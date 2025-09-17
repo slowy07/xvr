@@ -22,20 +22,28 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 **/
 
-#ifndef XVR_KEYWORD_H
-#define XVR_KEYWORD_H
+#ifndef XVR_LEXER_H
+#define XVR_LEXER_H
 
 #include "xvr_common.h"
 #include "xvr_token_types.h"
 
 typedef struct {
-  const Xvr_TokenType type;
-  const char *keyword;
-} Xvr_KeywordTypeTuple;
+  int start;
+  int current;
+  int line;
+  const char *source;
+} Xvr_lexer;
 
-extern const Xvr_KeywordTypeTuple Xvr_private_keywords[];
+typedef struct {
+  Xvr_TokenType type;
+  int lenght;
+  int line;
+  const char *lexeme;
+} Xvr_Token;
 
-const char *Xvr_private_findKeywordByType(const Xvr_TokenType type);
-Xvr_TokenType Xvr_private_findKeywordByKeyword(const char *keyword);
+XVR_API void Xvr_bindLexer(Xvr_lexer *lexer, const char *source);
+XVR_API Xvr_Token Xvr_private_scanLexer(Xvr_lexer *lexer);
+XVR_API void Xvr_private_printToken(Xvr_Token *token);
 
-#endif // !XVR_KEYWORD_H
+#endif // !XVR_LEXER_H
