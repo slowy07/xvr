@@ -1,14 +1,16 @@
 CFLAGS=-g -Wall -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
 LIBS=-lm
 
-TEST_SOURCEDIR=../$(XVR_SOURCEDIR)
+TEST_ROOTDIR=..
+TEST_SOURCEDIR=$(TEST_ROOTDIR)/$(XVR_SOURCEDIR)
 TEST_CASEDIR=cases
 
 TEST_OUTDIR=out
 TEST_OBJDIR=obj
 
-TEST_SOURCEFILES=$(wildcard $(TEST_SOURCEDIR)/*.c)
-TEST_CASESFILES=$(wildcard $(TEST_CASEDIR/*.c))
+TEST_SOURCEFILES=$(addprefix $(XVR_ROOTDIR)/,$(XVR_SOURCEFILES))
+TEST_CASESFILES=$(wildcard $(TEST_CASESDIR)/*.c)
+
 
 all: clean build-source build-cases $(addprefix $(TEST_OUTDIR)/,$(notdir $(TEST_CASESFILES:%.c=%.exe)))
 

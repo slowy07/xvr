@@ -1,11 +1,11 @@
+CFLAGS+=-std=c17 -pedantic -Werror
+LIBS=-lm
+
 export XVR_SOURCEDIR=src
 export XVR_OUTDIR=out
 export XVR_OBJDIR=obj
 
-CFLAGS+=-std=c17 -pedantic -Werror
-LIBS=-lm
-
-XVR_SOURCEFILES=$(wildcard $(XVR_SOURCEDIR)/*.c)
+export XVR_SOURCEFILES=$(wildcard $(XVR_SOURCEDIR)/*.c)
 
 all: clean tests
 		@echo no targets ready

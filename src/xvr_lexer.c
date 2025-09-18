@@ -339,13 +339,13 @@ static void trim(char **s, int *l) {
 
 void Xvr_private_printToken(Xvr_Token *token) {
   if (token->type == XVR_TOKEN_ERROR) {
-    printf(XVR_CC_ERROR "error\t%d\t%.*s\n" XVR_CC_RESET, token->line,
+    printf(XVR_CC_ERROR "error: \t%d\t%.*s\n" XVR_CC_RESET, token->line,
            token->length, token->lexeme);
     return;
   }
 
   if (token->type == XVR_TOKEN_PASS) {
-    printf(XVR_CC_NOTICE "error\t%d\t%.*s\n" XVR_CC_RESET, token->line,
+    printf(XVR_CC_NOTICE "pass: \t%d\t%.*s\n" XVR_CC_RESET, token->line,
            token->length, token->lexeme);
     return;
   }
