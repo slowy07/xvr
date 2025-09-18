@@ -12,7 +12,7 @@ all: clean tests
 
 .PHONY: tests
 tests:
-	$(MAKE) -C tests
+	$(MAKE) -C tests -k
 
 $(XVR_OUTDIR):
 	mkdir $(XVR_OUTDIR)

@@ -22,20 +22,14 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 **/
 
-#ifndef XVR_CHUNK_H
-#define XVR_CHUNK_H
+#ifndef XVR_AST_H
+#define XVR_AST_H
 
 #include "xvr_common.h"
-#include <stdint.h>
 
-typedef struct Xvr_Chunk {
-  int count;
-  int capacity;
-  uint8_t *code;
-} Xvr_Chunk;
+typedef enum Xvr_AstType {
+  XVR_AST_PASS,
+  XVR_AST_ERROR,
+} Xvr_AstType;
 
-XVR_API void Xvr_initChunk(Xvr_Chunk *chunk);
-XVR_API void Xvr_pushChunk(Xvr_Chunk *chunk, uint8_t byte);
-XVR_API void Xvr_freeChunk(Xvr_Chunk *chunk);
-
-#endif // !XVR_CHUNK_H
+#endif // !XVR_AST_H

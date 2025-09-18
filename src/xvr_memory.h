@@ -30,13 +30,40 @@ SOFTWARE.
 
 #define XVR_GROW_CAPACITY(capacity) ((capacity) < 8 ? 8 : (capacity) * 2)
 
+#define XVR_ALLOCATE(type, count)                                              \
+  (type *)Xvr_reallocate(NULL, 0, sizeof(type) * (count))
+
+#define XVR_FREE(type, pointer) (type *)Xvr_reallocate(pointer, sizeof(type), 0)
+
 #define XVR_GROW_ARRAY(type, pointer, oldSize, newSize)                        \
   (type *)Xvr_reallocate(pointer, sizeof(type) * oldSize,                      \
                          sizeof(type) * newSize)
+
+#define XVR_SHRINK_ARRAY(type, pointer, oldCount, count)                       \
+  (type *)Xvr_reallocate((type *)pointer, sizeof(type) * (oldCount),           \
+                         sizeof(type) * (count))
 
 #define XVR_FREE_ARRAY(type, pointer, oldSize)                                 \
   (type *)Xvr_reallocate(pointer, sizeof(type) * oldSize, 0)
 
 XVR_API void *Xvr_reallocate(void *pointer, size_t oldSize, size_t newSize);
+
+typedef struct Xvr_Bucket {
+  struct Xvr_Bucket *next;
+  void *contents;
+  int capacity;
+  int count;
+} Xvr_Bucket;
+
+XVR_API void Xvr_initBucket(Xvr_Bucket **bucketHandle, size_t capacity);
+XVR_API void *Xvr_partBucket(Xvr_Bucket **bucketHandle, size_t space);
+XVR_API void Xvr_freeBucket(Xvr_Bucket **bucketHandle);
+
+#define XVR_BUCKET_INIT(type, bucket, capacity)                                \
+  Xvr_initBucket(&(bucket), sizeof(type) * (capacity))
+
+#define XVR_BUCKET_PART(type, bucket) Xvr_partBucket(&(bucket), sizeof(type))
+
+#define XVR_BUCKET_FREE(bucket) Xvr_freeBucket(&(bucket))
 
 #endif // !XVR_MEMORY_H

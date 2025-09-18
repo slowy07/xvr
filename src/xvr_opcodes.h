@@ -26,7 +26,9 @@ SOFTWARE.
 #define XVR_OPCODES_H
 
 typedef enum Xvr_OpcodeType {
-  XVR_OPCODE_RETURN,
+  XVR_OPCODES_PASS,
+  XVR_OPCODE_ERROR,
+  XVR_OPCODE_EOF,
 } Xvr_OpcodeType;
 
 #endif // !XVR_OPCODES_H
