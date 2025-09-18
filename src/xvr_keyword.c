@@ -42,7 +42,7 @@ const Xvr_KeywordTypeTuple Xvr_private_keywords[] = {
     {XVR_TOKEN_LITERAL_FALSE, "false"},
 
     {XVR_TOKEN_EOF, NULL},
-    1};
+};
 
 const char *Xvr_private_findKeywordByType(const Xvr_TokenType type) {
   if (type == XVR_TOKEN_EOF) {

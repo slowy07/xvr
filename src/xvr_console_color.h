@@ -1,0 +1,57 @@
+#ifndef XVR_CONSOLE_COLOR_H
+#define XVR_CONSOLE_COLOR_H
+
+#if defined(__linux__) || defined(__MINGW32__) || defined(__GNUC__)
+
+#define XVR_CC_FONT_BLACK "\033[30;"
+#define XVR_CC_FONT_RED "\033[31;"
+#define XVR_CC_FONT_GREEN "\033[32;"
+#define XVR_CC_FONT_YELLOW "\033[33;"
+#define XVR_CC_FONT_BLUE "\033[34;"
+#define XVR_CC_FONT_PURPLE "\033[35;"
+#define XVR_CC_FONT_DGREEN "\033[6;"
+#define XVR_CC_FONT_WHITE "\033[7;"
+#define XVR_CC_FONT_CYAN "\x1b[36m"
+
+#define XVR_CC_BACK_BLACK "40m"
+#define XVR_CC_BACK_RED "41m"
+#define XVR_CC_BACK_GREEN "42m"
+#define XVR_CC_BACK_YELLOW "43m"
+#define XVR_CC_BACK_BLUE "44m"
+#define XVR_CC_BACK_PURPLE "45m"
+#define XVR_CC_BACK_DGREEN "46m"
+#define XVR_CC_BACK_WHITE "47m"
+
+#define XVR_CC_NOTICE XVR_CC_FONT_GREEN XVR_CC_BACK_BLACK
+#define XVR_CC_WARN XVR_CC_FONT_YELLOW XVR_CC_BACK_BLACK
+#define XVR_CC_ERROR XVR_CC_FONT_RED XVR_CC_BACK_BLACK
+#define XVR_CC_RESET "\033[0m"
+
+#else
+#define XVR_CC_FONT_BLACK
+#define XVR_CC_FONT_RED
+#define XVR_CC_FONT_GREEN
+#define XVR_CC_FONT_YELLOW
+#define XVR_CC_FONT_BLUE
+#define XVR_CC_FONT_PURPLE
+#define XVR_CC_FONT_DGREEN
+#define XVR_CC_FONT_WHITE
+#define XVR_CC_FONT_CYAN
+
+#define XVR_CC_BACK_BLACK
+#define XVR_CC_BACK_RED
+#define XVR_CC_BACK_GREEN
+#define XVR_CC_BACK_YELLOW
+#define XVR_CC_BACK_BLUE
+#define XVR_CC_BACK_PURPLE
+#define XVR_CC_BACK_DGREEN
+#define XVR_CC_BACK_WHITE
+
+#define XVR_CC_NOTICE XVR_CC_FONT_GREEN XVR_CC_BACK_BLACK
+#define XVR_CC_WARN XVR_CC_FONT_YELLOW XVR_CC_BACK_BLACK
+#define XVR_CC_ERROR XVR_CC_FONT_RED XVR_CC_BACK_BLACK
+#define XVR_CC_RESET
+
+#endif // defined(__linux__) || defined(__MINGW32__) || defined(__GNUC__)
+
+#endif // !XVR_CONSOLE_COLOR_H

@@ -37,7 +37,7 @@ typedef struct {
 
 typedef struct {
   Xvr_TokenType type;
-  int lenght;
+  int length;
   int line;
   const char *lexeme;
 } Xvr_Token;
