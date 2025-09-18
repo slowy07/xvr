@@ -4,7 +4,7 @@
 DEFINE = DECLARE + SET
 ```
 
->> [!NOTE]
+> [!NOTE]
 > altough the environment, representing an E, is formed at routine start and destroyed at routine conclusion, closure function as intended since it starts with the environment of the parent procedure
 
 ```
