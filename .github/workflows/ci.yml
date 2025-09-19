@@ -1,0 +1,12 @@
+name: testing xvr programming lang
+
+on: [push, pull_request]
+
+jobs:
+  test-ubuntu-latest:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+      - name: testing
+        run: make tests
