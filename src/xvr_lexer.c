@@ -273,7 +273,7 @@ Xvr_Token Xvr_private_scanLexer(Xvr_lexer *lexer) {
 
   case '!':
     return makeToken(lexer, match(lexer, '=') ? XVR_TOKEN_OPERATOR_COMPARE_NOT
-                                              : XVR_TOKEN_OPERATOR_INVERT);
+                                              : XVR_TOKEN_OPERATOR_NEGATE);
   case '=':
     return makeToken(lexer, match(lexer, '=') ? XVR_TOKEN_OPERATOR_COMPARE_EQUAL
                                               : XVR_TOKEN_OPERATOR_ASSIGN);

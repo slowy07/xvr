@@ -48,6 +48,10 @@ SOFTWARE.
 
 XVR_API void *Xvr_reallocate(void *pointer, size_t oldSize, size_t newSize);
 
+#define XVR_BUCKET_INIT(type, bucket, capacity) Xvr_initBucket(&(bucket), sizeof(type)*(capacity))
+#define XVR_BUCKET_PART(type, bucket) (type*)Xvr_partBucket(&(bucket), sizeof(type))
+#define XVR_BUCKET_FREE(bucket) Xvr_freeBucket(&(bucket))
+
 typedef struct Xvr_Bucket {
   struct Xvr_Bucket *next;
   void *contents;
@@ -58,12 +62,5 @@ typedef struct Xvr_Bucket {
 XVR_API void Xvr_initBucket(Xvr_Bucket **bucketHandle, size_t capacity);
 XVR_API void *Xvr_partBucket(Xvr_Bucket **bucketHandle, size_t space);
 XVR_API void Xvr_freeBucket(Xvr_Bucket **bucketHandle);
-
-#define XVR_BUCKET_INIT(type, bucket, capacity)                                \
-  Xvr_initBucket(&(bucket), sizeof(type) * (capacity))
-
-#define XVR_BUCKET_PART(type, bucket) Xvr_partBucket(&(bucket), sizeof(type))
-
-#define XVR_BUCKET_FREE(bucket) Xvr_freeBucket(&(bucket))
 
 #endif // !XVR_MEMORY_H
