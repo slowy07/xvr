@@ -25,7 +25,7 @@ SOFTWARE.
 #ifndef COMMON_XVR_TYPES_H
 #define COMMON_XVR_TYPES_H
 
-#if defined(__linux__) || defined(__MINGW32__) || defined(__GNUC__)
+#if defined(__GNUC__)
 #define XVR_API extern
 #elif defined(_MSC_VER)
 #ifndef XVR_EXPORT
@@ -37,7 +37,23 @@ SOFTWARE.
 #else
 #define XVRXVR_API extern
 
-#endif // defined(__linux__) || defined(__MINGW32__) || defined(__GNUC__)
+#endif // defined(__GNUC__)
+
+#if defined(__GNUC__)
+#if defined(__x86_64)
+#define XVR_BITNESS 64
+#else
+#define XVR_BITNESS 32
+#endif // defined(__x86_64)
+#elif defined(_MSC_VER)
+#if defined(_M_X64)
+#define XVR_BITNESS 64
+#else
+#define XVR_BITNESS 32
+#endif // defined(_M_X64)
+#else
+#define XVR_BITNESS -1
+#endif // defined(__GNUC__)
 
 #define XVR_VERSION_MAJOR 0
 #define XVR_VERSION_MINOR 1
