@@ -3,8 +3,8 @@
 #include "xvr_memory.h"
 #include <string.h>
 
-static void expand(void **handle, int *capacity, int *count) {
-  if ((*count) + 1 > (*capacity)) {
+static void expand(void **handle, int *capacity, int* count, int amount) {
+  while ((*count) + amount > (*capacity)) {
     int oldCapacity = (*capacity);
 
     (*capacity) = XVR_GROW_CAPACITY(oldCapacity);
@@ -15,7 +15,7 @@ static void expand(void **handle, int *capacity, int *count) {
 
 static void emitByte(void **handle, int *capacity, int *count,
                      unsigned char byte) {
-  expand(handle, capacity, count);
+  expand(handle, capacity, count, 1);
   ((unsigned char *)(*handle))[(*count)++] = byte;
 }
 

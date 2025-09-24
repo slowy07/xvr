@@ -6,7 +6,7 @@
 #include <string.h>
 
 static void expand(Xvr_Bytecode *bc, int amount) {
-  if (bc->count + amount > bc->capacity) {
+  while (bc->count + amount > bc->capacity) {
     int oldCapacity = bc->capacity;
     bc->capacity = XVR_GROW_CAPACITY(oldCapacity);
     bc->ptr = XVR_GROW_ARRAY(unsigned char, bc->ptr, oldCapacity, bc->capacity);

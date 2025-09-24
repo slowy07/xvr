@@ -17,6 +17,7 @@ int test_bytecode_header(Xvr_Bucket *bucket) {
       fprintf(
           stderr, XVR_CC_ERROR
           "error: failed to write bytecode header correctly\n" XVR_CC_RESET);
+      Xvr_freeBytecode(bc);
       return -1;
     }
 
@@ -26,6 +27,7 @@ int test_bytecode_header(Xvr_Bucket *bucket) {
 }
 
 int main() {
+  // TODO: fixing bytecode implementation
   int total = 0, res = 0;
 
   {
