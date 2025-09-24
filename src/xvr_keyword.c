@@ -12,7 +12,6 @@ const Xvr_KeywordTypeTuple Xvr_private_keywords[] = {
     {XVR_TOKEN_TYPE_FLOAT, "float"},
     {XVR_TOKEN_TYPE_STRING, "string"},
 
-    {XVR_TOKEN_TYPE_FUNCTION, "fn"},
     {XVR_TOKEN_TYPE_OPAQUE, "opaque"},
     {XVR_TOKEN_TYPE_ANY, "any"},
 
@@ -27,6 +26,7 @@ const Xvr_KeywordTypeTuple Xvr_private_keywords[] = {
     {XVR_TOKEN_KEYWORD_EXPORT, "export"},
     {XVR_TOKEN_KEYWORD_FOR, "for"},
     {XVR_TOKEN_KEYWORD_FOREACH, "foreach"},
+    {XVR_TOKEN_KEYWORD_FUNCTION, "fn"},
     {XVR_TOKEN_KEYWORD_IF, "if"},
     {XVR_TOKEN_KEYWORD_IMPORT, "import"},
     {XVR_TOKEN_KEYWORD_IN, "in"},

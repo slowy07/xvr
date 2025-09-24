@@ -38,31 +38,33 @@ void Xvr_private_emitAstValue(Xvr_Bucket **bucket, Xvr_Ast **handle,
 }
 
 void Xvr_private_emitAstUnary(Xvr_Bucket **bucket, Xvr_Ast **handle,
-                              Xvr_AstFlag flag, Xvr_Ast *child) {
-  (*handle) = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
+                              Xvr_AstFlag flag) {
 
-  (*handle)->unary.type = XVR_AST_UNARY;
-  (*handle)->unary.flag = flag;
-  (*handle)->unary.child = child;
+  Xvr_Ast *temp = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
+
+  temp->unary.type = XVR_AST_UNARY;
+  temp->unary.flag = flag;
+  temp->unary.child = *handle;
+  (*handle) = temp;
 }
 
 void Xvr_private_emitAstBinary(Xvr_Bucket **bucket, Xvr_Ast **handle,
-                               Xvr_AstFlag flag, Xvr_Ast *left,
-                               Xvr_Ast *right) {
-  (*handle) = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
+                               Xvr_AstFlag flag, Xvr_Ast *right) {
+  Xvr_Ast *temp = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
 
-  (*handle)->binary.type = XVR_AST_BINARY;
-  (*handle)->binary.flag = flag;
-  (*handle)->binary.left = left;
+  temp->binary.type = XVR_AST_BINARY;
+  temp->binary.flag = flag;
+  temp->binary.left = *handle;
   (*handle)->binary.right = right;
+  (*handle) = temp;
 }
 
-void Xvr_private_emitAstGroup(Xvr_Bucket **bucket, Xvr_Ast **handle,
-                              Xvr_Ast *child) {
-  (*handle) = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
+void Xvr_private_emitAstGroup(Xvr_Bucket **bucket, Xvr_Ast **handle) {
+  Xvr_Ast *temp = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
 
-  (*handle)->group.type = XVR_AST_GROUP;
-  (*handle)->group.child = child;
+  temp->group.type = XVR_AST_GROUP;
+  temp->group.child = (*handle);
+  (*handle) = temp;
 }
 
 void Xvr_private_emitAstPass(Xvr_Bucket **bucket, Xvr_Ast **handle) {
@@ -75,4 +77,10 @@ void Xvr_private_emitAstError(Xvr_Bucket **bucket, Xvr_Ast **handle) {
   (*handle) = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
 
   (*handle)->error.type = XVR_AST_ERROR;
+}
+
+void Xvr_private_emitAstEnd(Xvr_Bucket **bucket, Xvr_Ast **handle) {
+  (*handle) = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
+
+  (*handle)->error.type = XVR_AST_END;
 }

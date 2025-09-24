@@ -22,30 +22,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 **/
 
-#ifndef XVR_LEXER_H
-#define XVR_LEXER_H
+#ifndef XVR_PARSER_H
+#define XVR_PARSER_H
 
+#include "xvr_ast.h"
 #include "xvr_common.h"
-#include "xvr_token_types.h"
+#include "xvr_lexer.h"
+#include "xvr_memory.h"
 
-typedef struct {
-  int start;
-  int current;
-  int line;
-  const char *source;
-} Xvr_lexer;
+typedef struct Xvr_Parser {
+  Xvr_lexer *lexer;
 
-typedef struct {
-  Xvr_TokenType type;
-  int length;
-  int line;
-  const char *lexeme;
-} Xvr_Token;
+  Xvr_Token current;
+  Xvr_Token previous;
 
-XVR_API void Xvr_bindLexer(Xvr_lexer *lexer, const char *source);
-XVR_API Xvr_Token Xvr_private_scanLexer(Xvr_lexer *lexer);
-XVR_API void Xvr_private_printToken(Xvr_Token *token);
+  bool error;
+  // check error sementara
+  bool panic;
+} Xvr_Parser;
 
-#define XVR_BLANK_TOKEN() ((Xvr_Token){XVR_TOKEN_NULL, 0, 0, NULL})
+XVR_API void Xvr_bindParser(Xvr_Parser *parser, Xvr_lexer *lexer);
+XVR_API Xvr_Ast *Xvr_scanParser(Xvr_Bucket **bucket, Xvr_Parser *parser);
+XVR_API void Xvr_resetParser(Xvr_Parser *parser);
 
-#endif // !XVR_LEXER_H
+#endif // !XVR_PARSER_H

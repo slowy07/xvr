@@ -48,7 +48,7 @@ SOFTWARE.
 
 XVR_API void *Xvr_reallocate(void *pointer, size_t oldSize, size_t newSize);
 
-#define XVR_BUCKET_INIT(type, bucket, capacity) Xvr_initBucket(&(bucket), sizeof(type)*(capacity))
+#define XVR_BUCKET_INIT(type, bucket, count) Xvr_initBucket(&(bucket), sizeof(type)*(count))
 #define XVR_BUCKET_PART(type, bucket) (type*)Xvr_partBucket(&(bucket), sizeof(type))
 #define XVR_BUCKET_FREE(bucket) Xvr_freeBucket(&(bucket))
 
