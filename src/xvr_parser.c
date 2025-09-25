@@ -338,14 +338,16 @@ static Xvr_AstFlag atomic(Xvr_Bucket **bucket, Xvr_Parser *parser,
 static Xvr_AstFlag unary(Xvr_Bucket **bucket, Xvr_Parser *parser,
                          Xvr_Ast **root) {
   if (parser->previous.type == XVR_TOKEN_OPERATOR_SUBTRACT) {
+    bool connectedDigit =
+        parser->previous.lexeme[1] >= '0' && parser->previous.lexeme[1] <= '9';
     parsePrecedence(bucket, parser, root, PREC_UNARY);
 
     if ((*root)->type == XVR_AST_VALUE &&
-        XVR_VALUE_IS_INTEGER((*root)->value.value)) {
+        XVR_VALUE_IS_INTEGER((*root)->value.value) && connectedDigit) {
       (*root)->value.value =
           XVR_VALUE_TO_INTEGER(-XVR_VALUE_AS_INTEGER((*root)->value.value));
     } else if ((*root)->type == XVR_AST_VALUE &&
-               XVR_VALUE_IS_FLOAT((*root)->value.value)) {
+               XVR_VALUE_IS_FLOAT((*root)->value.value) && connectedDigit) {
       (*root)->value.value =
           XVR_VALUE_TO_FLOAT(-XVR_VALUE_AS_FLOAT((*root)->value.value));
     } else {

@@ -31,6 +31,24 @@ int test_cimple_empty_parsers(Xvr_Bucket *bucket) {
   }
 
   {
+    const char *source = ";";
+    Xvr_lexer lexer;
+    Xvr_bindLexer(&lexer, source);
+
+    Xvr_Parser parser;
+    Xvr_bindParser(&parser, &lexer);
+
+    Xvr_Ast *ast = Xvr_scanParser(&bucket, &parser);
+
+    if (ast == NULL || ast->type != XVR_AST_BLOCK || ast->block.child == NULL ||
+        ast->block.child->type != XVR_AST_PASS) {
+      fprintf(stderr, XVR_CC_ERROR "error: failed to running the parser with "
+                                   "one semicolon\n" XVR_CC_RESET);
+      return -1;
+    }
+  }
+
+  {
     const char *source = ";;;;;";
     Xvr_lexer lexer;
     Xvr_bindLexer(&lexer, source);

@@ -6,9 +6,13 @@
 #include <string.h>
 
 static void expand(Xvr_Bytecode *bc, int amount) {
-  while (bc->count + amount > bc->capacity) {
+  if (bc->count + amount > bc->capacity) {
     int oldCapacity = bc->capacity;
-    bc->capacity = XVR_GROW_CAPACITY(oldCapacity);
+
+    while (bc->count + amount > bc->capacity) {
+      bc->capacity = XVR_GROW_CAPACITY(bc->capacity);
+    }
+
     bc->ptr = XVR_GROW_ARRAY(unsigned char, bc->ptr, oldCapacity, bc->capacity);
   }
 }
@@ -17,7 +21,6 @@ static void emitByte(Xvr_Bytecode *bc, unsigned char byte) {
   expand(bc, 1);
   bc->ptr[bc->count++] = byte;
 }
-
 
 static void writeBytecodeHeader(Xvr_Bytecode *bc) {
   emitByte(bc, XVR_VERSION_MAJOR);
@@ -32,8 +35,7 @@ static void writeBytecodeHeader(Xvr_Bytecode *bc) {
   bc->count += len;
 }
 
-static void writeBytecodeBody(Xvr_Bytecode *bc, Xvr_Ast *ast) {
-}
+static void writeBytecodeBody(Xvr_Bytecode *bc, Xvr_Ast *ast) {}
 
 Xvr_Bytecode Xvr_compileBytecode(Xvr_Ast *ast) {
   Xvr_Bytecode bc;

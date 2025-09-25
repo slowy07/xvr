@@ -90,44 +90,44 @@ static void writeInstructionBinary(Xvr_routine **rt, Xvr_AstBinary ast) {
     EMIT_BYTE(rt, XVR_OPCODE_ADD);
   }
 
-  if (ast.flag == XVR_AST_FLAG_SUBTRACT) {
+  else if (ast.flag == XVR_AST_FLAG_SUBTRACT) {
     EMIT_BYTE(rt, XVR_OPCODE_SUBTRACT);
   }
 
-  if (ast.flag == XVR_AST_FLAG_MULTIPLY) {
+  else if (ast.flag == XVR_AST_FLAG_MULTIPLY) {
     EMIT_BYTE(rt, XVR_OPCODE_MULTIPLY);
   }
 
-  if (ast.flag == XVR_AST_FLAG_DIVIDE) {
+  else if (ast.flag == XVR_AST_FLAG_DIVIDE) {
     EMIT_BYTE(rt, XVR_OPCODE_DIVIDE);
   }
 
-  if (ast.flag == XVR_AST_FLAG_MODULO) {
+  else if (ast.flag == XVR_AST_FLAG_MODULO) {
     EMIT_BYTE(rt, XVR_OPCODE_MODULO);
   }
 
-  if (ast.flag == XVR_AST_FLAG_COMPARE_EQUAL) {
+  else if (ast.flag == XVR_AST_FLAG_COMPARE_EQUAL) {
     EMIT_BYTE(rt, XVR_OPCODE_COMPARE_EQUAL);
   }
 
-  if (ast.flag == XVR_AST_FLAG_COMPARE_NOT) {
+  else if (ast.flag == XVR_AST_FLAG_COMPARE_NOT) {
     EMIT_BYTE(rt, XVR_OPCODE_COMPARE_EQUAL);
     EMIT_BYTE(rt, XVR_OPCODE_NEGATE);
   }
 
-  if (ast.flag == XVR_AST_FLAG_COMPARE_LESS) {
+  else if (ast.flag == XVR_AST_FLAG_COMPARE_LESS) {
     EMIT_BYTE(rt, XVR_OPCODE_COMPARE_LESS);
   }
 
-  if (ast.flag == XVR_AST_FLAG_COMPARE_LESS_EQUAL) {
+  else if (ast.flag == XVR_AST_FLAG_COMPARE_LESS_EQUAL) {
     EMIT_BYTE(rt, XVR_OPCODE_COMPARE_LESS_EQUAL);
   }
 
-  if (ast.flag == XVR_AST_FLAG_COMPARE_GREATER) {
+  else if (ast.flag == XVR_AST_FLAG_COMPARE_GREATER) {
     EMIT_BYTE(rt, XVR_OPCODE_COMPARE_GREATER)
   }
 
-  if (ast.flag == XVR_AST_FLAG_AND) {
+  else if (ast.flag == XVR_AST_FLAG_AND) {
     EMIT_BYTE(rt, XVR_OPCODE_AND);
   } else {
     fprintf(stderr,
