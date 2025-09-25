@@ -18,7 +18,6 @@ static void emitByte(Xvr_Bytecode *bc, unsigned char byte) {
   bc->ptr[bc->count++] = byte;
 }
 
-static void writeModule(Xvr_Bytecode *bc, Xvr_Ast *ast) {}
 
 static void writeBytecodeHeader(Xvr_Bytecode *bc) {
   emitByte(bc, XVR_VERSION_MAJOR);
@@ -34,7 +33,6 @@ static void writeBytecodeHeader(Xvr_Bytecode *bc) {
 }
 
 static void writeBytecodeBody(Xvr_Bytecode *bc, Xvr_Ast *ast) {
-  writeModule(bc, ast);
 }
 
 Xvr_Bytecode Xvr_compileBytecode(Xvr_Ast *ast) {

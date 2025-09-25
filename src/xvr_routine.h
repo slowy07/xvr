@@ -37,16 +37,19 @@ typedef struct Xvr_routine {
   int codeCapacity;
   int codeCount;
 
+  int *jumps;
+  int jumpsCapacity;
+  int jumpsCount;
+
   unsigned char *data;
   int dataCapacity;
   int dataCount;
 
-  int *jump;
-  int jumpCapacity;
-  int jumpCount;
+  unsigned char *subs;
+  int subsCapacity;
+  int subsCount;
 } Xvr_routine;
 
-XVR_API Xvr_routine Xvr_compileRoutine(Xvr_Ast *ast);
-XVR_API void Xvr_freeRoutine(Xvr_routine routine);
+XVR_API void* Xvr_compileRoutine(Xvr_Ast* ast);
 
 #endif // !XVR_ROUTINE_H
