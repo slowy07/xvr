@@ -7,7 +7,7 @@ int main() {
   {
     char *source = "print null";
 
-    Xvr_lexer lexer;
+    Xvr_Lexer lexer;
 
     Xvr_bindLexer(&lexer, source);
 

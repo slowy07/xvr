@@ -7,20 +7,20 @@
 #include <stdio.h>
 #include <string.h>
 
-static void cleanLexer(Xvr_lexer *lexer) {
+static void cleanLexer(Xvr_Lexer *lexer) {
   lexer->start = 0;
   lexer->current = 0;
   lexer->line = 1;
   lexer->source = NULL;
 }
 
-static bool isAtEnd(Xvr_lexer *lexer) {
+static bool isAtEnd(Xvr_Lexer *lexer) {
   return lexer->source[lexer->current] == '\0';
 }
 
-static char peek(Xvr_lexer *lexer) { return lexer->source[lexer->current]; }
+static char peek(Xvr_Lexer *lexer) { return lexer->source[lexer->current]; }
 
-static char peekNext(Xvr_lexer *lexer) {
+static char peekNext(Xvr_Lexer *lexer) {
   if (isAtEnd(lexer)) {
     return '\0';
   }
@@ -28,7 +28,7 @@ static char peekNext(Xvr_lexer *lexer) {
   return lexer->source[lexer->current + 1];
 }
 
-static char advance(Xvr_lexer *lexer) {
+static char advance(Xvr_Lexer *lexer) {
   if (isAtEnd(lexer)) {
     return '\0';
   }
@@ -41,7 +41,7 @@ static char advance(Xvr_lexer *lexer) {
   return lexer->source[lexer->current - 1];
 }
 
-static void eatWithspace(Xvr_lexer *lexer) {
+static void eatWithspace(Xvr_Lexer *lexer) {
   const char c = peek(lexer);
 
   switch (c) {
@@ -78,16 +78,16 @@ static void eatWithspace(Xvr_lexer *lexer) {
   eatWithspace(lexer);
 }
 
-static bool isDigit(Xvr_lexer *lexer) {
+static bool isDigit(Xvr_Lexer *lexer) {
   return peek(lexer) >= '0' && peek(lexer) <= '9';
 }
 
-static bool isAlpha(Xvr_lexer *lexer) {
+static bool isAlpha(Xvr_Lexer *lexer) {
   return (peek(lexer) >= 'A' && peek(lexer) == 'Z') ||
          (peek(lexer) >= 'a' && peek(lexer) <= 'z') || peek(lexer) == '_';
 }
 
-static bool match(Xvr_lexer *lexer, char c) {
+static bool match(Xvr_Lexer *lexer, char c) {
   if (peek(lexer) == c) {
     advance(lexer);
     return true;
@@ -95,7 +95,7 @@ static bool match(Xvr_lexer *lexer, char c) {
   return false;
 }
 
-static Xvr_Token makeErrorToken(Xvr_lexer *lexer, char *msg) {
+static Xvr_Token makeErrorToken(Xvr_Lexer *lexer, char *msg) {
   Xvr_Token token;
 
   token.type = XVR_TOKEN_ERROR;
@@ -106,7 +106,7 @@ static Xvr_Token makeErrorToken(Xvr_lexer *lexer, char *msg) {
   return token;
 }
 
-static Xvr_Token makeToken(Xvr_lexer *lexer, Xvr_TokenType type) {
+static Xvr_Token makeToken(Xvr_Lexer *lexer, Xvr_TokenType type) {
   Xvr_Token token;
 
   token.type = type;
@@ -117,7 +117,7 @@ static Xvr_Token makeToken(Xvr_lexer *lexer, Xvr_TokenType type) {
   return token;
 }
 
-static Xvr_Token makeIntegerOrFloat(Xvr_lexer *lexer) {
+static Xvr_Token makeIntegerOrFloat(Xvr_Lexer *lexer) {
   Xvr_TokenType type = XVR_TOKEN_LITERAL_INTEGER;
 
   while (isDigit(lexer) || peek(lexer) == '_')
@@ -152,7 +152,7 @@ static bool isEscapableCharacter(char c) {
   }
 }
 
-static Xvr_Token makeString(Xvr_lexer *lexer, char terminator) {
+static Xvr_Token makeString(Xvr_Lexer *lexer, char terminator) {
   while (!isAtEnd(lexer)) {
     if (peek(lexer) == terminator) {
       advance(lexer);
@@ -181,7 +181,7 @@ static Xvr_Token makeString(Xvr_lexer *lexer, char terminator) {
   return token;
 }
 
-static Xvr_Token makeKeywordOrIdentifier(Xvr_lexer *lexer) {
+static Xvr_Token makeKeywordOrIdentifier(Xvr_Lexer *lexer) {
   advance(lexer);
 
   while (isDigit(lexer) || isAlpha(lexer)) {
@@ -213,12 +213,12 @@ static Xvr_Token makeKeywordOrIdentifier(Xvr_lexer *lexer) {
   return token;
 }
 
-void Xvr_bindLexer(Xvr_lexer *lexer, const char *source) {
+void Xvr_bindLexer(Xvr_Lexer *lexer, const char *source) {
   cleanLexer(lexer);
   lexer->source = source;
 }
 
-Xvr_Token Xvr_private_scanLexer(Xvr_lexer *lexer) {
+Xvr_Token Xvr_private_scanLexer(Xvr_Lexer *lexer) {
   eatWithspace(lexer);
 
   lexer->start = lexer->current;

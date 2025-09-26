@@ -31,7 +31,7 @@ SOFTWARE.
 #include "xvr_memory.h"
 
 typedef struct Xvr_Parser {
-  Xvr_lexer *lexer;
+  Xvr_Lexer *lexer;
 
   Xvr_Token current;
   Xvr_Token previous;
@@ -41,7 +41,7 @@ typedef struct Xvr_Parser {
   bool panic;
 } Xvr_Parser;
 
-XVR_API void Xvr_bindParser(Xvr_Parser *parser, Xvr_lexer *lexer);
+XVR_API void Xvr_bindParser(Xvr_Parser *parser, Xvr_Lexer *lexer);
 XVR_API Xvr_Ast *Xvr_scanParser(Xvr_Bucket **bucket, Xvr_Parser *parser);
 XVR_API void Xvr_resetParser(Xvr_Parser *parser);
 

@@ -3,7 +3,7 @@
 #include <stdio.h>
 
 Xvr_Ast *makeAstFromSource(Xvr_Bucket **bucket, const char *source) {
-  Xvr_lexer lexer;
+  Xvr_Lexer lexer;
   Xvr_bindLexer(&lexer, source);
 
   Xvr_Parser parser;

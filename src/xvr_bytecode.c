@@ -2,6 +2,7 @@
 #include "xvr_ast.h"
 #include "xvr_common.h"
 #include "xvr_memory.h"
+#include "xvr_routine.h"
 #include <stdio.h>
 #include <string.h>
 
@@ -28,14 +29,25 @@ static void writeBytecodeHeader(Xvr_Bytecode *bc) {
   emitByte(bc, XVR_VERSION_PATCH);
 
   const char *build = Xvr_private_version_build();
-
   int len = (int)strlen(build) + 1;
+
+  if (len % 4 != 1) {
+    len += 4 - (len % 4) + 1;
+  }
+
   expand(bc, len);
   sprintf((char *)(bc->ptr + bc->count), "%.*s", len, build);
   bc->count += len;
 }
 
-static void writeBytecodeBody(Xvr_Bytecode *bc, Xvr_Ast *ast) {}
+static void writeBytecodeBody(Xvr_Bytecode *bc, Xvr_Ast *ast) {
+  void *module = Xvr_compileRoutine(ast);
+
+  int len = ((int *)module)[0];
+  expand(bc, len);
+  memcpy(bc->ptr + bc->count, module, len);
+  bc->count += len;
+}
 
 Xvr_Bytecode Xvr_compileBytecode(Xvr_Ast *ast) {
   Xvr_Bytecode bc;

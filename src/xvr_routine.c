@@ -57,12 +57,18 @@ static void writeInstructionValue(Xvr_routine **rt, Xvr_AstValue ast) {
   EMIT_BYTE(rt, ast.value.type);
 
   if (XVR_VALUE_IS_NULL(ast.value)) {
-    // TODO
+    EMIT_BYTE(rt, 0);
+    EMIT_BYTE(rt, 0);
   } else if (XVR_VALUE_IS_BOOLEAN(ast.value)) {
     EMIT_BYTE(rt, XVR_VALUE_AS_BOOLEAN(ast.value));
+    EMIT_BYTE(rt, 0);
   } else if (XVR_VALUE_IS_INTEGER(ast.value)) {
+    EMIT_BYTE(rt, 0);
+    EMIT_BYTE(rt, 0);
     EMIT_INT(rt, code, XVR_VALUE_AS_INTEGER(ast.value));
   } else if (XVR_VALUE_IS_FLOAT(ast.value)) {
+    EMIT_BYTE(rt, 0);
+    EMIT_BYTE(rt, 0);
     EMIT_FLOAT(rt, code, XVR_VALUE_AS_FLOAT(ast.value));
   } else {
     fprintf(stderr,
@@ -76,6 +82,9 @@ static void writeInstructionUnary(Xvr_routine **rt, Xvr_AstUnary ast) {
 
   if (ast.flag == XVR_AST_FLAG_NEGATE) {
     EMIT_BYTE(rt, XVR_OPCODE_NEGATE);
+    EMIT_BYTE(rt, 0);
+    EMIT_BYTE(rt, 0);
+    EMIT_BYTE(rt, 0);
   } else {
     fprintf(stderr, XVR_CC_ERROR "invalid AST unary flag found\n" XVR_CC_RESET);
     exit(-1);
@@ -112,7 +121,13 @@ static void writeInstructionBinary(Xvr_routine **rt, Xvr_AstBinary ast) {
 
   else if (ast.flag == XVR_AST_FLAG_COMPARE_NOT) {
     EMIT_BYTE(rt, XVR_OPCODE_COMPARE_EQUAL);
+    EMIT_BYTE(rt, 0);
+    EMIT_BYTE(rt, 0);
+    EMIT_BYTE(rt, 0);
     EMIT_BYTE(rt, XVR_OPCODE_NEGATE);
+    EMIT_BYTE(rt, 0);
+    EMIT_BYTE(rt, 0);
+    EMIT_BYTE(rt, 0);
   }
 
   else if (ast.flag == XVR_AST_FLAG_COMPARE_LESS) {
@@ -134,6 +149,10 @@ static void writeInstructionBinary(Xvr_routine **rt, Xvr_AstBinary ast) {
             XVR_CC_ERROR "invalid ast binary flag found\n" XVR_CC_RESET);
     exit(-1);
   }
+
+  EMIT_BYTE(rt, 0);
+  EMIT_BYTE(rt, 0);
+  EMIT_BYTE(rt, 0);
 }
 
 static void writeRoutineCode(Xvr_routine **rt, Xvr_Ast *ast) {
@@ -186,6 +205,9 @@ static void writeRoutineCode(Xvr_routine **rt, Xvr_Ast *ast) {
 static void *writeRoutine(Xvr_routine *rt, Xvr_Ast *ast) {
   writeRoutineCode(&rt, ast);
   EMIT_BYTE(&rt, XVR_OPCODE_RETURN);
+  EMIT_BYTE(&rt, 0);
+  EMIT_BYTE(&rt, 0);
+  EMIT_BYTE(&rt, 0);
 
   void *buffer = XVR_ALLOCATE(unsigned char, 16);
   int capacity = 0, count = 0;
@@ -193,6 +215,7 @@ static void *writeRoutine(Xvr_routine *rt, Xvr_Ast *ast) {
 
   emitInt(&buffer, &capacity, &count, 0);
   emitInt(&buffer, &capacity, &count, rt->paramCount);
+  emitInt(&buffer, &capacity, &count, rt->jumpsCount);
   emitInt(&buffer, &capacity, &count, rt->dataCount);
   emitInt(&buffer, &capacity, &count, rt->subsCount);
 

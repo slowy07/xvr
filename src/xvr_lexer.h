@@ -33,7 +33,7 @@ typedef struct {
   int current;
   int line;
   const char *source;
-} Xvr_lexer;
+} Xvr_Lexer;
 
 typedef struct {
   Xvr_TokenType type;
@@ -42,8 +42,8 @@ typedef struct {
   const char *lexeme;
 } Xvr_Token;
 
-XVR_API void Xvr_bindLexer(Xvr_lexer *lexer, const char *source);
-XVR_API Xvr_Token Xvr_private_scanLexer(Xvr_lexer *lexer);
+XVR_API void Xvr_bindLexer(Xvr_Lexer *lexer, const char *source);
+XVR_API Xvr_Token Xvr_private_scanLexer(Xvr_Lexer *lexer);
 XVR_API void Xvr_private_printToken(Xvr_Token *token);
 
 #define XVR_BLANK_TOKEN() ((Xvr_Token){XVR_TOKEN_NULL, 0, 0, NULL})

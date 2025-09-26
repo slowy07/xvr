@@ -8,18 +8,22 @@
 #include <stddef.h>
 #include <stdio.h>
 
+#include "xvr_parser.h"
+
+#include <stdio.h>
+
 static void printError(Xvr_Parser *parser, Xvr_Token token,
                        const char *errorMsg) {
   if (parser->panic) {
     return;
   }
 
-  fprintf(stderr, XVR_CC_ERROR "[Line %d] Error", token.line);
+  fprintf(stderr, XVR_CC_ERROR "[Line %d] Error ", token.line);
 
   if (token.type == XVR_TOKEN_EOF) {
-    fprintf(stderr, "at end");
+    fprintf(stderr, " at end");
   } else {
-    fprintf(stderr, "at '%.*s'", token.length, token.lexeme);
+    fprintf(stderr, " at '%.*s'", token.length, token.lexeme);
   }
 
   fprintf(stderr, ": %s\n" XVR_CC_RESET, errorMsg);
@@ -48,14 +52,16 @@ static void consume(Xvr_Parser *parser, Xvr_TokenType tokenType,
                     const char *msg) {
   if (parser->current.type != tokenType) {
     printError(parser, parser->current, msg);
+    return;
   }
 
   advance(parser);
 }
 
-static void synhronize(Xvr_Parser *parser) {
+static void synchronize(Xvr_Parser *parser) {
   while (parser->current.type != XVR_TOKEN_EOF) {
     switch (parser->current.type) {
+    // these tokens can start a statement
     case XVR_TOKEN_KEYWORD_ASSERT:
     case XVR_TOKEN_KEYWORD_BREAK:
     case XVR_TOKEN_KEYWORD_CLASS:
@@ -74,6 +80,7 @@ static void synhronize(Xvr_Parser *parser) {
       parser->error = true;
       parser->panic = false;
       return;
+
     default:
       advance(parser);
     }
@@ -116,166 +123,106 @@ static Xvr_AstFlag binary(Xvr_Bucket **bucket, Xvr_Parser *parser,
 static Xvr_AstFlag group(Xvr_Bucket **bucket, Xvr_Parser *parser,
                          Xvr_Ast **root);
 
-static ParsingTuple parseingRulesetTable[] = {
-    {PREC_PRIMARY, atomic, NULL},
+static ParsingTuple parsingRulesetTable[] = {
+    {PREC_PRIMARY, atomic, NULL}, // XVR_TOKEN_NULL,
 
-    // NONE TYPE
-    {PREC_NONE, NULL, NULL},
-    // BOOLEAN
-    {PREC_NONE, NULL, NULL},
-    // INTEGER,
-    {PREC_NONE, NULL, NULL},
-    // FLOAT
-    {PREC_NONE, NULL, NULL},
-    // STRING
-    {PREC_NONE, NULL, NULL},
-    // ARRAY
-    {PREC_NONE, NULL, NULL},
-    // DICTIONARY
-    {PREC_NONE, NULL, NULL},
-    // OPAQUE
-    {PREC_NONE, NULL, NULL},
-    // ANY
-    {PREC_NONE, NULL, NULL},
+    // variable names
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_IDENTIFIER,
 
-    // AS
-    {PREC_NONE, NULL, NULL},
-    // ASSERT
-    {PREC_NONE, NULL, NULL},
-    // BREAK
-    {PREC_NONE, NULL, NULL},
-    // CLASS
-    {PREC_NONE, NULL, NULL},
-    // CONST
-    {PREC_NONE, NULL, NULL},
-    // CONTINUE
-    {PREC_NONE, NULL, NULL},
-    // DO
-    {PREC_NONE, NULL, NULL},
-    // ELSE
-    {PREC_NONE, NULL, NULL},
-    // EXPORT
-    {PREC_NONE, NULL, NULL},
-    // FOR
-    {PREC_NONE, NULL, NULL},
-    // FOREACH
-    {PREC_NONE, NULL, NULL},
-    // FUNCTION
-    {PREC_NONE, NULL, NULL},
-    // IF
-    {PREC_NONE, NULL, NULL},
-    // IMPORT
-    {PREC_NONE, NULL, NULL},
-    // IN
-    {PREC_NONE, NULL, NULL},
-    // OF
-    {PREC_NONE, NULL, NULL},
-    // PRINT
-    {PREC_NONE, NULL, NULL},
-    // RETURN
-    {PREC_NONE, NULL, NULL},
-    // TYPEAS
-    {PREC_NONE, NULL, NULL},
-    // TYPEOF
-    {PREC_NONE, NULL, NULL},
-    // VAR
-    {PREC_NONE, NULL, NULL},
-    // WHILE
-    {PREC_NONE, NULL, NULL},
-    // WHILE
-    {PREC_NONE, NULL, NULL},
+    // types
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_TYPE,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_BOOLEAN,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_INTEGER,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_FLOAT,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_STRING,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_ARRAY,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_DICTIONARY,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_FUNCTION,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_OPAQUE,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_ANY,
 
-    // TRUE
-    {PREC_PRIMARY, atomic, NULL},
-    // FALSE
-    {PREC_PRIMARY, atomic, NULL},
-    // INTEGER
-    {PREC_PRIMARY, atomic, NULL},
-    // FLOAT
-    {PREC_PRIMARY, atomic, NULL},
-    // STRING
-    {PREC_NONE, NULL, NULL},
+    // keywords and reserved words
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_AS,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_ASSERT,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_BREAK,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_CLASS,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_CONST,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_CONTINUE,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_DO,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_ELSE,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_EXPORT,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_FOR,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_FOREACH,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_FUNCTION,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_IF,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_IMPORT,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_IN,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_OF,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_PRINT,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_RETURN,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_TYPEAS,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_TYPEOF,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_VAR,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_WHILE,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_YIELD,
 
-    // ADD
-    {PREC_TERM, NULL, binary},
-    // SUBTRACT
-    {PREC_TERM, unary, binary},
-    // MULTIPLY
-    {PREC_FACTOR, NULL, binary},
-    // DIVIDE
-    {PREC_FACTOR, NULL, binary},
-    // MODULO
-    {PREC_FACTOR, NULL, binary},
-    // ADD_ASSIGN
-    {PREC_ASSIGNMENT, NULL, binary},
-    // SUBTRACT_ASSIGN
-    {PREC_ASSIGNMENT, NULL, binary},
-    // MULTIPLY_ASSIGN
-    {PREC_ASSIGNMENT, NULL, binary},
-    // DIVIDE_ASSIGN
-    {PREC_ASSIGNMENT, NULL, binary},
-    // MODULO_ASSIGN
-    {PREC_ASSIGNMENT, NULL, binary},
-    // OPERATOR_INCREMENT
-    {PREC_NONE, NULL, NULL},
-    // OPERATOR_DECREMENT
-    {PREC_NONE, NULL, NULL},
-    // OPERATOR_ASSIGN
-    {PREC_ASSIGNMENT, NULL, binary},
+    // literal values
+    {PREC_PRIMARY, atomic, NULL}, // XVR_TOKEN_LITERAL_TRUE,
+    {PREC_PRIMARY, atomic, NULL}, // XVR_TOKEN_LITERAL_FALSE,
+    {PREC_PRIMARY, atomic, NULL}, // XVR_TOKEN_LITERAL_INTEGER,
+    {PREC_PRIMARY, atomic, NULL}, // XVR_TOKEN_LITERAL_FLOAT,
+    {PREC_NONE, NULL, NULL},      // XVR_TOKEN_LITERAL_STRING,
 
-    // COMPARE_EQUAL
-    {PREC_COMPARISON, NULL, binary},
-    // COMPARE_NOT
-    {PREC_COMPARISON, NULL, binary},
-    // COMPARE_LESS
-    {PREC_COMPARISON, NULL, binary},
-    // COMPARE_LESS_EQUAL
-    {PREC_COMPARISON, NULL, binary},
-    // COMPARE_GREATER
-    {PREC_COMPARISON, NULL, binary},
-    // COMPARE_GREATER_EQUAL
-    {PREC_COMPARISON, NULL, binary},
+    // math operators
+    {PREC_TERM, NULL, binary},       // XVR_TOKEN_OPERATOR_ADD,
+    {PREC_TERM, unary, binary},      // XVR_TOKEN_OPERATOR_SUBTRACT,
+    {PREC_FACTOR, NULL, binary},     // XVR_TOKEN_OPERATOR_MULTIPLY,
+    {PREC_FACTOR, NULL, binary},     // XVR_TOKEN_OPERATOR_DIVIDE,
+    {PREC_FACTOR, NULL, binary},     // XVR_TOKEN_OPERATOR_MODULO,
+    {PREC_ASSIGNMENT, NULL, binary}, // XVR_TOKEN_OPERATOR_ADD_ASSIGN,
+    {PREC_ASSIGNMENT, NULL, binary}, // XVR_TOKEN_OPERATOR_SUBTRACT_ASSIGN,
+    {PREC_ASSIGNMENT, NULL, binary}, // XVR_TOKEN_OPERATOR_MULTIPLY_ASSIGN,
+    {PREC_ASSIGNMENT, NULL, binary}, // XVR_TOKEN_OPERATOR_DIVIDE_ASSIGN,
+    {PREC_ASSIGNMENT, NULL, binary}, // XVR_TOKEN_OPERATOR_MODULO_ASSIGN,
+    {PREC_NONE, NULL, NULL},         // XVR_TOKEN_OPERATOR_INCREMENT,
+    {PREC_NONE, NULL, NULL},         // XVR_TOKEN_OPERATOR_DECREMENT,
+    {PREC_ASSIGNMENT, NULL, binary}, // XVR_TOKEN_OPERATOR_ASSIGN,
 
-    // OPERATOR_PAREN_LEFT
-    {PREC_NONE, group, NULL},
-    // PAREN_RIGHT
-    {PREC_NONE, NULL, NULL},
-    // PAREN_LEFT
-    {PREC_NONE, NULL, NULL},
-    // BRACKET_RIGHT
-    {PREC_NONE, NULL, NULL},
-    // BRACE_LEFT
-    {PREC_NONE, NULL, NULL},
-    // BRACE_RIGHT
-    {PREC_NONE, NULL, NULL},
+    // comparator operators
+    {PREC_COMPARISON, NULL, binary}, // XVR_TOKEN_OPERATOR_COMPARE_EQUAL,
+    {PREC_COMPARISON, NULL, binary}, // XVR_TOKEN_OPERATOR_COMPARE_NOT,
+    {PREC_COMPARISON, NULL, binary}, // XVR_TOKEN_OPERATOR_COMPARE_LESS,
+    {PREC_COMPARISON, NULL, binary}, // XVR_TOKEN_OPERATOR_COMPARE_LESS_EQUAL,
+    {PREC_COMPARISON, NULL, binary}, // XVR_TOKEN_OPERATOR_COMPARE_GREATER,
+    {PREC_COMPARISON, NULL,
+     binary}, // XVR_TOKEN_OPERATOR_COMPARE_GREATER_EQUAL,
 
-    // TOKEN_OPERATOR_ADD
-    {PREC_NONE, NULL, NULL},
-    // TOKEN_POERATOR_OR
-    {PREC_NONE, NULL, NULL},
-    // TOKEN_OPERATOR_NEGATE
-    {PREC_NONE, unary, NULL},
-    // TOKEN_OPERATOR_QUESTION
-    {PREC_NONE, NULL, NULL},
-    // TOKEN_OPERATOR_COLON
-    {PREC_NONE, NULL, NULL},
+    // structural operators
+    {PREC_NONE, group, NULL}, // XVR_TOKEN_OPERATOR_PAREN_LEFT,
+    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_PAREN_RIGHT,
+    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_BRACKET_LEFT,
+    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_BRACKET_RIGHT,
+    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_BRACE_LEFT,
+    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_BRACE_RIGHT,
 
-    // OPERATOR_CONCAT
-    {PREC_NONE, NULL, NULL},
-    // OPERATOR_REST
-    {PREC_NONE, NULL, NULL},
+    // other operators
+    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_AND,
+    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_OR,
+    {PREC_NONE, unary, NULL}, // XVR_TOKEN_OPERATOR_NEGATE,
+    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_QUESTION,
+    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_COLON,
 
-    // OPERATOR_AMPERSAND
-    {PREC_NONE, NULL, NULL},
-    // OPERATOR_PIPE
-    {PREC_NONE, NULL, NULL},
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_OPERATOR_CONCAT, // ..
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_OPERATOR_REST, // ...
 
-    // TOKEN_PASS
-    {PREC_NONE, NULL, NULL},
-    // TOKEN_ERROR
-    {PREC_NONE, NULL, NULL},
-    // TOKEN_EOF
-    {PREC_NONE, NULL, NULL},
+    // unused operators
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_OPERATOR_AMPERSAND, // &
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_OPERATOR_PIPE, // |
+
+    // meta tokens
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_PASS,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_ERROR,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_EOF,
 };
 
 static Xvr_AstFlag atomic(Xvr_Bucket **bucket, Xvr_Parser *parser,
@@ -299,12 +246,11 @@ static Xvr_AstFlag atomic(Xvr_Bucket **bucket, Xvr_Parser *parser,
     int i = 0, o = 0;
     do {
       buffer[i] = parser->previous.lexeme[o];
-      if (buffer[i] != '_') {
+      if (buffer[i] != '_')
         i++;
-      }
     } while (parser->previous.lexeme[o++] && i < parser->previous.length);
-
     buffer[i] = '\0';
+
     int value = 0;
     sscanf(buffer, "%d", &value);
     Xvr_private_emitAstValue(bucket, root, XVR_VALUE_TO_INTEGER(value));
@@ -317,9 +263,8 @@ static Xvr_AstFlag atomic(Xvr_Bucket **bucket, Xvr_Parser *parser,
     int i = 0, o = 0;
     do {
       buffer[i] = parser->previous.lexeme[o];
-      if (buffer[i] != '_') {
+      if (buffer[i] != '_')
         i++;
-      }
     } while (parser->previous.lexeme[o++] && i < parser->previous.length);
     buffer[i] = '\0';
 
@@ -331,7 +276,7 @@ static Xvr_AstFlag atomic(Xvr_Bucket **bucket, Xvr_Parser *parser,
 
   default:
     printError(parser, parser->previous,
-               "Unexpected token passing to atomic precedence rule");
+               "Unexpected token passed to atomic precedence rule");
     Xvr_private_emitAstError(bucket, root);
     return XVR_AST_FLAG_NONE;
   }
@@ -339,7 +284,9 @@ static Xvr_AstFlag atomic(Xvr_Bucket **bucket, Xvr_Parser *parser,
 
 static Xvr_AstFlag unary(Xvr_Bucket **bucket, Xvr_Parser *parser,
                          Xvr_Ast **root) {
+
   if (parser->previous.type == XVR_TOKEN_OPERATOR_SUBTRACT) {
+
     bool connectedDigit =
         parser->previous.lexeme[1] >= '0' && parser->previous.lexeme[1] <= '9';
     parsePrecedence(bucket, parser, root, PREC_UNARY);
@@ -355,7 +302,9 @@ static Xvr_AstFlag unary(Xvr_Bucket **bucket, Xvr_Parser *parser,
     } else {
       Xvr_private_emitAstUnary(bucket, root, XVR_AST_FLAG_NEGATE);
     }
-  } else if (parser->previous.type == XVR_TOKEN_OPERATOR_NEGATE) {
+  }
+
+  else if (parser->previous.type == XVR_TOKEN_OPERATOR_NEGATE) {
     parsePrecedence(bucket, parser, root, PREC_UNARY);
 
     if ((*root)->type == XVR_AST_VALUE &&
@@ -365,9 +314,11 @@ static Xvr_AstFlag unary(Xvr_Bucket **bucket, Xvr_Parser *parser,
     } else {
       Xvr_private_emitAstUnary(bucket, root, XVR_AST_FLAG_NEGATE);
     }
-  } else {
+  }
+
+  else {
     printError(parser, parser->previous,
-               "Unexpected token passing to unary precedence rule");
+               "Unexpected token passed to unary precedence rule");
     Xvr_private_emitAstError(bucket, root);
   }
 
@@ -404,6 +355,7 @@ static Xvr_AstFlag binary(Xvr_Bucket **bucket, Xvr_Parser *parser,
     return XVR_AST_FLAG_MODULO;
   }
 
+  // assignment
   case XVR_TOKEN_OPERATOR_ASSIGN: {
     parsePrecedence(bucket, parser, root, PREC_ASSIGNMENT + 1);
     return XVR_AST_FLAG_ASSIGN;
@@ -417,6 +369,11 @@ static Xvr_AstFlag binary(Xvr_Bucket **bucket, Xvr_Parser *parser,
   case XVR_TOKEN_OPERATOR_SUBTRACT_ASSIGN: {
     parsePrecedence(bucket, parser, root, PREC_ASSIGNMENT + 1);
     return XVR_AST_FLAG_SUBTRACT_ASSIGN;
+  }
+
+  case XVR_TOKEN_OPERATOR_MULTIPLY_ASSIGN: {
+    parsePrecedence(bucket, parser, root, PREC_ASSIGNMENT + 1);
+    return XVR_AST_FLAG_MULTIPLY_ASSIGN;
   }
 
   case XVR_TOKEN_OPERATOR_DIVIDE_ASSIGN: {
@@ -461,7 +418,7 @@ static Xvr_AstFlag binary(Xvr_Bucket **bucket, Xvr_Parser *parser,
 
   default:
     printError(parser, parser->previous,
-               "Unexpected token passing to binary precedence rule");
+               "Unexpected token passed to binary precedence rule");
     Xvr_private_emitAstError(bucket, root);
     return XVR_AST_FLAG_NONE;
   }
@@ -472,11 +429,12 @@ static Xvr_AstFlag group(Xvr_Bucket **bucket, Xvr_Parser *parser,
   if (parser->previous.type == XVR_TOKEN_OPERATOR_PAREN_LEFT) {
     parsePrecedence(bucket, parser, root, PREC_GROUP);
     consume(parser, XVR_TOKEN_OPERATOR_PAREN_RIGHT,
-            "expected `)` at end of group");
-    Xvr_private_emitAstGroup(bucket, root);
-  } else {
+            "Expected ')' at end of group");
+  }
+
+  else {
     printError(parser, parser->previous,
-               "Unexpected token passing to grouping precedence rule");
+               "Unexpected token passed to grouping precedence rule");
     Xvr_private_emitAstError(bucket, root);
   }
 
@@ -484,41 +442,43 @@ static Xvr_AstFlag group(Xvr_Bucket **bucket, Xvr_Parser *parser,
 }
 
 static ParsingTuple *getParsingRule(Xvr_TokenType type) {
-  return &parseingRulesetTable[type];
+  return &parsingRulesetTable[type];
 }
 
 static void parsePrecedence(Xvr_Bucket **bucket, Xvr_Parser *parser,
                             Xvr_Ast **root, ParsingPrecedence precRule) {
   advance(parser);
-
   ParsingRule prefix = getParsingRule(parser->previous.type)->prefix;
+
   if (prefix == NULL) {
-    printError(parser, parser->previous, "expected expression");
+    printError(parser, parser->previous, "Expected expression");
     Xvr_private_emitAstError(bucket, root);
     return;
   }
 
   prefix(bucket, parser, root);
-
   while (precRule <= getParsingRule(parser->current.type)->precedence) {
     ParsingRule infix = getParsingRule(parser->current.type)->infix;
+
     if (infix == NULL) {
-      printError(parser, parser->previous, "expected operator");
+      printError(parser, parser->previous, "Expected operator");
       Xvr_private_emitAstError(bucket, root);
       return;
     }
+
     Xvr_Ast *ptr = NULL;
     Xvr_AstFlag flag = infix(bucket, parser, &ptr);
 
     if (flag == XVR_AST_FLAG_NONE) {
       (*root) = ptr;
+      return;
     }
 
     Xvr_private_emitAstBinary(bucket, root, flag, ptr);
   }
 
   if (precRule <= PREC_ASSIGNMENT && match(parser, XVR_TOKEN_OPERATOR_ASSIGN)) {
-    printError(parser, parser->current, "invalid assignment target");
+    printError(parser, parser->current, "Invalid assignment target");
   }
 }
 
@@ -535,20 +495,22 @@ static void makeExprStmt(Xvr_Bucket **bucket, Xvr_Parser *parser,
 
   makeExpr(bucket, parser, root);
   consume(parser, XVR_TOKEN_OPERATOR_SEMICOLON,
-          "expected `;` at the end of the expression statement");
+          "Expected ';' at the end of expression statement");
 }
 
 static void makeStmt(Xvr_Bucket **bucket, Xvr_Parser *parser, Xvr_Ast **root) {
+
   makeExprStmt(bucket, parser, root);
 }
 
-static void makeDeclarationStmt(Xvr_Bucket **buckeet, Xvr_Parser *parser,
+static void makeDeclarationStmt(Xvr_Bucket **bucket, Xvr_Parser *parser,
                                 Xvr_Ast **root) {
-  // TODO: implemented
+  makeStmt(bucket, parser, root);
 }
 
 static void makeBlockStmt(Xvr_Bucket **bucket, Xvr_Parser *parser,
                           Xvr_Ast **root) {
+
   Xvr_private_initAstBlock(bucket, root);
 
   while (!match(parser, XVR_TOKEN_EOF)) {
@@ -556,7 +518,7 @@ static void makeBlockStmt(Xvr_Bucket **bucket, Xvr_Parser *parser,
     makeDeclarationStmt(bucket, parser, &stmt);
 
     if (parser->panic) {
-      synhronize(parser);
+      synchronize(parser);
 
       Xvr_Ast *err = NULL;
       Xvr_private_emitAstError(bucket, &err);
@@ -564,12 +526,11 @@ static void makeBlockStmt(Xvr_Bucket **bucket, Xvr_Parser *parser,
 
       continue;
     }
-
     Xvr_private_appendAstBlock(bucket, root, stmt);
   }
 }
 
-void Xvr_bindParser(Xvr_Parser *parser, Xvr_lexer *lexer) {
+void Xvr_bindParser(Xvr_Parser *parser, Xvr_Lexer *lexer) {
   Xvr_resetParser(parser);
   parser->lexer = lexer;
   advance(parser);
