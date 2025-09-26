@@ -9,7 +9,7 @@ int test_bytecode_header(Xvr_Bucket *bucket) {
     Xvr_Ast *ast = NULL;
     Xvr_private_emitAstPass(&bucket, &ast);
 
-    Xvr_Bytecode bc = Xvr_compileByeCode(ast);
+    Xvr_Bytecode bc = Xvr_compileByteCode(ast);
 
     if (bc.ptr[0] != XVR_VERSION_MAJOR || bc.ptr[1] != XVR_VERSION_MINOR ||
         bc.ptr[2] != XVR_VERSION_PATCH ||

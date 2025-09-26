@@ -1,7 +1,7 @@
 #include "xvr_ast.h"
 #include "xvr_memory.h"
 
-void Xvr_private_initAsBlock(Xvr_Bucket **bucket, Xvr_Ast **handle) {
+void Xvr_private_initAstBlock(Xvr_Bucket **bucket, Xvr_Ast **handle) {
   (*handle) = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
 
   (*handle)->block.type = XVR_AST_BLOCK;
@@ -23,7 +23,7 @@ void Xvr_private_appendAstBlock(Xvr_Bucket **bucket, Xvr_Ast **handle,
     iter = iter->block.next;
   }
 
-  Xvr_private_initAsBlock(bucket, &(iter->block.next));
+  Xvr_private_initAstBlock(bucket, &(iter->block.next));
 
   iter->block.next->block.child = child;
   (*handle)->block.tail = iter->block.next;

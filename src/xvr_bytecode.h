@@ -34,7 +34,7 @@ typedef struct Xvr_Bytecode {
   int count;
 } Xvr_Bytecode;
 
-XVR_API Xvr_Bytecode Xvr_compileByeCode(Xvr_Ast *ast);
+XVR_API Xvr_Bytecode Xvr_compileByteCode(Xvr_Ast *ast);
 XVR_API void Xvr_freeBytecode(Xvr_Bytecode bc);
 
 #endif // !XVR_BYTECODE_H

@@ -37,6 +37,7 @@ const Xvr_KeywordTypeTuple Xvr_private_keywords[] = {
     {XVR_TOKEN_KEYWORD_TYPEOF, "typeof"},
     {XVR_TOKEN_KEYWORD_VAR, "var"},
     {XVR_TOKEN_KEYWORD_WHILE, "while"},
+  {XVR_TOKEN_KEYWORD_YIELD, "yield"},
 
     {XVR_TOKEN_LITERAL_TRUE, "true"},
     {XVR_TOKEN_LITERAL_FALSE, "false"},

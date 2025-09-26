@@ -182,6 +182,8 @@ static ParsingTuple parseingRulesetTable[] = {
     {PREC_NONE, NULL, NULL},
     // WHILE
     {PREC_NONE, NULL, NULL},
+    // WHILE
+    {PREC_NONE, NULL, NULL},
 
     // TRUE
     {PREC_PRIMARY, atomic, NULL},

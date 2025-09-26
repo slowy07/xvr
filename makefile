@@ -8,11 +8,15 @@ export XVR_OBJDIR=obj
 export XVR_SOURCEFILES=$(wildcard $(XVR_SOURCEDIR)/*.c)
 
 all: clean tests
-		@echo no targets ready
+	@echo no targets ready
 
 .PHONY: tests
 tests:
 	$(MAKE) -C tests -k
+
+.PHONY: tests-gdb
+tests-gdb:
+	$(MAKE) -C tests all-gdb -k
 
 $(XVR_OUTDIR):
 	mkdir $(XVR_OUTDIR)
@@ -20,7 +24,7 @@ $(XVR_OUTDIR):
 $(XVR_OBJDIR):
 	mkdir $(XVR_OBJDIR)
 
-$(XVR_OBJDIR)/%.o: $(XVR_SOURCEDIR)/%.c
+$(XVR_OBJDIR)/%.o: $(TOY_SOURCEDIR)/%.c
 	$(CC) -c -o $@ $< $(addprefix -I,$(XVR_SOURCEDIR)) $(CFLAGS)
 
 .PHONY: clean

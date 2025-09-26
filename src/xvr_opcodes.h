@@ -56,7 +56,7 @@ typedef enum Xvr_OpcodeType {
 
   XVR_OPCODES_PASS,
   XVR_OPCODE_ERROR,
-  XVR_OPCODE_EOF,
+  XVR_OPCODE_EOF = 255,
 } Xvr_OpcodeType;
 
 #endif // !XVR_OPCODES_H
