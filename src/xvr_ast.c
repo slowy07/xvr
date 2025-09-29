@@ -1,86 +1,101 @@
 #include "xvr_ast.h"
-#include "xvr_memory.h"
 
 void Xvr_private_initAstBlock(Xvr_Bucket **bucket, Xvr_Ast **handle) {
-  (*handle) = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
+  Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucket, sizeof(Xvr_Ast));
 
-  (*handle)->block.type = XVR_AST_BLOCK;
-  (*handle)->block.child = NULL;
-  (*handle)->block.next = NULL;
-  (*handle)->block.tail = NULL;
+  tmp->type = XVR_AST_BLOCK;
+  tmp->block.child = NULL;
+  tmp->block.next = NULL;
+  tmp->block.tail = NULL;
+
+  (*handle) = tmp;
 }
 
-void Xvr_private_appendAstBlock(Xvr_Bucket **bucket, Xvr_Ast **handle,
+void Xvr_private_appendAstBlock(Xvr_Bucket **bucket, Xvr_Ast *block,
                                 Xvr_Ast *child) {
-  if ((*handle)->block.child == NULL) {
-    (*handle)->block.child = child;
+  // first, check if we're an empty head
+  if (block->block.child == NULL) {
+    block->block.child = child;
     return;
   }
 
-  Xvr_Ast *iter = (*handle)->block.tail ? (*handle)->block.tail : (*handle);
+  // run (or jump) until we hit the current tail
+  Xvr_Ast *iter = block->block.tail ? block->block.tail : block;
 
   while (iter->block.next != NULL) {
     iter = iter->block.next;
   }
 
+  // append a new link to the chain
   Xvr_private_initAstBlock(bucket, &(iter->block.next));
 
+  // store the child in the new link, prep the tail pointer
   iter->block.next->block.child = child;
-  (*handle)->block.tail = iter->block.next;
+  block->block.tail = iter->block.next;
 }
 
 void Xvr_private_emitAstValue(Xvr_Bucket **bucket, Xvr_Ast **handle,
                               Xvr_Value value) {
-  (*handle) = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
+  Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucket, sizeof(Xvr_Ast));
 
-  (*handle)->unary.type = XVR_AST_VALUE;
-  (*handle)->value.value = value;
+  tmp->type = XVR_AST_VALUE;
+  tmp->value.value = value;
+
+  (*handle) = tmp;
 }
 
 void Xvr_private_emitAstUnary(Xvr_Bucket **bucket, Xvr_Ast **handle,
                               Xvr_AstFlag flag) {
+  Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucket, sizeof(Xvr_Ast));
 
-  Xvr_Ast *temp = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
+  tmp->type = XVR_AST_UNARY;
+  tmp->unary.flag = flag;
+  tmp->unary.child = *handle;
 
-  temp->unary.type = XVR_AST_UNARY;
-  temp->unary.flag = flag;
-  temp->unary.child = *handle;
-  (*handle) = temp;
+  (*handle) = tmp;
 }
 
 void Xvr_private_emitAstBinary(Xvr_Bucket **bucket, Xvr_Ast **handle,
                                Xvr_AstFlag flag, Xvr_Ast *right) {
-  Xvr_Ast *temp = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
+  Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucket, sizeof(Xvr_Ast));
 
-  temp->binary.type = XVR_AST_BINARY;
-  temp->binary.flag = flag;
-  temp->binary.left = *handle;
-  (*handle)->binary.right = right;
-  (*handle) = temp;
+  tmp->type = XVR_AST_BINARY;
+  tmp->binary.flag = flag;
+  tmp->binary.left = *handle; // left-recursive
+  tmp->binary.right = right;
+
+  (*handle) = tmp;
 }
 
 void Xvr_private_emitAstGroup(Xvr_Bucket **bucket, Xvr_Ast **handle) {
-  Xvr_Ast *temp = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
+  Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucket, sizeof(Xvr_Ast));
 
-  temp->group.type = XVR_AST_GROUP;
-  temp->group.child = (*handle);
-  (*handle) = temp;
+  tmp->type = XVR_AST_GROUP;
+  tmp->group.child = (*handle);
+
+  (*handle) = tmp;
 }
 
 void Xvr_private_emitAstPass(Xvr_Bucket **bucket, Xvr_Ast **handle) {
-  (*handle) = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
+  Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucket, sizeof(Xvr_Ast));
 
-  (*handle)->pass.type = XVR_AST_PASS;
+  tmp->type = XVR_AST_PASS;
+
+  (*handle) = tmp;
 }
 
 void Xvr_private_emitAstError(Xvr_Bucket **bucket, Xvr_Ast **handle) {
-  (*handle) = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
+  Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucket, sizeof(Xvr_Ast));
 
-  (*handle)->error.type = XVR_AST_ERROR;
+  tmp->type = XVR_AST_ERROR;
+
+  (*handle) = tmp;
 }
 
 void Xvr_private_emitAstEnd(Xvr_Bucket **bucket, Xvr_Ast **handle) {
-  (*handle) = (Xvr_Ast *)Xvr_partBucket(bucket, sizeof(Xvr_Ast));
+  Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucket, sizeof(Xvr_Ast));
 
-  (*handle)->error.type = XVR_AST_END;
+  tmp->type = XVR_AST_END;
+
+  (*handle) = tmp;
 }

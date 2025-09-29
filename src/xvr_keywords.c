@@ -1,11 +1,12 @@
-#include "xvr_keyword.h"
-#include "xvr_token_types.h"
+#include "xvr_keywords.h"
+
 #include <string.h>
 
 const Xvr_KeywordTypeTuple Xvr_private_keywords[] = {
-
+    // null
     {XVR_TOKEN_NULL, "null"},
 
+    // types
     {XVR_TOKEN_TYPE_TYPE, "type"},
     {XVR_TOKEN_TYPE_BOOLEAN, "bool"},
     {XVR_TOKEN_TYPE_INTEGER, "int"},
@@ -15,6 +16,7 @@ const Xvr_KeywordTypeTuple Xvr_private_keywords[] = {
     {XVR_TOKEN_TYPE_OPAQUE, "opaque"},
     {XVR_TOKEN_TYPE_ANY, "any"},
 
+    // keywords and reserved words
     {XVR_TOKEN_KEYWORD_AS, "as"},
     {XVR_TOKEN_KEYWORD_ASSERT, "assert"},
     {XVR_TOKEN_KEYWORD_BREAK, "break"},
@@ -37,8 +39,9 @@ const Xvr_KeywordTypeTuple Xvr_private_keywords[] = {
     {XVR_TOKEN_KEYWORD_TYPEOF, "typeof"},
     {XVR_TOKEN_KEYWORD_VAR, "var"},
     {XVR_TOKEN_KEYWORD_WHILE, "while"},
-  {XVR_TOKEN_KEYWORD_YIELD, "yield"},
+    {XVR_TOKEN_KEYWORD_YIELD, "yield"},
 
+    // literal values
     {XVR_TOKEN_LITERAL_TRUE, "true"},
     {XVR_TOKEN_LITERAL_FALSE, "false"},
 
@@ -59,7 +62,7 @@ const char *Xvr_private_findKeywordByType(const Xvr_TokenType type) {
   return NULL;
 }
 
-Xvr_TokenType Xvr_private_findByKeyword(const char *keyword) {
+Xvr_TokenType Xvr_private_findTypeByKeyword(const char *keyword) {
   const int length = strlen(keyword);
 
   for (int i = 0; Xvr_private_keywords[i].keyword; i++) {
@@ -67,5 +70,6 @@ Xvr_TokenType Xvr_private_findByKeyword(const char *keyword) {
       return Xvr_private_keywords[i].type;
     }
   }
+
   return XVR_TOKEN_EOF;
 }

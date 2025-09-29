@@ -1,13 +1,56 @@
 #include "xvr_routine.h"
-#include "xvr_ast.h"
-#include "xvr_console_color.h"
-#include "xvr_memory.h"
+#include "xvr_console_colors.h"
+
 #include "xvr_opcodes.h"
 #include "xvr_value.h"
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+static void expand(void **handle, unsigned int *capacity, unsigned int *count,
+                   unsigned int amount) {
+  if ((*count) + amount > (*capacity)) {
+    while ((*count) + amount > (*capacity)) {
+      (*capacity) = (*capacity) < 8 ? 8 : (*capacity) * 2;
+    }
+    (*handle) = realloc((*handle), (*capacity));
+
+    if ((*handle) == NULL) {
+      fprintf(stderr,
+              XVR_CC_ERROR "ERROR: Failed to allocate a 'Xvr_Routine' of %d "
+                           "capacity\n" XVR_CC_RESET,
+              (int)(*capacity));
+      exit(1);
+    }
+  }
+}
+
+static void emitByte(void **handle, unsigned int *capacity, unsigned int *count,
+                     unsigned char byte) {
+  expand(handle, capacity, count, 1);
+  ((unsigned char *)(*handle))[(*count)++] = byte;
+}
+
+static void emitInt(void **handle, unsigned int *capacity, unsigned int *count,
+                    unsigned int bytes) {
+  char *ptr = (char *)&bytes;
+  emitByte(handle, capacity, count, *(ptr++));
+  emitByte(handle, capacity, count, *(ptr++));
+  emitByte(handle, capacity, count, *(ptr++));
+  emitByte(handle, capacity, count, *(ptr++));
+}
+
+static void emitFloat(void **handle, unsigned int *capacity,
+                      unsigned int *count, float bytes) {
+  char *ptr = (char *)&bytes;
+  emitByte(handle, capacity, count, *(ptr++));
+  emitByte(handle, capacity, count, *(ptr++));
+  emitByte(handle, capacity, count, *(ptr++));
+  emitByte(handle, capacity, count, *(ptr++));
+}
+
+// write instructions based on the AST types
 #define EMIT_BYTE(rt, byte)                                                    \
   emitByte((void **)(&((*rt)->code)), &((*rt)->codeCapacity),                  \
            &((*rt)->codeCount), byte);
@@ -18,148 +61,122 @@
   emitFloat((void **)(&((*rt)->code)), &((*rt)->codeCapacity),                 \
             &((*rt)->codeCount), byte);
 
-static void expand(void **handle, int *capacity, int *count, int amount) {
-  while ((*count) + amount > (*capacity)) {
-    int oldCapacity = (*capacity);
+static void writeRoutineCode(Xvr_Routine **rt,
+                             Xvr_Ast *ast); // forward declare for recursion
 
-    (*capacity) = XVR_GROW_CAPACITY(oldCapacity);
-    (*handle) =
-        XVR_GROW_ARRAY(unsigned char, (*handle), oldCapacity, (*capacity));
-  }
-}
-
-static void emitByte(void **handle, int *capacity, int *count,
-                     unsigned char byte) {
-  expand(handle, capacity, count, 1);
-  ((unsigned char *)(*handle))[(*count)++] = byte;
-}
-
-static void emitInt(void **handle, int *capacity, int *count, int bytes) {
-  char *ptr = (char *)&bytes;
-  emitByte(handle, capacity, count, *(ptr++));
-  emitByte(handle, capacity, count, *(ptr++));
-  emitByte(handle, capacity, count, *(ptr++));
-  emitByte(handle, capacity, count, *(ptr++));
-}
-
-static void emitFloat(void **handle, int *capacity, int *count, float bytes) {
-  char *ptr = (char *)&bytes;
-  emitByte(handle, capacity, count, *(ptr++));
-  emitByte(handle, capacity, count, *(ptr++));
-  emitByte(handle, capacity, count, *(ptr++));
-  emitByte(handle, capacity, count, *(ptr++));
-}
-
-static void writeRoutineCode(Xvr_routine **rt, Xvr_Ast *ast);
-
-static void writeInstructionValue(Xvr_routine **rt, Xvr_AstValue ast) {
+static void writeInstructionValue(Xvr_Routine **rt, Xvr_AstValue ast) {
   EMIT_BYTE(rt, XVR_OPCODE_READ);
   EMIT_BYTE(rt, ast.value.type);
 
+  // emit the raw value based on the type
   if (XVR_VALUE_IS_NULL(ast.value)) {
+    // NOTHING - null's type data is enough
+
     EMIT_BYTE(rt, 0);
     EMIT_BYTE(rt, 0);
   } else if (XVR_VALUE_IS_BOOLEAN(ast.value)) {
     EMIT_BYTE(rt, XVR_VALUE_AS_BOOLEAN(ast.value));
+
+    // BUGFIX: 4-byte alignment
     EMIT_BYTE(rt, 0);
   } else if (XVR_VALUE_IS_INTEGER(ast.value)) {
+    // BUGFIX: 4-byte alignment
     EMIT_BYTE(rt, 0);
     EMIT_BYTE(rt, 0);
+
     EMIT_INT(rt, code, XVR_VALUE_AS_INTEGER(ast.value));
   } else if (XVR_VALUE_IS_FLOAT(ast.value)) {
+    // BUGFIX: 4-byte alignment
     EMIT_BYTE(rt, 0);
     EMIT_BYTE(rt, 0);
+
     EMIT_FLOAT(rt, code, XVR_VALUE_AS_FLOAT(ast.value));
   } else {
-    fprintf(stderr,
-            XVR_CC_ERROR "invalid ast type: unknown type value\n" XVR_CC_RESET);
+    fprintf(stderr, XVR_CC_ERROR
+            "ERROR: Invalid AST type found: Unknown value type\n" XVR_CC_RESET);
     exit(-1);
   }
 }
 
-static void writeInstructionUnary(Xvr_routine **rt, Xvr_AstUnary ast) {
+static void writeInstructionUnary(Xvr_Routine **rt, Xvr_AstUnary ast) {
+  // working with a stack means the child gets placed first
   writeRoutineCode(rt, ast.child);
 
   if (ast.flag == XVR_AST_FLAG_NEGATE) {
     EMIT_BYTE(rt, XVR_OPCODE_NEGATE);
+
+    // BUGFIX: 4-byte alignment
     EMIT_BYTE(rt, 0);
     EMIT_BYTE(rt, 0);
     EMIT_BYTE(rt, 0);
   } else {
-    fprintf(stderr, XVR_CC_ERROR "invalid AST unary flag found\n" XVR_CC_RESET);
+    fprintf(stderr,
+            XVR_CC_ERROR "ERROR: Invalid AST unary flag found\n" XVR_CC_RESET);
     exit(-1);
   }
 }
 
-static void writeInstructionBinary(Xvr_routine **rt, Xvr_AstBinary ast) {
+static void writeInstructionBinary(Xvr_Routine **rt, Xvr_AstBinary ast) {
+  // left, then right, then the binary's operation
   writeRoutineCode(rt, ast.left);
   writeRoutineCode(rt, ast.right);
 
   if (ast.flag == XVR_AST_FLAG_ADD) {
     EMIT_BYTE(rt, XVR_OPCODE_ADD);
-  }
-
-  else if (ast.flag == XVR_AST_FLAG_SUBTRACT) {
+  } else if (ast.flag == XVR_AST_FLAG_SUBTRACT) {
     EMIT_BYTE(rt, XVR_OPCODE_SUBTRACT);
-  }
-
-  else if (ast.flag == XVR_AST_FLAG_MULTIPLY) {
+  } else if (ast.flag == XVR_AST_FLAG_MULTIPLY) {
     EMIT_BYTE(rt, XVR_OPCODE_MULTIPLY);
-  }
-
-  else if (ast.flag == XVR_AST_FLAG_DIVIDE) {
+  } else if (ast.flag == XVR_AST_FLAG_DIVIDE) {
     EMIT_BYTE(rt, XVR_OPCODE_DIVIDE);
-  }
-
-  else if (ast.flag == XVR_AST_FLAG_MODULO) {
+  } else if (ast.flag == XVR_AST_FLAG_MODULO) {
     EMIT_BYTE(rt, XVR_OPCODE_MODULO);
-  }
-
-  else if (ast.flag == XVR_AST_FLAG_COMPARE_EQUAL) {
+  } else if (ast.flag == XVR_AST_FLAG_COMPARE_EQUAL) {
     EMIT_BYTE(rt, XVR_OPCODE_COMPARE_EQUAL);
-  }
-
-  else if (ast.flag == XVR_AST_FLAG_COMPARE_NOT) {
+  } else if (ast.flag == XVR_AST_FLAG_COMPARE_NOT) {
     EMIT_BYTE(rt, XVR_OPCODE_COMPARE_EQUAL);
-    EMIT_BYTE(rt, 0);
-    EMIT_BYTE(rt, 0);
-    EMIT_BYTE(rt, 0);
     EMIT_BYTE(rt, XVR_OPCODE_NEGATE);
     EMIT_BYTE(rt, 0);
     EMIT_BYTE(rt, 0);
-    EMIT_BYTE(rt, 0);
-  }
 
-  else if (ast.flag == XVR_AST_FLAG_COMPARE_LESS) {
+    return;
+  } else if (ast.flag == XVR_AST_FLAG_COMPARE_LESS) {
     EMIT_BYTE(rt, XVR_OPCODE_COMPARE_LESS);
-  }
-
-  else if (ast.flag == XVR_AST_FLAG_COMPARE_LESS_EQUAL) {
+  } else if (ast.flag == XVR_AST_FLAG_COMPARE_LESS_EQUAL) {
     EMIT_BYTE(rt, XVR_OPCODE_COMPARE_LESS_EQUAL);
-  }
-
-  else if (ast.flag == XVR_AST_FLAG_COMPARE_GREATER) {
-    EMIT_BYTE(rt, XVR_OPCODE_COMPARE_GREATER)
+  } else if (ast.flag == XVR_AST_FLAG_COMPARE_GREATER) {
+    EMIT_BYTE(rt, XVR_OPCODE_COMPARE_GREATER);
+  } else if (ast.flag == XVR_AST_FLAG_COMPARE_GREATER_EQUAL) {
+    EMIT_BYTE(rt, XVR_OPCODE_COMPARE_GREATER_EQUAL);
   }
 
   else if (ast.flag == XVR_AST_FLAG_AND) {
     EMIT_BYTE(rt, XVR_OPCODE_AND);
+  } else if (ast.flag == XVR_AST_FLAG_OR) {
+    EMIT_BYTE(rt, XVR_OPCODE_OR);
   } else {
     fprintf(stderr,
-            XVR_CC_ERROR "invalid ast binary flag found\n" XVR_CC_RESET);
+            XVR_CC_ERROR "ERROR: Invalid AST binary flag found\n" XVR_CC_RESET);
     exit(-1);
   }
 
+  // BUGFIX: 4-byte alignment (covers most cases)
   EMIT_BYTE(rt, 0);
   EMIT_BYTE(rt, 0);
   EMIT_BYTE(rt, 0);
 }
 
-static void writeRoutineCode(Xvr_routine **rt, Xvr_Ast *ast) {
+// routine structure
+//  static void writeRoutineParam(Xvr_Routine* rt) {
+//  	//
+//  }
+
+static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
   if (ast == NULL) {
     return;
   }
 
+  // determine how to write each instruction based on the Ast
   switch (ast->type) {
   case XVR_AST_BLOCK:
     writeRoutineCode(rt, ast->block.child);
@@ -178,79 +195,90 @@ static void writeRoutineCode(Xvr_routine **rt, Xvr_Ast *ast) {
     writeInstructionBinary(rt, ast->binary);
     break;
 
+  // other disallowed instructions
   case XVR_AST_GROUP:
-    fprintf(stderr, XVR_CC_ERROR
-            "invalid AST type found: group shouldn't be used\n" XVR_CC_RESET);
+    fprintf(stderr, XVR_CC_ERROR "ERROR: Invalid AST type found: Group "
+                                 "shouldn't be used\n" XVR_CC_RESET);
     exit(-1);
     break;
 
   case XVR_AST_PASS:
-    // PASSING point
+    // NOTE: this should be disallowed, but for now it's required for testing
+    //  fprintf(stderr, XVR_CC_ERROR "ERROR: Invalid AST type found: Unknown
+    //  pass\n" XVR_CC_RESET); exit(-1);
     break;
 
+  // meta instructions are disallowed
   case XVR_AST_ERROR:
     fprintf(stderr, XVR_CC_ERROR
-            "invalid AST type found: unknown error\n" XVR_CC_RESET);
+            "ERROR: Invalid AST type found: Unknown error\n" XVR_CC_RESET);
     exit(-1);
     break;
 
   case XVR_AST_END:
-    fprintf(stderr,
-            XVR_CC_ERROR "invalid AST type found: unknown end\n" XVR_CC_RESET);
+    fprintf(stderr, XVR_CC_ERROR
+            "ERROR: Invalid AST type found: Unknown end\n" XVR_CC_RESET);
     exit(-1);
     break;
   }
 }
 
-static void *writeRoutine(Xvr_routine *rt, Xvr_Ast *ast) {
+static void *writeRoutine(Xvr_Routine *rt, Xvr_Ast *ast) {
+
   writeRoutineCode(&rt, ast);
   EMIT_BYTE(&rt, XVR_OPCODE_RETURN);
   EMIT_BYTE(&rt, 0);
   EMIT_BYTE(&rt, 0);
   EMIT_BYTE(&rt, 0);
-
-  void *buffer = XVR_ALLOCATE(unsigned char, 16);
-  int capacity = 0, count = 0;
+  void *buffer = NULL;
+  unsigned int capacity = 0, count = 0;
   int codeAddr = 0;
 
-  emitInt(&buffer, &capacity, &count, 0);
-  emitInt(&buffer, &capacity, &count, rt->paramCount);
-  emitInt(&buffer, &capacity, &count, rt->jumpsCount);
-  emitInt(&buffer, &capacity, &count, rt->dataCount);
-  emitInt(&buffer, &capacity, &count, rt->subsCount);
+  emitInt(&buffer, &capacity, &count, 0); // total size (overwritten later)
+  emitInt(&buffer, &capacity, &count, rt->paramCount); // param count
+  emitInt(&buffer, &capacity, &count, rt->jumpsCount); // jumps count
+  emitInt(&buffer, &capacity, &count, rt->dataCount);  // data count
+  emitInt(&buffer, &capacity, &count, rt->subsCount);  // routine count
 
+  // generate blank spaces, cache their positions in the []Addr variables
   if (rt->paramCount > 0) {
-    emitInt((void **)&buffer, &capacity, &count, 0);
+    // paramAddr = count;
+    emitInt((void **)&buffer, &capacity, &count, 0); // params
   }
-
   if (rt->codeCount > 0) {
     codeAddr = count;
-    emitInt((void **)&buffer, &capacity, &count, 0);
+    emitInt((void **)&buffer, &capacity, &count, 0); // code
   }
-
+  if (rt->jumpsCount > 0) {
+    // jumpsAddr = count;
+    emitInt((void **)&buffer, &capacity, &count, 0); // jumps
+  }
   if (rt->dataCount > 0) {
-    emitInt((void **)&buffer, &capacity, &count, 0);
+    // dataAddr = count;
+    emitInt((void **)&buffer, &capacity, &count, 0); // data
   }
-
   if (rt->subsCount > 0) {
-    emitInt((void **)&buffer, &capacity, &count, 0);
+    // subsAddr = count;
+    emitInt((void **)&buffer, &capacity, &count, 0); // subs
   }
 
   if (rt->codeCount > 0) {
     expand(&buffer, &capacity, &count, rt->codeCount);
     memcpy((buffer + count), rt->code, rt->codeCount);
 
-    ((int *)buffer)[codeAddr] = count;
+    *((int *)(buffer + codeAddr)) = count;
     count += rt->codeCount;
   }
 
-  ((int *)buffer)[0] = count;
+  *((int *)buffer) = count;
 
   return buffer;
 }
 
+// exposed functions
 void *Xvr_compileRoutine(Xvr_Ast *ast) {
-  Xvr_routine rt;
+  // setup
+  Xvr_Routine rt;
 
   rt.param = NULL;
   rt.paramCapacity = 0;
@@ -260,6 +288,10 @@ void *Xvr_compileRoutine(Xvr_Ast *ast) {
   rt.codeCapacity = 0;
   rt.codeCount = 0;
 
+  rt.jumps = NULL;
+  rt.jumpsCapacity = 0;
+  rt.jumpsCount = 0;
+
   rt.data = NULL;
   rt.dataCapacity = 0;
   rt.dataCount = 0;
@@ -268,14 +300,15 @@ void *Xvr_compileRoutine(Xvr_Ast *ast) {
   rt.subsCapacity = 0;
   rt.subsCount = 0;
 
+  // build
   void *buffer = writeRoutine(&rt, ast);
 
-  XVR_FREE_ARRAY(unsigned char, rt.param, rt.paramCapacity);
-  XVR_FREE_ARRAY(unsigned char, rt.code, rt.codeCapacity);
-  XVR_FREE_ARRAY(unsigned char, rt.data, rt.dataCapacity);
-  XVR_FREE_ARRAY(int, rt.jumps, rt.jumpsCapacity);
-  XVR_FREE_ARRAY(unsigned char, rt.data, rt.dataCapacity);
-  XVR_FREE_ARRAY(unsigned char, rt.subs, rt.subsCapacity);
+  // cleanup the temp object
+  free(rt.param);
+  free(rt.code);
+  free(rt.jumps);
+  free(rt.data);
+  free(rt.subs);
 
   return buffer;
 }

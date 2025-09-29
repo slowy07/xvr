@@ -24,7 +24,7 @@ $(XVR_OUTDIR):
 $(XVR_OBJDIR):
 	mkdir $(XVR_OBJDIR)
 
-$(XVR_OBJDIR)/%.o: $(TOY_SOURCEDIR)/%.c
+$(XVR_OBJDIR)/%.o: $(XVR_SOURCEDIR)/%.c
 	$(CC) -c -o $@ $< $(addprefix -I,$(XVR_SOURCEDIR)) $(CFLAGS)
 
 .PHONY: clean

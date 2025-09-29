@@ -1,27 +1,3 @@
-/**
-MIT License
-
-Copyright (c) 2025 arfy slowy
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-**/
-
 #ifndef XVR_LEXER_H
 #define XVR_LEXER_H
 
@@ -29,22 +5,22 @@ SOFTWARE.
 #include "xvr_token_types.h"
 
 typedef struct {
-  int start;
-  int current;
-  int line;
+  unsigned int start;   // start of the current token
+  unsigned int current; // current position of the lexer
+  unsigned int line;    // track this for error handling
   const char *source;
 } Xvr_Lexer;
 
 typedef struct {
   Xvr_TokenType type;
-  int length;
-  int line;
+  unsigned int length;
+  unsigned int line;
   const char *lexeme;
 } Xvr_Token;
 
 XVR_API void Xvr_bindLexer(Xvr_Lexer *lexer, const char *source);
 XVR_API Xvr_Token Xvr_private_scanLexer(Xvr_Lexer *lexer);
-XVR_API void Xvr_private_printToken(Xvr_Token *token);
+XVR_API void Xvr_private_printToken(Xvr_Token *token); // debugging
 
 #define XVR_BLANK_TOKEN() ((Xvr_Token){XVR_TOKEN_NULL, 0, 0, NULL})
 

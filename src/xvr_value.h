@@ -1,32 +1,7 @@
-/**
-MIT License
-
-Copyright (c) 2025 arfy slowy
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-**/
-
 #ifndef XVR_VALUE_H
 #define XVR_VALUE_H
 
 #include "xvr_common.h"
-#include <stdbool.h>
 
 typedef enum Xvr_ValueType {
   XVR_VALUE_NULL,
@@ -40,15 +15,16 @@ typedef enum Xvr_ValueType {
   XVR_VALUE_OPAQUE,
 } Xvr_ValueType;
 
-typedef struct Xvr_Value {
+// 8 bytes in size
+typedef struct Xvr_Value { // 32 | 64 BITNESS
   union {
-    bool boolean;
-    int integer;
-    float number;
-  } as;
+    bool boolean; // 1  | 1
+    int integer;  // 4  | 4
+    float number; // 4  | 4
+  } as;           // 4  | 4
 
-  Xvr_ValueType type;
-} Xvr_Value;
+  Xvr_ValueType type; // 4  | 4
+} Xvr_Value;          // 8  | 8
 
 #define XVR_VALUE_IS_NULL(value) ((value).type == XVR_VALUE_NULL)
 #define XVR_VALUE_IS_BOOLEAN(value) ((value).type == XVR_VALUE_BOOLEAN)
@@ -74,5 +50,10 @@ typedef struct Xvr_Value {
 
 #define XVR_VALUE_IS_TRUTHY(value) Xvr_private_isTruthy(value)
 XVR_API bool Xvr_private_isTruthy(Xvr_Value value);
+
+#define XVR_VALUE_IS_EQUAL(left, right) Xvr_private_isEqual(left, right)
+XVR_API bool Xvr_private_isEqual(Xvr_Value left, Xvr_Value right);
+
+unsigned int Xvr_hashValue(Xvr_Value value);
 
 #endif // !XVR_VALUE_H

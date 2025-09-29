@@ -1,31 +1,25 @@
 #include "xvr_parser.h"
-#include "xvr_ast.h"
-#include "xvr_console_color.h"
-#include "xvr_lexer.h"
-#include "xvr_memory.h"
-#include "xvr_token_types.h"
-#include "xvr_value.h"
-#include <stddef.h>
-#include <stdio.h>
-
-#include "xvr_parser.h"
+#include "xvr_console_colors.h"
 
 #include <stdio.h>
 
 static void printError(Xvr_Parser *parser, Xvr_Token token,
                        const char *errorMsg) {
+  // keep going while panicking
   if (parser->panic) {
     return;
   }
 
-  fprintf(stderr, XVR_CC_ERROR "[Line %d] Error ", token.line);
+  fprintf(stderr, XVR_CC_ERROR "[Line %d] Error ", (int)token.line);
 
+  // check type
   if (token.type == XVR_TOKEN_EOF) {
-    fprintf(stderr, " at end");
+    fprintf(stderr, "at end");
   } else {
-    fprintf(stderr, " at '%.*s'", token.length, token.lexeme);
+    fprintf(stderr, "at '%.*s'", (int)token.length, token.lexeme);
   }
 
+  // finally
   fprintf(stderr, ": %s\n" XVR_CC_RESET, errorMsg);
   parser->error = true;
   parser->panic = true;
@@ -36,7 +30,7 @@ static void advance(Xvr_Parser *parser) {
   parser->current = Xvr_private_scanLexer(parser->lexer);
 
   if (parser->current.type == XVR_TOKEN_ERROR) {
-    printError(parser, parser->current, "Read error");
+    printError(parser, parser->current, "Can't read the source code");
   }
 }
 
@@ -61,7 +55,6 @@ static void consume(Xvr_Parser *parser, Xvr_TokenType tokenType,
 static void synchronize(Xvr_Parser *parser) {
   while (parser->current.type != XVR_TOKEN_EOF) {
     switch (parser->current.type) {
-    // these tokens can start a statement
     case XVR_TOKEN_KEYWORD_ASSERT:
     case XVR_TOKEN_KEYWORD_BREAK:
     case XVR_TOKEN_KEYWORD_CLASS:
@@ -87,6 +80,7 @@ static void synchronize(Xvr_Parser *parser) {
   }
 }
 
+// precedence declarations
 typedef enum ParsingPrecedence {
   PREC_NONE,
   PREC_ASSIGNMENT,
@@ -243,7 +237,7 @@ static Xvr_AstFlag atomic(Xvr_Bucket **bucket, Xvr_Parser *parser,
   case XVR_TOKEN_LITERAL_INTEGER: {
     char buffer[parser->previous.length];
 
-    int i = 0, o = 0;
+    unsigned int i = 0, o = 0;
     do {
       buffer[i] = parser->previous.lexeme[o];
       if (buffer[i] != '_')
@@ -260,13 +254,13 @@ static Xvr_AstFlag atomic(Xvr_Bucket **bucket, Xvr_Parser *parser,
   case XVR_TOKEN_LITERAL_FLOAT: {
     char buffer[parser->previous.length];
 
-    int i = 0, o = 0;
+    unsigned int i = 0, o = 0;
     do {
       buffer[i] = parser->previous.lexeme[o];
       if (buffer[i] != '_')
         i++;
     } while (parser->previous.lexeme[o++] && i < parser->previous.length);
-    buffer[i] = '\0';
+    buffer[i] = '\0'; // BUGFIX
 
     float value = 0;
     sscanf(buffer, "%f", &value);
@@ -284,6 +278,9 @@ static Xvr_AstFlag atomic(Xvr_Bucket **bucket, Xvr_Parser *parser,
 
 static Xvr_AstFlag unary(Xvr_Bucket **bucket, Xvr_Parser *parser,
                          Xvr_Ast **root) {
+  //'subtract' can only be applied to numbers and groups, while 'negate' can
+  // only be applied to booleans and groups this function takes the libery of
+  // peeking into the uppermost node, to see if it can apply this to it
 
   if (parser->previous.type == XVR_TOKEN_OPERATOR_SUBTRACT) {
 
@@ -307,11 +304,13 @@ static Xvr_AstFlag unary(Xvr_Bucket **bucket, Xvr_Parser *parser,
   else if (parser->previous.type == XVR_TOKEN_OPERATOR_NEGATE) {
     parsePrecedence(bucket, parser, root, PREC_UNARY);
 
+    // inverted booleans
     if ((*root)->type == XVR_AST_VALUE &&
         XVR_VALUE_IS_BOOLEAN((*root)->value.value)) {
       (*root)->value.value =
           XVR_VALUE_TO_BOOLEAN(!XVR_VALUE_AS_BOOLEAN((*root)->value.value));
     } else {
+      // actually emit the negation node
       Xvr_private_emitAstUnary(bucket, root, XVR_AST_FLAG_NEGATE);
     }
   }
@@ -327,9 +326,11 @@ static Xvr_AstFlag unary(Xvr_Bucket **bucket, Xvr_Parser *parser,
 
 static Xvr_AstFlag binary(Xvr_Bucket **bucket, Xvr_Parser *parser,
                           Xvr_Ast **root) {
+  // infix must advance
   advance(parser);
 
   switch (parser->previous.type) {
+  // arithmetic
   case XVR_TOKEN_OPERATOR_ADD: {
     parsePrecedence(bucket, parser, root, PREC_TERM + 1);
     return XVR_AST_FLAG_ADD;
@@ -430,6 +431,7 @@ static Xvr_AstFlag group(Xvr_Bucket **bucket, Xvr_Parser *parser,
     parsePrecedence(bucket, parser, root, PREC_GROUP);
     consume(parser, XVR_TOKEN_OPERATOR_PAREN_RIGHT,
             "Expected ')' at end of group");
+
   }
 
   else {
@@ -445,9 +447,13 @@ static ParsingTuple *getParsingRule(Xvr_TokenType type) {
   return &parsingRulesetTable[type];
 }
 
+// grammar rules
 static void parsePrecedence(Xvr_Bucket **bucket, Xvr_Parser *parser,
                             Xvr_Ast **root, ParsingPrecedence precRule) {
+  //'step over' the token to parse
   advance(parser);
+
+  // every valid expression has a prefix rule
   ParsingRule prefix = getParsingRule(parser->previous.type)->prefix;
 
   if (prefix == NULL) {
@@ -457,6 +463,8 @@ static void parsePrecedence(Xvr_Bucket **bucket, Xvr_Parser *parser,
   }
 
   prefix(bucket, parser, root);
+
+  // infix rules are left-recursive
   while (precRule <= getParsingRule(parser->current.type)->precedence) {
     ParsingRule infix = getParsingRule(parser->current.type)->infix;
 
@@ -469,6 +477,7 @@ static void parsePrecedence(Xvr_Bucket **bucket, Xvr_Parser *parser,
     Xvr_Ast *ptr = NULL;
     Xvr_AstFlag flag = infix(bucket, parser, &ptr);
 
+    // finished
     if (flag == XVR_AST_FLAG_NONE) {
       (*root) = ptr;
       return;
@@ -477,6 +486,7 @@ static void parsePrecedence(Xvr_Bucket **bucket, Xvr_Parser *parser,
     Xvr_private_emitAstBinary(bucket, root, flag, ptr);
   }
 
+  // can't assign below a certain precedence
   if (precRule <= PREC_ASSIGNMENT && match(parser, XVR_TOKEN_OPERATOR_ASSIGN)) {
     printError(parser, parser->current, "Invalid assignment target");
   }
@@ -488,6 +498,7 @@ static void makeExpr(Xvr_Bucket **bucket, Xvr_Parser *parser, Xvr_Ast **root) {
 
 static void makeExprStmt(Xvr_Bucket **bucket, Xvr_Parser *parser,
                          Xvr_Ast **root) {
+  // check for empty lines
   if (match(parser, XVR_TOKEN_OPERATOR_SEMICOLON)) {
     Xvr_private_emitAstPass(bucket, root);
     return;
@@ -499,7 +510,6 @@ static void makeExprStmt(Xvr_Bucket **bucket, Xvr_Parser *parser,
 }
 
 static void makeStmt(Xvr_Bucket **bucket, Xvr_Parser *parser, Xvr_Ast **root) {
-
   makeExprStmt(bucket, parser, root);
 }
 
@@ -510,7 +520,6 @@ static void makeDeclarationStmt(Xvr_Bucket **bucket, Xvr_Parser *parser,
 
 static void makeBlockStmt(Xvr_Bucket **bucket, Xvr_Parser *parser,
                           Xvr_Ast **root) {
-
   Xvr_private_initAstBlock(bucket, root);
 
   while (!match(parser, XVR_TOKEN_EOF)) {
@@ -522,11 +531,11 @@ static void makeBlockStmt(Xvr_Bucket **bucket, Xvr_Parser *parser,
 
       Xvr_Ast *err = NULL;
       Xvr_private_emitAstError(bucket, &err);
-      Xvr_private_appendAstBlock(bucket, root, err);
+      Xvr_private_appendAstBlock(bucket, *root, err);
 
       continue;
     }
-    Xvr_private_appendAstBlock(bucket, root, stmt);
+    Xvr_private_appendAstBlock(bucket, *root, stmt);
   }
 }
 
