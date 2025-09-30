@@ -58,6 +58,31 @@ int test_table_simple_insert_lookup_and_remove_data() {
   return 0;
 }
 
+int test_table_expansion() {
+  {
+    Xvr_Table *table = Xvr_allocateTable();
+    int top = 300;
+
+    for (int i = 0; i < 400; i++) {
+      Xvr_insertTable(&table, XVR_VALUE_TO_INTEGER(i),
+                      XVR_VALUE_TO_INTEGER(top - i));
+    }
+
+    Xvr_Value result = Xvr_lookupTable(&table, XVR_VALUE_TO_INTEGER(265));
+
+    if (table == NULL || table->capacity != 512 || table->count != 400 ||
+        XVR_VALUE_IS_INTEGER(result) != true ||
+        XVR_VALUE_AS_INTEGER(result) != 35) {
+      fprintf(stderr, XVR_CC_ERROR
+              "error: table expansion under stress test failed\n" XVR_CC_RESET);
+      Xvr_freeTable(table);
+      return -1;
+    }
+    Xvr_freeTable(table);
+  }
+  return 0;
+}
+
 int main() {
   int total = 0, res = 0;
 
@@ -77,5 +102,15 @@ int main() {
     }
     total += res;
   }
+
+  {
+    res = test_table_expansion();
+    if (res == 0) {
+      printf(XVR_CC_NOTICE
+             "nice one test_table_expansion(): aman rek\n" XVR_CC_RESET);
+    }
+    total += res;
+  }
+
   return total;
 }
