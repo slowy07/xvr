@@ -14,7 +14,7 @@ INTER_OBJDIR=obj
 #file names
 INTER_INTERFILES=$(wildcard $(INTER_INTERDIR)/*.c)
 INTER_OBJFILES=$(addprefix $(INTER_OBJDIR)/,$(notdir $(INTER_INTERFILES:.c=.o)))
-INTER_TARGETNAME=inter
+INTER_TARGETNAME=xvr
 
 #linker fix
 LDFLAGS+=-L$(realpath $(INTER_OUTDIR))

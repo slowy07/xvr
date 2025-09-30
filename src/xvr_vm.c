@@ -331,8 +331,7 @@ static void process(Xvr_VM *vm) {
 }
 
 // exposed functions
-void Xvr_bindVM(Xvr_VM *vm, unsigned char *bytecode,
-                unsigned int bytecodeSize) {
+void Xvr_bindVM(Xvr_VM *vm, unsigned char *bytecode) {
   if (bytecode[0] != XVR_VERSION_MAJOR || bytecode[1] > XVR_VERSION_MINOR) {
     fprintf(stderr,
             XVR_CC_ERROR "ERROR: Wrong bytecode version found: expected "
@@ -365,7 +364,6 @@ void Xvr_bindVM(Xvr_VM *vm, unsigned char *bytecode,
   Xvr_bindVMToRoutine(vm, bytecode + offset);
 
   vm->bc = bytecode;
-  vm->bcSize = bytecodeSize;
 }
 
 void Xvr_bindVMToRoutine(Xvr_VM *vm, unsigned char *routine) {
@@ -418,7 +416,6 @@ void Xvr_freeVM(Xvr_VM *vm) {
 
 void Xvr_resetVM(Xvr_VM *vm) {
   vm->bc = NULL;
-  vm->bcSize = 0;
 
   vm->routine = NULL;
   vm->routineSize = 0;

@@ -32,7 +32,7 @@ int test_setup_and_teardown(Xvr_Bucket **bucket) {
     Xvr_Bytecode bc = Xvr_compileBytecode(ast);
 
     Xvr_VM vm;
-    Xvr_bindVM(&vm, bc.ptr, bc.capacity);
+    Xvr_bindVM(&vm, bc.ptr);
 
     int headerSize = 3 + strlen(XVR_VERSION_BUILD) + 1;
 

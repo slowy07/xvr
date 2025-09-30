@@ -194,7 +194,7 @@ int main(int argc, const char *argv[]) {
 
     // run the setup
     Xvr_VM vm;
-    Xvr_bindVM(&vm, bc.ptr, bc.capacity);
+    Xvr_bindVM(&vm, bc.ptr);
 
     // run
     Xvr_runVM(&vm);

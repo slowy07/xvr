@@ -6,7 +6,6 @@
 
 typedef struct Xvr_VM {
   unsigned char *bc;
-  unsigned int bcSize;
 
   unsigned char *routine;
   unsigned int routineSize;
@@ -26,8 +25,8 @@ typedef struct Xvr_VM {
   Xvr_Stack *stack;
 } Xvr_VM;
 
-XVR_API void Xvr_bindVM(Xvr_VM *vm, unsigned char *bytecode,
-                        unsigned int bytecodeSize); // process the version data
+XVR_API void Xvr_bindVM(Xvr_VM *vm,
+                        unsigned char *bytecode); // process the version data
 XVR_API void
 Xvr_bindVMToRoutine(Xvr_VM *vm,
                     unsigned char *routine); // process the routine only
