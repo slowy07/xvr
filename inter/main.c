@@ -1,4 +1,5 @@
 #include "xvr.h"
+#include "xvr_print.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -136,7 +137,14 @@ CmdLine parseCmdLine(int argc, const char *argv[]) {
   return cmd;
 }
 
+static void errorAndExit(const char *msg) {
+  fprintf(stderr, "%s", msg);
+  exit(-1);
+}
+
 int main(int argc, const char *argv[]) {
+  Xvr_setErrorCallback(errorAndExit);
+  Xvr_setAssertFailureCallback(errorAndExit);
   CmdLine cmd = parseCmdLine(argc, argv);
 
   if (cmd.error) {

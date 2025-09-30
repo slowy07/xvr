@@ -56,7 +56,7 @@ int test_setup_and_teardown(Xvr_Bucket **bucket) {
 }
 
 int main() {
-
+  printf(XVR_CC_WARN "testing: xvr VM\n" XVR_CC_RESET);
   int total = 0, res = 0;
 
   {

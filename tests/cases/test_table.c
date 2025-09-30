@@ -84,6 +84,7 @@ int test_table_expansion() {
 }
 
 int main() {
+  printf(XVR_CC_WARN "testing: xvr table\n" XVR_CC_RESET);
   int total = 0, res = 0;
 
   {

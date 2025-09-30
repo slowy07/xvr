@@ -1,8 +1,8 @@
 #include "xvr_table.h"
 #include "xvr_console_colors.h"
+#include "xvr_print.h"
 #include "xvr_value.h"
 
-#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -51,12 +51,8 @@ static Xvr_Table *adjustTableCapacity(Xvr_Table *oldTable,
       malloc(newCapacity * sizeof(Xvr_TableEntry) + sizeof(Xvr_Table));
 
   if (newTable == NULL) {
-    fprintf(
-        stderr,
-        XVR_CC_ERROR
-        "Error: Failed to allocate a 'Xvr_Table' of %u capacity\n" XVR_CC_RESET,
-        newCapacity);
-    exit(-1);
+    Xvr_error(XVR_CC_ERROR
+              "Error: failed to allocate `Xvr_Table`\n" XVR_CC_RESET);
   }
 
   newTable->capacity = newCapacity;
@@ -92,8 +88,7 @@ void Xvr_freeTable(Xvr_Table *table) { free(table); }
 
 void Xvr_insertTable(Xvr_Table **table, Xvr_Value key, Xvr_Value value) {
   if (XVR_VALUE_IS_NULL(key) || XVR_VALUE_IS_BOOLEAN(key)) {
-    fprintf(stderr, XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
-    exit(-1);
+    Xvr_error(XVR_CC_ERROR "Error: bad table key\n" XVR_CC_RESET);
   }
 
   // expand the capacity
@@ -106,8 +101,7 @@ void Xvr_insertTable(Xvr_Table **table, Xvr_Value key, Xvr_Value value) {
 
 Xvr_Value Xvr_lookupTable(Xvr_Table **table, Xvr_Value key) {
   if (XVR_VALUE_IS_NULL(key) || XVR_VALUE_IS_BOOLEAN(key)) {
-    fprintf(stderr, XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
-    exit(-1);
+    Xvr_error(XVR_CC_ERROR "Error: bad table key\n" XVR_CC_RESET);
   }
 
   // lookup
@@ -130,8 +124,7 @@ Xvr_Value Xvr_lookupTable(Xvr_Table **table, Xvr_Value key) {
 
 void Xvr_removeTable(Xvr_Table **table, Xvr_Value key) {
   if (XVR_VALUE_IS_NULL(key) || XVR_VALUE_IS_BOOLEAN(key)) {
-    fprintf(stderr, XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
-    exit(-1);
+    Xvr_error(XVR_CC_ERROR "Error: bad table key\n" XVR_CC_RESET);
   }
 
   // lookup

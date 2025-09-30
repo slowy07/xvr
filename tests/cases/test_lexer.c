@@ -4,6 +4,7 @@
 #include <string.h>
 
 int main() {
+  printf(XVR_CC_WARN "testing: xvr lexer\n" XVR_CC_RESET);
   {
     char *source = "print null;";
 

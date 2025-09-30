@@ -1,14 +1,11 @@
 #include "xvr_value.h"
 #include "xvr_console_colors.h"
-
-#include <stdio.h>
-#include <stdlib.h>
+#include "xvr_print.h"
 
 bool Xvr_private_isTruthy(Xvr_Value value) {
   if (XVR_VALUE_IS_NULL(value)) {
-    fprintf(stderr, XVR_CC_ERROR
-            "ERROR: 'null' is neither true nor false\n" XVR_CC_RESET);
-    exit(-1);
+    Xvr_error(XVR_CC_ERROR
+              "Error: `null` is neither true or false\n" XVR_CC_RESET);
   }
 
   // only 'false' is falsy
@@ -23,11 +20,9 @@ bool Xvr_private_isTruthy(Xvr_Value value) {
 bool Xvr_private_isEqual(Xvr_Value left, Xvr_Value right) {
   // temp check
   if (right.type > XVR_VALUE_FLOAT) {
-    fprintf(stderr,
-            XVR_CC_ERROR
-            "ERROR: Unknown types %d and %d in equality\n" XVR_CC_RESET,
-            left.type, right.type);
-    exit(-1);
+    Xvr_error(
+        XVR_CC_ERROR
+        "Error: unknown types in value equality comparison\n" XVR_CC_RESET);
   }
 
   switch (left.type) {
@@ -62,12 +57,11 @@ bool Xvr_private_isEqual(Xvr_Value left, Xvr_Value right) {
   case XVR_VALUE_FUNCTION:
   case XVR_VALUE_OPAQUE:
   default:
-    fprintf(stderr,
-            XVR_CC_ERROR
-            "ERROR: Unknown types %d and %d in equality\n" XVR_CC_RESET,
-            left.type, right.type);
-    exit(-1);
+    Xvr_error(
+        XVR_CC_ERROR
+        "Error: unknown types in value equality comparison\n" XVR_CC_RESET);
   }
+  return 0;
 }
 
 // hash utils
@@ -109,9 +103,7 @@ unsigned int Xvr_hashValue(Xvr_Value value) {
   case XVR_VALUE_FUNCTION:
   case XVR_VALUE_OPAQUE:
   default:
-    fprintf(stderr,
-            XVR_CC_ERROR "ERROR: Can't hash an unknown type %d\n" XVR_CC_RESET,
-            value.type);
-    exit(-1);
+    Xvr_error(XVR_CC_ERROR "Error: cant't hash unknown type\n" XVR_CC_RESET);
   }
+  return 0;
 }

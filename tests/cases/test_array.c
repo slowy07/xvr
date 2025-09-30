@@ -30,6 +30,7 @@ int test_resizeArray() {
 }
 
 int main() {
+  printf(XVR_CC_WARN "testing: xvr array\n" XVR_CC_RESET);
   int total = 0, res = 0;
 
   {

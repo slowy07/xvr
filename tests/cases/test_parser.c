@@ -80,6 +80,7 @@ int test_simple_empty_parsers(Xvr_Bucket **bucket) {
 }
 
 int main() {
+  printf(XVR_CC_WARN "testing: xvr parser\n" XVR_CC_RESET);
   int total = 0, res = 0;
 
   {
