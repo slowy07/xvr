@@ -1,8 +1,8 @@
-#include "../../src/xvr_bytecode.h"
-#include "../../src/xvr_console_colors.h"
-#include "../../src/xvr_lexer.h"
-#include "../../src/xvr_parser.h"
-#include "../../src/xvr_vm.h"
+#include "xvr_bytecode.h"
+#include "xvr_console_colors.h"
+#include "xvr_lexer.h"
+#include "xvr_parser.h"
+#include "xvr_vm.h"
 #include <stdio.h>
 #include <string.h>
 

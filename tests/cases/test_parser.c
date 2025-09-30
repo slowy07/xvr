@@ -1,5 +1,5 @@
-#include "../../src/xvr_console_colors.h"
-#include "../../src/xvr_parser.h"
+#include "xvr_console_colors.h"
+#include "xvr_parser.h"
 
 #include <stddef.h>
 #include <stdio.h>

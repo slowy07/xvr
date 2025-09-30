@@ -53,3 +53,11 @@ dkms.conf
 
 # debug information files
 *.dwo
+
+# bear compile json
+*.json
+.cache
+
+# object file on tests
+tests/obj/*
+tests/out/*
