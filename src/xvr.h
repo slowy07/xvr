@@ -10,6 +10,7 @@
 #include "xvr_bucket.h"
 #include "xvr_stack.h"
 #include "xvr_string.h"
+#include "xvr_table.h"
 #include "xvr_value.h"
 
 // IR structures and other components

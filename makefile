@@ -10,6 +10,14 @@ export XVR_SOURCEFILES=$(wildcard $(XVR_SOURCEDIR)/*.c)
 all: clean tests
 	@echo no targets ready
 
+.PHONY: src
+src:
+	$(MAKE) -C src -k
+
+.PHONY: inter
+inter: src
+	$(MAKE) -C inter -k
+
 .PHONY: tests
 tests:
 	$(MAKE) -C tests -k
