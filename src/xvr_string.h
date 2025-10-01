@@ -35,8 +35,8 @@ XVR_API Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucket,
 XVR_API Xvr_String *Xvr_copyString(Xvr_Bucket **bucket, Xvr_String *str);
 XVR_API Xvr_String *Xvr_deepCopyString(Xvr_Bucket **bucket, Xvr_String *str);
 
-XVR_API Xvr_String *Xvr_concatString(Xvr_Bucket **bucket, Xvr_String *left,
-                                     Xvr_String *right);
+XVR_API Xvr_String *Xvr_concatStrings(Xvr_Bucket **bucket, Xvr_String *left,
+                                      Xvr_String *right);
 
 XVR_API void Xvr_freeString(Xvr_String *str);
 
@@ -44,5 +44,7 @@ XVR_API int Xvr_getStringLength(Xvr_String *str);
 XVR_API int Xvr_getStringRefCount(Xvr_String *str);
 
 XVR_API char *Xvr_getStringRawBuffer(Xvr_String *str);
+
+XVR_API int Xvr_compareString(Xvr_String *left, Xvr_String *right);
 
 #endif // !XVR_STRING_H

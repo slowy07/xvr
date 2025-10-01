@@ -82,8 +82,8 @@ Xvr_String *Xvr_deepCopyString(Xvr_Bucket **bucket, Xvr_String *str) {
   return ret;
 }
 
-Xvr_String *Xvr_concatString(Xvr_Bucket **bucket, Xvr_String *left,
-                             Xvr_String *right) {
+Xvr_String *Xvr_concatStrings(Xvr_Bucket **bucket, Xvr_String *left,
+                              Xvr_String *right) {
   if (left->refCount == 0 || right->refCount == 0) {
     fprintf(stderr, XVR_CC_ERROR "ERROR: Can't concatenate a string with "
                                  "refcount of zero\n" XVR_CC_RESET);
@@ -124,4 +124,87 @@ char *Xvr_getStringRawBuffer(Xvr_String *str) {
   buffer[str->length] = '\0';
 
   return buffer;
+}
+
+static int deepCompareUtil(Xvr_String *left, Xvr_String *right,
+                           const char **leftHead, const char **rightHead) {
+  int result = 0;
+
+  if (left == right) {
+    return result;
+  }
+
+  if (left->type == XVR_STRING_LEAF && (*leftHead) != NULL &&
+      (**leftHead) != '\0' &&
+      ((*leftHead) < left->as.leaf.data ||
+       (*leftHead) > (left->as.leaf.data + strlen(left->as.leaf.data)))) {
+    return result;
+  }
+
+  if (right->type == XVR_STRING_LEAF && (*rightHead) != NULL &&
+      (**rightHead) != '\0' &&
+      ((*rightHead) < right->as.leaf.data ||
+       (*rightHead) > (right->as.leaf.data + strlen(right->as.leaf.data)))) {
+    return result;
+  }
+
+  if (left->type == XVR_STRING_NODE) {
+    if ((result = deepCompareUtil(left->as.node.left, right, leftHead,
+                                  rightHead)) != 0) {
+      return result;
+    }
+
+    if ((result = deepCompareUtil(left->as.node.right, right, leftHead,
+                                  rightHead)) != 0) {
+      return result;
+    }
+
+    return result;
+  }
+
+  if (right->type == XVR_STRING_NODE) {
+    if ((result = deepCompareUtil(left, right->as.node.left, leftHead,
+                                  rightHead)) != 0) {
+      return result;
+    }
+    if ((result = deepCompareUtil(left, right->as.node.right, leftHead,
+                                  rightHead)) != 0) {
+      return result;
+    }
+
+    return result;
+  }
+
+  if (left->type == XVR_STRING_LEAF && right->type == XVR_STRING_LEAF) {
+    if ((*leftHead) == NULL || (**leftHead) == '\0') {
+      (*leftHead) = left->as.leaf.data;
+    }
+
+    if ((*rightHead) == NULL || (**rightHead) == '\0') {
+      (*rightHead) = right->as.leaf.data;
+    }
+
+    while (**leftHead && (**leftHead == **rightHead)) {
+      (*leftHead)++;
+      (*rightHead)++;
+    }
+
+    if ((**leftHead == '\0' || **rightHead == '\0') == false) {
+      result = *(const unsigned char *)(*leftHead) -
+               *(const unsigned char *)(*rightHead);
+    }
+  }
+
+  return result;
+}
+
+int Xvr_compareString(Xvr_String *left, Xvr_String *right) {
+  if (left->length == 0 || right->length == 0) {
+    return left->length - right->length;
+  }
+
+  const char *leftHead = NULL;
+  const char *rightHead = NULL;
+
+  return deepCompareUtil(left, right, &leftHead, &rightHead);
 }
