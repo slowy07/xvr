@@ -3,11 +3,13 @@
 
 #include "xvr_bucket.h"
 #include "xvr_common.h"
+#include "xvr_value.h"
 
 typedef struct Xvr_String { // 32 | 64 BITNESS
   enum Xvr_StringType {
     XVR_STRING_NODE,
     XVR_STRING_LEAF,
+    XVR_STRING_NAME,
   } type; // 4  | 4
 
   unsigned int length;   // 4  | 4
@@ -24,13 +26,20 @@ typedef struct Xvr_String { // 32 | 64 BITNESS
     struct {
       int _dummy;  // 4  | 4
       char data[]; //-  | -
-    } leaf;        // 4  | 4
-  } as;            // 8  | 16
-} Xvr_String;      // 24 | 32
+    } leaf;
+
+    struct {
+      Xvr_ValueType type; // 4 | 4
+      char data[];        // - | -
+    } name;
+  } as;       // 8  | 16
+} Xvr_String; // 24 | 32
 
 XVR_API Xvr_String *Xvr_createString(Xvr_Bucket **bucket, const char *cstring);
 XVR_API Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucket,
                                            const char *cstring, int length);
+XVR_API Xvr_String *Xvr_createNameString(Xvr_Bucket **bucketHandle,
+                                         const char *cname);
 
 XVR_API Xvr_String *Xvr_copyString(Xvr_Bucket **bucket, Xvr_String *str);
 XVR_API Xvr_String *Xvr_deepCopyString(Xvr_Bucket **bucket, Xvr_String *str);

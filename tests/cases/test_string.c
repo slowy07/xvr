@@ -94,6 +94,64 @@ int test_string_allocation() {
 
     Xvr_freeBucket(&bucket);
   }
+
+  {
+    Xvr_Bucket *bucket = Xvr_allocateBucket(1024);
+
+    const char *cstring = "hello world";
+    Xvr_String *str = Xvr_createNameString(&bucket, cstring);
+
+    Xvr_String *shallow = Xvr_copyString(&bucket, str);
+    Xvr_String *deep = Xvr_deepCopyString(&bucket, str);
+
+    if (str != shallow || str == deep || shallow->refCount != 2 ||
+        deep->refCount != 1 ||
+        strcmp(shallow->as.name.data, deep->as.name.data) != 0) {
+      fprintf(stderr,
+              XVR_CC_ERROR "Error: failed copy name string \n" XVR_CC_RESET);
+      Xvr_freeBucket(&bucket);
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
+int test_string_diffs() {
+  {
+    Xvr_Bucket *bucket = Xvr_allocateBucket(1024);
+    Xvr_String *pangram = Xvr_concatStrings(
+        &bucket, Xvr_createString(&bucket, "The quick brown "),
+        Xvr_concatStrings(&bucket, Xvr_createString(&bucket, "fox jumps o"),
+                          Xvr_createString(&bucket, "ver the lazy dog.")));
+
+    Xvr_String *neckbeard = Xvr_concatStrings(
+        &bucket, Xvr_createString(&bucket, "The quick brown fox jumps over"),
+        Xvr_concatStrings(&bucket, Xvr_createString(&bucket, "the lazy"),
+                          Xvr_createString(&bucket, "dog.")));
+
+    int result = 0;
+
+    if (((result = Xvr_compareString(pangram, neckbeard)) < 0) == false) {
+      char *leftBuffer = Xvr_getStringRawBuffer(pangram);
+      char *rightBuffer = Xvr_getStringRawBuffer(neckbeard);
+      fprintf(
+          stderr,
+          XVR_CC_ERROR
+          "Error: string diff `%s` == `%s` incorrect, found %s\n" XVR_CC_RESET,
+          leftBuffer, rightBuffer,
+          result < 0    ? "<"
+          : result == 0 ? "=="
+                        : ">");
+      free(leftBuffer);
+      free(rightBuffer);
+      Xvr_freeBucket(&bucket);
+      return -1;
+    }
+
+    Xvr_freeBucket(&bucket);
+  }
+
   return 0;
 }
 
@@ -126,6 +184,15 @@ int main() {
     if (res == 0) {
       printf(XVR_CC_NOTICE
              "test_string_allocation(): nice one aman rek\n" XVR_CC_RESET);
+    }
+    total += res;
+  }
+
+  {
+    res = test_string_diffs();
+    if (res == 0) {
+      printf(XVR_CC_NOTICE
+             "test_string_diffs(): nice one loh ya rek\n" XVR_CC_RESET);
     }
     total += res;
   }
