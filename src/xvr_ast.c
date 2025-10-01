@@ -1,4 +1,5 @@
 #include "xvr_ast.h"
+#include "xvr_bucket.h"
 
 void Xvr_private_initAstBlock(Xvr_Bucket **bucket, Xvr_Ast **handle) {
   Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucket, sizeof(Xvr_Ast));
@@ -74,6 +75,13 @@ void Xvr_private_emitAstGroup(Xvr_Bucket **bucket, Xvr_Ast **handle) {
   tmp->group.child = (*handle);
 
   (*handle) = tmp;
+}
+
+void Xvr_private_emitAstPrint(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle) {
+  Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
+  tmp->type = XVR_AST_PRINT;
+  tmp->print.child = (*astHandle);
+  (*astHandle) = tmp;
 }
 
 void Xvr_private_emitAstPass(Xvr_Bucket **bucket, Xvr_Ast **handle) {

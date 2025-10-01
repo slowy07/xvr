@@ -137,14 +137,17 @@ CmdLine parseCmdLine(int argc, const char *argv[]) {
   return cmd;
 }
 
-static void errorAndExit(const char *msg) {
+static void printCallback(const char *msg) { fprintf(stdout, "%s\n", msg); }
+
+static void errorAndExitCallback(const char *msg) {
   fprintf(stderr, "%s", msg);
   exit(-1);
 }
 
 int main(int argc, const char *argv[]) {
-  Xvr_setErrorCallback(errorAndExit);
-  Xvr_setAssertFailureCallback(errorAndExit);
+  Xvr_setPrintCallback(printCallback);
+  Xvr_setErrorCallback(errorAndExitCallback);
+  Xvr_setAssertFailureCallback(errorAndExitCallback);
   CmdLine cmd = parseCmdLine(argc, argv);
 
   if (cmd.error) {
@@ -208,39 +211,41 @@ int main(int argc, const char *argv[]) {
     Xvr_runVM(&vm);
 
     // debugging result
-    printf("printing the stack result\n\ntype\tvalue\n");
-    for (int i = 0; i < vm.stack->count; i++) {
-      Xvr_Value v = ((Xvr_Value *)(vm.stack + 1))[i];
+    if (vm.stack->count > 0) {
+      printf("printing the stack result\n\ntype\tvalue\n");
+      for (int i = 0; i < vm.stack->count; i++) {
+        Xvr_Value v = ((Xvr_Value *)(vm.stack + 1))[i];
 
-      printf(" %d\t ", v.type);
+        printf(" %d\t ", v.type);
 
-      switch (v.type) {
-      case XVR_VALUE_NULL:
-        printf("null");
-        break;
+        switch (v.type) {
+        case XVR_VALUE_NULL:
+          printf("null");
+          break;
 
-      case XVR_VALUE_BOOLEAN:
-        printf("%s", XVR_VALUE_AS_BOOLEAN(v) ? "true" : "false");
-        break;
+        case XVR_VALUE_BOOLEAN:
+          printf("%s", XVR_VALUE_AS_BOOLEAN(v) ? "true" : "false");
+          break;
 
-      case XVR_VALUE_INTEGER:
-        printf("%d", XVR_VALUE_AS_INTEGER(v));
-        break;
+        case XVR_VALUE_INTEGER:
+          printf("%d", XVR_VALUE_AS_INTEGER(v));
+          break;
 
-      case XVR_VALUE_FLOAT:
-        printf("%f", XVR_VALUE_AS_FLOAT(v));
-        break;
+        case XVR_VALUE_FLOAT:
+          printf("%f", XVR_VALUE_AS_FLOAT(v));
+          break;
 
-      case XVR_VALUE_STRING:
-      case XVR_VALUE_ARRAY:
-      case XVR_VALUE_DICTIONARY:
-      case XVR_VALUE_FUNCTION:
-      case XVR_VALUE_OPAQUE:
-        printf("???");
-        break;
+        case XVR_VALUE_STRING:
+        case XVR_VALUE_ARRAY:
+        case XVR_VALUE_DICTIONARY:
+        case XVR_VALUE_FUNCTION:
+        case XVR_VALUE_OPAQUE:
+          printf("???");
+          break;
+        }
+
+        printf("\n");
       }
-
-      printf("\n");
     }
 
     Xvr_freeVM(&vm);

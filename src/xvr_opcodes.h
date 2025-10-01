@@ -34,6 +34,9 @@ typedef enum Xvr_OpcodeType {
   // control instructions
   XVR_OPCODE_RETURN,
 
+  // print
+  XVR_OPCODE_PRINT,
+
   // meta instructions
   XVR_OPCODE_PASS,
   XVR_OPCODE_ERROR,

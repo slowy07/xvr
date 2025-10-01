@@ -2,6 +2,8 @@
 #include "xvr_console_colors.h"
 
 #include "xvr_opcodes.h"
+#include "xvr_print.h"
+#include "xvr_stack.h"
 #include "xvr_value.h"
 
 #include <stdio.h>
@@ -274,6 +276,46 @@ static void processLogical(Xvr_VM *vm, Xvr_OpcodeType opcode) {
   }
 }
 
+static void processPrint(Xvr_VM *vm) {
+  Xvr_Value value = Xvr_popStack(&vm->stack);
+
+  switch (value.type) {
+  case XVR_VALUE_NULL:
+    Xvr_print("null");
+    break;
+
+  case XVR_VALUE_BOOLEAN:
+    Xvr_print(XVR_VALUE_AS_BOOLEAN(value) ? "true" : "false");
+    break;
+
+  case XVR_VALUE_INTEGER: {
+    char buffer[16];
+    sprintf(buffer, "%d", XVR_VALUE_AS_INTEGER(value));
+    Xvr_print(buffer);
+    break;
+  }
+
+  case XVR_VALUE_FLOAT: {
+    char buffer[16];
+    sprintf(buffer, "%f", XVR_VALUE_AS_FLOAT(value));
+    Xvr_print(buffer);
+    break;
+  }
+
+  case XVR_VALUE_STRING:
+  case XVR_VALUE_ARRAY:
+  case XVR_VALUE_DICTIONARY:
+  case XVR_VALUE_FUNCTION:
+  case XVR_VALUE_OPAQUE:
+    fprintf(
+        stderr,
+        XVR_CC_ERROR
+        "Error: unknown value type %d passed to processPrint\n" XVR_CC_RESET,
+        value.type);
+    exit(-1);
+  }
+}
+
 static void process(Xvr_VM *vm) {
   while (true) {
     Xvr_OpcodeType opcode = READ_BYTE(vm);
@@ -306,6 +348,13 @@ static void process(Xvr_VM *vm) {
       processLogical(vm, opcode);
       break;
 
+    case XVR_OPCODE_RETURN:
+      return;
+
+    case XVR_OPCODE_PRINT:
+      processPrint(vm);
+      break;
+
     case XVR_OPCODE_LOAD:
     case XVR_OPCODE_LOAD_LONG:
     case XVR_OPCODE_DECLARE:
@@ -319,10 +368,6 @@ static void process(Xvr_VM *vm) {
               "ERROR: Invalid opcode %d found, exiting\n" XVR_CC_RESET,
               opcode);
       exit(-1);
-
-    case XVR_OPCODE_RETURN: // temp terminator, temp position
-      //
-      return;
     }
 
     // prepare for the next instruction

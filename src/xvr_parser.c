@@ -1,5 +1,8 @@
 #include "xvr_parser.h"
+#include "xvr_ast.h"
+#include "xvr_bucket.h"
 #include "xvr_console_colors.h"
+#include "xvr_token_types.h"
 
 #include <stdio.h>
 
@@ -496,21 +499,34 @@ static void makeExpr(Xvr_Bucket **bucket, Xvr_Parser *parser, Xvr_Ast **root) {
   parsePrecedence(bucket, parser, root, PREC_ASSIGNMENT);
 }
 
-static void makeExprStmt(Xvr_Bucket **bucket, Xvr_Parser *parser,
-                         Xvr_Ast **root) {
-  // check for empty lines
-  if (match(parser, XVR_TOKEN_OPERATOR_SEMICOLON)) {
-    Xvr_private_emitAstPass(bucket, root);
-    return;
-  }
+static void makePrintStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
+                          Xvr_Ast **rootHandle) {
+  makeExpr(bucketHandle, parser, rootHandle);
+  Xvr_private_emitAstPrint(bucketHandle, rootHandle);
 
-  makeExpr(bucket, parser, root);
+  consume(parser, XVR_TOKEN_OPERATOR_SEMICOLON,
+          "Expected `;` at the  end of print statement");
+}
+
+static void makeExprStmt(Xvr_Bucket **bucket, Xvr_Parser *parser,
+                         Xvr_Ast **rootHandle) {
+  makeExpr(bucket, parser, rootHandle);
   consume(parser, XVR_TOKEN_OPERATOR_SEMICOLON,
           "Expected ';' at the end of expression statement");
 }
 
-static void makeStmt(Xvr_Bucket **bucket, Xvr_Parser *parser, Xvr_Ast **root) {
-  makeExprStmt(bucket, parser, root);
+static void makeStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
+                     Xvr_Ast **rootHandle) {
+  if (match(parser, XVR_TOKEN_OPERATOR_SEMICOLON)) {
+    Xvr_private_emitAstPass(bucketHandle, rootHandle);
+    return;
+  } else if (match(parser, XVR_TOKEN_KEYWORD_PRINT)) {
+    makePrintStmt(bucketHandle, parser, rootHandle);
+    return;
+  } else {
+    makeExprStmt(bucketHandle, parser, rootHandle);
+    return;
+  }
 }
 
 static void makeDeclarationStmt(Xvr_Bucket **bucket, Xvr_Parser *parser,

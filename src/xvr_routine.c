@@ -1,4 +1,5 @@
 #include "xvr_routine.h"
+#include "xvr_ast.h"
 #include "xvr_console_colors.h"
 
 #include "xvr_opcodes.h"
@@ -166,10 +167,15 @@ static void writeInstructionBinary(Xvr_Routine **rt, Xvr_AstBinary ast) {
   EMIT_BYTE(rt, 0);
 }
 
-// routine structure
-//  static void writeRoutineParam(Xvr_Routine* rt) {
-//  	//
-//  }
+static void writeInstructionPrint(Xvr_Routine **rt, Xvr_AstPrint ast) {
+  writeRoutineCode(rt, ast.child);
+
+  EMIT_BYTE(rt, XVR_OPCODE_PRINT);
+
+  EMIT_BYTE(rt, 0);
+  EMIT_BYTE(rt, 0);
+  EMIT_BYTE(rt, 0);
+}
 
 static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
   if (ast == NULL) {
@@ -195,6 +201,10 @@ static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
     writeInstructionBinary(rt, ast->binary);
     break;
 
+  case XVR_AST_PRINT:
+    writeInstructionPrint(rt, ast->print);
+    break;
+
   // other disallowed instructions
   case XVR_AST_GROUP:
     fprintf(stderr, XVR_CC_ERROR "ERROR: Invalid AST type found: Group "
@@ -203,7 +213,7 @@ static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
     break;
 
   case XVR_AST_PASS:
-    // NOTE: this should be disallowed, but for now it's required for testing
+    // NOTE: this should be disallowed, but for it's required for testing
     //  fprintf(stderr, XVR_CC_ERROR "ERROR: Invalid AST type found: Unknown
     //  pass\n" XVR_CC_RESET); exit(-1);
     break;
