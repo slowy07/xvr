@@ -13,7 +13,7 @@ static void probeAndInsert(Xvr_Table **table, Xvr_Value key, Xvr_Value value) {
   Xvr_TableEntry entry = (Xvr_TableEntry){.key = key, .value = value, .psl = 0};
 
   while (true) {
-    if (XVR_VALUE_IS_EQUAL((*table)->data[probe].key, key)) {
+    if (XVR_VALUES_ARE_EQUAL((*table)->data[probe].key, key)) {
       (*table)->data[probe] = entry;
 
       (*table)->minPsl =
@@ -109,7 +109,7 @@ Xvr_Value Xvr_lookupTable(Xvr_Table **table, Xvr_Value key) {
 
   while (true) {
     // found the entry
-    if (XVR_VALUE_IS_EQUAL((*table)->data[probe].key, key)) {
+    if (XVR_VALUES_ARE_EQUAL((*table)->data[probe].key, key)) {
       return (*table)->data[probe].value;
     }
 
@@ -133,7 +133,7 @@ void Xvr_removeTable(Xvr_Table **table, Xvr_Value key) {
 
   while (true) {
     // found the entry
-    if (XVR_VALUE_IS_EQUAL((*table)->data[probe].key, key)) {
+    if (XVR_VALUES_ARE_EQUAL((*table)->data[probe].key, key)) {
       break;
     }
 

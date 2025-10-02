@@ -189,7 +189,7 @@ static void processComparison(Xvr_VM *vm, Xvr_OpcodeType opcode) {
 
   // most things can be equal, so handle it separately
   if (opcode == XVR_OPCODE_COMPARE_EQUAL) {
-    bool equal = XVR_VALUE_IS_EQUAL(left, right);
+    bool equal = XVR_VALUES_ARE_EQUAL(left, right);
 
     // equality has an optional "negate" opcode within it's word
     if (READ_BYTE(vm) != XVR_OPCODE_NEGATE) {

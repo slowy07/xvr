@@ -57,7 +57,7 @@ typedef struct Xvr_Value { // 32 | 64 BITNESS
 #define XVR_VALUE_IS_TRUTHY(value) Xvr_private_isTruthy(value)
 XVR_API bool Xvr_private_isTruthy(Xvr_Value value);
 
-#define XVR_VALUE_IS_EQUAL(left, right) Xvr_private_isEqual(left, right)
+#define XVR_VALUES_ARE_EQUAL(left, right) Xvr_private_isEqual(left, right)
 XVR_API bool Xvr_private_isEqual(Xvr_Value left, Xvr_Value right);
 
 unsigned int Xvr_hashValue(Xvr_Value value);
