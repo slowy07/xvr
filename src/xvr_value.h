@@ -3,6 +3,8 @@
 
 #include "xvr_common.h"
 
+struct Xvr_String;
+
 typedef enum Xvr_ValueType {
   XVR_VALUE_NULL,
   XVR_VALUE_BOOLEAN,
@@ -18,10 +20,11 @@ typedef enum Xvr_ValueType {
 // 8 bytes in size
 typedef struct Xvr_Value { // 32 | 64 BITNESS
   union {
-    bool boolean; // 1  | 1
-    int integer;  // 4  | 4
-    float number; // 4  | 4
-  } as;           // 4  | 4
+    bool boolean;              // 1  | 1
+    int integer;               // 4  | 4
+    float number;              // 4  | 4
+    struct Xvr_String *string; // 4 | 8
+  } as;                        // 4  | 4
 
   Xvr_ValueType type; // 4  | 4
 } Xvr_Value;          // 8  | 8
@@ -39,14 +42,17 @@ typedef struct Xvr_Value { // 32 | 64 BITNESS
 #define XVR_VALUE_AS_BOOLEAN(value) ((value).as.boolean)
 #define XVR_VALUE_AS_INTEGER(value) ((value).as.integer)
 #define XVR_VALUE_AS_FLOAT(value) ((value).as.number)
+#define XVR_VALUE_AS_STRING(value) ((value).as.string)
 
-#define XVR_VALUE_TO_NULL() ((Xvr_Value){{.integer = 0}, XVR_VALUE_NULL})
-#define XVR_VALUE_TO_BOOLEAN(value)                                            \
+#define XVR_VALUE_FROM_NULL() ((Xvr_Value){{.integer = 0}, XVR_VALUE_NULL})
+#define XVR_VALUE_FROM_BOOLEAN(value)                                          \
   ((Xvr_Value){{.boolean = value}, XVR_VALUE_BOOLEAN})
-#define XVR_VALUE_TO_INTEGER(value)                                            \
+#define XVR_VALUE_FROM_INTEGER(value)                                          \
   ((Xvr_Value){{.integer = value}, XVR_VALUE_INTEGER})
-#define XVR_VALUE_TO_FLOAT(value)                                              \
+#define XVR_VALUE_FROM_FLOAT(value)                                            \
   ((Xvr_Value){{.number = value}, XVR_VALUE_FLOAT})
+#define XVR_VALUE_FROM_STRING(value)                                           \
+  ((Xvr_Value){{.string = value}, XVR_VALUE_STRING})
 
 #define XVR_VALUE_IS_TRUTHY(value) Xvr_private_isTruthy(value)
 XVR_API bool Xvr_private_isTruthy(Xvr_Value value);

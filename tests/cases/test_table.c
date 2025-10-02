@@ -24,8 +24,8 @@ int test_table_simple_insert_lookup_and_remove_data() {
   {
     Xvr_Table *table = Xvr_allocateTable();
 
-    Xvr_Value key = XVR_VALUE_TO_INTEGER(1);
-    Xvr_Value value = XVR_VALUE_TO_INTEGER(42);
+    Xvr_Value key = XVR_VALUE_FROM_INTEGER(1);
+    Xvr_Value value = XVR_VALUE_FROM_INTEGER(42);
 
     Xvr_insertTable(&table, key, value);
     if (table == NULL || table->capacity != 16 || table->count != 1) {
@@ -35,7 +35,7 @@ int test_table_simple_insert_lookup_and_remove_data() {
       return -1;
     }
 
-    Xvr_Value result = Xvr_lookupTable(&table, XVR_VALUE_TO_INTEGER(1));
+    Xvr_Value result = Xvr_lookupTable(&table, XVR_VALUE_FROM_INTEGER(1));
 
     if (table == NULL || table->capacity != 16 || table->count != 1 ||
         XVR_VALUE_AS_INTEGER(result) != 42) {
@@ -45,7 +45,7 @@ int test_table_simple_insert_lookup_and_remove_data() {
       return -1;
     }
 
-    Xvr_removeTable(&table, XVR_VALUE_TO_INTEGER(1));
+    Xvr_removeTable(&table, XVR_VALUE_FROM_INTEGER(1));
 
     if (table == NULL || table->capacity != 16 || table->count != 0) {
       fprintf(stderr, XVR_CC_ERROR
@@ -64,11 +64,11 @@ int test_table_expansion() {
     int top = 300;
 
     for (int i = 0; i < 400; i++) {
-      Xvr_insertTable(&table, XVR_VALUE_TO_INTEGER(i),
-                      XVR_VALUE_TO_INTEGER(top - i));
+      Xvr_insertTable(&table, XVR_VALUE_FROM_INTEGER(i),
+                      XVR_VALUE_FROM_INTEGER(top - i));
     }
 
-    Xvr_Value result = Xvr_lookupTable(&table, XVR_VALUE_TO_INTEGER(265));
+    Xvr_Value result = Xvr_lookupTable(&table, XVR_VALUE_FROM_INTEGER(265));
 
     if (table == NULL || table->capacity != 512 || table->count != 400 ||
         XVR_VALUE_IS_INTEGER(result) != true ||
@@ -80,6 +80,29 @@ int test_table_expansion() {
     }
     Xvr_freeTable(table);
   }
+
+  {
+    Xvr_Table *table = Xvr_allocateTable();
+
+    for (int i = 0; i < 20; i++) {
+      Xvr_insertTable(&table, XVR_VALUE_FROM_INTEGER(i),
+                      XVR_VALUE_FROM_INTEGER(100 - i));
+    }
+
+    Xvr_Value result = Xvr_lookupTable(&table, XVR_VALUE_FROM_INTEGER(15));
+
+    if (table == NULL || table->capacity != 32 || table->count != 20 ||
+        XVR_VALUE_IS_INTEGER(result) != true ||
+        XVR_VALUE_AS_INTEGER(result) != 85) {
+      fprintf(stderr,
+              XVR_CC_ERROR "error: bad result table lookup after expansion "
+                           "with collision and modulo wrap\n" XVR_CC_RESET);
+      Xvr_freeTable(table);
+      return -1;
+    }
+    Xvr_freeTable(table);
+  }
+
   return 0;
 }
 

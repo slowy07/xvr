@@ -226,15 +226,15 @@ static Xvr_AstFlag atomic(Xvr_Bucket **bucket, Xvr_Parser *parser,
                           Xvr_Ast **root) {
   switch (parser->previous.type) {
   case XVR_TOKEN_NULL:
-    Xvr_private_emitAstValue(bucket, root, XVR_VALUE_TO_NULL());
+    Xvr_private_emitAstValue(bucket, root, XVR_VALUE_FROM_NULL());
     return XVR_AST_FLAG_NONE;
 
   case XVR_TOKEN_LITERAL_TRUE:
-    Xvr_private_emitAstValue(bucket, root, XVR_VALUE_TO_BOOLEAN(true));
+    Xvr_private_emitAstValue(bucket, root, XVR_VALUE_FROM_BOOLEAN(true));
     return XVR_AST_FLAG_NONE;
 
   case XVR_TOKEN_LITERAL_FALSE:
-    Xvr_private_emitAstValue(bucket, root, XVR_VALUE_TO_BOOLEAN(false));
+    Xvr_private_emitAstValue(bucket, root, XVR_VALUE_FROM_BOOLEAN(false));
     return XVR_AST_FLAG_NONE;
 
   case XVR_TOKEN_LITERAL_INTEGER: {
@@ -250,7 +250,7 @@ static Xvr_AstFlag atomic(Xvr_Bucket **bucket, Xvr_Parser *parser,
 
     int value = 0;
     sscanf(buffer, "%d", &value);
-    Xvr_private_emitAstValue(bucket, root, XVR_VALUE_TO_INTEGER(value));
+    Xvr_private_emitAstValue(bucket, root, XVR_VALUE_FROM_INTEGER(value));
     return XVR_AST_FLAG_NONE;
   }
 
@@ -267,7 +267,7 @@ static Xvr_AstFlag atomic(Xvr_Bucket **bucket, Xvr_Parser *parser,
 
     float value = 0;
     sscanf(buffer, "%f", &value);
-    Xvr_private_emitAstValue(bucket, root, XVR_VALUE_TO_FLOAT(value));
+    Xvr_private_emitAstValue(bucket, root, XVR_VALUE_FROM_FLOAT(value));
     return XVR_AST_FLAG_NONE;
   }
 
@@ -294,11 +294,11 @@ static Xvr_AstFlag unary(Xvr_Bucket **bucket, Xvr_Parser *parser,
     if ((*root)->type == XVR_AST_VALUE &&
         XVR_VALUE_IS_INTEGER((*root)->value.value) && connectedDigit) {
       (*root)->value.value =
-          XVR_VALUE_TO_INTEGER(-XVR_VALUE_AS_INTEGER((*root)->value.value));
+          XVR_VALUE_FROM_INTEGER(-XVR_VALUE_AS_INTEGER((*root)->value.value));
     } else if ((*root)->type == XVR_AST_VALUE &&
                XVR_VALUE_IS_FLOAT((*root)->value.value) && connectedDigit) {
       (*root)->value.value =
-          XVR_VALUE_TO_FLOAT(-XVR_VALUE_AS_FLOAT((*root)->value.value));
+          XVR_VALUE_FROM_FLOAT(-XVR_VALUE_AS_FLOAT((*root)->value.value));
     } else {
       Xvr_private_emitAstUnary(bucket, root, XVR_AST_FLAG_NEGATE);
     }
@@ -311,7 +311,7 @@ static Xvr_AstFlag unary(Xvr_Bucket **bucket, Xvr_Parser *parser,
     if ((*root)->type == XVR_AST_VALUE &&
         XVR_VALUE_IS_BOOLEAN((*root)->value.value)) {
       (*root)->value.value =
-          XVR_VALUE_TO_BOOLEAN(!XVR_VALUE_AS_BOOLEAN((*root)->value.value));
+          XVR_VALUE_FROM_BOOLEAN(!XVR_VALUE_AS_BOOLEAN((*root)->value.value));
     } else {
       // actually emit the negation node
       Xvr_private_emitAstUnary(bucket, root, XVR_AST_FLAG_NEGATE);

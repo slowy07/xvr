@@ -119,21 +119,21 @@ union Xvr_Ast {         // 32 | 64 BITNESS
   Xvr_AstEnd end;       // 4  | 4
 }; // 16 | 32
 
-void Xvr_private_initAstBlock(Xvr_Bucket **bucket, Xvr_Ast **astHandle);
-void Xvr_private_appendAstBlock(Xvr_Bucket **bucket, Xvr_Ast *block,
+void Xvr_private_initAstBlock(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);
+void Xvr_private_appendAstBlock(Xvr_Bucket **bucketHandle, Xvr_Ast *block,
                                 Xvr_Ast *child);
 
-void Xvr_private_emitAstValue(Xvr_Bucket **bucket, Xvr_Ast **astHandle,
+void Xvr_private_emitAstValue(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle,
                               Xvr_Value value);
-void Xvr_private_emitAstUnary(Xvr_Bucket **bucket, Xvr_Ast **astHandle,
+void Xvr_private_emitAstUnary(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle,
                               Xvr_AstFlag flag);
-void Xvr_private_emitAstBinary(Xvr_Bucket **bucket, Xvr_Ast **astHandle,
+void Xvr_private_emitAstBinary(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle,
                                Xvr_AstFlag flag, Xvr_Ast *right);
-void Xvr_private_emitAstGroup(Xvr_Bucket **bucket, Xvr_Ast **astHandle);
+void Xvr_private_emitAstGroup(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);
 void Xvr_private_emitAstPrint(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);
 
-void Xvr_private_emitAstPass(Xvr_Bucket **bucket, Xvr_Ast **astHandle);
-void Xvr_private_emitAstError(Xvr_Bucket **bucket, Xvr_Ast **astHandle);
-void Xvr_private_emitAstEnd(Xvr_Bucket **bucket, Xvr_Ast **astHandle);
+void Xvr_private_emitAstPass(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);
+void Xvr_private_emitAstError(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);
+void Xvr_private_emitAstEnd(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);
 
 #endif // !XVR_AST_Hxvr_ast

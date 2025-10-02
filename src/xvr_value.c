@@ -1,6 +1,8 @@
 #include "xvr_value.h"
 #include "xvr_console_colors.h"
 #include "xvr_print.h"
+#include "xvr_string.h"
+#include <stdlib.h>
 
 bool Xvr_private_isTruthy(Xvr_Value value) {
   if (XVR_VALUE_IS_NULL(value)) {
@@ -19,7 +21,7 @@ bool Xvr_private_isTruthy(Xvr_Value value) {
 
 bool Xvr_private_isEqual(Xvr_Value left, Xvr_Value right) {
   // temp check
-  if (right.type > XVR_VALUE_FLOAT) {
+  if (right.type > XVR_VALUE_STRING) {
     Xvr_error(
         XVR_CC_ERROR
         "Error: unknown types in value equality comparison\n" XVR_CC_RESET);
@@ -52,6 +54,11 @@ bool Xvr_private_isEqual(Xvr_Value left, Xvr_Value right) {
     return false;
 
   case XVR_VALUE_STRING:
+    if (XVR_VALUE_IS_STRING(right)) {
+      return Xvr_compareStrings(XVR_VALUE_AS_STRING(left),
+                                XVR_VALUE_AS_STRING(right)) == 0;
+    }
+    return false;
   case XVR_VALUE_ARRAY:
   case XVR_VALUE_DICTIONARY:
   case XVR_VALUE_FUNCTION:
@@ -94,10 +101,27 @@ unsigned int Xvr_hashValue(Xvr_Value value) {
   case XVR_VALUE_INTEGER:
     return hashUInt(XVR_VALUE_AS_INTEGER(value));
 
+  case XVR_VALUE_STRING: {
+    Xvr_String *str = XVR_VALUE_AS_STRING(value);
+
+    if (str->cachedHash != 0) {
+      return str->cachedHash;
+    } else if (str->type == XVR_STRING_NODE) {
+      char *buffer = Xvr_getStringRawBuffer(str);
+      str->cachedHash = hashCString(buffer);
+      free(buffer);
+    } else if (str->type == XVR_STRING_LEAF) {
+      str->cachedHash = hashCString(str->as.leaf.data);
+    } else if (str->type == XVR_STRING_NAME) {
+      str->cachedHash = hashCString(str->as.name.data);
+    }
+
+    return str->cachedHash;
+  }
+
   case XVR_VALUE_FLOAT:
     return hashUInt(*((int *)(&XVR_VALUE_AS_FLOAT(value))));
 
-  case XVR_VALUE_STRING:
   case XVR_VALUE_ARRAY:
   case XVR_VALUE_DICTIONARY:
   case XVR_VALUE_FUNCTION:

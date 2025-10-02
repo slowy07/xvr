@@ -115,7 +115,7 @@ Xvr_Value Xvr_lookupTable(Xvr_Table **table, Xvr_Value key) {
 
     // if the psl is too big, or empty slot
     if (XVR_VALUE_IS_NULL((*table)->data[probe].key)) {
-      return XVR_VALUE_TO_NULL();
+      return XVR_VALUE_FROM_NULL();
     }
 
     probe = (probe + 1) % (*table)->capacity;
@@ -161,6 +161,6 @@ void Xvr_removeTable(Xvr_Table **table, Xvr_Value key) {
 
   // finally, wipe the removed entry
   (*table)->data[wipe] = (Xvr_TableEntry){
-      .key = XVR_VALUE_TO_NULL(), .value = XVR_VALUE_TO_NULL(), .psl = 0};
+      .key = XVR_VALUE_FROM_NULL(), .value = XVR_VALUE_FROM_NULL(), .psl = 0};
   (*table)->count--;
 }

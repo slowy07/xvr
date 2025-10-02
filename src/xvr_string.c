@@ -50,6 +50,7 @@ Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucket, const char *cstring,
   ret->type = XVR_STRING_LEAF;
   ret->length = length;
   ret->refCount = 1;
+  ret->cachedHash = 0;
   memcpy(ret->as.leaf.data, cstring, length);
   ret->as.leaf.data[length] = '\0';
 
@@ -65,6 +66,7 @@ XVR_API Xvr_String *Xvr_createNameString(Xvr_Bucket **bucketHandle,
   ret->type = XVR_STRING_NAME;
   ret->length = length;
   ret->refCount = 1;
+  ret->cachedHash = 0;
   memcpy(ret->as.name.data, cname, length);
   ret->as.name.data[length] = '\0';
 
@@ -95,12 +97,14 @@ Xvr_String *Xvr_deepCopyString(Xvr_Bucket **bucket, Xvr_String *str) {
     ret->type = XVR_STRING_LEAF;
     ret->length = str->length;
     ret->refCount = 1;
+    ret->cachedHash = 0;
     deepCopyUtil(ret->as.leaf.data, str); // copy each leaf into the buffer
     ret->as.leaf.data[ret->length] = '\0';
   } else {
     ret->type = XVR_STRING_NAME;
     ret->length = str->length;
     ret->refCount = 1;
+    ret->cachedHash = 0;
     memcpy(ret->as.name.data, str->as.name.data, str->length);
     ret->as.name.data[ret->length] = '\0';
   }
@@ -129,6 +133,7 @@ Xvr_String *Xvr_concatStrings(Xvr_Bucket **bucket, Xvr_String *left,
   ret->type = XVR_STRING_NODE;
   ret->length = left->length + right->length;
   ret->refCount = 1;
+  ret->cachedHash = 0;
   ret->as.node.left = left;
   ret->as.node.right = right;
 
@@ -237,7 +242,7 @@ static int deepCompareUtil(Xvr_String *left, Xvr_String *right,
   return result;
 }
 
-int Xvr_compareString(Xvr_String *left, Xvr_String *right) {
+int Xvr_compareStrings(Xvr_String *left, Xvr_String *right) {
   if (left->length == 0 || right->length == 0) {
     return left->length - right->length;
   }

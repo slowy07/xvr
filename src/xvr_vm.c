@@ -38,7 +38,7 @@ static inline void fix_alignment(Xvr_VM *vm) {
 static void processRead(Xvr_VM *vm) {
   Xvr_ValueType type = READ_BYTE(vm);
 
-  Xvr_Value value = XVR_VALUE_TO_NULL();
+  Xvr_Value value = XVR_VALUE_FROM_NULL();
 
   switch (type) {
   case XVR_VALUE_NULL: {
@@ -47,19 +47,19 @@ static void processRead(Xvr_VM *vm) {
   }
 
   case XVR_VALUE_BOOLEAN: {
-    value = XVR_VALUE_TO_BOOLEAN((bool)READ_BYTE(vm));
+    value = XVR_VALUE_FROM_BOOLEAN((bool)READ_BYTE(vm));
     break;
   }
 
   case XVR_VALUE_INTEGER: {
     fix_alignment(vm);
-    value = XVR_VALUE_TO_INTEGER(READ_INT(vm));
+    value = XVR_VALUE_FROM_INTEGER(READ_INT(vm));
     break;
   }
 
   case XVR_VALUE_FLOAT: {
     fix_alignment(vm);
-    value = XVR_VALUE_TO_FLOAT(READ_FLOAT(vm));
+    value = XVR_VALUE_FROM_FLOAT(READ_FLOAT(vm));
     break;
   }
 
@@ -136,41 +136,41 @@ static void processArithmetic(Xvr_VM *vm, Xvr_OpcodeType opcode) {
 
   // coerce ints into floats if needed
   if (XVR_VALUE_IS_INTEGER(left) && XVR_VALUE_IS_FLOAT(right)) {
-    left = XVR_VALUE_TO_FLOAT((float)XVR_VALUE_AS_INTEGER(left));
+    left = XVR_VALUE_FROM_FLOAT((float)XVR_VALUE_AS_INTEGER(left));
   } else if (XVR_VALUE_IS_FLOAT(left) && XVR_VALUE_IS_INTEGER(right)) {
-    right = XVR_VALUE_TO_FLOAT((float)XVR_VALUE_AS_INTEGER(right));
+    right = XVR_VALUE_FROM_FLOAT((float)XVR_VALUE_AS_INTEGER(right));
   }
 
   // apply operation
-  Xvr_Value result = XVR_VALUE_TO_NULL();
+  Xvr_Value result = XVR_VALUE_FROM_NULL();
 
   if (opcode == XVR_OPCODE_ADD) {
     result = XVR_VALUE_IS_FLOAT(left)
-                 ? XVR_VALUE_TO_FLOAT(XVR_VALUE_AS_FLOAT(left) +
-                                      XVR_VALUE_AS_FLOAT(right))
-                 : XVR_VALUE_TO_INTEGER(XVR_VALUE_AS_INTEGER(left) +
-                                        XVR_VALUE_AS_INTEGER(right));
+                 ? XVR_VALUE_FROM_FLOAT(XVR_VALUE_AS_FLOAT(left) +
+                                        XVR_VALUE_AS_FLOAT(right))
+                 : XVR_VALUE_FROM_INTEGER(XVR_VALUE_AS_INTEGER(left) +
+                                          XVR_VALUE_AS_INTEGER(right));
   } else if (opcode == XVR_OPCODE_SUBTRACT) {
     result = XVR_VALUE_IS_FLOAT(left)
-                 ? XVR_VALUE_TO_FLOAT(XVR_VALUE_AS_FLOAT(left) -
-                                      XVR_VALUE_AS_FLOAT(right))
-                 : XVR_VALUE_TO_INTEGER(XVR_VALUE_AS_INTEGER(left) -
-                                        XVR_VALUE_AS_INTEGER(right));
+                 ? XVR_VALUE_FROM_FLOAT(XVR_VALUE_AS_FLOAT(left) -
+                                        XVR_VALUE_AS_FLOAT(right))
+                 : XVR_VALUE_FROM_INTEGER(XVR_VALUE_AS_INTEGER(left) -
+                                          XVR_VALUE_AS_INTEGER(right));
   } else if (opcode == XVR_OPCODE_MULTIPLY) {
     result = XVR_VALUE_IS_FLOAT(left)
-                 ? XVR_VALUE_TO_FLOAT(XVR_VALUE_AS_FLOAT(left) *
-                                      XVR_VALUE_AS_FLOAT(right))
-                 : XVR_VALUE_TO_INTEGER(XVR_VALUE_AS_INTEGER(left) *
-                                        XVR_VALUE_AS_INTEGER(right));
+                 ? XVR_VALUE_FROM_FLOAT(XVR_VALUE_AS_FLOAT(left) *
+                                        XVR_VALUE_AS_FLOAT(right))
+                 : XVR_VALUE_FROM_INTEGER(XVR_VALUE_AS_INTEGER(left) *
+                                          XVR_VALUE_AS_INTEGER(right));
   } else if (opcode == XVR_OPCODE_DIVIDE) {
     result = XVR_VALUE_IS_FLOAT(left)
-                 ? XVR_VALUE_TO_FLOAT(XVR_VALUE_AS_FLOAT(left) /
-                                      XVR_VALUE_AS_FLOAT(right))
-                 : XVR_VALUE_TO_INTEGER(XVR_VALUE_AS_INTEGER(left) /
-                                        XVR_VALUE_AS_INTEGER(right));
+                 ? XVR_VALUE_FROM_FLOAT(XVR_VALUE_AS_FLOAT(left) /
+                                        XVR_VALUE_AS_FLOAT(right))
+                 : XVR_VALUE_FROM_INTEGER(XVR_VALUE_AS_INTEGER(left) /
+                                          XVR_VALUE_AS_INTEGER(right));
   } else if (opcode == XVR_OPCODE_MODULO) {
-    result = XVR_VALUE_TO_INTEGER(XVR_VALUE_AS_INTEGER(left) %
-                                  XVR_VALUE_AS_INTEGER(right));
+    result = XVR_VALUE_FROM_INTEGER(XVR_VALUE_AS_INTEGER(left) %
+                                    XVR_VALUE_AS_INTEGER(right));
   } else {
     fprintf(stderr,
             XVR_CC_ERROR "ERROR: Invalid opcode %d passed to "
@@ -193,9 +193,9 @@ static void processComparison(Xvr_VM *vm, Xvr_OpcodeType opcode) {
 
     // equality has an optional "negate" opcode within it's word
     if (READ_BYTE(vm) != XVR_OPCODE_NEGATE) {
-      Xvr_pushStack(&vm->stack, XVR_VALUE_TO_BOOLEAN(equal));
+      Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(equal));
     } else {
-      Xvr_pushStack(&vm->stack, XVR_VALUE_TO_BOOLEAN(!equal));
+      Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(!equal));
     }
 
     return;
@@ -203,37 +203,37 @@ static void processComparison(Xvr_VM *vm, Xvr_OpcodeType opcode) {
 
   // coerce ints into floats if needed
   if (XVR_VALUE_IS_INTEGER(left) && XVR_VALUE_IS_FLOAT(right)) {
-    left = XVR_VALUE_TO_FLOAT((float)XVR_VALUE_AS_INTEGER(left));
+    left = XVR_VALUE_FROM_FLOAT((float)XVR_VALUE_AS_INTEGER(left));
   } else if (XVR_VALUE_IS_FLOAT(left) && XVR_VALUE_IS_INTEGER(right)) {
-    right = XVR_VALUE_TO_FLOAT((float)XVR_VALUE_AS_INTEGER(right));
+    right = XVR_VALUE_FROM_FLOAT((float)XVR_VALUE_AS_INTEGER(right));
   }
 
   // other opcodes
   if (opcode == XVR_OPCODE_COMPARE_LESS) {
     Xvr_pushStack(
         &vm->stack,
-        XVR_VALUE_TO_BOOLEAN(
+        XVR_VALUE_FROM_BOOLEAN(
             XVR_VALUE_IS_FLOAT(left)
                 ? XVR_VALUE_AS_FLOAT(left) < XVR_VALUE_AS_FLOAT(right)
                 : XVR_VALUE_AS_INTEGER(left) < XVR_VALUE_AS_INTEGER(right)));
   } else if (opcode == XVR_OPCODE_COMPARE_LESS_EQUAL) {
     Xvr_pushStack(
         &vm->stack,
-        XVR_VALUE_TO_BOOLEAN(
+        XVR_VALUE_FROM_BOOLEAN(
             XVR_VALUE_IS_FLOAT(left)
                 ? XVR_VALUE_AS_FLOAT(left) <= XVR_VALUE_AS_FLOAT(right)
                 : XVR_VALUE_AS_INTEGER(left) <= XVR_VALUE_AS_INTEGER(right)));
   } else if (opcode == XVR_OPCODE_COMPARE_GREATER) {
     Xvr_pushStack(
         &vm->stack,
-        XVR_VALUE_TO_BOOLEAN(
+        XVR_VALUE_FROM_BOOLEAN(
             XVR_VALUE_IS_FLOAT(left)
                 ? XVR_VALUE_AS_FLOAT(left) > XVR_VALUE_AS_FLOAT(right)
                 : XVR_VALUE_AS_INTEGER(left) > XVR_VALUE_AS_INTEGER(right)));
   } else if (opcode == XVR_OPCODE_COMPARE_GREATER_EQUAL) {
     Xvr_pushStack(
         &vm->stack,
-        XVR_VALUE_TO_BOOLEAN(
+        XVR_VALUE_FROM_BOOLEAN(
             XVR_VALUE_IS_FLOAT(left)
                 ? XVR_VALUE_AS_FLOAT(left) >= XVR_VALUE_AS_FLOAT(right)
                 : XVR_VALUE_AS_INTEGER(left) >= XVR_VALUE_AS_INTEGER(right)));
@@ -251,22 +251,25 @@ static void processLogical(Xvr_VM *vm, Xvr_OpcodeType opcode) {
     Xvr_Value right = Xvr_popStack(&vm->stack);
     Xvr_Value left = Xvr_popStack(&vm->stack);
 
-    Xvr_pushStack(&vm->stack, XVR_VALUE_TO_BOOLEAN(XVR_VALUE_IS_TRUTHY(left) &&
-                                                   XVR_VALUE_IS_TRUTHY(right)));
+    Xvr_pushStack(&vm->stack,
+                  XVR_VALUE_FROM_BOOLEAN(XVR_VALUE_IS_TRUTHY(left) &&
+                                         XVR_VALUE_IS_TRUTHY(right)));
   } else if (opcode == XVR_OPCODE_OR) {
     Xvr_Value right = Xvr_popStack(&vm->stack);
     Xvr_Value left = Xvr_popStack(&vm->stack);
 
-    Xvr_pushStack(&vm->stack, XVR_VALUE_TO_BOOLEAN(XVR_VALUE_IS_TRUTHY(left) ||
-                                                   XVR_VALUE_IS_TRUTHY(right)));
+    Xvr_pushStack(&vm->stack,
+                  XVR_VALUE_FROM_BOOLEAN(XVR_VALUE_IS_TRUTHY(left) ||
+                                         XVR_VALUE_IS_TRUTHY(right)));
   } else if (opcode == XVR_OPCODE_TRUTHY) {
     Xvr_Value top = Xvr_popStack(&vm->stack);
 
-    Xvr_pushStack(&vm->stack, XVR_VALUE_TO_BOOLEAN(XVR_VALUE_IS_TRUTHY(top)));
+    Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(XVR_VALUE_IS_TRUTHY(top)));
   } else if (opcode == XVR_OPCODE_NEGATE) {
     Xvr_Value top = Xvr_popStack(&vm->stack);
 
-    Xvr_pushStack(&vm->stack, XVR_VALUE_TO_BOOLEAN(!XVR_VALUE_IS_TRUTHY(top)));
+    Xvr_pushStack(&vm->stack,
+                  XVR_VALUE_FROM_BOOLEAN(!XVR_VALUE_IS_TRUTHY(top)));
   } else {
     fprintf(stderr,
             XVR_CC_ERROR "ERROR: Invalid opcode %d passed to processLogical, "

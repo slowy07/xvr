@@ -7,7 +7,7 @@
 
 int test_sizeof_string_64bit() {
   {
-    if (sizeof(Xvr_String) != 32) {
+    if (sizeof(Xvr_String) != 40) {
       fprintf(stderr,
               XVR_CC_ERROR "Error: `Xvr_String` unexpected size in memory: "
                            "expected 32, found %d \n" XVR_CC_RESET,
@@ -39,7 +39,7 @@ int test_string_equal() {
 
     int result = 0;
 
-    if ((result = Xvr_compareString(helloWorld, helloWorldC)) != 0) {
+    if ((result = Xvr_compareStrings(helloWorld, helloWorldC)) != 0) {
       char *leftBuffer = Xvr_getStringRawBuffer(helloWorld);
       char *rightBuffer = Xvr_getStringRawBuffer(helloWorldC);
       fprintf(
@@ -132,7 +132,7 @@ int test_string_diffs() {
 
     int result = 0;
 
-    if (((result = Xvr_compareString(pangram, neckbeard)) < 0) == false) {
+    if (((result = Xvr_compareStrings(pangram, neckbeard)) < 0) == false) {
       char *leftBuffer = Xvr_getStringRawBuffer(pangram);
       char *rightBuffer = Xvr_getStringRawBuffer(neckbeard);
       fprintf(

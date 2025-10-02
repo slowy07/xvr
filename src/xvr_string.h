@@ -12,8 +12,9 @@ typedef struct Xvr_String { // 32 | 64 BITNESS
     XVR_STRING_NAME,
   } type; // 4  | 4
 
-  unsigned int length;   // 4  | 4
-  unsigned int refCount; // 4  | 4
+  unsigned int length;     // 4  | 4
+  unsigned int refCount;   // 4  | 4
+  unsigned int cachedHash; // 4 | 4
 
   int _padding; // 4  | 4
 
@@ -54,6 +55,6 @@ XVR_API int Xvr_getStringRefCount(Xvr_String *str);
 
 XVR_API char *Xvr_getStringRawBuffer(Xvr_String *str);
 
-XVR_API int Xvr_compareString(Xvr_String *left, Xvr_String *right);
+XVR_API int Xvr_compareStrings(Xvr_String *left, Xvr_String *right);
 
 #endif // !XVR_STRING_H
