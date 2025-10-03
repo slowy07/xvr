@@ -41,8 +41,8 @@ int test_setup_and_teardown(Xvr_Bucket **bucket) {
     }
 
     if (vm.routine - vm.bc != headerSize || vm.routineSize != 72 ||
-        vm.paramCount != 0 || vm.jumpsCount != 0 || vm.dataCount != 0 ||
-        vm.dataCount != 0 || vm.subsCount != 0) {
+        vm.paramSize != 0 || vm.jumpsSize != 0 || vm.dataSize != 0 ||
+        vm.dataSize != 0 || vm.subsSize != 0) {
       fprintf(stderr,
               XVR_CC_ERROR
               "error: failed to setup Xvr_VM, source: %s\n" XVR_CC_RESET,

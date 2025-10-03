@@ -5,6 +5,8 @@
 #include "xvr_common.h"
 #include "xvr_value.h"
 
+#define XVR_STRING_MAX_LENGTH 1000
+
 typedef struct Xvr_String { // 32 | 64 BITNESS
   enum Xvr_StringType {
     XVR_STRING_NODE,

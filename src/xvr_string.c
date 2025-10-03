@@ -44,6 +44,15 @@ Xvr_String *Xvr_createString(Xvr_Bucket **bucket, const char *cstring) {
 
 Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucket, const char *cstring,
                                    int length) {
+
+  if (length > XVR_STRING_MAX_LENGTH) {
+    fprintf(stderr,
+            XVR_CC_ERROR
+            "Error: can't create string longer than %d\n" XVR_CC_RESET,
+            XVR_STRING_MAX_LENGTH);
+    exit(-1);
+  }
+
   Xvr_String *ret = (Xvr_String *)Xvr_partitionBucket(
       bucket, sizeof(Xvr_String) + length + 1);
 
@@ -51,7 +60,7 @@ Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucket, const char *cstring,
   ret->length = length;
   ret->refCount = 1;
   ret->cachedHash = 0;
-  memcpy(ret->as.leaf.data, cstring, length);
+  memcpy(ret->as.leaf.data, cstring, length + 1);
   ret->as.leaf.data[length] = '\0';
 
   return ret;
@@ -60,6 +69,15 @@ Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucket, const char *cstring,
 XVR_API Xvr_String *Xvr_createNameString(Xvr_Bucket **bucketHandle,
                                          const char *cname) {
   int length = strlen(cname);
+
+  if (length > XVR_STRING_MAX_LENGTH) {
+    fprintf(stderr,
+            XVR_CC_ERROR
+            "error: can't create name string longer than %d\n" XVR_CC_RESET,
+            XVR_STRING_MAX_LENGTH);
+    exit(-1);
+  }
+
   Xvr_String *ret = (Xvr_String *)Xvr_partitionBucket(
       bucketHandle, sizeof(Xvr_String) + length + 1);
 
@@ -67,7 +85,7 @@ XVR_API Xvr_String *Xvr_createNameString(Xvr_Bucket **bucketHandle,
   ret->length = length;
   ret->refCount = 1;
   ret->cachedHash = 0;
-  memcpy(ret->as.name.data, cname, length);
+  memcpy(ret->as.name.data, cname, length + 1);
   ret->as.name.data[length] = '\0';
 
   return ret;
@@ -105,7 +123,7 @@ Xvr_String *Xvr_deepCopyString(Xvr_Bucket **bucket, Xvr_String *str) {
     ret->length = str->length;
     ret->refCount = 1;
     ret->cachedHash = 0;
-    memcpy(ret->as.name.data, str->as.name.data, str->length);
+    memcpy(ret->as.name.data, str->as.name.data, str->length + 1);
     ret->as.name.data[ret->length] = '\0';
   }
 
@@ -124,6 +142,14 @@ Xvr_String *Xvr_concatStrings(Xvr_Bucket **bucket, Xvr_String *left,
   if (left->refCount == 0 || right->refCount == 0) {
     fprintf(stderr, XVR_CC_ERROR "ERROR: Can't concatenate a string with "
                                  "refcount of zero\n" XVR_CC_RESET);
+    exit(-1);
+  }
+
+  if (left->length + right->length > XVR_STRING_MAX_LENGTH) {
+    fprintf(stderr,
+            XVR_CC_ERROR
+            "Error: can't concat string longer than %d\n" XVR_CC_RESET,
+            XVR_STRING_MAX_LENGTH);
     exit(-1);
   }
 

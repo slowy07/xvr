@@ -37,6 +37,10 @@ void *Xvr_partitionBucket(Xvr_Bucket **bucketHandle, unsigned int amount) {
     exit(1);
   }
 
+  if (amount % 4 != 0) {
+    amount += 4 - (amount % 4);
+  }
+
   // if you try to allocate too much space
   if ((*bucketHandle)->capacity < amount) {
     fprintf(stderr,

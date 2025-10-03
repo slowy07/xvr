@@ -1,4 +1,5 @@
 #include "xvr.h"
+#include "xvr_bucket.h"
 #include "xvr_print.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -198,7 +199,7 @@ int main(int argc, const char *argv[]) {
     Xvr_Parser parser;
     Xvr_bindParser(&parser, &lexer);
 
-    Xvr_Bucket *bucket = Xvr_allocateBucket(sizeof(Xvr_Ast) * 32);
+    Xvr_Bucket *bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
     Xvr_Ast *ast = Xvr_scanParser(&bucket, &parser);
 
     Xvr_Bytecode bc = Xvr_compileBytecode(ast);

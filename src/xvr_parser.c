@@ -2,7 +2,9 @@
 #include "xvr_ast.h"
 #include "xvr_bucket.h"
 #include "xvr_console_colors.h"
+#include "xvr_string.h"
 #include "xvr_token_types.h"
+#include "xvr_value.h"
 
 #include <stdio.h>
 
@@ -111,8 +113,8 @@ typedef struct ParsingTuple {
 static void parsePrecedence(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                             Xvr_Ast **rootHandle, ParsingPrecedence precRule);
 
-static Xvr_AstFlag atomic(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
-                          Xvr_Ast **rootHandle);
+static Xvr_AstFlag literal(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
+                           Xvr_Ast **rootHandle);
 static Xvr_AstFlag unary(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                          Xvr_Ast **rootHandle);
 static Xvr_AstFlag binary(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
@@ -121,7 +123,7 @@ static Xvr_AstFlag group(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                          Xvr_Ast **rootHandle);
 
 static ParsingTuple parsingRulesetTable[] = {
-    {PREC_PRIMARY, atomic, NULL}, // XVR_TOKEN_NULL,
+    {PREC_PRIMARY, literal, NULL}, // XVR_TOKEN_NULL,
 
     // variable names
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_IDENTIFIER,
@@ -164,11 +166,11 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_KEYWORD_YIELD,
 
     // literal values
-    {PREC_PRIMARY, atomic, NULL}, // XVR_TOKEN_LITERAL_TRUE,
-    {PREC_PRIMARY, atomic, NULL}, // XVR_TOKEN_LITERAL_FALSE,
-    {PREC_PRIMARY, atomic, NULL}, // XVR_TOKEN_LITERAL_INTEGER,
-    {PREC_PRIMARY, atomic, NULL}, // XVR_TOKEN_LITERAL_FLOAT,
-    {PREC_NONE, NULL, NULL},      // XVR_TOKEN_LITERAL_STRING,
+    {PREC_PRIMARY, literal, NULL}, // XVR_TOKEN_LITERAL_TRUE,
+    {PREC_PRIMARY, literal, NULL}, // XVR_TOKEN_LITERAL_FALSE,
+    {PREC_PRIMARY, literal, NULL}, // XVR_TOKEN_LITERAL_INTEGER,
+    {PREC_PRIMARY, literal, NULL}, // XVR_TOKEN_LITERAL_FLOAT,
+    {PREC_PRIMARY, literal, NULL}, // XVR_TOKEN_LITERAL_STRING,
 
     // math operators
     {PREC_TERM, NULL, binary},       // XVR_TOKEN_OPERATOR_ADD,
@@ -209,8 +211,12 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_QUESTION,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_COLON,
 
-    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_OPERATOR_CONCAT, // ..
-    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_OPERATOR_REST, // ...
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_OPERATOR_SEMICOLON, // ;
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_OPERATOR_COMMA, // ,
+
+    {PREC_NONE, NULL, NULL},   // XVR_TOKEN_OPERATOR_DOT, // .
+    {PREC_CALL, NULL, binary}, // XVR_TOKEN_OPERATOR_CONCAT, // ..
+    {PREC_NONE, NULL, NULL},   // XVR_TOKEN_OPERATOR_REST, // ...
 
     // unused operators
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_OPERATOR_AMPERSAND, // &
@@ -222,8 +228,8 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_EOF,
 };
 
-static Xvr_AstFlag atomic(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
-                          Xvr_Ast **rootHandle) {
+static Xvr_AstFlag literal(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
+                           Xvr_Ast **rootHandle) {
   switch (parser->previous.type) {
   case XVR_TOKEN_NULL:
     Xvr_private_emitAstValue(bucketHandle, rootHandle, XVR_VALUE_FROM_NULL());
@@ -248,7 +254,7 @@ static Xvr_AstFlag atomic(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
       if (buffer[i] != '_')
         i++;
     } while (parser->previous.lexeme[o++] && i < parser->previous.length);
-    buffer[i] = '\0'; 
+    buffer[i] = '\0';
 
     int value = 0;
     sscanf(buffer, "%d", &value);
@@ -275,9 +281,40 @@ static Xvr_AstFlag atomic(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
     return XVR_AST_FLAG_NONE;
   }
 
+  case XVR_TOKEN_LITERAL_STRING: {
+    char buffer[parser->previous.length + 1];
+
+    unsigned int i = 0, o = 0;
+    do {
+      buffer[i] = parser->previous.lexeme[o];
+      if (buffer[i] == '\\' && parser->previous.lexeme[++o]) {
+        switch (parser->previous.lexeme[o]) {
+        case 'n':
+          buffer[i] = '\n';
+          break;
+        case 't':
+          buffer[i] = '\t';
+          break;
+        case '\\':
+          buffer[i] = '\\';
+          break;
+        case '"':
+          buffer[i] = '"';
+          break;
+        }
+      }
+      i++;
+    } while (parser->previous.lexeme[o++] && i < parser->previous.length);
+    buffer[i] = '\0';
+    Xvr_private_emitAstValue(
+        bucketHandle, rootHandle,
+        XVR_VALUE_FROM_STRING(Xvr_createStringLength(bucketHandle, buffer, i)));
+    return XVR_AST_FLAG_NONE;
+  }
+
   default:
     printError(parser, parser->previous,
-               "Unexpected token passed to atomic precedence rule");
+               "Unexpected token passed to literal precedence rule");
     Xvr_private_emitAstError(bucketHandle, rootHandle);
     return XVR_AST_FLAG_NONE;
   }
@@ -292,9 +329,7 @@ static Xvr_AstFlag unary(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
   if (parser->previous.type == XVR_TOKEN_OPERATOR_SUBTRACT) {
 
     bool connectedDigit =
-        parser->previous.lexeme[1] >= '0' &&
-        parser->previous.lexeme[1] <=
-            '9'; 
+        parser->previous.lexeme[1] >= '0' && parser->previous.lexeme[1] <= '9';
     parsePrecedence(bucketHandle, parser, rootHandle, PREC_UNARY);
 
     if ((*rootHandle)->type == XVR_AST_VALUE &&
@@ -425,6 +460,11 @@ static Xvr_AstFlag binary(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
   case XVR_TOKEN_OPERATOR_COMPARE_GREATER_EQUAL: {
     parsePrecedence(bucketHandle, parser, rootHandle, PREC_COMPARISON + 1);
     return XVR_AST_FLAG_COMPARE_GREATER_EQUAL;
+  }
+
+  case XVR_TOKEN_OPERATOR_CONCAT: {
+    parsePrecedence(bucketHandle, parser, rootHandle, PREC_CALL + 1);
+    return XVR_AST_FLAG_CONCAT;
   }
 
   default:
@@ -574,6 +614,12 @@ void Xvr_bindParser(Xvr_Parser *parser, Xvr_Lexer *lexer) {
 
 Xvr_Ast *Xvr_scanParser(Xvr_Bucket **bucketHandle, Xvr_Parser *parser) {
   Xvr_Ast *rootHandle = NULL;
+
+  if ((*bucketHandle)->capacity < XVR_STRING_MAX_LENGTH) {
+    fprintf(stderr,
+            XVR_CC_WARN "Warning: bucket capacity in Xvr_scanParser() is "
+                        "smaller than XVR_STRING_MAX_LENGTH" XVR_CC_RESET);
+  }
 
   // check for EOF
   if (match(parser, XVR_TOKEN_EOF)) {

@@ -1,6 +1,7 @@
 #ifndef XVR_WM_H
 #define XVR_WM_H
 
+#include "xvr_bucket.h"
 #include "xvr_common.h"
 #include "xvr_stack.h"
 
@@ -10,10 +11,10 @@ typedef struct Xvr_VM {
   unsigned char *routine;
   unsigned int routineSize;
 
-  unsigned int paramCount;
-  unsigned int jumpsCount;
-  unsigned int dataCount;
-  unsigned int subsCount;
+  unsigned int paramSize;
+  unsigned int jumpsSize;
+  unsigned int dataSize;
+  unsigned int subsSize;
 
   unsigned int paramAddr;
   unsigned int codeAddr;
@@ -23,6 +24,7 @@ typedef struct Xvr_VM {
 
   unsigned int routineCounter;
   Xvr_Stack *stack;
+  Xvr_Bucket *stringBucket;
 } Xvr_VM;
 
 XVR_API void Xvr_bindVM(Xvr_VM *vm,

@@ -1,9 +1,12 @@
 #include "xvr_vm.h"
+#include "xvr_ast.h"
+#include "xvr_bucket.h"
 #include "xvr_console_colors.h"
 
 #include "xvr_opcodes.h"
 #include "xvr_print.h"
 #include "xvr_stack.h"
+#include "xvr_string.h"
 #include "xvr_value.h"
 
 #include <stdio.h>
@@ -64,8 +67,12 @@ static void processRead(Xvr_VM *vm) {
   }
 
   case XVR_VALUE_STRING: {
-    //
-    // break;
+    fix_alignment(vm);
+    unsigned int jump =
+        *(unsigned int *)(vm->routine + vm->jumpsAddr + READ_INT(vm));
+    char *cstring = (char *)(vm->routine + vm->dataAddr + jump);
+    value = XVR_VALUE_FROM_STRING(Xvr_createString(&vm->stringBucket, cstring));
+    break;
   }
 
   case XVR_VALUE_ARRAY: {
@@ -305,7 +312,19 @@ static void processPrint(Xvr_VM *vm) {
     break;
   }
 
-  case XVR_VALUE_STRING:
+  case XVR_VALUE_STRING: {
+    Xvr_String *str = XVR_VALUE_AS_STRING(value);
+    if (str->type == XVR_STRING_NODE) {
+      char *buffer = Xvr_getStringRawBuffer(str);
+      Xvr_print(buffer);
+      free(buffer);
+    } else if (str->type == XVR_STRING_LEAF) {
+      Xvr_print(str->as.leaf.data);
+    } else if (str->type == XVR_STRING_NAME) {
+      Xvr_print(str->as.name.data);
+    }
+    break;
+  }
   case XVR_VALUE_ARRAY:
   case XVR_VALUE_DICTIONARY:
   case XVR_VALUE_FUNCTION:
@@ -317,6 +336,25 @@ static void processPrint(Xvr_VM *vm) {
         value.type);
     exit(-1);
   }
+}
+
+static void processConcat(Xvr_VM *vm) {
+  Xvr_Value right = Xvr_popStack(&vm->stack);
+  Xvr_Value left = Xvr_popStack(&vm->stack);
+
+  if (!XVR_VALUE_IS_STRING(left)) {
+    Xvr_error("failed to concatenate a value that is not a string");
+    return;
+  }
+
+  if (!XVR_VALUE_IS_STRING(left)) {
+    Xvr_error("failed to concatenate value that is not a string");
+    return;
+  }
+
+  Xvr_String *result = Xvr_concatStrings(
+      &vm->stringBucket, XVR_VALUE_AS_STRING(left), XVR_VALUE_AS_STRING(right));
+  Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_STRING(result));
 }
 
 static void process(Xvr_VM *vm) {
@@ -356,6 +394,10 @@ static void process(Xvr_VM *vm) {
 
     case XVR_OPCODE_PRINT:
       processPrint(vm);
+      break;
+
+    case XVR_OPCODE_CONCAT:
+      processConcat(vm);
       break;
 
     case XVR_OPCODE_LOAD:
@@ -421,31 +463,32 @@ void Xvr_bindVMToRoutine(Xvr_VM *vm, unsigned char *routine) {
 
   // read the header metadata
   vm->routineSize = READ_UNSIGNED_INT(vm);
-  vm->paramCount = READ_UNSIGNED_INT(vm);
-  vm->jumpsCount = READ_UNSIGNED_INT(vm);
-  vm->dataCount = READ_UNSIGNED_INT(vm);
-  vm->subsCount = READ_UNSIGNED_INT(vm);
+  vm->paramSize = READ_UNSIGNED_INT(vm);
+  vm->jumpsSize = READ_UNSIGNED_INT(vm);
+  vm->dataSize = READ_UNSIGNED_INT(vm);
+  vm->subsSize = READ_UNSIGNED_INT(vm);
 
   // read the header addresses
-  if (vm->paramCount > 0) {
+  if (vm->paramSize > 0) {
     vm->paramAddr = READ_UNSIGNED_INT(vm);
   }
 
   vm->codeAddr = READ_UNSIGNED_INT(vm); // required
 
-  if (vm->jumpsCount > 0) {
+  if (vm->jumpsSize > 0) {
     vm->jumpsAddr = READ_UNSIGNED_INT(vm);
   }
 
-  if (vm->dataCount > 0) {
+  if (vm->dataSize > 0) {
     vm->dataAddr = READ_UNSIGNED_INT(vm);
   }
 
-  if (vm->subsCount > 0) {
+  if (vm->subsSize > 0) {
     vm->subsAddr = READ_UNSIGNED_INT(vm);
   }
 
   vm->stack = Xvr_allocateStack();
+  vm->stringBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
 }
 
 void Xvr_runVM(Xvr_VM *vm) {
@@ -468,10 +511,10 @@ void Xvr_resetVM(Xvr_VM *vm) {
   vm->routine = NULL;
   vm->routineSize = 0;
 
-  vm->paramCount = 0;
-  vm->jumpsCount = 0;
-  vm->dataCount = 0;
-  vm->subsCount = 0;
+  vm->paramSize = 0;
+  vm->jumpsSize = 0;
+  vm->dataSize = 0;
+  vm->subsSize = 0;
 
   vm->paramAddr = 0;
   vm->codeAddr = 0;

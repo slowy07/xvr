@@ -46,6 +46,7 @@ typedef enum Xvr_AstFlag {
   XVR_AST_FLAG_COMPARE_GREATER_EQUAL,
   XVR_AST_FLAG_AND,
   XVR_AST_FLAG_OR,
+  XVR_AST_FLAG_CONCAT,
 
   // unary flags
   XVR_AST_FLAG_NEGATE,
@@ -109,7 +110,7 @@ typedef struct Xvr_AstEnd {
 union Xvr_Ast {         // 32 | 64 BITNESS
   Xvr_AstType type;     // 4  | 4
   Xvr_AstBlock block;   // 16 | 32
-  Xvr_AstValue value;   // 12 | 12
+  Xvr_AstValue value;   // 12 | 24
   Xvr_AstUnary unary;   // 12 | 16
   Xvr_AstBinary binary; // 16 | 24
   Xvr_AstGroup group;   // 8  | 16
