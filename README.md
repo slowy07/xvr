@@ -1,5 +1,4 @@
-# The XVR programming language
-xvr programming language, byte-code interpreted
+![image_banner](.github/images/banner_xvr.png)
 
 ## Feature
 
