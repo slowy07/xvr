@@ -4,7 +4,7 @@ thank you for contributing for Xvr Programming Languages!
 
 ## Building block
 
-![images](./github/images/building_blocks.png)
+![images](.github/images/building_blocks.png)
 
 ## Code style
 
