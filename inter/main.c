@@ -55,7 +55,8 @@ int dir(char *dest, const char *src) {
   return len;
 }
 
-#define APPEND(dest, src) memcpy((dest) + (strlen(dest)), (src), strlen((src)));
+#define APPEND(dest, src)                                                      \
+  strncpy((dest) + (strlen(dest)), (src), strlen((src)) + 1);
 
 #if defined(_WIN32) || defined(_WIN64)
 #define FLIPSLASH(str)                                                         \
@@ -121,7 +122,7 @@ CmdLine parseCmdLine(int argc, const char *argv[]) {
 
         i++;
         cmd.infileLength = strlen(argv[0]) + strlen(argv[i]);
-        cmd.infile = malloc(cmd.infileLength);
+        cmd.infile = malloc(cmd.infileLength + 1);
 
         if (cmd.infile == NULL) {
           fprintf(stderr,
@@ -190,7 +191,6 @@ int repl(const char *name) {
 
     Xvr_runVM(&vm);
 
-    Xvr_freeBytecode(bc);
     Xvr_resetVM(&vm);
 
     Xvr_Bucket *iter = bucket;
@@ -343,7 +343,6 @@ int main(int argc, const char *argv[]) {
     }
 
     Xvr_freeVM(&vm);
-    Xvr_freeBytecode(bc);
     Xvr_freeBucket(&bucket);
     free(source);
   } else {
