@@ -27,6 +27,7 @@ typedef struct Xvr_VM {
   Xvr_Bucket *stringBucket;
 } Xvr_VM;
 
+XVR_API void Xvr_initVM(Xvr_VM* vm);
 XVR_API void Xvr_bindVM(Xvr_VM *vm,
                         unsigned char *bytecode); // process the version data
 XVR_API void

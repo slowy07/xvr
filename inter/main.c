@@ -1,6 +1,12 @@
 #include "xvr.h"
 #include "xvr_bucket.h"
+#include "xvr_bytecode.h"
+#include "xvr_lexer.h"
+#include "xvr_parser.h"
 #include "xvr_print.h"
+#include "xvr_string.h"
+#include "xvr_value.h"
+#include "xvr_vm.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -138,6 +144,75 @@ CmdLine parseCmdLine(int argc, const char *argv[]) {
   return cmd;
 }
 
+static void errorAndContinueCallback(const char *msg) {
+  fprintf(stderr, "%s\n", msg);
+}
+
+int repl(const char *name) {
+  Xvr_setErrorCallback(errorAndContinueCallback);
+  Xvr_setAssertFailureCallback(errorAndContinueCallback);
+
+  unsigned int INPUT_BUFFER_SIZE = 4096;
+  char inputBuffer[INPUT_BUFFER_SIZE];
+  memset(inputBuffer, 0, INPUT_BUFFER_SIZE);
+
+  Xvr_Bucket *bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
+
+  Xvr_VM vm;
+  Xvr_initVM(&vm);
+
+  printf("%s>> ", name);
+
+  while (fgets(inputBuffer, INPUT_BUFFER_SIZE, stdin)) {
+    unsigned int length = strlen(inputBuffer);
+    if (inputBuffer[length - 1] == '\n') {
+      inputBuffer[--length] = '\0';
+    }
+
+    if (strlen(inputBuffer) == 4 && (strncmp(inputBuffer, "exit", 4) == 0 ||
+                                     strncmp(inputBuffer, "quit", 4) == 0)) {
+      break;
+    }
+
+    Xvr_Lexer lexer;
+    Xvr_bindLexer(&lexer, inputBuffer);
+    Xvr_Parser parser;
+    Xvr_bindParser(&parser, &lexer);
+    Xvr_Ast *ast = Xvr_scanParser(&bucket, &parser);
+
+    if (parser.error) {
+      printf("%s>> ", name);
+      continue;
+    }
+
+    Xvr_Bytecode bc = Xvr_compileBytecode(ast);
+    Xvr_bindVM(&vm, bc.ptr);
+
+    Xvr_runVM(&vm);
+
+    Xvr_freeBytecode(bc);
+    Xvr_resetVM(&vm);
+
+    Xvr_Bucket *iter = bucket;
+    int depth = 0;
+
+    while (iter->next) {
+      iter = iter->next;
+      if (++depth >= 7) {
+        Xvr_freeBucket(&bucket);
+        bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
+        break;
+      }
+    }
+
+    printf("%s> ", name);
+  }
+
+  Xvr_freeVM(&vm);
+  Xvr_freeBucket(&bucket);
+  return 0;
+}
+
 static void printCallback(const char *msg) { fprintf(stdout, "%s\n", msg); }
 
 static void errorAndExitCallback(const char *msg) {
@@ -149,6 +224,11 @@ int main(int argc, const char *argv[]) {
   Xvr_setPrintCallback(printCallback);
   Xvr_setErrorCallback(errorAndExitCallback);
   Xvr_setAssertFailureCallback(errorAndExitCallback);
+
+  if (argc == 1) {
+    return repl(argv[0]);
+  }
+
   CmdLine cmd = parseCmdLine(argc, argv);
 
   if (cmd.error) {
@@ -236,7 +316,20 @@ int main(int argc, const char *argv[]) {
           printf("%f", XVR_VALUE_AS_FLOAT(v));
           break;
 
-        case XVR_VALUE_STRING:
+        case XVR_VALUE_STRING: {
+          Xvr_String *str = XVR_VALUE_AS_STRING(v);
+          if (str->type == XVR_STRING_NODE) {
+            char *buffer = Xvr_getStringRawBuffer(str);
+            printf("%s", buffer);
+            free(buffer);
+          } else if (str->type == XVR_STRING_LEAF) {
+            printf("%s", str->as.leaf.data);
+          } else if (str->type == XVR_STRING_NAME) {
+            printf("%s", str->as.name.data);
+          }
+          break;
+        }
+
         case XVR_VALUE_ARRAY:
         case XVR_VALUE_DICTIONARY:
         case XVR_VALUE_FUNCTION:
@@ -250,6 +343,7 @@ int main(int argc, const char *argv[]) {
     }
 
     Xvr_freeVM(&vm);
+    Xvr_freeBytecode(bc);
     Xvr_freeBucket(&bucket);
     free(source);
   } else {

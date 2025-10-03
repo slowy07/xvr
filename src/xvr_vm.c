@@ -420,6 +420,12 @@ static void process(Xvr_VM *vm) {
   }
 }
 
+void Xvr_initVM(Xvr_VM *vm) {
+  vm->stack = NULL;
+  vm->stringBucket = NULL;
+  Xvr_resetVM(vm);
+}
+
 // exposed functions
 void Xvr_bindVM(Xvr_VM *vm, unsigned char *bytecode) {
   if (bytecode[0] != XVR_VERSION_MAJOR || bytecode[1] > XVR_VERSION_MINOR) {
@@ -457,8 +463,6 @@ void Xvr_bindVM(Xvr_VM *vm, unsigned char *bytecode) {
 }
 
 void Xvr_bindVMToRoutine(Xvr_VM *vm, unsigned char *routine) {
-  Xvr_resetVM(vm);
-
   vm->routine = routine;
 
   // read the header metadata
@@ -523,7 +527,4 @@ void Xvr_resetVM(Xvr_VM *vm) {
   vm->subsAddr = 0;
 
   vm->routineCounter = 0;
-
-  // init the scope & stack
-  vm->stack = NULL;
 }
