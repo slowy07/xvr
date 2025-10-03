@@ -170,6 +170,11 @@ int repl(const char *name) {
       inputBuffer[--length] = '\0';
     }
 
+    if (length == 0) {
+      printf("%s>> ", name);
+      continue;
+    }
+
     if (strlen(inputBuffer) == 4 && (strncmp(inputBuffer, "exit", 4) == 0 ||
                                      strncmp(inputBuffer, "quit", 4) == 0)) {
       break;
@@ -205,7 +210,7 @@ int repl(const char *name) {
       }
     }
 
-    printf("%s> ", name);
+    printf("%s>> ", name);
   }
 
   Xvr_freeVM(&vm);
