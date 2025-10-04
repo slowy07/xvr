@@ -19,14 +19,12 @@ XVR_API Xvr_Scope *Xvr_popScope(Xvr_Scope *scope);
 XVR_API Xvr_Scope *Xvr_deepCopyScope(Xvr_Bucket **bucketHandle,
                                      Xvr_Scope *scope);
 
-XVR_API void Xvr_declareScope(Xvr_Bucket **bucketHandle, Xvr_Scope *scope,
-                              Xvr_String *key, Xvr_Value value);
-XVR_API void Xvr_assignScope(Xvr_Bucket **bucketHandle, Xvr_Scope *scope,
-                             Xvr_String *key, Xvr_Value value);
-XVR_API Xvr_Value Xvr_accessScope(Xvr_Bucket **bucketHandle, Xvr_Scope *scope,
-                                  Xvr_String *key);
+XVR_API void Xvr_declareScope(Xvr_Scope *scope, Xvr_String *key,
+                              Xvr_Value value);
+XVR_API void Xvr_assignScope(Xvr_Scope *scope, Xvr_String *key,
+                             Xvr_Value value);
+XVR_API Xvr_Value Xvr_accessScope(Xvr_Scope *scope, Xvr_String *key);
 
-XVR_API bool Xvr_isDeclaredScope(Xvr_Bucket **bucketHandle, Xvr_Scope *scope,
-                                 Xvr_String *key);
+XVR_API bool Xvr_isDeclaredScope(Xvr_Scope *scope, Xvr_String *key);
 
 #endif // !XVR_SCOPE_H

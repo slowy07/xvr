@@ -102,7 +102,7 @@ int test_string_allocation() {
     const char *cstring = "hello world";
     Xvr_String *str = Xvr_createNameString(&bucket, cstring, XVR_VALUE_NULL);
 
-    Xvr_String *shallow = Xvr_copyString(&bucket, str);
+    Xvr_String *shallow = Xvr_copyString(str);
     Xvr_String *deep = Xvr_deepCopyString(&bucket, str);
 
     if (str != shallow || str == deep || shallow->refCount != 2 ||

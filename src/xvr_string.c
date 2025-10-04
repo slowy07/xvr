@@ -105,7 +105,7 @@ XVR_API Xvr_String *Xvr_createNameString(Xvr_Bucket **bucketHandle,
   return ret;
 }
 
-Xvr_String *Xvr_copyString(Xvr_Bucket **bucket, Xvr_String *str) {
+Xvr_String *Xvr_copyString(Xvr_String *str) {
   if (str->refCount == 0) {
     fprintf(stderr, XVR_CC_ERROR
             "ERROR: Can't copy a string with refcount of zero\n" XVR_CC_RESET);
