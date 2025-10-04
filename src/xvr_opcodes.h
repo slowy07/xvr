@@ -4,8 +4,6 @@
 typedef enum Xvr_OpcodeType {
   // variable instructions
   XVR_OPCODE_READ,
-  XVR_OPCODE_LOAD,
-  XVR_OPCODE_LOAD_LONG, // corner case
   XVR_OPCODE_DECLARE,
   XVR_OPCODE_ASSIGN,
   XVR_OPCODE_ACCESS,

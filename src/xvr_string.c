@@ -2,6 +2,7 @@
 #include "xvr_bucket.h"
 #include "xvr_common.h"
 #include "xvr_console_colors.h"
+#include "xvr_value.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -33,6 +34,17 @@ static void decrementRefCount(Xvr_String *str) {
     decrementRefCount(str->as.node.left);
     decrementRefCount(str->as.node.right);
   }
+}
+
+static unsigned int hashCString(const char *string) {
+  unsigned int hash = 2166136261u;
+
+  for (unsigned int i = 0; string[i]; i++) {
+    hash *= string[i];
+    hash ^= 16777619;
+  }
+
+  return hash;
 }
 
 // exposed functions
@@ -67,7 +79,8 @@ Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucket, const char *cstring,
 }
 
 XVR_API Xvr_String *Xvr_createNameString(Xvr_Bucket **bucketHandle,
-                                         const char *cname) {
+                                         const char *cname,
+                                         Xvr_ValueType type) {
   int length = strlen(cname);
 
   if (length > XVR_STRING_MAX_LENGTH) {
@@ -87,6 +100,7 @@ XVR_API Xvr_String *Xvr_createNameString(Xvr_Bucket **bucketHandle,
   ret->cachedHash = 0;
   memcpy(ret->as.name.data, cname, length + 1);
   ret->as.name.data[length] = '\0';
+  ret->as.name.type = type;
 
   return ret;
 }
@@ -288,4 +302,21 @@ int Xvr_compareStrings(Xvr_String *left, Xvr_String *right) {
   const char *rightHead = NULL;
 
   return deepCompareUtil(left, right, &leftHead, &rightHead);
+}
+
+unsigned int Xvr_hashString(Xvr_String *str) {
+
+  if (str->cachedHash != 0) {
+    return str->cachedHash;
+  } else if (str->type == XVR_STRING_NODE) {
+    char *buffer = Xvr_getStringRawBuffer(str);
+    str->cachedHash = hashCString(str->as.leaf.data);
+    free(buffer);
+  } else if (str->type == XVR_STRING_LEAF) {
+    str->cachedHash = hashCString(str->as.leaf.data);
+  } else if (str->type == XVR_STRING_NAME) {
+    str->cachedHash = hashCString(str->as.name.data);
+  }
+
+  return str->cachedHash;
 }

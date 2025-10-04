@@ -8,51 +8,66 @@
 
 #define MIN_CAPACITY 16
 
-static void probeAndInsert(Xvr_Table **table, Xvr_Value key, Xvr_Value value) {
-  unsigned int probe = Xvr_hashValue(key) % (*table)->capacity;
+static void probeAndInsert(Xvr_Table **tableHandle, Xvr_Value key,
+                           Xvr_Value value) {
+  unsigned int probe = Xvr_hashValue(key) % (*tableHandle)->capacity;
   Xvr_TableEntry entry = (Xvr_TableEntry){.key = key, .value = value, .psl = 0};
 
+  // probe
   while (true) {
-    if (XVR_VALUES_ARE_EQUAL((*table)->data[probe].key, key)) {
-      (*table)->data[probe] = entry;
+    if (XVR_VALUES_ARE_EQUAL((*tableHandle)->data[probe].key, key)) {
+      (*tableHandle)->data[probe] = entry;
 
-      (*table)->minPsl =
-          entry.psl < (*table)->minPsl ? entry.psl : (*table)->minPsl;
-      (*table)->maxPsl =
-          entry.psl > (*table)->maxPsl ? entry.psl : (*table)->maxPsl;
+      (*tableHandle)->minPsl = entry.psl < (*tableHandle)->minPsl
+                                   ? entry.psl
+                                   : (*tableHandle)->minPsl;
+      (*tableHandle)->maxPsl = entry.psl > (*tableHandle)->maxPsl
+                                   ? entry.psl
+                                   : (*tableHandle)->maxPsl;
+
       return;
     }
 
-    if (XVR_VALUE_IS_NULL((*table)->data[probe].key)) {
-      (*table)->data[probe] = entry;
-      (*table)->count++;
+    // if this spot is free, insert and return
+    if (XVR_VALUE_IS_NULL((*tableHandle)->data[probe].key)) {
+      (*tableHandle)->data[probe] = entry;
 
-      (*table)->minPsl =
-          entry.psl < (*table)->minPsl ? entry.psl : (*table)->minPsl;
-      (*table)->maxPsl =
-          entry.psl > (*table)->maxPsl ? entry.psl : (*table)->maxPsl;
+      (*tableHandle)->count++;
+
+      // TODO: benchmark the psl optimisation
+      (*tableHandle)->minPsl = entry.psl < (*tableHandle)->minPsl
+                                   ? entry.psl
+                                   : (*tableHandle)->minPsl;
+      (*tableHandle)->maxPsl = entry.psl > (*tableHandle)->maxPsl
+                                   ? entry.psl
+                                   : (*tableHandle)->maxPsl;
+
       return;
     }
 
-    if ((*table)->data[probe].psl < entry.psl) {
-      Xvr_TableEntry tmp = (*table)->data[probe];
-      (*table)->data[probe] = entry;
+    // if the new entry is "poorer", insert it and shift the old one
+    if ((*tableHandle)->data[probe].psl < entry.psl) {
+      Xvr_TableEntry tmp = (*tableHandle)->data[probe];
+      (*tableHandle)->data[probe] = entry;
       entry = tmp;
     }
-    probe = (probe + 1) % (*table)->capacity;
+
+    // adjust and continue
+    probe = (probe + 1) % (*tableHandle)->capacity;
     entry.psl++;
   }
 }
 
-static Xvr_Table *adjustTableCapacity(Xvr_Table *oldTable,
-                                      unsigned int newCapacity) {
+// exposed functions
+Xvr_Table *Xvr_private_adjustTableCapacity(Xvr_Table *oldTable,
+                                           unsigned int newCapacity) {
   // allocate and zero a new table in memory
   Xvr_Table *newTable =
       malloc(newCapacity * sizeof(Xvr_TableEntry) + sizeof(Xvr_Table));
 
   if (newTable == NULL) {
     Xvr_error(XVR_CC_ERROR
-              "Error: failed to allocate `Xvr_Table`\n" XVR_CC_RESET);
+              "ERROR: Failed to allocate a 'Xvr_Table'\n" XVR_CC_RESET);
   }
 
   newTable->capacity = newCapacity;
@@ -60,107 +75,103 @@ static Xvr_Table *adjustTableCapacity(Xvr_Table *oldTable,
   newTable->minPsl = 0;
   newTable->maxPsl = 0;
 
-  // unlike other structures, the empty space in a table needs to be null
   memset(newTable + 1, 0, newTable->capacity * sizeof(Xvr_TableEntry));
 
   if (oldTable == NULL) { // for initial allocations
     return newTable;
   }
 
-  // for each entry in the old table, copy it into the new table
   for (int i = 0; i < oldTable->capacity; i++) {
     if (!XVR_VALUE_IS_NULL(oldTable->data[i].key)) {
       probeAndInsert(&newTable, oldTable->data[i].key, oldTable->data[i].value);
     }
   }
 
-  // clean up and return
   free(oldTable);
   return newTable;
 }
 
-// exposed functions
 Xvr_Table *Xvr_allocateTable() {
-  return adjustTableCapacity(NULL, MIN_CAPACITY);
+  return Xvr_private_adjustTableCapacity(NULL, MIN_CAPACITY);
 }
 
 void Xvr_freeTable(Xvr_Table *table) { free(table); }
 
-void Xvr_insertTable(Xvr_Table **table, Xvr_Value key, Xvr_Value value) {
+void Xvr_insertTable(Xvr_Table **tableHandle, Xvr_Value key, Xvr_Value value) {
   if (XVR_VALUE_IS_NULL(key) || XVR_VALUE_IS_BOOLEAN(key)) {
-    Xvr_error(XVR_CC_ERROR "Error: bad table key\n" XVR_CC_RESET);
+    Xvr_error(XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
   }
 
-  // expand the capacity
-  if ((*table)->count > (*table)->capacity * 0.8) {
-    (*table) = adjustTableCapacity(*table, (*table)->capacity * 2);
+  if ((*tableHandle)->count > (*tableHandle)->capacity * 0.8) {
+    (*tableHandle) = Xvr_private_adjustTableCapacity(
+        (*tableHandle), (*tableHandle)->capacity * 2);
   }
 
-  probeAndInsert(table, key, value);
+  probeAndInsert(tableHandle, key, value);
 }
 
-Xvr_Value Xvr_lookupTable(Xvr_Table **table, Xvr_Value key) {
+Xvr_Value Xvr_lookupTable(Xvr_Table **tableHandle, Xvr_Value key) {
   if (XVR_VALUE_IS_NULL(key) || XVR_VALUE_IS_BOOLEAN(key)) {
-    Xvr_error(XVR_CC_ERROR "Error: bad table key\n" XVR_CC_RESET);
+    Xvr_error(XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
   }
 
   // lookup
-  unsigned int probe = Xvr_hashValue(key) % (*table)->capacity;
+  unsigned int probe = Xvr_hashValue(key) % (*tableHandle)->capacity;
 
   while (true) {
     // found the entry
-    if (XVR_VALUES_ARE_EQUAL((*table)->data[probe].key, key)) {
-      return (*table)->data[probe].value;
+    if (XVR_VALUES_ARE_EQUAL((*tableHandle)->data[probe].key, key)) {
+      return (*tableHandle)->data[probe].value;
     }
 
-    // if the psl is too big, or empty slot
-    if (XVR_VALUE_IS_NULL((*table)->data[probe].key)) {
+    // if its an empty slot
+    if (XVR_VALUE_IS_NULL((*tableHandle)->data[probe].key)) {
       return XVR_VALUE_FROM_NULL();
     }
 
-    probe = (probe + 1) % (*table)->capacity;
+    // adjust and continue
+    probe = (probe + 1) % (*tableHandle)->capacity;
   }
 }
 
-void Xvr_removeTable(Xvr_Table **table, Xvr_Value key) {
-  if (XVR_VALUE_IS_NULL(key) || XVR_VALUE_IS_BOOLEAN(key)) {
-    Xvr_error(XVR_CC_ERROR "Error: bad table key\n" XVR_CC_RESET);
+void Xvr_removeTable(Xvr_Table **tableHandle, Xvr_Value key) {
+  if (XVR_VALUE_IS_NULL(key) ||
+      XVR_VALUE_IS_BOOLEAN(key)) { // TODO: disallow functions and opaques
+    Xvr_error(XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
   }
 
-  // lookup
-  unsigned int probe = Xvr_hashValue(key) % (*table)->capacity;
-  unsigned int wipe = probe; // wiped at the end
+  unsigned int probe = Xvr_hashValue(key) % (*tableHandle)->capacity;
+  unsigned int wipe = probe;
 
   while (true) {
-    // found the entry
-    if (XVR_VALUES_ARE_EQUAL((*table)->data[probe].key, key)) {
+    if (XVR_VALUES_ARE_EQUAL((*tableHandle)->data[probe].key, key)) {
       break;
     }
 
-    // if the psl is too big, or empty slot
-    if (XVR_VALUE_IS_NULL((*table)->data[probe].key)) {
+    if (XVR_VALUE_IS_NULL((*tableHandle)->data[probe].key)) {
       return;
     }
 
-    // adjust and continue
-    probe = (probe + 1) % (*table)->capacity;
+    probe = (probe + 1) % (*tableHandle)->capacity;
   }
 
-  // shift down the later entries (past the probing point)
-  for (unsigned int i = (*table)->minPsl; i < (*table)->maxPsl; i++) {
-    unsigned int p = (probe + i + 0) % (*table)->capacity; // prev
-    unsigned int u = (probe + i + 1) % (*table)->capacity; // current
+  for (unsigned int i = (*tableHandle)->minPsl; i < (*tableHandle)->maxPsl;
+       i++) {
+    unsigned int p = (probe + i + 0) % (*tableHandle)->capacity; // prev
+    unsigned int u = (probe + i + 1) % (*tableHandle)->capacity; // current
 
-    // if the psl is too big, or an empty slot, stop
-    if (XVR_VALUE_IS_NULL((*table)->data[u].key) ||
-        (*table)->data[p].psl == 0) {
+    (*tableHandle)->data[p] = (*tableHandle)->data[u];
+    (*tableHandle)->data[p].psl--;
+
+    if (XVR_VALUE_IS_NULL((*tableHandle)->data[u].key) ||
+        (*tableHandle)->data[p].psl == 0) {
       wipe = u;
       break;
     }
   }
 
   // finally, wipe the removed entry
-  (*table)->data[wipe] = (Xvr_TableEntry){
+  (*tableHandle)->data[wipe] = (Xvr_TableEntry){
       .key = XVR_VALUE_FROM_NULL(), .value = XVR_VALUE_FROM_NULL(), .psl = 0};
-  (*table)->count--;
+  (*tableHandle)->count--;
 }

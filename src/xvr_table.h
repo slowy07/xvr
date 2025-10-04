@@ -24,4 +24,6 @@ XVR_API void Xvr_insertTable(Xvr_Table **table, Xvr_Value key, Xvr_Value value);
 XVR_API Xvr_Value Xvr_lookupTable(Xvr_Table **table, Xvr_Value key);
 XVR_API void Xvr_removeTable(Xvr_Table **table, Xvr_Value key);
 
+XVR_API Xvr_Table* Xvr_private_adjustTableCapacity(Xvr_Table* oldTable, unsigned int newCapacity);
+
 #endif // !XVR_TABLE_H

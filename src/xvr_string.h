@@ -42,7 +42,7 @@ XVR_API Xvr_String *Xvr_createString(Xvr_Bucket **bucket, const char *cstring);
 XVR_API Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucket,
                                            const char *cstring, int length);
 XVR_API Xvr_String *Xvr_createNameString(Xvr_Bucket **bucketHandle,
-                                         const char *cname);
+                                         const char *cname, Xvr_ValueType type);
 
 XVR_API Xvr_String *Xvr_copyString(Xvr_Bucket **bucket, Xvr_String *str);
 XVR_API Xvr_String *Xvr_deepCopyString(Xvr_Bucket **bucket, Xvr_String *str);
@@ -58,5 +58,7 @@ XVR_API int Xvr_getStringRefCount(Xvr_String *str);
 XVR_API char *Xvr_getStringRawBuffer(Xvr_String *str);
 
 XVR_API int Xvr_compareStrings(Xvr_String *left, Xvr_String *right);
+
+XVR_API unsigned int Xvr_hashString(Xvr_String *str);
 
 #endif // !XVR_STRING_H

@@ -71,18 +71,6 @@ bool Xvr_private_isEqual(Xvr_Value left, Xvr_Value right) {
   return 0;
 }
 
-// hash utils
-static unsigned int hashCString(const char *string) {
-  unsigned int hash = 2166136261u;
-
-  for (unsigned int i = 0; string[i]; i++) {
-    hash *= string[i];
-    hash ^= 16777619;
-  }
-
-  return hash;
-}
-
 static unsigned int hashUInt(unsigned int x) {
   x = ((x >> 16) ^ x) * 0x45d9f3b;
   x = ((x >> 16) ^ x) * 0x45d9f3b;
@@ -101,33 +89,18 @@ unsigned int Xvr_hashValue(Xvr_Value value) {
   case XVR_VALUE_INTEGER:
     return hashUInt(XVR_VALUE_AS_INTEGER(value));
 
-  case XVR_VALUE_STRING: {
-    Xvr_String *str = XVR_VALUE_AS_STRING(value);
-
-    if (str->cachedHash != 0) {
-      return str->cachedHash;
-    } else if (str->type == XVR_STRING_NODE) {
-      char *buffer = Xvr_getStringRawBuffer(str);
-      str->cachedHash = hashCString(buffer);
-      free(buffer);
-    } else if (str->type == XVR_STRING_LEAF) {
-      str->cachedHash = hashCString(str->as.leaf.data);
-    } else if (str->type == XVR_STRING_NAME) {
-      str->cachedHash = hashCString(str->as.name.data);
-    }
-
-    return str->cachedHash;
-  }
-
   case XVR_VALUE_FLOAT:
     return hashUInt(*((int *)(&XVR_VALUE_AS_FLOAT(value))));
+
+  case XVR_VALUE_STRING:
+    return Xvr_hashString(XVR_VALUE_AS_STRING(value));
 
   case XVR_VALUE_ARRAY:
   case XVR_VALUE_DICTIONARY:
   case XVR_VALUE_FUNCTION:
   case XVR_VALUE_OPAQUE:
   default:
-    Xvr_error(XVR_CC_ERROR "Error: cant't hash unknown type\n" XVR_CC_RESET);
+    Xvr_error(XVR_CC_ERROR "Error: can't hash unknown type\n" XVR_CC_RESET);
   }
   return 0;
 }

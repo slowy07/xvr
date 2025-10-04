@@ -400,8 +400,6 @@ static void process(Xvr_VM *vm) {
       processConcat(vm);
       break;
 
-    case XVR_OPCODE_LOAD:
-    case XVR_OPCODE_LOAD_LONG:
     case XVR_OPCODE_DECLARE:
     case XVR_OPCODE_ASSIGN:
     case XVR_OPCODE_ACCESS:
