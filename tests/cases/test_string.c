@@ -156,6 +156,30 @@ int test_string_diffs() {
   return 0;
 }
 
+// int test_string_fragmenting() {
+//   {
+//     Xvr_Bucket *bucket = Xvr_allocateBucket(1024);
+//
+//     const char *cstring = "arfy";
+//
+//     Xvr_String *str = Xvr_createString(&bucket, cstring);
+//
+//     if (str->type != XVR_STRING_NODE || str->length != 10 ||
+//         str->refCount != 1) {
+//       fprintf(stderr, XVR_CC_ERROR
+//               "Error: Failed to fragment within Xvr_String\n" XVR_CC_RESET);
+//       Xvr_freeString(str);
+//       Xvr_freeBucket(&bucket);
+//       return -1;
+//     }
+//
+//     Xvr_freeString(str);
+//     Xvr_freeBucket(&bucket);
+//   }
+//
+//   return 0;
+// }
+
 int main() {
   printf(XVR_CC_WARN "testing: xvr string\n" XVR_CC_RESET);
   int total = 0, res = 0;
@@ -197,6 +221,15 @@ int main() {
     }
     total += res;
   }
+
+  // {
+  //   res = test_string_fragmenting();
+  //   if (res == 0) {
+  //     printf(XVR_CC_NOTICE
+  //            "test_string_fragmenting(): aman cik\n" XVR_CC_RESET);
+  //   }
+  //   total += res;
+  // }
 
   return total;
 }

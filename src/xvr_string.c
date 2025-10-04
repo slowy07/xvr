@@ -8,6 +8,8 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define MIN(X, Y) ((X) < (Y) ? (X) : (Y))
+
 // utils
 static void deepCopyUtil(char *dest, Xvr_String *str) {
   if (str->type == XVR_STRING_NODE) {
@@ -47,26 +49,22 @@ static unsigned int hashCString(const char *string) {
   return hash;
 }
 
-// exposed functions
-Xvr_String *Xvr_createString(Xvr_Bucket **bucket, const char *cstring) {
-  int length = strlen(cstring);
+static Xvr_String *partitionStringLength(Xvr_Bucket **bucketHandle,
+                                         const char *cstring,
+                                         unsigned int length) {
 
-  return Xvr_createStringLength(bucket, cstring, length);
-}
-
-Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucket, const char *cstring,
-                                   int length) {
-
-  if (length > XVR_STRING_MAX_LENGTH) {
+  if (sizeof(Xvr_String) + length + 1 > (*bucketHandle)->capacity) {
     fprintf(stderr,
             XVR_CC_ERROR
-            "Error: can't create string longer than %d\n" XVR_CC_RESET,
-            XVR_STRING_MAX_LENGTH);
+            "Error: can't partition enough space for string, requested %d "
+            "length (%d total ) but bucket have capacity of %d\n" XVR_CC_RESET,
+            (int)length, (int)(sizeof(Xvr_String) + length - 1),
+            (int)((*bucketHandle)->capacity));
     exit(-1);
   }
 
   Xvr_String *ret = (Xvr_String *)Xvr_partitionBucket(
-      bucket, sizeof(Xvr_String) + length + 1);
+      bucketHandle, sizeof(Xvr_String) + length + 1);
 
   ret->type = XVR_STRING_LEAF;
   ret->length = length;
@@ -74,20 +72,52 @@ Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucket, const char *cstring,
   ret->cachedHash = 0;
   memcpy(ret->as.leaf.data, cstring, length + 1);
   ret->as.leaf.data[length] = '\0';
-
   return ret;
+}
+
+// exposed functions
+Xvr_String *Xvr_createString(Xvr_Bucket **bucket, const char *cstring) {
+  unsigned int length = strlen(cstring);
+
+  return Xvr_createStringLength(bucket, cstring, length);
+}
+
+Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucketHandle,
+                                   const char *cstring, unsigned int length) {
+
+  if (length < (*bucketHandle)->capacity - sizeof(Xvr_String) - 1) {
+    return partitionStringLength(bucketHandle, cstring, length);
+  }
+
+  Xvr_String *result = NULL;
+
+  for (unsigned int i = 0; i < length;
+       i += (*bucketHandle)->capacity - sizeof(Xvr_String) - 1) {
+    unsigned int amount =
+        MIN((length - i), (*bucketHandle)->capacity - sizeof(Xvr_String) - 1);
+    Xvr_String *fragment =
+        partitionStringLength(bucketHandle, cstring + i, amount);
+
+    result = result == NULL ? fragment
+                            : Xvr_concatStrings(bucketHandle, result, fragment);
+  }
+
+  return result;
 }
 
 XVR_API Xvr_String *Xvr_createNameString(Xvr_Bucket **bucketHandle,
                                          const char *cname,
                                          Xvr_ValueType type) {
-  int length = strlen(cname);
+  unsigned int length = strlen(cname);
 
-  if (length > XVR_STRING_MAX_LENGTH) {
-    fprintf(stderr,
-            XVR_CC_ERROR
-            "error: can't create name string longer than %d\n" XVR_CC_RESET,
-            XVR_STRING_MAX_LENGTH);
+  if (sizeof(Xvr_String) + length + 1 > (*bucketHandle)->capacity) {
+    fprintf(
+        stderr,
+        XVR_CC_ERROR
+        "Error: can't partition enough for a name string, requested %d length "
+        "(%d total) but buckets have a capacity of %d\n" XVR_CC_RESET,
+        (int)length, (int)(sizeof(Xvr_String) + length + 1),
+        (int)((*bucketHandle)->capacity));
     exit(-1);
   }
 
@@ -115,28 +145,36 @@ Xvr_String *Xvr_copyString(Xvr_String *str) {
   return str;
 }
 
-Xvr_String *Xvr_deepCopyString(Xvr_Bucket **bucket, Xvr_String *str) {
+Xvr_String *Xvr_deepCopyString(Xvr_Bucket **bucketHandle, Xvr_String *str) {
   if (str->refCount == 0) {
     fprintf(
         stderr, XVR_CC_ERROR
         "ERROR: Can't deep copy a string with refcount of zero\n" XVR_CC_RESET);
     exit(-1);
   }
+
+  if (sizeof(Xvr_String) + str->length + 1 > (*bucketHandle)->capacity) {
+  char* buffer = Xvr_getStringRawBuffer(str);
+    Xvr_String* result = Xvr_createStringLength(bucketHandle, buffer, str->length);
+    free(buffer);
+    return result;
+  }
+
   Xvr_String *ret = (Xvr_String *)Xvr_partitionBucket(
-      bucket, sizeof(Xvr_String) + str->length + 1);
+      bucketHandle, sizeof(Xvr_String) + str->length + 1);
 
   if (str->type == XVR_STRING_NODE || str->type == XVR_STRING_LEAF) {
     ret->type = XVR_STRING_LEAF;
     ret->length = str->length;
     ret->refCount = 1;
-    ret->cachedHash = 0;
+    ret->cachedHash = str->cachedHash;
     deepCopyUtil(ret->as.leaf.data, str); // copy each leaf into the buffer
     ret->as.leaf.data[ret->length] = '\0';
   } else {
     ret->type = XVR_STRING_NAME;
     ret->length = str->length;
     ret->refCount = 1;
-    ret->cachedHash = 0;
+    ret->cachedHash = str->cachedHash;
     memcpy(ret->as.name.data, str->as.name.data, str->length + 1);
     ret->as.name.data[ret->length] = '\0';
   }
@@ -159,14 +197,6 @@ Xvr_String *Xvr_concatStrings(Xvr_Bucket **bucket, Xvr_String *left,
     exit(-1);
   }
 
-  if (left->length + right->length > XVR_STRING_MAX_LENGTH) {
-    fprintf(stderr,
-            XVR_CC_ERROR
-            "Error: can't concat string longer than %d\n" XVR_CC_RESET,
-            XVR_STRING_MAX_LENGTH);
-    exit(-1);
-  }
-
   Xvr_String *ret =
       (Xvr_String *)Xvr_partitionBucket(bucket, sizeof(Xvr_String));
 
@@ -185,9 +215,9 @@ Xvr_String *Xvr_concatStrings(Xvr_Bucket **bucket, Xvr_String *left,
 
 void Xvr_freeString(Xvr_String *str) { decrementRefCount(str); }
 
-int Xvr_getStringLength(Xvr_String *str) { return str->length; }
+unsigned int Xvr_getStringLength(Xvr_String *str) { return str->length; }
 
-int Xvr_getStringRefCount(Xvr_String *str) { return str->refCount; }
+unsigned int Xvr_getStringRefCount(Xvr_String *str) { return str->refCount; }
 
 char *Xvr_getStringRawBuffer(Xvr_String *str) {
   if (str->type == XVR_STRING_NAME) {

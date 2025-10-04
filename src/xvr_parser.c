@@ -607,12 +607,6 @@ void Xvr_bindParser(Xvr_Parser *parser, Xvr_Lexer *lexer) {
 Xvr_Ast *Xvr_scanParser(Xvr_Bucket **bucketHandle, Xvr_Parser *parser) {
   Xvr_Ast *rootHandle = NULL;
 
-  if ((*bucketHandle)->capacity < XVR_STRING_MAX_LENGTH) {
-    fprintf(stderr,
-            XVR_CC_WARN "Warning: bucket capacity in Xvr_scanParser() is "
-                        "smaller than XVR_STRING_MAX_LENGTH" XVR_CC_RESET);
-  }
-
   // check for EOF
   if (match(parser, XVR_TOKEN_EOF)) {
     Xvr_private_emitAstEnd(bucketHandle, &rootHandle);

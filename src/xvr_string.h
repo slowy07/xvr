@@ -5,8 +5,6 @@
 #include "xvr_common.h"
 #include "xvr_value.h"
 
-#define XVR_STRING_MAX_LENGTH 1000
-
 typedef struct Xvr_String { // 32 | 64 BITNESS
   enum Xvr_StringType {
     XVR_STRING_NODE,
@@ -41,11 +39,11 @@ typedef struct Xvr_String { // 32 | 64 BITNESS
 XVR_API Xvr_String *Xvr_createString(Xvr_Bucket **bucketHandle,
                                      const char *cstring);
 XVR_API Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucketHandle,
-                                           const char *cstring, int length);
+                                           const char *cstring,
+                                           unsigned int length);
 
 XVR_API Xvr_String *Xvr_createNameString(Xvr_Bucket **bucketHandle,
                                          const char *cname, Xvr_ValueType type);
-
 XVR_API Xvr_String *Xvr_copyString(Xvr_String *str);
 XVR_API Xvr_String *Xvr_deepCopyString(Xvr_Bucket **bucketHandle,
                                        Xvr_String *str);
@@ -55,8 +53,8 @@ XVR_API Xvr_String *Xvr_concatStrings(Xvr_Bucket **bucketHandle,
 
 XVR_API void Xvr_freeString(Xvr_String *str);
 
-XVR_API int Xvr_getStringLength(Xvr_String *str);
-XVR_API int Xvr_getStringRefCount(Xvr_String *str);
+XVR_API unsigned int Xvr_getStringLength(Xvr_String *str);
+XVR_API unsigned int Xvr_getStringRefCount(Xvr_String *str);
 
 XVR_API char *Xvr_getStringRawBuffer(Xvr_String *str);
 
