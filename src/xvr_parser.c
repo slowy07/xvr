@@ -348,16 +348,7 @@ static Xvr_AstFlag unary(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
 
   else if (parser->previous.type == XVR_TOKEN_OPERATOR_NEGATE) {
     parsePrecedence(bucketHandle, parser, rootHandle, PREC_UNARY);
-
-    // inverted booleans
-    if ((*rootHandle)->type == XVR_AST_VALUE &&
-        XVR_VALUE_IS_BOOLEAN((*rootHandle)->value.value)) {
-      (*rootHandle)->value.value = XVR_VALUE_FROM_BOOLEAN(
-          !XVR_VALUE_AS_BOOLEAN((*rootHandle)->value.value));
-    } else {
-      // actually emit the negation node
-      Xvr_private_emitAstUnary(bucketHandle, rootHandle, XVR_AST_FLAG_NEGATE);
-    }
+    Xvr_private_emitAstUnary(bucketHandle, rootHandle, XVR_AST_FLAG_NEGATE);
   }
 
   else {
@@ -481,6 +472,7 @@ static Xvr_AstFlag group(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
     parsePrecedence(bucketHandle, parser, rootHandle, PREC_GROUP);
     consume(parser, XVR_TOKEN_OPERATOR_PAREN_RIGHT,
             "Expected ')' at end of group");
+    Xvr_private_emitAstGroup(bucketHandle, rootHandle);
   }
 
   else {

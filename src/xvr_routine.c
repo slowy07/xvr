@@ -245,6 +245,10 @@ static void writeInstructionBinary(Xvr_Routine **rt, Xvr_AstBinary ast) {
   EMIT_BYTE(rt, code, 0);
 }
 
+static void writeInstructionGroup(Xvr_Routine **rt, Xvr_AstGroup ast) {
+  writeRoutineCode(rt, ast.child);
+}
+
 static void writeInstructionPrint(Xvr_Routine **rt, Xvr_AstPrint ast) {
   // the thing to print
   writeRoutineCode(rt, ast.child);
@@ -287,15 +291,12 @@ static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
     writeInstructionBinary(rt, ast->binary);
     break;
 
-  case XVR_AST_PRINT:
-    writeInstructionPrint(rt, ast->print);
+  case XVR_AST_GROUP:
+    writeInstructionGroup(rt, ast->group);
     break;
 
-  // other disallowed instructions
-  case XVR_AST_GROUP:
-    fprintf(stderr, XVR_CC_ERROR "ERROR: Invalid AST type found: Group "
-                                 "shouldn't be used\n" XVR_CC_RESET);
-    exit(-1);
+  case XVR_AST_PRINT:
+    writeInstructionPrint(rt, ast->print);
     break;
 
   case XVR_AST_PASS:
