@@ -71,8 +71,11 @@ static void processRead(Xvr_VM *vm) {
     fix_alignment(vm);
     unsigned int jump =
         *(unsigned int *)(vm->routine + vm->jumpsAddr + READ_INT(vm));
+
     char *cstring = (char *)(vm->routine + vm->dataAddr + jump);
+
     value = XVR_VALUE_FROM_STRING(Xvr_createString(&vm->stringBucket, cstring));
+
     break;
   }
 
@@ -112,9 +115,9 @@ static void processRead(Xvr_VM *vm) {
 }
 
 static void processDeclare(Xvr_VM *vm) {
-  Xvr_ValueType type = READ_BYTE(vm);
-  unsigned int len = READ_BYTE(vm);
-  fix_alignment(vm);
+  Xvr_ValueType type = READ_BYTE(vm); // variable type
+  unsigned int len = READ_BYTE(vm);   // name length
+  fix_alignment(vm);                  // one spare byte
 
   unsigned int jump =
       *(unsigned int *)(vm->routine + vm->jumpsAddr + READ_INT(vm));
@@ -130,7 +133,6 @@ static void processArithmetic(Xvr_VM *vm, Xvr_OpcodeType opcode) {
   Xvr_Value right = Xvr_popStack(&vm->stack);
   Xvr_Value left = Xvr_popStack(&vm->stack);
 
-  // check types
   if ((!XVR_VALUE_IS_INTEGER(left) && !XVR_VALUE_IS_FLOAT(left)) ||
       (!XVR_VALUE_IS_INTEGER(right) && !XVR_VALUE_IS_FLOAT(right))) {
     fprintf(stderr,
@@ -330,6 +332,7 @@ static void processPrint(Xvr_VM *vm) {
 
   case XVR_VALUE_STRING: {
     Xvr_String *str = XVR_VALUE_AS_STRING(value);
+
     if (str->type == XVR_STRING_NODE) {
       char *buffer = Xvr_getStringRawBuffer(str);
       Xvr_print(buffer);
@@ -341,15 +344,15 @@ static void processPrint(Xvr_VM *vm) {
     }
     break;
   }
+
   case XVR_VALUE_ARRAY:
   case XVR_VALUE_DICTIONARY:
   case XVR_VALUE_FUNCTION:
   case XVR_VALUE_OPAQUE:
-    fprintf(
-        stderr,
-        XVR_CC_ERROR
-        "Error: unknown value type %d passed to processPrint\n" XVR_CC_RESET,
-        value.type);
+    fprintf(stderr,
+            XVR_CC_ERROR "ERROR: Unknown value type %d passed to processPrint, "
+                         "exiting\n" XVR_CC_RESET,
+            value.type);
     exit(-1);
   }
 }
@@ -359,12 +362,12 @@ static void processConcat(Xvr_VM *vm) {
   Xvr_Value left = Xvr_popStack(&vm->stack);
 
   if (!XVR_VALUE_IS_STRING(left)) {
-    Xvr_error("failed to concatenate a value that is not a string");
+    Xvr_error("Failed to concatenate a value that is not a string");
     return;
   }
 
   if (!XVR_VALUE_IS_STRING(left)) {
-    Xvr_error("failed to concatenate value that is not a string");
+    Xvr_error("Failed to concatenate a value that is not a string");
     return;
   }
 
@@ -422,6 +425,12 @@ static void process(Xvr_VM *vm) {
 
     case XVR_OPCODE_ASSIGN:
     case XVR_OPCODE_ACCESS:
+      fprintf(stderr,
+              XVR_CC_ERROR
+              "ERROR: Incomplete opcode %d found, exiting\n" XVR_CC_RESET,
+              opcode);
+      exit(-1);
+
     case XVR_OPCODE_PASS:
     case XVR_OPCODE_ERROR:
     case XVR_OPCODE_EOF:
@@ -432,7 +441,6 @@ static void process(Xvr_VM *vm) {
       exit(-1);
     }
 
-    // prepare for the next instruction
     fix_alignment(vm);
   }
 }
@@ -442,10 +450,10 @@ void Xvr_initVM(Xvr_VM *vm) {
   vm->scopeBucket = NULL;
   vm->stack = NULL;
   vm->scope = NULL;
+
   Xvr_resetVM(vm);
 }
 
-// exposed functions
 void Xvr_bindVM(Xvr_VM *vm, unsigned char *bytecode) {
   if (bytecode[0] != XVR_VERSION_MAJOR || bytecode[1] > XVR_VERSION_MINOR) {
     fprintf(stderr,
@@ -473,7 +481,7 @@ void Xvr_bindVM(Xvr_VM *vm, unsigned char *bytecode) {
 
   int offset = 3 + strlen(XVR_VERSION_BUILD) + 1;
   if (offset % 4 != 0) {
-    offset += 4 - (offset % 4); // ceil
+    offset += 4 - (offset % 4); 
   }
 
   Xvr_bindVMToRoutine(vm, bytecode + offset);
@@ -484,19 +492,17 @@ void Xvr_bindVM(Xvr_VM *vm, unsigned char *bytecode) {
 void Xvr_bindVMToRoutine(Xvr_VM *vm, unsigned char *routine) {
   vm->routine = routine;
 
-  // read the header metadata
   vm->routineSize = READ_UNSIGNED_INT(vm);
   vm->paramSize = READ_UNSIGNED_INT(vm);
   vm->jumpsSize = READ_UNSIGNED_INT(vm);
   vm->dataSize = READ_UNSIGNED_INT(vm);
   vm->subsSize = READ_UNSIGNED_INT(vm);
 
-  // read the header addresses
   if (vm->paramSize > 0) {
     vm->paramAddr = READ_UNSIGNED_INT(vm);
   }
 
-  vm->codeAddr = READ_UNSIGNED_INT(vm); // required
+  vm->codeAddr = READ_UNSIGNED_INT(vm); 
 
   if (vm->jumpsSize > 0) {
     vm->jumpsAddr = READ_UNSIGNED_INT(vm);
@@ -510,25 +516,24 @@ void Xvr_bindVMToRoutine(Xvr_VM *vm, unsigned char *routine) {
     vm->subsAddr = READ_UNSIGNED_INT(vm);
   }
 
-  vm->stack = Xvr_allocateStack();
   vm->stringBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
+  vm->scopeBucket = Xvr_allocateBucket(XVR_BUCKET_SMALL);
+  vm->stack = Xvr_allocateStack();
+  vm->scope = Xvr_pushScope(&vm->scopeBucket, NULL);
 }
 
 void Xvr_runVM(Xvr_VM *vm) {
   vm->routineCounter = vm->codeAddr;
 
-  // begin
   process(vm);
 }
 
 void Xvr_freeVM(Xvr_VM *vm) {
-  // clear the stack
   Xvr_freeStack(vm->stack);
   Xvr_popScope(vm->scope);
   Xvr_freeBucket(&vm->stringBucket);
   Xvr_freeBucket(&vm->scopeBucket);
 
-  // free the bytecode
   free(vm->bc);
 
   Xvr_resetVM(vm);

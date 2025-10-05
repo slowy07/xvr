@@ -575,7 +575,7 @@ static void makeVariableDeclarationStmt(Xvr_Bucket **bucketHandle,
   if (match(parser, XVR_TOKEN_OPERATOR_ASSIGN)) {
     makeExpr(bucketHandle, parser, &expr);
   } else {
-    Xvr_private_emitAstValue(bucketHandle, rootHandle, XVR_VALUE_FROM_NULL());
+    Xvr_private_emitAstValue(bucketHandle, &expr, XVR_VALUE_FROM_NULL());
   }
 
   Xvr_private_emitAstVariableDeclaration(bucketHandle, rootHandle, nameStr,

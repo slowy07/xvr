@@ -6,19 +6,21 @@
 #include <stdio.h>
 #include <string.h>
 
-Xvr_Bytecode makeBytecodeFromSource(Xvr_Bucket **bucket, const char *source) {
+Xvr_Bytecode makeBytecodeFromSource(Xvr_Bucket **bucketHandle,
+                                    const char *source) {
   Xvr_Lexer lexer;
   Xvr_bindLexer(&lexer, source);
+
   Xvr_Parser parser;
   Xvr_bindParser(&parser, &lexer);
 
-  Xvr_Ast *ast = Xvr_scanParser(bucket, &parser);
+  Xvr_Ast *ast = Xvr_scanParser(bucketHandle, &parser);
   Xvr_Bytecode bc = Xvr_compileBytecode(ast);
 
   return bc;
 }
 
-int test_setup_and_teardown(Xvr_Bucket **bucket) {
+int test_setup_and_teardown(Xvr_Bucket **bucketHandle) {
   {
     const char *source = "(1 + 2) * (3 + 4);";
 
@@ -28,30 +30,34 @@ int test_setup_and_teardown(Xvr_Bucket **bucket) {
     Xvr_Parser parser;
     Xvr_bindParser(&parser, &lexer);
 
-    Xvr_Ast *ast = Xvr_scanParser(bucket, &parser);
+    Xvr_Ast *ast = Xvr_scanParser(bucketHandle, &parser);
+
     Xvr_Bytecode bc = Xvr_compileBytecode(ast);
 
     Xvr_VM vm;
+    Xvr_initVM(&vm);
     Xvr_bindVM(&vm, bc.ptr);
 
     int headerSize = 3 + strlen(XVR_VERSION_BUILD) + 1;
-
     if (headerSize % 4 != 0) {
       headerSize += 4 - (headerSize % 4);
     }
 
     if (vm.routine - vm.bc != headerSize || vm.routineSize != 72 ||
         vm.paramSize != 0 || vm.jumpsSize != 0 || vm.dataSize != 0 ||
-        vm.dataSize != 0 || vm.subsSize != 0) {
+        vm.subsSize != 0) {
       fprintf(stderr,
-              XVR_CC_ERROR
-              "error: failed to setup Xvr_VM, source: %s\n" XVR_CC_RESET,
+              XVR_CC_ERROR "ERROR: failed to setup and teadown Xvr_VM, source: "
+                           "%s\n" XVR_CC_RESET,
               source);
+
       Xvr_freeVM(&vm);
       return -1;
     }
+
     Xvr_freeVM(&vm);
   }
+
   return 0;
 }
 
@@ -64,7 +70,7 @@ int main() {
     res = test_setup_and_teardown(&bucket);
     Xvr_freeBucket(&bucket);
     if (res == 0) {
-      printf(XVR_CC_NOTICE "Xvr_allocateBucket(): nice one rek\n" XVR_CC_RESET);
+      printf(XVR_CC_NOTICE "Xvr_allocateBucket(): nice one rek jalan loh ya cik\n" XVR_CC_RESET);
     }
     total += res;
   }
