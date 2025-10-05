@@ -67,8 +67,10 @@ int test_scope_elements() {
     Xvr_Bucket *bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
     Xvr_Scope *scope = Xvr_pushScope(&bucket, NULL);
 
-    Xvr_String *hello1 = Xvr_createNameString(&bucket, "hello", XVR_VALUE_NULL);
-    Xvr_String *hello2 = Xvr_createNameString(&bucket, "hello", XVR_VALUE_NULL);
+    Xvr_String *hello1 =
+        Xvr_createNameStringLength(&bucket, "hello", 5, XVR_VALUE_NULL);
+    Xvr_String *hello2 =
+        Xvr_createNameStringLength(&bucket, "hello", 5, XVR_VALUE_NULL);
 
     if (Xvr_isDeclaredScope(scope, hello2)) {
       fprintf(stderr, XVR_CC_ERROR
@@ -140,7 +142,8 @@ int test_scope_elements() {
     Xvr_Bucket *bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
     Xvr_Scope *scope = Xvr_pushScope(&bucket, NULL);
 
-    Xvr_String *hello = Xvr_createNameString(&bucket, "hello", XVR_VALUE_NULL);
+    Xvr_String *hello =
+        Xvr_createNameStringLength(&bucket, "hello", 5, XVR_VALUE_NULL);
 
     Xvr_declareScope(scope, hello, XVR_VALUE_FROM_INTEGER(42));
 

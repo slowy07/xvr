@@ -4,6 +4,7 @@
 #include "xvr_lexer.h"
 #include "xvr_parser.h"
 #include "xvr_print.h"
+#include "xvr_stack.h"
 #include "xvr_string.h"
 #include "xvr_value.h"
 #include "xvr_vm.h"
@@ -61,7 +62,7 @@ int getFileName(char *dest, const char *src) {
   char *p = strrchr(src, '\\') + 1;
 #else
   char *p = strrchr(src, '/') + 1;
-#endif /* if defined(_WIN32) || defined(_WIN64) */
+#endif
 
   int len = strlen(p);
   strncpy(dest, p, len);
@@ -235,6 +236,124 @@ int repl(const char *filepath) {
   return 0;
 }
 
+static void debugStackPrint(Xvr_Stack *stack) {
+  if (stack->count > 0) {
+    printf("stacl Dump\n\ntype\tvalue\n");
+    for (int i = 0; i < stack->count; i++) {
+      Xvr_Value v = ((Xvr_Value *)(stack + 1))[i];
+
+      printf("%d\t", v.type);
+
+      switch (v.type) {
+      case XVR_VALUE_NULL:
+        printf("null");
+        break;
+
+      case XVR_VALUE_BOOLEAN:
+        printf("%s", XVR_VALUE_AS_BOOLEAN(v) ? "true" : "false");
+        break;
+
+      case XVR_VALUE_INTEGER:
+        printf("%d", XVR_VALUE_AS_INTEGER(v));
+        break;
+
+      case XVR_VALUE_FLOAT:
+        printf("%f", XVR_VALUE_AS_FLOAT(v));
+        break;
+
+      case XVR_VALUE_STRING: {
+        Xvr_String *str = XVR_VALUE_AS_STRING(v);
+
+        if (str->type == XVR_STRING_NODE) {
+          char *buffer = Xvr_getStringRawBuffer(str);
+          printf("%s", buffer);
+          free(buffer);
+        } else if (str->type == XVR_STRING_LEAF) {
+          printf("%s", str->as.leaf.data);
+        } else if (str->type == XVR_STRING_NAME) {
+          printf("%s", str->as.name.data);
+        }
+        break;
+      }
+
+      case XVR_VALUE_ARRAY:
+      case XVR_VALUE_DICTIONARY:
+      case XVR_VALUE_FUNCTION:
+      case XVR_VALUE_OPAQUE:
+        printf("what???");
+        break;
+      }
+
+      printf("\n");
+    }
+  }
+}
+
+static void debugScopePrint(Xvr_Scope *scope, int depth) {
+  if (scope->table->count > 0) {
+    printf("Scope %d Dump\n\ntype\tname\tvalue\n", depth);
+    for (int i = 0; i < scope->table->capacity; i++) {
+      if ((XVR_VALUE_IS_STRING(scope->table->data[i].key) &&
+           XVR_VALUE_AS_STRING(scope->table->data[i].key)->type ==
+               XVR_STRING_NAME) == false) {
+        continue;
+      }
+
+      Xvr_Value k = scope->table->data[i].key;
+      Xvr_Value v = scope->table->data[i].value;
+
+      printf("%d\t%s\t", v.type, XVR_VALUE_AS_STRING(k)->as.name.data);
+
+      switch (v.type) {
+      case XVR_VALUE_NULL:
+        printf("null");
+        break;
+
+      case XVR_VALUE_BOOLEAN:
+        printf("%s", XVR_VALUE_AS_BOOLEAN(v) ? "true" : "false");
+        break;
+
+      case XVR_VALUE_INTEGER:
+        printf("%d", XVR_VALUE_AS_INTEGER(v));
+        break;
+
+      case XVR_VALUE_FLOAT:
+        printf("%f", XVR_VALUE_AS_FLOAT(v));
+        break;
+
+      case XVR_VALUE_STRING: {
+        Xvr_String *str = XVR_VALUE_AS_STRING(v);
+
+        if (str->type == XVR_STRING_NODE) {
+          char *buffer = Xvr_getStringRawBuffer(str);
+          printf("%s", buffer);
+          free(buffer);
+        } else if (str->type == XVR_STRING_LEAF) {
+          printf("%s", str->as.leaf.data);
+        } else if (str->type == XVR_STRING_NAME) {
+          printf("%s\nWarning: The above value is a name string",
+                 str->as.name.data);
+        }
+        break;
+      }
+
+      case XVR_VALUE_ARRAY:
+      case XVR_VALUE_DICTIONARY:
+      case XVR_VALUE_FUNCTION:
+      case XVR_VALUE_OPAQUE:
+        printf("what???");
+        break;
+      }
+
+      printf("\n");
+    }
+  }
+
+  if (scope->next != NULL) {
+    debugScopePrint(scope->next, depth + 1);
+  }
+}
+
 static void printCallback(const char *msg) { fprintf(stdout, "%s\n", msg); }
 
 static void errorAndExitCallback(const char *msg) {
@@ -308,61 +427,14 @@ int main(int argc, const char *argv[]) {
 
     // run the setup
     Xvr_VM vm;
+    Xvr_initVM(&vm);
     Xvr_bindVM(&vm, bc.ptr);
 
     // run
     Xvr_runVM(&vm);
 
-    // debugging result
-    if (vm.stack->count > 0) {
-      printf("printing the stack result\n\ntype\tvalue\n");
-      for (int i = 0; i < vm.stack->count; i++) {
-        Xvr_Value v = ((Xvr_Value *)(vm.stack + 1))[i];
-
-        printf(" %d\t ", v.type);
-
-        switch (v.type) {
-        case XVR_VALUE_NULL:
-          printf("null");
-          break;
-
-        case XVR_VALUE_BOOLEAN:
-          printf("%s", XVR_VALUE_AS_BOOLEAN(v) ? "true" : "false");
-          break;
-
-        case XVR_VALUE_INTEGER:
-          printf("%d", XVR_VALUE_AS_INTEGER(v));
-          break;
-
-        case XVR_VALUE_FLOAT:
-          printf("%f", XVR_VALUE_AS_FLOAT(v));
-          break;
-
-        case XVR_VALUE_STRING: {
-          Xvr_String *str = XVR_VALUE_AS_STRING(v);
-          if (str->type == XVR_STRING_NODE) {
-            char *buffer = Xvr_getStringRawBuffer(str);
-            printf("%s", buffer);
-            free(buffer);
-          } else if (str->type == XVR_STRING_LEAF) {
-            printf("%s", str->as.leaf.data);
-          } else if (str->type == XVR_STRING_NAME) {
-            printf("%s", str->as.name.data);
-          }
-          break;
-        }
-
-        case XVR_VALUE_ARRAY:
-        case XVR_VALUE_DICTIONARY:
-        case XVR_VALUE_FUNCTION:
-        case XVR_VALUE_OPAQUE:
-          printf("???");
-          break;
-        }
-
-        printf("\n");
-      }
-    }
+    debugStackPrint(vm.stack);
+    debugScopePrint(vm.scope, 0);
 
     Xvr_freeVM(&vm);
     Xvr_freeBucket(&bucket);

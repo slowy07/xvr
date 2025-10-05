@@ -4,6 +4,7 @@
 #include "xvr_bucket.h"
 #include "xvr_common.h"
 #include "xvr_stack.h"
+#include "xvr_scope.h"
 
 typedef struct Xvr_VM {
   unsigned char *bc;
@@ -24,7 +25,10 @@ typedef struct Xvr_VM {
 
   unsigned int routineCounter;
   Xvr_Stack *stack;
+  
+  Xvr_Scope* scope;
   Xvr_Bucket *stringBucket;
+  Xvr_Bucket *scopeBucket;
 } Xvr_VM;
 
 XVR_API void Xvr_initVM(Xvr_VM* vm);

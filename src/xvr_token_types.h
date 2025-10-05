@@ -6,7 +6,7 @@ typedef enum Xvr_TokenType {
   XVR_TOKEN_NULL,
 
   // variable names
-  XVR_TOKEN_IDENTIFIER,
+  XVR_TOKEN_NAME,
 
   // types
   XVR_TOKEN_TYPE_TYPE,

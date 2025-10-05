@@ -126,7 +126,7 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_PRIMARY, literal, NULL}, // XVR_TOKEN_NULL,
 
     // variable names
-    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_IDENTIFIER,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_NAME,
 
     // types
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_TYPE,
@@ -554,6 +554,34 @@ static void makeExprStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
           "Expected ';' at the end of expression statement");
 }
 
+static void makeVariableDeclarationStmt(Xvr_Bucket **bucketHandle,
+                                        Xvr_Parser *parser,
+                                        Xvr_Ast **rootHandle) {
+  consume(parser, XVR_TOKEN_NAME, "Expecter variable name after `var` keyword");
+
+  if (parser->previous.length > 256) {
+    printError(parser, parser->previous,
+               "Can't have a variable name longer than 256 characters");
+    Xvr_private_emitAstError(bucketHandle, rootHandle);
+    return;
+  }
+
+  Xvr_Token nameToken = parser->previous;
+
+  Xvr_String *nameStr = Xvr_createNameStringLength(
+      bucketHandle, nameToken.lexeme, nameToken.length, XVR_VALUE_NULL);
+
+  Xvr_Ast *expr = NULL;
+  if (match(parser, XVR_TOKEN_OPERATOR_ASSIGN)) {
+    makeExpr(bucketHandle, parser, &expr);
+  } else {
+    Xvr_private_emitAstValue(bucketHandle, rootHandle, XVR_VALUE_FROM_NULL());
+  }
+
+  Xvr_private_emitAstVariableDeclaration(bucketHandle, rootHandle, nameStr,
+                                         expr);
+}
+
 static void makeStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                      Xvr_Ast **rootHandle) {
   if (match(parser, XVR_TOKEN_OPERATOR_SEMICOLON)) {
@@ -574,7 +602,11 @@ static void makeStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
 
 static void makeDeclarationStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                                 Xvr_Ast **rootHandle) {
-  makeStmt(bucketHandle, parser, rootHandle);
+  if (match(parser, XVR_TOKEN_KEYWORD_VAR)) {
+    makeVariableDeclarationStmt(bucketHandle, parser, rootHandle);
+  } else {
+    makeStmt(bucketHandle, parser, rootHandle);
+  }
 }
 
 static void makeBlockStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,

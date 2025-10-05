@@ -5,6 +5,7 @@
 
 #include "xvr_opcodes.h"
 #include "xvr_print.h"
+#include "xvr_scope.h"
 #include "xvr_stack.h"
 #include "xvr_string.h"
 #include "xvr_value.h"
@@ -108,6 +109,21 @@ static void processRead(Xvr_VM *vm) {
 
   // leave the counter in a good spot
   fix_alignment(vm);
+}
+
+static void processDeclare(Xvr_VM *vm) {
+  Xvr_ValueType type = READ_BYTE(vm);
+  unsigned int len = READ_BYTE(vm);
+  fix_alignment(vm);
+
+  unsigned int jump =
+      *(unsigned int *)(vm->routine + vm->jumpsAddr + READ_INT(vm));
+  char *cstring = (char *)(vm->routine + vm->dataAddr + jump);
+  Xvr_String *name =
+      Xvr_createNameStringLength(&vm->stringBucket, cstring, len, type);
+  Xvr_Value value = Xvr_popStack(&vm->stack);
+  Xvr_declareScope(vm->scope, name, value);
+  Xvr_freeString(name);
 }
 
 static void processArithmetic(Xvr_VM *vm, Xvr_OpcodeType opcode) {
@@ -366,6 +382,10 @@ static void process(Xvr_VM *vm) {
       processRead(vm);
       break;
 
+    case XVR_OPCODE_DECLARE:
+      processDeclare(vm);
+      break;
+
     case XVR_OPCODE_ADD:
     case XVR_OPCODE_SUBTRACT:
     case XVR_OPCODE_MULTIPLY:
@@ -400,7 +420,6 @@ static void process(Xvr_VM *vm) {
       processConcat(vm);
       break;
 
-    case XVR_OPCODE_DECLARE:
     case XVR_OPCODE_ASSIGN:
     case XVR_OPCODE_ACCESS:
     case XVR_OPCODE_PASS:
@@ -419,8 +438,10 @@ static void process(Xvr_VM *vm) {
 }
 
 void Xvr_initVM(Xvr_VM *vm) {
-  vm->stack = NULL;
   vm->stringBucket = NULL;
+  vm->scopeBucket = NULL;
+  vm->stack = NULL;
+  vm->scope = NULL;
   Xvr_resetVM(vm);
 }
 
@@ -503,7 +524,13 @@ void Xvr_runVM(Xvr_VM *vm) {
 void Xvr_freeVM(Xvr_VM *vm) {
   // clear the stack
   Xvr_freeStack(vm->stack);
+  Xvr_popScope(vm->scope);
+  Xvr_freeBucket(&vm->stringBucket);
+  Xvr_freeBucket(&vm->scopeBucket);
+
+  // free the bytecode
   free(vm->bc);
+
   Xvr_resetVM(vm);
 }
 

@@ -4,6 +4,7 @@
 #include "xvr_bucket.h"
 #include "xvr_common.h"
 #include "xvr_value.h"
+#include <assert.h>
 
 typedef struct Xvr_String { // 32 | 64 BITNESS
   enum Xvr_StringType {
@@ -42,8 +43,10 @@ XVR_API Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucketHandle,
                                            const char *cstring,
                                            unsigned int length);
 
-XVR_API Xvr_String *Xvr_createNameString(Xvr_Bucket **bucketHandle,
-                                         const char *cname, Xvr_ValueType type);
+XVR_API Xvr_String *Xvr_createNameStringLength(Xvr_Bucket **bucketHandle,
+                                               const char *cname,
+                                               unsigned int length,
+                                               Xvr_ValueType type);
 XVR_API Xvr_String *Xvr_copyString(Xvr_String *str);
 XVR_API Xvr_String *Xvr_deepCopyString(Xvr_Bucket **bucketHandle,
                                        Xvr_String *str);
@@ -55,6 +58,7 @@ XVR_API void Xvr_freeString(Xvr_String *str);
 
 XVR_API unsigned int Xvr_getStringLength(Xvr_String *str);
 XVR_API unsigned int Xvr_getStringRefCount(Xvr_String *str);
+XVR_API Xvr_ValueType Xvr_getNameStringType(Xvr_String *str);
 
 XVR_API char *Xvr_getStringRawBuffer(Xvr_String *str);
 

@@ -262,6 +262,18 @@ static void writeInstructionPrint(Xvr_Routine **rt, Xvr_AstPrint ast) {
   EMIT_BYTE(rt, code, 0);
 }
 
+static void writeInstructionVarDeclare(Xvr_Routine **rt,
+                                       Xvr_AstVarDeclare ast) {
+  writeRoutineCode(rt, ast.expr);
+
+  EMIT_BYTE(rt, code, XVR_OPCODE_DECLARE);
+  EMIT_BYTE(rt, code, Xvr_getNameStringType(ast.name));
+  EMIT_BYTE(rt, code, ast.name->length);
+  EMIT_BYTE(rt, code, 0);
+
+  emitString(rt, ast.name);
+}
+
 // routine structure
 //  static void writeRoutineParam(Xvr_Routine* rt) {
 //  	//
@@ -297,6 +309,9 @@ static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
 
   case XVR_AST_PRINT:
     writeInstructionPrint(rt, ast->print);
+    break;
+
+  case XVR_AST_VAR_DECLARE:
     break;
 
   case XVR_AST_PASS:

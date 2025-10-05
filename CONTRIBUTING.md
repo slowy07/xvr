@@ -62,4 +62,13 @@ a test case must be used to extensively test any new code that is added. if it c
 features, each one should be tested separately as well as in tandem. it is necessary to fix
 any corner case that can cause problems on any supported platform.
 
+```sh
+# for testing
+make tests
+# for compiling interpreter
+make inter
 
+# if using bear
+bear -- make tests
+bear -- make inter
+```

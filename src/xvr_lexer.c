@@ -197,7 +197,7 @@ static Xvr_Token makeString(Xvr_Lexer *lexer, char terminator) {
   return token;
 }
 
-static Xvr_Token makeKeywordOrIdentifier(Xvr_Lexer *lexer) {
+static Xvr_Token makeKeywordOrName(Xvr_Lexer *lexer) {
   advance(lexer); // first letter can only be alpha
 
   while (isDigit(lexer) || isAlpha(lexer)) {
@@ -224,10 +224,10 @@ static Xvr_Token makeKeywordOrIdentifier(Xvr_Lexer *lexer) {
     }
   }
 
-  // make token (identifier)
+  // make token (name)
   Xvr_Token token;
 
-  token.type = XVR_TOKEN_IDENTIFIER;
+  token.type = XVR_TOKEN_NAME;
   token.length = lexer->current - lexer->start;
   token.line = lexer->line;
   token.lexeme = &lexer->source[lexer->start];
@@ -250,13 +250,16 @@ Xvr_Token Xvr_private_scanLexer(Xvr_Lexer *lexer) {
 
   lexer->start = lexer->current;
 
-  if (isAtEnd(lexer))
+  if (isAtEnd(lexer)) {
     return makeToken(lexer, XVR_TOKEN_EOF);
+  }
 
-  if (isDigit(lexer))
+  if (isDigit(lexer)) {
     return makeIntegerOrFloat(lexer);
-  if (isAlpha(lexer))
-    return makeKeywordOrIdentifier(lexer);
+  }
+  if (isAlpha(lexer)) {
+    return makeKeywordOrName(lexer);
+  }
 
   char c = advance(lexer);
 
@@ -382,7 +385,7 @@ void Xvr_private_printToken(Xvr_Token *token) {
   printf("\t%d\t%d\t", token->type, (int)token->line);
 
   // print based on type
-  if (token->type == XVR_TOKEN_IDENTIFIER ||
+  if (token->type == XVR_TOKEN_NAME ||
       token->type == XVR_TOKEN_LITERAL_INTEGER ||
       token->type == XVR_TOKEN_LITERAL_FLOAT ||
       token->type == XVR_TOKEN_LITERAL_STRING) {

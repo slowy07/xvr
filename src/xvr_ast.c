@@ -84,6 +84,18 @@ void Xvr_private_emitAstPrint(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle) {
   (*astHandle) = tmp;
 }
 
+void Xvr_private_emitAstVariableDeclaration(Xvr_Bucket **bucketHandle,
+                                            Xvr_Ast **astHandle,
+                                            Xvr_String *name, Xvr_Ast *expr) {
+  Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
+
+  tmp->type = XVR_AST_VAR_DECLARE;
+  tmp->varDeclare.name = name;
+  tmp->varDeclare.expr = expr;
+
+  (*astHandle) = tmp;
+}
+
 void Xvr_private_emitAstPass(Xvr_Bucket **bucketHandle, Xvr_Ast **handle) {
   Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
 

@@ -105,17 +105,15 @@ Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucketHandle,
   return result;
 }
 
-XVR_API Xvr_String *Xvr_createNameString(Xvr_Bucket **bucketHandle,
-                                         const char *cname,
-                                         Xvr_ValueType type) {
-  unsigned int length = strlen(cname);
-
+Xvr_String *Xvr_createNameStringLength(Xvr_Bucket **bucketHandle,
+                                       const char *cname, unsigned int length,
+                                       Xvr_ValueType type) {
   if (sizeof(Xvr_String) + length + 1 > (*bucketHandle)->capacity) {
     fprintf(
         stderr,
         XVR_CC_ERROR
-        "Error: can't partition enough for a name string, requested %d length "
-        "(%d total) but buckets have a capacity of %d\n" XVR_CC_RESET,
+        "ERROR: Can't partition enough space for a name string, requested %d "
+        "length (%d total) but buckets have a capacity of %d\n" XVR_CC_RESET,
         (int)length, (int)(sizeof(Xvr_String) + length + 1),
         (int)((*bucketHandle)->capacity));
     exit(-1);
@@ -154,8 +152,9 @@ Xvr_String *Xvr_deepCopyString(Xvr_Bucket **bucketHandle, Xvr_String *str) {
   }
 
   if (sizeof(Xvr_String) + str->length + 1 > (*bucketHandle)->capacity) {
-  char* buffer = Xvr_getStringRawBuffer(str);
-    Xvr_String* result = Xvr_createStringLength(bucketHandle, buffer, str->length);
+    char *buffer = Xvr_getStringRawBuffer(str);
+    Xvr_String *result =
+        Xvr_createStringLength(bucketHandle, buffer, str->length);
     free(buffer);
     return result;
   }
@@ -218,6 +217,16 @@ void Xvr_freeString(Xvr_String *str) { decrementRefCount(str); }
 unsigned int Xvr_getStringLength(Xvr_String *str) { return str->length; }
 
 unsigned int Xvr_getStringRefCount(Xvr_String *str) { return str->refCount; }
+
+Xvr_ValueType Xvr_getNameStringType(Xvr_String *str) {
+  if (str->type != XVR_STRING_NAME) {
+    fprintf(stderr, XVR_CC_ERROR "Error: can't get the variable type of a "
+                                 "non-name string\n" XVR_CC_RESET);
+    exit(-1);
+  }
+
+  return str->as.name.type;
+}
 
 char *Xvr_getStringRawBuffer(Xvr_String *str) {
   if (str->type == XVR_STRING_NAME) {
