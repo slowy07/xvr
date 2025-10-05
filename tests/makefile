@@ -1,15 +1,16 @@
 CC=gcc
-CFLAGS=-g -Wall -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
+CFLAGS=-std=c17 -g -Wall -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
 LIBS=-lm
+LDFLAGS+=
 
 ifeq ($(shell uname),Linux)
-LDFLAG=-Wl,--gc-sections
+LDFLAGS=-Wl,--gc-sections
 else ifeq ($(OS),Windows_NT)
-LDFLAG=-Wl,--gc-sections
+LDFLAGS=-Wl,--gc-sections
 else ifeq ($(shell uname),Darwin)
-LDFLAG=-Wl,-dead_strip
+LDFLAGS=-Wl,-dead_strip
 else
-	@echo "LDFLAG set failed - are you using temple os?"
+	@echo "LDFLAGS set failed - are you using temple os?"
 endif
 
 TEST_ROOTDIR=..

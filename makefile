@@ -1,5 +1,5 @@
-CFLAGS+=-std=c17 -pedantic -Werror
-LIBS=-lm
+# CFLAGS+=-std=c17 -pedantic -Werror
+# LIBS=-lm
 
 export XVR_SOURCEDIR=src
 export XVR_OUTDIR=out

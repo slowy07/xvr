@@ -160,7 +160,12 @@ int test_string_fragmenting() {
   {
     Xvr_Bucket *bucket = Xvr_allocateBucket(1024);
 
-    const char *cstring = "arfy";
+    const char *cstring =
+        "Kami bangsa Indonesia dengan ini menyatakan kemerdekaan Indonesia. "
+        "Hal-hal mengenai pemindahan kekuasaan dan lain-lain, diselenggarakan "
+        "dengan cara saksama dan dalam tempo yang sesingkat-singkatnya. "
+        "Djakarta, hari 17 bulan 8 tahun '05. Atas nama bangsa Indonesia, "
+        "Soekarno/Hatta";
 
     Xvr_String *str = Xvr_createString(&bucket, cstring);
 
@@ -226,7 +231,8 @@ int main() {
     res = test_string_fragmenting();
     if (res == 0) {
       printf(XVR_CC_NOTICE
-             "test_string_fragmenting(): dah bisa test fragment loh ya XD. XVR dah nda ngambek lagi XD.\n" XVR_CC_RESET);
+             "test_string_fragmenting(): dah bisa test fragment loh ya XD. XVR "
+             "dah nda ngambek lagi XD.\n" XVR_CC_RESET);
     }
     total += res;
   }
