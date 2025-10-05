@@ -1,10 +1,87 @@
 #include "xvr_lexer.h"
 #include "xvr_console_colors.h"
-#include "xvr_keywords.h"
+#include "xvr_token_types.h"
 
 #include <ctype.h>
 #include <stdio.h>
 #include <string.h>
+
+typedef struct {
+  const Xvr_TokenType type;
+  const char *keyword;
+} Xvr_KeywordTypeTuple;
+
+const Xvr_KeywordTypeTuple keywordTuples[] = {
+    // null
+    {XVR_TOKEN_NULL, "null"},
+
+    // types
+    {XVR_TOKEN_TYPE_TYPE, "type"},
+    {XVR_TOKEN_TYPE_BOOLEAN, "bool"},
+    {XVR_TOKEN_TYPE_INTEGER, "int"},
+    {XVR_TOKEN_TYPE_FLOAT, "float"},
+    {XVR_TOKEN_TYPE_STRING, "string"},
+
+    {XVR_TOKEN_TYPE_OPAQUE, "opaque"},
+    {XVR_TOKEN_TYPE_ANY, "any"},
+
+    // keywords and reserved words
+    {XVR_TOKEN_KEYWORD_AS, "as"},
+    {XVR_TOKEN_KEYWORD_ASSERT, "assert"},
+    {XVR_TOKEN_KEYWORD_BREAK, "break"},
+    {XVR_TOKEN_KEYWORD_CLASS, "class"},
+    {XVR_TOKEN_KEYWORD_CONST, "const"},
+    {XVR_TOKEN_KEYWORD_CONTINUE, "continue"},
+    {XVR_TOKEN_KEYWORD_DO, "do"},
+    {XVR_TOKEN_KEYWORD_ELSE, "else"},
+    {XVR_TOKEN_KEYWORD_EXPORT, "export"},
+    {XVR_TOKEN_KEYWORD_FOR, "for"},
+    {XVR_TOKEN_KEYWORD_FOREACH, "foreach"},
+    {XVR_TOKEN_KEYWORD_FUNCTION, "fn"},
+    {XVR_TOKEN_KEYWORD_IF, "if"},
+    {XVR_TOKEN_KEYWORD_IMPORT, "import"},
+    {XVR_TOKEN_KEYWORD_IN, "in"},
+    {XVR_TOKEN_KEYWORD_OF, "of"},
+    {XVR_TOKEN_KEYWORD_PRINT, "print"},
+    {XVR_TOKEN_KEYWORD_RETURN, "return"},
+    {XVR_TOKEN_KEYWORD_TYPEAS, "typeas"},
+    {XVR_TOKEN_KEYWORD_TYPEOF, "typeof"},
+    {XVR_TOKEN_KEYWORD_VAR, "var"},
+    {XVR_TOKEN_KEYWORD_WHILE, "while"},
+    {XVR_TOKEN_KEYWORD_YIELD, "yield"},
+
+    // literal values
+    {XVR_TOKEN_LITERAL_TRUE, "true"},
+    {XVR_TOKEN_LITERAL_FALSE, "false"},
+
+    {XVR_TOKEN_EOF, NULL},
+};
+
+const char *Xvr_private_findKeywordByType(const Xvr_TokenType type) {
+  if (type == XVR_TOKEN_EOF) {
+    return "EOF";
+  }
+
+  for (int i = 0; keywordTuples[i].keyword; i++) {
+    if (keywordTuples[i].type == type) {
+      return keywordTuples[i].keyword;
+    }
+  }
+
+  return NULL;
+}
+
+Xvr_TokenType Xvr_private_findTypeByKeyword(const char *keyword) {
+  const int length = strlen(keyword);
+
+  for (int i = 0; keywordTuples[i].keyword; i++) {
+    if (!strncmp(keyword, keywordTuples[i].keyword, length)) {
+      return keywordTuples[i].type;
+    }
+  }
+
+  return XVR_TOKEN_EOF;
+}
 
 static void cleanLexer(Xvr_Lexer *lexer) {
   lexer->start = 0;
@@ -205,17 +282,17 @@ static Xvr_Token makeKeywordOrName(Xvr_Lexer *lexer) {
   }
 
   // scan for a keyword
-  for (int i = 0; Xvr_private_keywords[i].keyword; i++) {
+  for (int i = 0; keywordTuples[i].keyword; i++) {
     // WONTFIX: could squeeze miniscule performance gain from this, but ROI
     // isn't worth it
-    if (strlen(Xvr_private_keywords[i].keyword) ==
+    if (strlen(keywordTuples[i].keyword) ==
             (lexer->current - lexer->start) &&
-        !strncmp(Xvr_private_keywords[i].keyword, &lexer->source[lexer->start],
+        !strncmp(keywordTuples[i].keyword, &lexer->source[lexer->start],
                  lexer->current - lexer->start)) {
       // make token (keyword)
       Xvr_Token token;
 
-      token.type = Xvr_private_keywords[i].type;
+      token.type = keywordTuples[i].type;
       token.length = lexer->current - lexer->start;
       token.line = lexer->line;
       token.lexeme = &lexer->source[lexer->start];
