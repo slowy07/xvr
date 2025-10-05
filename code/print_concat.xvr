@@ -1,0 +1,4 @@
+// print string and concat
+
+print "arfy slowy";
+print "xaviera " .. "putri";

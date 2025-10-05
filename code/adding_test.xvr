@@ -1,1 +1,2 @@
-print 3 * 12;
+// aritmethic symbols + - / *
+print 20 * 3;

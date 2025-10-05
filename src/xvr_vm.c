@@ -18,23 +18,23 @@
 #define READ_BYTE(vm) vm->routine[vm->routineCounter++]
 
 #define READ_UNSIGNED_INT(vm)                                                  \
-  *((unsigned int *)(vm->routine + _read_postfix(&(vm->routineCounter), 4)))
+  *((unsigned int *)(vm->routine + readPostfixUtil(&(vm->routineCounter), 4)))
 
 #define READ_INT(vm)                                                           \
-  *((int *)(vm->routine + _read_postfix(&(vm->routineCounter), 4)))
+  *((int *)(vm->routine + readPostfixUtil(&(vm->routineCounter), 4)))
 
 #define READ_FLOAT(vm)                                                         \
-  *((float *)(vm->routine + _read_postfix(&(vm->routineCounter), 4)))
+  *((float *)(vm->routine + readPostfixUtil(&(vm->routineCounter), 4)))
 
-static inline int _read_postfix(unsigned int *ptr, int amount) {
+static inline int readPostfixUtil(unsigned int *ptr, int amount) {
   int ret = *ptr;
   *ptr += amount;
   return ret;
 }
 
-static inline void fix_alignment(Xvr_VM *vm) {
+static inline void fixAlignment(Xvr_VM *vm) {
   if (vm->routineCounter % 4 != 0) {
-    vm->routineCounter += (4 - vm->routineCounter % 4);
+    vm->routineCounter = (vm->routineCounter + 3) & ~0b11;
   }
 }
 
@@ -56,19 +56,19 @@ static void processRead(Xvr_VM *vm) {
   }
 
   case XVR_VALUE_INTEGER: {
-    fix_alignment(vm);
+    fixAlignment(vm);
     value = XVR_VALUE_FROM_INTEGER(READ_INT(vm));
     break;
   }
 
   case XVR_VALUE_FLOAT: {
-    fix_alignment(vm);
+    fixAlignment(vm);
     value = XVR_VALUE_FROM_FLOAT(READ_FLOAT(vm));
     break;
   }
 
   case XVR_VALUE_STRING: {
-    fix_alignment(vm);
+    fixAlignment(vm);
     unsigned int jump =
         *(unsigned int *)(vm->routine + vm->jumpsAddr + READ_INT(vm));
 
@@ -111,13 +111,13 @@ static void processRead(Xvr_VM *vm) {
   Xvr_pushStack(&vm->stack, value);
 
   // leave the counter in a good spot
-  fix_alignment(vm);
+  fixAlignment(vm);
 }
 
 static void processDeclare(Xvr_VM *vm) {
   Xvr_ValueType type = READ_BYTE(vm); // variable type
   unsigned int len = READ_BYTE(vm);   // name length
-  fix_alignment(vm);                  // one spare byte
+  fixAlignment(vm);                   // one spare byte
 
   unsigned int jump =
       *(unsigned int *)(vm->routine + vm->jumpsAddr + READ_INT(vm));
@@ -441,7 +441,7 @@ static void process(Xvr_VM *vm) {
       exit(-1);
     }
 
-    fix_alignment(vm);
+    fixAlignment(vm);
   }
 }
 
@@ -481,7 +481,7 @@ void Xvr_bindVM(Xvr_VM *vm, unsigned char *bytecode) {
 
   int offset = 3 + strlen(XVR_VERSION_BUILD) + 1;
   if (offset % 4 != 0) {
-    offset += 4 - (offset % 4); 
+    offset += 4 - (offset % 4);
   }
 
   Xvr_bindVMToRoutine(vm, bytecode + offset);
@@ -502,7 +502,7 @@ void Xvr_bindVMToRoutine(Xvr_VM *vm, unsigned char *routine) {
     vm->paramAddr = READ_UNSIGNED_INT(vm);
   }
 
-  vm->codeAddr = READ_UNSIGNED_INT(vm); 
+  vm->codeAddr = READ_UNSIGNED_INT(vm);
 
   if (vm->jumpsSize > 0) {
     vm->jumpsAddr = READ_UNSIGNED_INT(vm);
