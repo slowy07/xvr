@@ -68,6 +68,10 @@ Xvr_Scope *Xvr_pushScope(Xvr_Bucket **bucketHandle, Xvr_Scope *scope) {
 }
 
 Xvr_Scope *Xvr_popScope(Xvr_Scope *scope) {
+  if (scope == NULL) {
+    return NULL;
+  }
+
   decrementRefCount(scope);
 
   if (scope->refCount == 0) {

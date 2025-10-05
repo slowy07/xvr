@@ -25,7 +25,11 @@ Xvr_Stack *Xvr_allocateStack() {
   return stack;
 }
 
-void Xvr_freeStack(Xvr_Stack *stack) { free(stack); }
+void Xvr_freeStack(Xvr_Stack *stack) {
+  if (stack != NULL) {
+    free(stack);
+  }
+}
 
 void Xvr_pushStack(Xvr_Stack **stack, Xvr_Value value) {
   if ((*stack)->count >= 1024 * 1024 / sizeof(Xvr_Value)) {

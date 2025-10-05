@@ -12,7 +12,26 @@
 #include <stdlib.h>
 #include <string.h>
 
+#define APPEND(dest, src)                                                      \
+  strncpy((dest) + (strlen(dest)), (src), strlen((src)) + 1);
+
+#if defined(_WIN32) || defined(_WIN64)
+#define FLIPSLASH(str)                                                         \
+  for (int i = 0; str[i]; i++)                                                 \
+    str[i] == '/' ? '\\' : str[i];
+#else
+#define FLIPSLASH(str)                                                         \
+  for (int i = 0; str[i]; i++)                                                 \
+    str[i] = str[i] == '\\' ? '/' : str[i];
+#endif /* if defined (_WIN32) || defined (_WIN64) */
+
 unsigned char *readFile(char *path, int *size) {
+  int pathLength = strlen(path);
+  char realPath[pathLength + 1];
+  strncpy(realPath, path, pathLength);
+  realPath[pathLength] = '\0';
+  FLIPSLASH(realPath);
+
   FILE *file = fopen(path, "rb");
   if (file == NULL) {
     *size = -1;
@@ -35,21 +54,27 @@ unsigned char *readFile(char *path, int *size) {
     return NULL;
   }
 
-  fclose(file);
-
   buffer[(*size)++] = '\0';
+
+  fclose(file);
   return buffer;
 }
 
-int getDirPath(char *dest, const char *src) {
+int getFilePath(char *dest, const char *src) {
+  char *p = NULL;
 
-#if defined(_WIN32) || defined(_WIN64)
-  char *p = strrchr(src, '\\');
-#else
-  char *p = strrchr(src, '/');
-#endif
+  p = strrchr(src, '\\');
+  if (p == NULL) {
+    p = strchr(src, '/');
+  }
 
-  int len = p != NULL ? p - src + 1 : 0;
+  if (p == NULL) {
+    int len = strlen(src);
+    strncpy(dest, src, len);
+    return len;
+  }
+
+  int len = p - src + 1;
   strncpy(dest, src, len);
   dest[len] = '\0';
 
@@ -57,12 +82,20 @@ int getDirPath(char *dest, const char *src) {
 }
 
 int getFileName(char *dest, const char *src) {
+  char *p = NULL;
 
-#if defined(_WIN32) || defined(_WIN64)
-  char *p = strrchr(src, '\\') + 1;
-#else
-  char *p = strrchr(src, '/') + 1;
-#endif
+  p = strrchr(src, '\\');
+  if (p == NULL) {
+    p = strrchr(src, '/');
+  }
+
+  if (p == NULL) {
+    int len = strlen(src);
+    strncpy(dest, src, len);
+    return len;
+  }
+
+  p++;
 
   int len = strlen(p);
   strncpy(dest, p, len);
@@ -70,19 +103,6 @@ int getFileName(char *dest, const char *src) {
 
   return len;
 }
-
-#define APPEND(dest, src)                                                      \
-  strncpy((dest) + (strlen(dest)), (src), strlen((src)) + 1);
-
-#if defined(_WIN32) || defined(_WIN64)
-#define FLIPSLASH(str)                                                         \
-  for (int i = 0; str[i]; i++)                                                 \
-    str[i] = str[i] == '/' ? '\\' : str[i];
-#else
-#define FLIPSLASH(str)                                                         \
-  for (int i = 0; str[i]; i++)                                                 \
-    str[i] = str[i] == '\\' ? '/' : str[i];
-#endif
 
 typedef struct CmdLine {
   bool error;
@@ -147,7 +167,7 @@ CmdLine parseCmdLine(int argc, const char *argv[]) {
           exit(-1);
         }
 
-        getDirPath(cmd.infile, argv[0]);
+        getFilePath(cmd.infile, argv[0]);
         APPEND(cmd.infile, argv[i]);
         FLIPSLASH(cmd.infile);
       }

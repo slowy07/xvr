@@ -1,0 +1,7 @@
+print 42;
+
+print 3 * 3;
+
+print "wello";
+
+print "xaviera " .. "putri";

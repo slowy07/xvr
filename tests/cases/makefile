@@ -1,6 +1,6 @@
 CC=gcc
-CFLAGS=-std=c17 -g -Wall -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
-LIBS=-lm
+CFLAGS+=-std=c17 -g -Wall -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable -Wformat=2
+LIBS+=-lm
 LDFLAGS+=
 
 ifeq ($(shell uname),Linux)
@@ -10,21 +10,25 @@ LDFLAGS=-Wl,--gc-sections
 else ifeq ($(shell uname),Darwin)
 LDFLAGS=-Wl,-dead_strip
 else
-	@echo "LDFLAGS set failed - are you using temple os?"
+	@echo "LDFLAGS set failed - what platform is this?"
 endif
 
-TEST_ROOTDIR=..
+#directories
+TEST_ROOTDIR=../..
 TEST_SOURCEDIR=$(TEST_ROOTDIR)/$(XVR_SOURCEDIR)
-TEST_CASESDIR=cases
+TEST_CASESDIR=.
 
 TEST_OUTDIR=out
 TEST_OBJDIR=obj
 
-TEST_SOURCEFILES=$(addprefix $(XVR_ROOTDIR)/,$(XVR_SOURCEFILES))
-TEST_CASESFILES=$(wildcard $(TEST_CASESDIR)/*.c)
+#file names
+TEST_SOURCEFILES=$(wildcard $(TEST_SOURCEDIR)/*.c)
+TEST_CASESFILES=$(wildcard $(TEST_CASESDIR)/test_*.c)
 
-all: clean build-source build-cases build-link build-run
+#build the object files, compile the test cases, and run
+all: build-source build-cases build-link build-run
 
+#targets for each step
 .PHONY: build-source
 build-source: $(TEST_OUTDIR) $(TEST_OBJDIR) $(addprefix $(TEST_OBJDIR)/,$(notdir $(TEST_SOURCEFILES:.c=.o)))
 
@@ -37,12 +41,14 @@ build-link: $(TEST_OUTDIR) $(TEST_OBJDIR) $(addprefix $(TEST_OUTDIR)/,$(notdir $
 .PHONY: build-run
 build-run: $(addprefix $(TEST_OUTDIR)/,$(notdir $(TEST_CASESFILES:%.c=%.exe))) $(addprefix $(TEST_OUTDIR)/,$(notdir $(TEST_CASESFILES:%.c=%.run)))
 
+#util targets
 $(TEST_OUTDIR):
 	mkdir $(TEST_OUTDIR)
 
 $(TEST_OBJDIR):
 	mkdir $(TEST_OBJDIR)
 
+#compilation steps
 $(TEST_OBJDIR)/%.o: $(TEST_SOURCEDIR)/%.c
 	$(CC) -c -o $@ $< $(addprefix -I,$(TEST_SOURCEDIR)) $(CFLAGS) -fdata-sections -ffunction-sections
 
@@ -56,41 +62,12 @@ $(TEST_OUTDIR)/%.exe: $(TEST_OBJDIR)/%.o
 $(TEST_OUTDIR)/%.run: $(TEST_OUTDIR)/%.exe
 	$<
 
-all-gdb: clean build-source build-cases build-link build-run-gdb
+#debugging targets
+gdb: build-source build-cases build-link build-run-gdb
 
 .PHONY: build-run-gdb
 build-run-gdb: $(addprefix $(TEST_OUTDIR)/,$(notdir $(TEST_CASESFILES:%.c=%.exe))) $(addprefix $(TEST_OUTDIR)/,$(notdir $(TEST_CASESFILES:%.c=%.run-gdb)))
 
 .PRECIOUS: $(TEST_OUTDIR)/%.run-gdb
 $(TEST_OUTDIR)/%.run-gdb: $(TEST_OUTDIR)/%.exe
-	gdb $< -ex "run" --batch
-
-.PHONY: clean
-clean:
-ifeq ($(shell uname),Linux)
-	find . -type f -name '*.o' -delete
-	find . -type f -name '*.a' -delete
-	find . -type f -name '*.exe' -delete
-	find . -type f -name '*.dll' -delete
-	find . -type f -name '*.lib' -delete
-	find . -type f -name '*.so' -delete
-	find . -type f -name '*.dylib' -delete
-	find . -type d -name 'out' -delete
-	find . -type d -name 'obj' -delete
-else ifeq ($(OS),Windows_NT)
-	$(RM) *.o *.a *.exe *.dll *.lib *.so *.dylib
-	$(RM) out
-	$(RM) obj
-else ifeq ($(shell uname),Darwin)
-	find . -type f -name '*.o' -delete
-	find . -type f -name '*.a' -delete
-	find . -type f -name '*.exe' -delete
-	find . -type f -name '*.dll' -delete
-	find . -type f -name '*.lib' -delete
-	find . -type f -name '*.so' -delete
-	find . -type f -name '*.dylib' -delete
-	find . -type d -name 'out' -delete
-	find . -type d -name 'obj' -delete
-else
-	@echo "Deletion failed - what platform is this?"
-endif
+	gdb $< -ix gdb_init -ex=run --batch --return-child-result --args "$<"

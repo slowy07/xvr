@@ -2,13 +2,17 @@
 # LIBS=-lm
 
 export XVR_SOURCEDIR=src
+export XVR_INTERDIR=inter
+export XVR_CASESDIR=tests/cases
+export XVR_INTEGRATIONSDIR=tests/integrations
+export XVR_BENCHMARKSDIR=tests/benchmarks
 export XVR_OUTDIR=out
 export XVR_OBJDIR=obj
 
 export XVR_SOURCEFILES=$(wildcard $(XVR_SOURCEDIR)/*.c)
 
-all: clean tests
-	@echo no targets ready
+# all: clean tests
+# 	@echo no targets ready
 
 .PHONY: src
 src:
@@ -18,13 +22,17 @@ src:
 inter: src
 	$(MAKE) -C inter -k
 
-.PHONY: tests
-tests:
-	$(MAKE) -C tests -k
+.PHONY: tests-cases
+tests-cases:
+	$(MAKE) -C $(XVR_CASESDIR) -k
 
 .PHONY: tests-gdb
 tests-gdb:
 	$(MAKE) -C tests all-gdb -k
+
+.PHONY: tests-integrations
+tests-integrations:
+	$(MAKE) -C $(XVR_INTEGRATIONSDIR) -k
 
 $(XVR_OUTDIR):
 	mkdir $(XVR_OUTDIR)

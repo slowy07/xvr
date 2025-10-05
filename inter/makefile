@@ -45,37 +45,6 @@ $(INTER_OUTDIR)/$(INTER_TARGETNAME): $(INTER_OBJFILES)
 ifeq ($(shell uname),Darwin) #dylib fix
 	otool -L $@
 	install_name_tool -add_rpath @executable_path/. $@
-	install_name_tool -change ../out/libXvr.dylib @executable_path/libXvr.dylib $@
+	install_name_tool -change $(INTER_OUTDIR)/libXvr.dylib @executable_path/libXvr.dylib $@
 	otool -L $@
-endif
-
-#util commands
-.PHONY: clean
-clean:
-ifeq ($(shell uname),Linux)
-	find . -type f -name '*.o' -delete
-	find . -type f -name '*.a' -delete
-	find . -type f -name '*.exe' -delete
-	find . -type f -name '*.dll' -delete
-	find . -type f -name '*.lib' -delete
-	find . -type f -name '*.so' -delete
-	find . -type f -name '*.dylib' -delete
-	find . -type d -name 'out' -delete
-	find . -type d -name 'obj' -delete
-else ifeq ($(OS),Windows_NT)
-	$(RM) *.o *.a *.exe *.dll *.lib *.so *.dylib
-	$(RM) out
-	$(RM) obj
-else ifeq ($(shell uname),Darwin)
-	find . -type f -name '*.o' -delete
-	find . -type f -name '*.a' -delete
-	find . -type f -name '*.exe' -delete
-	find . -type f -name '*.dll' -delete
-	find . -type f -name '*.lib' -delete
-	find . -type f -name '*.so' -delete
-	find . -type f -name '*.dylib' -delete
-	find . -type d -name 'out' -delete
-	find . -type d -name 'obj' -delete
-else
-	@echo "del failed"
 endif
