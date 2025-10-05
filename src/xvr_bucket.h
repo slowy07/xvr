@@ -3,11 +3,13 @@
 
 #include "xvr_common.h"
 
-#define XVR_BUCKET_SMALL 256
-#define XVR_BUCKET_MEDIUM 512
-#define XVR_BUCKET_LARGE 1024
+#define XVR_BUCKET_TINY (1024 * 2)
+#define XVR_BUCKET_SMALL (1024 * 4)
+#define XVR_BUCKET_MEDIUM (1024 * 8)
+#define XVR_BUCKET_LARGE (1024 * 32)
+#define XVR_BUCKET_HUGE (1024 * 32)
 
-#define XVR_BUCKET_IDEAL 1024
+#define XVR_BUCKET_IDEAL (XVR_BUCKET_HUGE - sizeof(Xvr_Bucket))
 
 typedef struct Xvr_Bucket { // 32 | 64 BITNESS
   struct Xvr_Bucket *next;  // 4  | 8

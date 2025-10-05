@@ -40,7 +40,7 @@ unsigned char *readFile(char *path, int *size) {
   return buffer;
 }
 
-int dir(char *dest, const char *src) {
+int getDirPath(char *dest, const char *src) {
 
 #if defined(_WIN32) || defined(_WIN64)
   char *p = strrchr(src, '\\');
@@ -50,6 +50,21 @@ int dir(char *dest, const char *src) {
 
   int len = p != NULL ? p - src + 1 : 0;
   strncpy(dest, src, len);
+  dest[len] = '\0';
+
+  return len;
+}
+
+int getFileName(char *dest, const char *src) {
+
+#if defined(_WIN32) || defined(_WIN64)
+  char *p = strrchr(src, '\\') + 1;
+#else
+  char *p = strrchr(src, '/') + 1;
+#endif /* if defined(_WIN32) || defined(_WIN64) */
+
+  int len = strlen(p);
+  strncpy(dest, p, len);
   dest[len] = '\0';
 
   return len;
@@ -131,7 +146,7 @@ CmdLine parseCmdLine(int argc, const char *argv[]) {
           exit(-1);
         }
 
-        dir(cmd.infile, argv[0]);
+        getDirPath(cmd.infile, argv[0]);
         APPEND(cmd.infile, argv[i]);
         FLIPSLASH(cmd.infile);
       }
@@ -149,10 +164,12 @@ static void errorAndContinueCallback(const char *msg) {
   fprintf(stderr, "%s\n", msg);
 }
 
-int repl(const char *name) {
+int repl(const char *filepath) {
   Xvr_setErrorCallback(errorAndContinueCallback);
   Xvr_setAssertFailureCallback(errorAndContinueCallback);
 
+  char prompt[256];
+  getFileName(prompt, filepath);
   unsigned int INPUT_BUFFER_SIZE = 4096;
   char inputBuffer[INPUT_BUFFER_SIZE];
   memset(inputBuffer, 0, INPUT_BUFFER_SIZE);
@@ -162,7 +179,7 @@ int repl(const char *name) {
   Xvr_VM vm;
   Xvr_initVM(&vm);
 
-  printf("%s>> ", name);
+  printf("%s >> ", prompt);
 
   while (fgets(inputBuffer, INPUT_BUFFER_SIZE, stdin)) {
     unsigned int length = strlen(inputBuffer);
@@ -171,7 +188,7 @@ int repl(const char *name) {
     }
 
     if (length == 0) {
-      printf("%s>> ", name);
+      printf("%s >> ", prompt);
       continue;
     }
 
@@ -187,7 +204,7 @@ int repl(const char *name) {
     Xvr_Ast *ast = Xvr_scanParser(&bucket, &parser);
 
     if (parser.error) {
-      printf("%s>> ", name);
+      printf("%s >> ", prompt);
       continue;
     }
 
@@ -210,7 +227,7 @@ int repl(const char *name) {
       }
     }
 
-    printf("%s>> ", name);
+    printf("%s >> ", prompt);
   }
 
   Xvr_freeVM(&vm);
