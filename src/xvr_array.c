@@ -1,5 +1,6 @@
 #include "xvr_array.h"
 #include "xvr_console_colors.h"
+#include "xvr_value.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -10,14 +11,15 @@ Xvr_Array *Xvr_resizeArray(Xvr_Array *paramArray, unsigned int capacity) {
     return NULL;
   }
 
-  Xvr_Array *array = realloc(paramArray, capacity + sizeof(Xvr_Array));
+  unsigned int originalCapacity = paramArray == NULL ? 0 : paramArray->capacity;
+  Xvr_Array *array =
+      realloc(paramArray, capacity * sizeof(Xvr_Value) + sizeof(Xvr_Array));
 
   if (array == NULL) {
-    fprintf(
-        stderr,
-        XVR_CC_ERROR
-        "ERROR: Failed to allocate a 'Xvr_Array' of %d capacity\n" XVR_CC_RESET,
-        (int)capacity);
+    fprintf(stderr,
+            XVR_CC_ERROR "ERROR: Failed to resizing a 'Xvr_Array' from %d to "
+                         "%d capacity\n" XVR_CC_RESET,
+            (int)originalCapacity, (int)capacity);
     exit(-1);
   }
 

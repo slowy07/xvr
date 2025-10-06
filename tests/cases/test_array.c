@@ -1,29 +1,30 @@
 #include "xvr_array.h"
 #include "xvr_console_colors.h"
+#include "xvr_value.h"
 
 #include <stdio.h>
 
 int test_resizeArray() {
   {
-    Xvr_Array *array = XVR_ALLOCATE_ARRAY(int, 1);
-    XVR_FREE_ARRAY(int, array);
+    Xvr_Array *array = Xvr_resizeArray(NULL, 1);
+    array = Xvr_resizeArray(array, 0);
   }
 
   {
-    Xvr_Array *array = XVR_ALLOCATE_ARRAY(int, 10);
-    array->data[1] = 42;
-    XVR_FREE_ARRAY(int, array);
+    Xvr_Array *array = Xvr_resizeArray(NULL, 10);
+    array->data[1] = XVR_VALUE_FROM_INTEGER(42);
+    Xvr_resizeArray(array, 0);
   }
 
   {
-    Xvr_Array *array1 = XVR_ALLOCATE_ARRAY(int, 10);
-    Xvr_Array *array2 = XVR_ALLOCATE_ARRAY(int, 10);
+    Xvr_Array *array1 = Xvr_resizeArray(NULL, 10);
+    Xvr_Array *array2 = Xvr_resizeArray(NULL, 10);
 
-    array1->data[1] = 42;
-    array2->data[1] = 42;
+    array1->data[1] = XVR_VALUE_FROM_INTEGER(42);
+    array2->data[1] = XVR_VALUE_FROM_INTEGER(42);
 
-    XVR_FREE_ARRAY(int, array1);
-    XVR_FREE_ARRAY(int, array2);
+    Xvr_resizeArray(array1, 0);
+    Xvr_resizeArray(array2, 0);
   }
 
   return 0;
