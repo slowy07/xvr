@@ -8,7 +8,7 @@ int test_stack_basics() {
   {
     Xvr_Stack *stack = Xvr_allocateStack();
 
-    if (stack == NULL || stack->capacity != 64 || stack->count != 0) {
+    if (stack == NULL || stack->capacity != 8 || stack->count != 0) {
       fprintf(stderr, XVR_CC_ERROR
               "Error: failed to allocate Xvr_Stack\n" XVR_CC_ERROR);
       Xvr_freeStack(stack);

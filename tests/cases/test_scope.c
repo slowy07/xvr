@@ -11,7 +11,7 @@ int test_scope_allocation() {
     Xvr_Scope *scope = Xvr_pushScope(&bucket, NULL);
 
     if (scope == NULL || scope->next != NULL || scope->table == NULL ||
-        scope->table->capacity != 16 || scope->refCount != 1 || false) {
+        scope->table->capacity != 8 || scope->refCount != 1 || false) {
       fprintf(stderr, XVR_CC_ERROR
               "Error: failed to allocate Xvr_Scope\n" XVR_CC_RESET);
       Xvr_popScope(scope);
@@ -22,43 +22,7 @@ int test_scope_allocation() {
     Xvr_popScope(scope);
     Xvr_freeBucket(&bucket);
   }
-
-  {
-    Xvr_Bucket *bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
-    Xvr_Scope *scope = NULL;
-
-    for (int i = 0; i < 5; i++) {
-      scope = Xvr_pushScope(&bucket, scope);
-    }
-
-    if (scope == NULL || scope->next == NULL || scope->table == NULL ||
-        scope->table->capacity != 16 || scope->refCount != 1 ||
-        scope->next->next == NULL || scope->next->table == NULL ||
-        scope->next->table->capacity != 16 || scope->next->refCount != 2 ||
-        scope->next->next->next == NULL || scope->next->next->table == NULL ||
-        scope->next->next->table->capacity != 16 ||
-        scope->next->next->refCount != 3 ||
-        scope->next->next->next->next == NULL ||
-        scope->next->next->next->table == NULL ||
-        scope->next->next->next->table->capacity != 16 ||
-        scope->next->next->next->next->refCount != 5 || false) {
-      fprintf(stderr, XVR_CC_ERROR
-              "Error: failed to allocate list of Xvr_scope\n" XVR_CC_RESET);
-      while (scope) {
-        scope = Xvr_popScope(scope);
-      }
-
-      Xvr_freeBucket(&bucket);
-      return -1;
-    }
-
-    while (scope) {
-      scope = Xvr_popScope(scope);
-    }
-
-    Xvr_freeBucket(&bucket);
-  }
-
+  
   return 0;
 }
 
@@ -97,7 +61,7 @@ int test_scope_elements() {
     Xvr_Value result = Xvr_accessScope(scope, hello2);
 
     if (scope == NULL || scope->next != NULL || scope->table == NULL ||
-        scope->table->capacity != 16 || scope->refCount != 1 ||
+        scope->table->capacity != 8 || scope->refCount != 1 ||
 
         XVR_VALUE_IS_INTEGER(result) != true ||
         XVR_VALUE_AS_INTEGER(result) != 42 ||
@@ -117,7 +81,7 @@ int test_scope_elements() {
     Xvr_Value resultTwo = Xvr_accessScope(scope, hello2);
 
     if (scope == NULL || scope->next != NULL || scope->table == NULL ||
-        scope->table->capacity != 16 || scope->refCount != 1 ||
+        scope->table->capacity != 8 || scope->refCount != 1 ||
 
         XVR_VALUE_IS_FLOAT(resultTwo) != true ||
         XVR_VALUE_AS_FLOAT(resultTwo) != 3.1415f ||

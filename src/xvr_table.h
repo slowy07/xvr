@@ -26,4 +26,16 @@ XVR_API void Xvr_removeTable(Xvr_Table **table, Xvr_Value key);
 
 XVR_API Xvr_Table* Xvr_private_adjustTableCapacity(Xvr_Table* oldTable, unsigned int newCapacity);
 
+#ifndef XVR_TABLE_INITIAL_CAPACITY
+#define XVR_TABLE_INITIAL_CAPACITY 8
+#endif // !XVR_TABLE_INITIAL_CAPACITY
+
+#ifndef XVR_TABLE_EXPANSION_RATE
+#define XVR_TABLE_EXPANSION_RATE 2
+#endif // !XVR_TABLE_EXPANSION_RATE
+
+#ifndef XVR_TABLE_EXPANSION_THRESHOLD
+#define XVR_TABLE_EXPANSION_THRESHOLD 0.8
+#endif // !XVR_TABLE_EXPANSION_THRESHOLD
+
 #endif // !XVR_TABLE_H

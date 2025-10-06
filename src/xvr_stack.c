@@ -4,22 +4,21 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#define MIN_CAPACITY 64
-
 Xvr_Stack *Xvr_allocateStack() {
-  Xvr_Stack *stack =
-      malloc(MIN_CAPACITY * sizeof(Xvr_Value) + sizeof(Xvr_Stack));
+  Xvr_Stack *stack = malloc(XVR_STACK_INITIAL_CAPACITY * sizeof(Xvr_Value) +
+                            sizeof(Xvr_Stack));
 
   if (stack == NULL) {
     fprintf(stderr,
             XVR_CC_ERROR "ERROR: Failed to allocate a 'Xvr_Stack' of %d "
                          "capacity (%d space in memory)\n" XVR_CC_RESET,
-            MIN_CAPACITY,
-            (int)(MIN_CAPACITY * sizeof(Xvr_Value) + sizeof(Xvr_Stack)));
+            XVR_STACK_INITIAL_CAPACITY,
+            (int)(XVR_STACK_INITIAL_CAPACITY * sizeof(Xvr_Value) +
+                  sizeof(Xvr_Stack)));
     exit(1);
   }
 
-  stack->capacity = MIN_CAPACITY;
+  stack->capacity = XVR_STACK_INITIAL_CAPACITY;
   stack->count = 0;
 
   return stack;
@@ -32,7 +31,7 @@ void Xvr_freeStack(Xvr_Stack *stack) {
 }
 
 void Xvr_pushStack(Xvr_Stack **stack, Xvr_Value value) {
-  if ((*stack)->count >= 1024 * 1024 / sizeof(Xvr_Value)) {
+  if ((*stack)->count >= XVR_STACK_OVERFLOW) {
     fprintf(stderr, XVR_CC_ERROR "ERROR: Stack overflow\n" XVR_CC_RESET);
     exit(-1);
   }
@@ -40,9 +39,9 @@ void Xvr_pushStack(Xvr_Stack **stack, Xvr_Value value) {
   // expand the capacity if needed
   if ((*stack)->count + 1 > (*stack)->capacity) {
     while ((*stack)->count + 1 > (*stack)->capacity) {
-      (*stack)->capacity = (*stack)->capacity < MIN_CAPACITY
-                               ? MIN_CAPACITY
-                               : (*stack)->capacity * 2;
+      (*stack)->capacity = (*stack)->capacity < XVR_STACK_INITIAL_CAPACITY
+                               ? XVR_STACK_INITIAL_CAPACITY
+                               : (*stack)->capacity * XVR_STACK_EXPANSION_RATE;
     }
 
     unsigned int newCapacity = (*stack)->capacity;
@@ -80,8 +79,8 @@ Xvr_Value Xvr_popStack(Xvr_Stack **stack) {
   }
 
   // shrink if possible
-  if ((*stack)->count > MIN_CAPACITY &&
-      (*stack)->count < (*stack)->capacity / 4) {
+  if ((*stack)->count > XVR_STACK_INITIAL_CAPACITY &&
+      (*stack)->count < (*stack)->capacity * XVR_STACK_CONTRACTION_RATE) {
     (*stack)->capacity /= 2;
     unsigned int newCapacity = (*stack)->capacity;
 

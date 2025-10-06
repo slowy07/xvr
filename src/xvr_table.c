@@ -6,8 +6,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define MIN_CAPACITY 16
-
 static void probeAndInsert(Xvr_Table **tableHandle, Xvr_Value key,
                            Xvr_Value value) {
   unsigned int probe = Xvr_hashValue(key) % (*tableHandle)->capacity;
@@ -92,7 +90,7 @@ Xvr_Table *Xvr_private_adjustTableCapacity(Xvr_Table *oldTable,
 }
 
 Xvr_Table *Xvr_allocateTable() {
-  return Xvr_private_adjustTableCapacity(NULL, MIN_CAPACITY);
+  return Xvr_private_adjustTableCapacity(NULL, XVR_TABLE_INITIAL_CAPACITY);
 }
 
 void Xvr_freeTable(Xvr_Table *table) { free(table); }
@@ -102,9 +100,10 @@ void Xvr_insertTable(Xvr_Table **tableHandle, Xvr_Value key, Xvr_Value value) {
     Xvr_error(XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
   }
 
-  if ((*tableHandle)->count > (*tableHandle)->capacity * 0.8) {
+  if ((*tableHandle)->count >
+      (*tableHandle)->capacity * XVR_TABLE_EXPANSION_THRESHOLD) {
     (*tableHandle) = Xvr_private_adjustTableCapacity(
-        (*tableHandle), (*tableHandle)->capacity * 2);
+        (*tableHandle), (*tableHandle)->capacity * XVR_TABLE_EXPANSION_RATE);
   }
 
   probeAndInsert(tableHandle, key, value);

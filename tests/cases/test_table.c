@@ -28,7 +28,7 @@ int test_table_simple_insert_lookup_and_remove_data() {
     Xvr_Value value = XVR_VALUE_FROM_INTEGER(42);
 
     Xvr_insertTable(&table, key, value);
-    if (table == NULL || table->capacity != 16 || table->count != 1) {
+    if (table == NULL || table->capacity != 8 || table->count != 1) {
       fprintf(stderr,
               XVR_CC_ERROR "error: failed to insert into table\n" XVR_CC_ERROR);
       Xvr_freeTable(table);
@@ -37,7 +37,7 @@ int test_table_simple_insert_lookup_and_remove_data() {
 
     Xvr_Value result = Xvr_lookupTable(&table, XVR_VALUE_FROM_INTEGER(1));
 
-    if (table == NULL || table->capacity != 16 || table->count != 1 ||
+    if (table == NULL || table->capacity != 8 || table->count != 1 ||
         XVR_VALUE_AS_INTEGER(result) != 42) {
       fprintf(stderr,
               XVR_CC_ERROR "error: failed to lookup from table\n" XVR_CC_RESET);
@@ -47,7 +47,7 @@ int test_table_simple_insert_lookup_and_remove_data() {
 
     Xvr_removeTable(&table, XVR_VALUE_FROM_INTEGER(1));
 
-    if (table == NULL || table->capacity != 16 || table->count != 0) {
+    if (table == NULL || table->capacity != 8 || table->count != 0) {
       fprintf(stderr, XVR_CC_ERROR
               "error: failed to remove from a table\n" XVR_CC_RESET);
       Xvr_freeTable(table);
