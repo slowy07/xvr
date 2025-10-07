@@ -11,6 +11,12 @@ Xvr_Array *Xvr_resizeArray(Xvr_Array *paramArray, unsigned int capacity) {
     return NULL;
   }
 
+  if (paramArray != NULL && paramArray->count > capacity) {
+    for (unsigned int i = capacity; i < paramArray->count; i++) {
+      Xvr_freeValue(paramArray->data[i]);
+    }
+  }
+
   unsigned int originalCapacity = paramArray == NULL ? 0 : paramArray->capacity;
   Xvr_Array *array =
       realloc(paramArray, capacity * sizeof(Xvr_Value) + sizeof(Xvr_Array));

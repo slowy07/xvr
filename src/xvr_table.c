@@ -93,7 +93,16 @@ Xvr_Table *Xvr_allocateTable() {
   return Xvr_private_adjustTableCapacity(NULL, XVR_TABLE_INITIAL_CAPACITY);
 }
 
-void Xvr_freeTable(Xvr_Table *table) { free(table); }
+void Xvr_freeTable(Xvr_Table *table) {
+
+  if (table != NULL) {
+    for (unsigned int i = 0; i < table->capacity; i++) {
+      Xvr_freeValue(table->data[i].key);
+      Xvr_freeValue(table->data[i].value);
+    }
+    free(table);
+  }
+}
 
 void Xvr_insertTable(Xvr_Table **tableHandle, Xvr_Value key, Xvr_Value value) {
   if (XVR_VALUE_IS_NULL(key) || XVR_VALUE_IS_BOOLEAN(key)) {
