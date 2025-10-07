@@ -68,13 +68,21 @@ static void processRead(Xvr_VM *vm) {
   }
 
   case XVR_VALUE_STRING: {
-    fixAlignment(vm);
-    unsigned int jump =
-        *(unsigned int *)(vm->routine + vm->jumpsAddr + READ_INT(vm));
-
+    enum Xvr_StringType stringType = READ_BYTE(vm);
+    int len = (int)READ_BYTE(vm);
+    unsigned int jump = vm->routine[vm->jumpsAddr + READ_INT(vm)];
     char *cstring = (char *)(vm->routine + vm->dataAddr + jump);
 
-    value = XVR_VALUE_FROM_STRING(Xvr_createString(&vm->stringBucket, cstring));
+    if (stringType == XVR_STRING_LEAF) {
+      value =
+          XVR_VALUE_FROM_STRING(Xvr_createString(&vm->stringBucket, cstring));
+    } else if (stringType == XVR_STRING_NAME) {
+      Xvr_ValueType valueType = XVR_VALUE_UNKNOWN;
+      value = XVR_VALUE_FROM_STRING(Xvr_createNameStringLength(
+          &vm->stringBucket, cstring, len, valueType));
+    } else {
+      Xvr_error("invalid string type found");
+    }
 
     break;
   }
@@ -84,7 +92,7 @@ static void processRead(Xvr_VM *vm) {
     // break;
   }
 
-  case XVR_VALUE_DICTIONARY: {
+  case XVR_VALUE_TABLE: {
     //
     // break;
   }
@@ -95,6 +103,21 @@ static void processRead(Xvr_VM *vm) {
   }
 
   case XVR_VALUE_OPAQUE: {
+    //
+    // break;
+  }
+
+  case XVR_VALUE_TYPE: {
+    //
+    // berak;
+  }
+
+  case XVR_VALUE_ANY: {
+    //
+    // break;
+  }
+
+  case XVR_VALUE_UNKNOWN: {
     //
     // break;
   }
@@ -127,6 +150,20 @@ static void processDeclare(Xvr_VM *vm) {
   Xvr_Value value = Xvr_popStack(&vm->stack);
   Xvr_declareScope(vm->scope, name, value);
   Xvr_freeString(name);
+}
+
+static void processAssign(Xvr_VM *vm) {
+  Xvr_Value value = Xvr_popStack(&vm->stack);
+  Xvr_Value name = Xvr_popStack(&vm->stack);
+
+  if (!XVR_VALUE_IS_STRING(name) &&
+      XVR_VALUE_AS_STRING(name)->type != XVR_STRING_NAME) {
+    Xvr_error("invalid assignment target");
+    return;
+  }
+
+  Xvr_assignScope(vm->scope, XVR_VALUE_AS_STRING(name), value);
+  Xvr_freeValue(name);
 }
 
 static void processArithmetic(Xvr_VM *vm, Xvr_OpcodeType opcode) {
@@ -206,6 +243,17 @@ static void processArithmetic(Xvr_VM *vm, Xvr_OpcodeType opcode) {
 
   // finally
   Xvr_pushStack(&vm->stack, result);
+
+  Xvr_OpcodeType squeezed = READ_BYTE(vm);
+  if (squeezed == XVR_OPCODE_ASSIGN) {
+    processAssign(vm);
+  }
+}
+
+static void processDuplicate(Xvr_VM *vm) {
+  Xvr_Value value = Xvr_copyValue(Xvr_peekStack(&vm->stack));
+  Xvr_pushStack(&vm->stack, value);
+  Xvr_freeValue(value);
 }
 
 static void processComparison(Xvr_VM *vm, Xvr_OpcodeType opcode) {
@@ -346,9 +394,12 @@ static void processPrint(Xvr_VM *vm) {
   }
 
   case XVR_VALUE_ARRAY:
-  case XVR_VALUE_DICTIONARY:
+  case XVR_VALUE_TABLE:
   case XVR_VALUE_FUNCTION:
   case XVR_VALUE_OPAQUE:
+  case XVR_VALUE_TYPE:
+  case XVR_VALUE_ANY:
+  case XVR_VALUE_UNKNOWN:
     fprintf(stderr,
             XVR_CC_ERROR "ERROR: Unknown value type %d passed to processPrint, "
                          "exiting\n" XVR_CC_RESET,
@@ -389,6 +440,14 @@ static void process(Xvr_VM *vm) {
       processDeclare(vm);
       break;
 
+    case XVR_OPCODE_ASSIGN:
+      processAssign(vm);
+      break;
+
+    case XVR_OPCODE_DUPLICATE:
+      processDuplicate(vm);
+      break;
+
     case XVR_OPCODE_ADD:
     case XVR_OPCODE_SUBTRACT:
     case XVR_OPCODE_MULTIPLY:
@@ -423,7 +482,6 @@ static void process(Xvr_VM *vm) {
       processConcat(vm);
       break;
 
-    case XVR_OPCODE_ASSIGN:
     case XVR_OPCODE_ACCESS:
       fprintf(stderr,
               XVR_CC_ERROR
@@ -519,7 +577,9 @@ void Xvr_bindVMToRoutine(Xvr_VM *vm, unsigned char *routine) {
   vm->stringBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
   vm->scopeBucket = Xvr_allocateBucket(XVR_BUCKET_SMALL);
   vm->stack = Xvr_allocateStack();
-  vm->scope = Xvr_pushScope(&vm->scopeBucket, NULL);
+  if (vm->scope == NULL) {
+    vm->scope = Xvr_pushScope(&vm->scopeBucket, NULL);
+  }
 }
 
 void Xvr_runVM(Xvr_VM *vm) {

@@ -1,0 +1,3 @@
+var hasil = 42;
+
+hasil = 3 + 3;

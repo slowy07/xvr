@@ -80,7 +80,7 @@ static void emitString(Xvr_Routine **rt, Xvr_String *str) {
 
   // move the string into the data section
   expand((void **)(&((*rt)->data)), &((*rt)->dataCapacity), &((*rt)->dataCount),
-         (*rt)->dataCount + length);
+         length);
 
   if (str->type == XVR_STRING_NODE) {
     char *buffer = Xvr_getStringRawBuffer(str);
@@ -102,7 +102,6 @@ static void writeRoutineCode(Xvr_Routine **rt,
                              Xvr_Ast *ast); // forward declare for recursion
 
 static void writeInstructionValue(Xvr_Routine **rt, Xvr_AstValue ast) {
-  // TODO: store more complex values in the data code
   EMIT_BYTE(rt, code, XVR_OPCODE_READ);
   EMIT_BYTE(rt, code, ast.value.type);
 
@@ -132,7 +131,7 @@ static void writeInstructionValue(Xvr_Routine **rt, Xvr_AstValue ast) {
     EMIT_FLOAT(rt, code, XVR_VALUE_AS_FLOAT(ast.value));
   } else if (XVR_VALUE_IS_STRING(ast.value)) {
     // 4-byte alignment
-    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, XVR_STRING_LEAF);
     EMIT_BYTE(rt, code, 0);
 
     emitString(rt, XVR_VALUE_AS_STRING(ast.value));
@@ -178,41 +177,143 @@ static void writeInstructionBinary(Xvr_Routine **rt, Xvr_AstBinary ast) {
     EMIT_BYTE(rt, code, XVR_OPCODE_MODULO);
   }
 
-  // else if (ast.flag == XVR_AST_FLAG_ASSIGN) {
-  // 	EMIT_BYTE(rt, code,XVR_OPCODE_ASSIGN);
-  // 	//TODO: emit the env symbol to store TOP(S) within
-  // }
-  // else if (ast.flag == XVR_AST_FLAG_ADD_ASSIGN) {
-  // 	EMIT_BYTE(rt, code,XVR_OPCODE_ADD);
-  // 	EMIT_BYTE(rt, code,XVR_OPCODE_ASSIGN);
-  // 	//TODO: emit the env symbol to store TOP(S) within
-  // }
-  // else if (ast.flag == XVR_AST_FLAG_SUBTRACT_ASSIGN) {
-  // 	EMIT_BYTE(rt, code,XVR_OPCODE_SUBTRACT);
-  // 	EMIT_BYTE(rt, code,XVR_OPCODE_ASSIGN);
-  // 	//TODO: emit the env symbol to store TOP(S) within
-  // }
-  // else if (ast.flag == XVR_AST_FLAG_MULTIPLY_ASSIGN) {
-  // 	EMIT_BYTE(rt, code,XVR_OPCODE_MULTIPLY);
-  // 	EMIT_BYTE(rt, code,XVR_OPCODE_ASSIGN);
-  // 	//TODO: emit the env symbol to store TOP(S) within
-  // }
-  // else if (ast.flag == XVR_AST_FLAG_DIVIDE_ASSIGN) {
-  // 	EMIT_BYTE(rt, code,XVR_OPCODE_DIVIDE);
-  // 	EMIT_BYTE(rt, code,XVR_OPCODE_ASSIGN);
-  // 	//TODO: emit the env symbol to store TOP(S) within
-  // }
-  // else if (ast.flag == XVR_AST_FLAG_MODULO_ASSIGN) {
-  // 	EMIT_BYTE(rt, code,XVR_OPCODE_MODULO);
-  // 	EMIT_BYTE(rt, code,XVR_OPCODE_ASSIGN);
-  // 	//TODO: emit the env symbol to store TOP(S) within
-  // }
+  else if (ast.flag == XVR_AST_FLAG_AND) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_AND);
+  } else if (ast.flag == XVR_AST_FLAG_OR) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_OR);
+  } else if (ast.flag == XVR_AST_FLAG_CONCAT) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_CONCAT);
+  } else {
+    fprintf(stderr,
+            XVR_CC_ERROR "ERROR: Invalid AST binary flag found\n" XVR_CC_RESET);
+    exit(-1);
+  }
 
-  else if (ast.flag == XVR_AST_FLAG_COMPARE_EQUAL) {
+  EMIT_BYTE(rt, code, XVR_OPCODE_PASS);
+  EMIT_BYTE(rt, code, 0);
+  EMIT_BYTE(rt, code, 0);
+}
+
+static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
+  // name, duplicate, right, opcode
+  if (ast.flag == XVR_AST_FLAG_ASSIGN) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_READ);
+    EMIT_BYTE(rt, code, XVR_VALUE_STRING);
+    EMIT_BYTE(rt, code, XVR_STRING_NAME);
+    EMIT_BYTE(rt, code, ast.name->length);
+
+    emitString(rt, ast.name);
+    writeRoutineCode(rt, ast.expr);
+
+    EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
+    EMIT_BYTE(rt, code, 0);
+  } else if (ast.flag == XVR_AST_FLAG_ADD_ASSIGN) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_READ);
+    EMIT_BYTE(rt, code, XVR_VALUE_STRING);
+    EMIT_BYTE(rt, code, XVR_STRING_NAME);
+    EMIT_BYTE(rt, code, ast.name->length);
+
+    emitString(rt, ast.name);
+
+    EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+
+    writeRoutineCode(rt, ast.expr);
+
+    EMIT_BYTE(rt, code, XVR_OPCODE_ADD);
+    EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
+  } else if (ast.flag == XVR_AST_FLAG_SUBTRACT_ASSIGN) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_READ);
+    EMIT_BYTE(rt, code, XVR_VALUE_STRING);
+    EMIT_BYTE(rt, code, XVR_STRING_NAME);
+    EMIT_BYTE(rt, code, ast.name->length);
+
+    emitString(rt, ast.name);
+
+    EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+
+    writeRoutineCode(rt, ast.expr);
+
+    EMIT_BYTE(rt, code, XVR_OPCODE_SUBTRACT);
+    EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN); // squeezed
+  } else if (ast.flag == XVR_AST_FLAG_MULTIPLY_ASSIGN) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_READ);
+    EMIT_BYTE(rt, code, XVR_VALUE_STRING);
+    EMIT_BYTE(rt, code, XVR_STRING_NAME);
+    EMIT_BYTE(rt, code, ast.name->length); // store the length (max 255)
+
+    emitString(rt, ast.name);
+
+    EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+
+    writeRoutineCode(rt, ast.expr);
+
+    EMIT_BYTE(rt, code, XVR_OPCODE_MULTIPLY);
+    EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN); // squeezed
+  } else if (ast.flag == XVR_AST_FLAG_DIVIDE_ASSIGN) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_READ);
+    EMIT_BYTE(rt, code, XVR_VALUE_STRING);
+    EMIT_BYTE(rt, code, XVR_STRING_NAME);
+    EMIT_BYTE(rt, code, ast.name->length); // store the length (max 255)
+
+    emitString(rt, ast.name);
+
+    EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+
+    writeRoutineCode(rt, ast.expr);
+
+    EMIT_BYTE(rt, code, XVR_OPCODE_DIVIDE);
+    EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN); // squeezed
+  } else if (ast.flag == XVR_AST_FLAG_MODULO_ASSIGN) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_READ);
+    EMIT_BYTE(rt, code, XVR_VALUE_STRING);
+    EMIT_BYTE(rt, code, XVR_STRING_NAME);
+    EMIT_BYTE(rt, code, ast.name->length); // store the length (max 255)
+
+    emitString(rt, ast.name);
+
+    EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+
+    writeRoutineCode(rt, ast.expr);
+
+    EMIT_BYTE(rt, code, XVR_OPCODE_MODULO);
+    EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN); // squeezed
+  }
+
+  else {
+    fprintf(stderr,
+            XVR_CC_ERROR "ERROR: Invalid AST assign flag found\n" XVR_CC_RESET);
+    exit(-1);
+  }
+
+  // 4-byte alignment
+  EMIT_BYTE(rt, code, 0);
+  EMIT_BYTE(rt, code, 0);
+}
+
+static void writeInstructionCompare(Xvr_Routine **rt, Xvr_AstCompare ast) {
+  writeRoutineCode(rt, ast.left);
+  writeRoutineCode(rt, ast.right);
+
+  if (ast.flag == XVR_AST_FLAG_COMPARE_EQUAL) {
     EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_EQUAL);
   } else if (ast.flag == XVR_AST_FLAG_COMPARE_NOT) {
     EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_EQUAL);
-    EMIT_BYTE(rt, code, XVR_OPCODE_NEGATE); // squeezed into one word
+    EMIT_BYTE(rt, code, XVR_OPCODE_NEGATE); // squeezed
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
 
@@ -227,15 +328,9 @@ static void writeInstructionBinary(Xvr_Routine **rt, Xvr_AstBinary ast) {
     EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_GREATER_EQUAL);
   }
 
-  else if (ast.flag == XVR_AST_FLAG_AND) {
-    EMIT_BYTE(rt, code, XVR_OPCODE_AND);
-  } else if (ast.flag == XVR_AST_FLAG_OR) {
-    EMIT_BYTE(rt, code, XVR_OPCODE_OR);
-  } else if (ast.flag == XVR_AST_FLAG_CONCAT) {
-    EMIT_BYTE(rt, code, XVR_OPCODE_CONCAT);
-  } else {
-    fprintf(stderr,
-            XVR_CC_ERROR "ERROR: Invalid AST binary flag found\n" XVR_CC_RESET);
+  else {
+    fprintf(stderr, XVR_CC_ERROR
+            "ERROR: Invalid AST compare flag found\n" XVR_CC_RESET);
     exit(-1);
   }
 
@@ -268,7 +363,8 @@ static void writeInstructionVarDeclare(Xvr_Routine **rt,
 
   EMIT_BYTE(rt, code, XVR_OPCODE_DECLARE);
   EMIT_BYTE(rt, code, Xvr_getNameStringType(ast.name));
-  EMIT_BYTE(rt, code, ast.name->length);
+  EMIT_BYTE(rt, code,
+            ast.name->length); // quick optimisation to skip a 'strlen()' call
   EMIT_BYTE(rt, code, 0);
 
   emitString(rt, ast.name);
@@ -303,6 +399,14 @@ static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
     writeInstructionBinary(rt, ast->binary);
     break;
 
+  case XVR_AST_VAR_ASSIGN:
+    writeInstructionAssign(rt, ast->varAssign);
+    break;
+
+  case XVR_AST_COMPARE:
+    writeInstructionCompare(rt, ast->compare);
+    break;
+
   case XVR_AST_GROUP:
     writeInstructionGroup(rt, ast->group);
     break;
@@ -312,6 +416,7 @@ static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
     break;
 
   case XVR_AST_VAR_DECLARE:
+    writeInstructionVarDeclare(rt, ast->varDeclare);
     break;
 
   case XVR_AST_PASS:
@@ -320,7 +425,6 @@ static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
     //  pass\n" XVR_CC_RESET); exit(-1);
     break;
 
-  // meta instructions are disallowed
   case XVR_AST_ERROR:
     fprintf(stderr, XVR_CC_ERROR
             "ERROR: Invalid AST type found: Unknown error\n" XVR_CC_RESET);
@@ -341,6 +445,7 @@ static void *writeRoutine(Xvr_Routine *rt, Xvr_Ast *ast) {
   EMIT_BYTE(&rt, code, 0);                 // 4-byte alignment
   EMIT_BYTE(&rt, code, 0);
   EMIT_BYTE(&rt, code, 0);
+
   void *buffer = NULL;
   unsigned int capacity = 0, count = 0;
   int codeAddr = 0;
@@ -376,6 +481,9 @@ static void *writeRoutine(Xvr_Routine *rt, Xvr_Ast *ast) {
     emitInt((void **)&buffer, &capacity, &count, 0); // subs
   }
 
+  // append various parts to the buffer
+  // TODO: param region
+
   if (rt->codeCount > 0) {
     expand(&buffer, &capacity, &count, rt->codeCount);
     memcpy((buffer + count), rt->code, rt->codeCount);
@@ -399,6 +507,8 @@ static void *writeRoutine(Xvr_Routine *rt, Xvr_Ast *ast) {
     *((int *)(buffer + dataAddr)) = count;
     count += rt->dataCount;
   }
+
+  // TODO: subs region
 
   // finally, record the total size within the header, and return the result
   *((int *)buffer) = count;

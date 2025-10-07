@@ -8,6 +8,8 @@ typedef enum Xvr_OpcodeType {
   XVR_OPCODE_ASSIGN,
   XVR_OPCODE_ACCESS,
 
+  XVR_OPCODE_DUPLICATE,
+
   // arithmetic instructions
   XVR_OPCODE_ADD,
   XVR_OPCODE_SUBTRACT,

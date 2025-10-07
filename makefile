@@ -22,6 +22,13 @@ src:
 inter: src
 	$(MAKE) -C inter -k
 
+
+.PHONY: tests
+tests: clean tests-cases
+
+.PHONY: test-all
+test-all: clean tests-cases tests-integrations
+
 .PHONY: tests-cases
 tests-cases:
 	$(MAKE) -C $(XVR_CASESDIR) -k

@@ -2,6 +2,7 @@
 #include "xvr_ast.h"
 #include "xvr_bucket.h"
 #include "xvr_console_colors.h"
+#include "xvr_lexer.h"
 #include "xvr_string.h"
 #include "xvr_token_types.h"
 #include "xvr_value.h"
@@ -113,6 +114,8 @@ typedef struct ParsingTuple {
 static void parsePrecedence(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                             Xvr_Ast **rootHandle, ParsingPrecedence precRule);
 
+static Xvr_AstFlag nameString(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
+                              Xvr_Ast **rootHandle);
 static Xvr_AstFlag literal(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                            Xvr_Ast **rootHandle);
 static Xvr_AstFlag unary(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
@@ -126,7 +129,7 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_PRIMARY, literal, NULL}, // XVR_TOKEN_NULL,
 
     // variable names
-    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_NAME,
+    {PREC_NONE, nameString, NULL}, // XVR_TOKEN_NAME,
 
     // types
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_TYPE,
@@ -228,6 +231,46 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_EOF,
 };
 
+static Xvr_AstFlag nameString(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
+                              Xvr_Ast **rootHandle) {
+  Xvr_String *name =
+      Xvr_createNameStringLength(bucketHandle, parser->previous.lexeme,
+                                 parser->previous.length, XVR_VALUE_UNKNOWN);
+
+  Xvr_AstFlag flag = XVR_AST_FLAG_NONE;
+
+  if (match(parser, XVR_TOKEN_OPERATOR_ASSIGN)) {
+    flag = XVR_AST_FLAG_ASSIGN;
+  } else if (match(parser, XVR_TOKEN_OPERATOR_ADD_ASSIGN)) {
+    flag = XVR_AST_FLAG_ADD_ASSIGN;
+  } else if (match(parser, XVR_TOKEN_OPERATOR_SUBTRACT_ASSIGN)) {
+    flag = XVR_AST_FLAG_SUBTRACT_ASSIGN;
+  } else if (match(parser, XVR_TOKEN_OPERATOR_MULTIPLY_ASSIGN)) {
+    flag = XVR_AST_FLAG_MULTIPLY_ASSIGN;
+  } else if (match(parser, XVR_TOKEN_OPERATOR_DIVIDE_ASSIGN)) {
+    flag = XVR_AST_FLAG_DIVIDE_ASSIGN;
+  } else if (match(parser, XVR_TOKEN_OPERATOR_MODULO_ASSIGN)) {
+    flag = XVR_AST_FLAG_MODULO_ASSIGN;
+  }
+
+  // assignment
+  if (flag != XVR_AST_FLAG_NONE) {
+    Xvr_Ast *expr = NULL;
+    parsePrecedence(
+        bucketHandle, parser, &expr,
+        PREC_ASSIGNMENT);  
+    Xvr_private_emitAstVariableAssignment(bucketHandle, rootHandle, name, flag,
+                                          expr);
+    return XVR_AST_FLAG_NONE;
+  }
+
+  printError(
+      parser, parser->previous,
+      "Unexpectedly found a variable access; this is not yet implemented");
+  Xvr_private_emitAstError(bucketHandle, rootHandle);
+  return XVR_AST_FLAG_NONE;
+}
+
 static Xvr_AstFlag literal(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                            Xvr_Ast **rootHandle) {
   switch (parser->previous.type) {
@@ -305,10 +348,12 @@ static Xvr_AstFlag literal(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
       }
       i++;
     } while (parser->previous.lexeme[o++] && i < parser->previous.length);
+
     buffer[i] = '\0';
     Xvr_private_emitAstValue(
         bucketHandle, rootHandle,
         XVR_VALUE_FROM_STRING(Xvr_createStringLength(bucketHandle, buffer, i)));
+
     return XVR_AST_FLAG_NONE;
   }
 
@@ -322,16 +367,15 @@ static Xvr_AstFlag literal(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
 
 static Xvr_AstFlag unary(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                          Xvr_Ast **rootHandle) {
-  //'subtract' can only be applied to numbers and groups, while 'negate' can
-  // only be applied to booleans and groups this function takes the libery of
-  // peeking into the uppermost node, to see if it can apply this to it
 
   if (parser->previous.type == XVR_TOKEN_OPERATOR_SUBTRACT) {
-
     bool connectedDigit =
-        parser->previous.lexeme[1] >= '0' && parser->previous.lexeme[1] <= '9';
+        parser->previous.lexeme[1] >= '0' &&
+        parser->previous.lexeme[1] <=
+            '9'; // BUGFIX: '- 1' should not be optimised into a negative
     parsePrecedence(bucketHandle, parser, rootHandle, PREC_UNARY);
 
+    // negative numbers
     if ((*rootHandle)->type == XVR_AST_VALUE &&
         XVR_VALUE_IS_INTEGER((*rootHandle)->value.value) && connectedDigit) {
       (*rootHandle)->value.value = XVR_VALUE_FROM_INTEGER(
@@ -472,6 +516,7 @@ static Xvr_AstFlag group(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
     parsePrecedence(bucketHandle, parser, rootHandle, PREC_GROUP);
     consume(parser, XVR_TOKEN_OPERATOR_PAREN_RIGHT,
             "Expected ')' at end of group");
+
     Xvr_private_emitAstGroup(bucketHandle, rootHandle);
   }
 
@@ -515,19 +560,26 @@ static void parsePrecedence(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
       return;
     }
 
+    Xvr_Token prevToken = parser->previous;
+
     Xvr_Ast *ptr = NULL;
     Xvr_AstFlag flag = infix(bucketHandle, parser, &ptr);
 
-    // finished
     if (flag == XVR_AST_FLAG_NONE) {
       (*rootHandle) = ptr;
       return;
+    } else if (flag >= 10 && flag <= 19) {
+      Xvr_String *name = Xvr_createNameStringLength(
+          bucketHandle, prevToken.lexeme, prevToken.length, XVR_VALUE_UNKNOWN);
+      Xvr_private_emitAstVariableAssignment(bucketHandle, rootHandle, name,
+                                            flag, ptr);
+    } else if (flag >= 20 && flag <= 29) {
+      Xvr_private_emitAstCompare(bucketHandle, rootHandle, flag, ptr);
+    } else {
+      Xvr_private_emitAstBinary(bucketHandle, rootHandle, flag, ptr);
     }
-
-    Xvr_private_emitAstBinary(bucketHandle, rootHandle, flag, ptr);
   }
 
-  // can't assign below a certain precedence
   if (precRule <= PREC_ASSIGNMENT && match(parser, XVR_TOKEN_OPERATOR_ASSIGN)) {
     printError(parser, parser->current, "Invalid assignment target");
   }
@@ -557,17 +609,16 @@ static void makeExprStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
 static void makeVariableDeclarationStmt(Xvr_Bucket **bucketHandle,
                                         Xvr_Parser *parser,
                                         Xvr_Ast **rootHandle) {
-  consume(parser, XVR_TOKEN_NAME, "Expecter variable name after `var` keyword");
+  consume(parser, XVR_TOKEN_NAME, "Expected variable name after 'var' keyword");
 
-  if (parser->previous.length > 256) {
+  if (parser->previous.length > 255) {
     printError(parser, parser->previous,
-               "Can't have a variable name longer than 256 characters");
+               "Can't have a variable name longer than 255 characters");
     Xvr_private_emitAstError(bucketHandle, rootHandle);
     return;
   }
 
   Xvr_Token nameToken = parser->previous;
-
   Xvr_String *nameStr = Xvr_createNameStringLength(
       bucketHandle, nameToken.lexeme, nameToken.length, XVR_VALUE_NULL);
 

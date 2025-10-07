@@ -68,6 +68,19 @@ void Xvr_private_emitAstBinary(Xvr_Bucket **bucketHandle, Xvr_Ast **handle,
   (*handle) = tmp;
 }
 
+
+void Xvr_private_emitAstCompare(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle,
+                                Xvr_AstFlag flag, Xvr_Ast *right) {
+  Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
+
+  tmp->type = XVR_AST_COMPARE;
+  tmp->compare.flag = flag;
+  tmp->compare.left = *astHandle;
+  tmp->compare.right = right;
+
+  (*astHandle) = tmp;
+}
+
 void Xvr_private_emitAstGroup(Xvr_Bucket **bucketHandle, Xvr_Ast **handle) {
   Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
 
@@ -92,6 +105,20 @@ void Xvr_private_emitAstVariableDeclaration(Xvr_Bucket **bucketHandle,
   tmp->type = XVR_AST_VAR_DECLARE;
   tmp->varDeclare.name = name;
   tmp->varDeclare.expr = expr;
+
+  (*astHandle) = tmp;
+}
+
+void Xvr_private_emitAstVariableAssignment(Xvr_Bucket **bucketHandle,
+                                           Xvr_Ast **astHandle,
+                                           Xvr_String *name, Xvr_AstFlag flag,
+                                           Xvr_Ast *expr) {
+  Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
+
+  tmp->type = XVR_AST_VAR_ASSIGN;
+  tmp->varAssign.flag = flag;
+  tmp->varAssign.name = name;
+  tmp->varAssign.expr = expr;
 
   (*astHandle) = tmp;
 }

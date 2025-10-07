@@ -7,7 +7,7 @@
 typedef struct Xvr_Stack { // 32 | 64 BITNESS
   unsigned int capacity;   // 4  | 4
   unsigned int count;      // 4  | 4
-  char data[];             //-  | -
+  Xvr_Value data[];             //-  | -
 } Xvr_Stack;               // 8  | 8
 
 XVR_API Xvr_Stack *Xvr_allocateStack();

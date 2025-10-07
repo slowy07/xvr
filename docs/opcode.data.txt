@@ -1,0 +1,23 @@
+XVR_OPCODE_DECLARE:
+  {Declar, type, length, 0} ; {emitString()}
+
+XVR_OPCODE_READ:
+  null -> {Read, type, 0, 0}
+  bool -> {Read, type, value, 0}
+  int -> {Read, type, 0, 0} ; {value}
+  float -> {Read, type, 0, 0} ; {value}
+  string -> {Read, type, leaf, 0} ; {emitString()}
+
+XVR_AST_FLAG_ASSIGN:
+  {Read, type(string), name, length} ;
+  {emitString()} ;
+  {writeCode()} ;
+  {Assign, 0, 0, 0} ;
+
+XVR_AST_FLAG_ADD_ASSIGN:
+  {Read, type(string), name, length} ;
+  {emitString()} ;
+  {Duplicate, 0, 0, 0} ;
+  {writeCode()} ;
+  {Assign 0, 0, 0} ;
+  {Add, Assign, 0, 0} ;

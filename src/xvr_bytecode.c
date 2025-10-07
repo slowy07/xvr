@@ -26,7 +26,6 @@ static void expand(Xvr_Bytecode *bc, unsigned int amount) {
   }
 }
 
-
 static void emitByte(Xvr_Bytecode *bc, unsigned char byte) {
   expand(bc, 1);
   bc->ptr[bc->count++] = byte;

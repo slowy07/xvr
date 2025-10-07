@@ -236,18 +236,6 @@ int repl(const char *filepath) {
 
     Xvr_resetVM(&vm);
 
-    Xvr_Bucket *iter = bucket;
-    int depth = 0;
-
-    while (iter->next) {
-      iter = iter->next;
-      if (++depth >= 7) {
-        Xvr_freeBucket(&bucket);
-        bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
-        break;
-      }
-    }
-
     printf("%s >> ", prompt);
   }
 
@@ -297,9 +285,12 @@ static void debugStackPrint(Xvr_Stack *stack) {
       }
 
       case XVR_VALUE_ARRAY:
-      case XVR_VALUE_DICTIONARY:
+      case XVR_VALUE_TABLE:
       case XVR_VALUE_FUNCTION:
       case XVR_VALUE_OPAQUE:
+      case XVR_VALUE_TYPE:
+      case XVR_VALUE_ANY:
+      case XVR_VALUE_UNKNOWN:
         printf("what???");
         break;
       }
@@ -358,9 +349,12 @@ static void debugScopePrint(Xvr_Scope *scope, int depth) {
       }
 
       case XVR_VALUE_ARRAY:
-      case XVR_VALUE_DICTIONARY:
+      case XVR_VALUE_TABLE:
       case XVR_VALUE_FUNCTION:
       case XVR_VALUE_OPAQUE:
+      case XVR_VALUE_TYPE:
+      case XVR_VALUE_ANY:
+      case XVR_VALUE_UNKNOWN:
         printf("what???");
         break;
       }

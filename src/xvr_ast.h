@@ -14,11 +14,13 @@ typedef enum Xvr_AstType {
   XVR_AST_VALUE,
   XVR_AST_UNARY,
   XVR_AST_BINARY,
+  XVR_AST_COMPARE,
   XVR_AST_GROUP,
 
   XVR_AST_PRINT,
 
   XVR_AST_VAR_DECLARE,
+  XVR_AST_VAR_ASSIGN,
 
   XVR_AST_PASS,
   XVR_AST_ERROR,
@@ -27,34 +29,37 @@ typedef enum Xvr_AstType {
 
 // flags are handled differently by different types
 typedef enum Xvr_AstFlag {
-  XVR_AST_FLAG_NONE,
+  XVR_AST_FLAG_NONE = 0,
 
   // binary flags
-  XVR_AST_FLAG_ADD,
-  XVR_AST_FLAG_SUBTRACT,
-  XVR_AST_FLAG_MULTIPLY,
-  XVR_AST_FLAG_DIVIDE,
-  XVR_AST_FLAG_MODULO,
-  XVR_AST_FLAG_ASSIGN,
-  XVR_AST_FLAG_ADD_ASSIGN,
-  XVR_AST_FLAG_SUBTRACT_ASSIGN,
-  XVR_AST_FLAG_MULTIPLY_ASSIGN,
-  XVR_AST_FLAG_DIVIDE_ASSIGN,
-  XVR_AST_FLAG_MODULO_ASSIGN,
-  XVR_AST_FLAG_COMPARE_EQUAL,
-  XVR_AST_FLAG_COMPARE_NOT,
-  XVR_AST_FLAG_COMPARE_LESS,
-  XVR_AST_FLAG_COMPARE_LESS_EQUAL,
-  XVR_AST_FLAG_COMPARE_GREATER,
-  XVR_AST_FLAG_COMPARE_GREATER_EQUAL,
-  XVR_AST_FLAG_AND,
-  XVR_AST_FLAG_OR,
-  XVR_AST_FLAG_CONCAT,
+  XVR_AST_FLAG_ADD = 1,
+  XVR_AST_FLAG_SUBTRACT = 2,
+  XVR_AST_FLAG_MULTIPLY = 3,
+  XVR_AST_FLAG_DIVIDE = 4,
+  XVR_AST_FLAG_MODULO = 5,
+  XVR_AST_FLAG_ASSIGN = 10,
+
+  XVR_AST_FLAG_ADD_ASSIGN = 11,
+  XVR_AST_FLAG_SUBTRACT_ASSIGN = 12,
+  XVR_AST_FLAG_MULTIPLY_ASSIGN = 13,
+  XVR_AST_FLAG_DIVIDE_ASSIGN = 14,
+  XVR_AST_FLAG_MODULO_ASSIGN = 15,
+
+  XVR_AST_FLAG_COMPARE_EQUAL = 20,
+  XVR_AST_FLAG_COMPARE_NOT = 21,
+  XVR_AST_FLAG_COMPARE_LESS = 22,
+  XVR_AST_FLAG_COMPARE_LESS_EQUAL = 23,
+  XVR_AST_FLAG_COMPARE_GREATER = 25,
+  XVR_AST_FLAG_COMPARE_GREATER_EQUAL = 25,
+
+  XVR_AST_FLAG_AND = 30,
+  XVR_AST_FLAG_OR = 31,
+  XVR_AST_FLAG_CONCAT = 32,
 
   // unary flags
-  XVR_AST_FLAG_NEGATE,
-  XVR_AST_FLAG_INCREMENT,
-  XVR_AST_FLAG_DECREMENT,
+  XVR_AST_FLAG_NEGATE = 33,
+  XVR_AST_FLAG_INCREMENT = 34,
+  XVR_AST_FLAG_DECREMENT = 35,
 
   // XVR_AST_FLAG_TERNARY,
 } Xvr_AstFlag;
@@ -88,6 +93,13 @@ typedef struct Xvr_AstBinary {
   Xvr_Ast *right;
 } Xvr_AstBinary;
 
+typedef struct Xvr_AstCompare {
+  Xvr_AstType type;
+  Xvr_AstFlag flag;
+  Xvr_Ast *left;
+  Xvr_Ast *right;
+} Xvr_AstCompare;
+
 typedef struct Xvr_AstGroup {
   Xvr_AstType type;
   Xvr_Ast *child;
@@ -103,6 +115,13 @@ typedef struct Xvr_AstVarDeclare {
   Xvr_String *name;
   Xvr_Ast *expr;
 } Xvr_AstVarDeclare;
+
+typedef struct Xvr_AstVarAssign {
+  Xvr_AstType type;
+  Xvr_AstFlag flag;
+  Xvr_String *name;
+  Xvr_Ast *expr;
+} Xvr_AstVarAssign;
 
 typedef struct Xvr_AstPass {
   Xvr_AstType type;
@@ -122,8 +141,10 @@ union Xvr_Ast {                 // 32 | 64 BITNESS
   Xvr_AstValue value;           // 12 | 24
   Xvr_AstUnary unary;           // 12 | 16
   Xvr_AstBinary binary;         // 16 | 24
+  Xvr_AstCompare compare;       // 16 | 24
   Xvr_AstGroup group;           // 8  | 16
   Xvr_AstVarDeclare varDeclare; // 16 | 24
+  Xvr_AstVarAssign varAssign;   // 16 | 24
   Xvr_AstPrint print;           // 8 | 16
   Xvr_AstPass pass;             // 4  | 4
   Xvr_AstError error;           // 4  | 4
@@ -140,12 +161,21 @@ void Xvr_private_emitAstUnary(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle,
                               Xvr_AstFlag flag);
 void Xvr_private_emitAstBinary(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle,
                                Xvr_AstFlag flag, Xvr_Ast *right);
+
+void Xvr_private_emitAstCompare(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle,
+                                Xvr_AstFlag flag, Xvr_Ast *right);
+
 void Xvr_private_emitAstGroup(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);
 void Xvr_private_emitAstPrint(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);
 
 void Xvr_private_emitAstVariableDeclaration(Xvr_Bucket **bucketHandle,
                                             Xvr_Ast **astHandle,
                                             Xvr_String *name, Xvr_Ast *expr);
+
+void Xvr_private_emitAstVariableAssignment(Xvr_Bucket **bucketHandle,
+                                           Xvr_Ast **astHandle,
+                                           Xvr_String *name, Xvr_AstFlag flag,
+                                           Xvr_Ast *expr);
 
 void Xvr_private_emitAstPass(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);
 void Xvr_private_emitAstError(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);

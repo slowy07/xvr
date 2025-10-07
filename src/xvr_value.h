@@ -12,9 +12,13 @@ typedef enum Xvr_ValueType {
   XVR_VALUE_FLOAT,
   XVR_VALUE_STRING,
   XVR_VALUE_ARRAY,
-  XVR_VALUE_DICTIONARY,
+  XVR_VALUE_TABLE,
   XVR_VALUE_FUNCTION,
   XVR_VALUE_OPAQUE,
+
+  XVR_VALUE_TYPE,
+  XVR_VALUE_ANY,
+  XVR_VALUE_UNKNOWN,
 } Xvr_ValueType;
 
 // 8 bytes in size
@@ -35,7 +39,7 @@ typedef struct Xvr_Value { // 32 | 64 BITNESS
 #define XVR_VALUE_IS_FLOAT(value) ((value).type == XVR_VALUE_FLOAT)
 #define XVR_VALUE_IS_STRING(value) ((value).type == XVR_VALUE_STRING)
 #define XVR_VALUE_IS_ARRAY(value) ((value).type == XVR_VALUE_ARRAY)
-#define XVR_VALUE_IS_DICTIONARY(value) ((value).type == XVR_VALUE_DICTIONARY)
+#define XVR_VALUE_IS_TABLE(value) ((value).type == XVR_VALUE_TABLE)
 #define XVR_VALUE_IS_FUNCTION(value) ((value).type == XVR_VALUE_FUNCTION)
 #define XVR_VALUE_IS_OPAQUE(value) ((value).type == XVR_VALUE_OPAQUE)
 
@@ -61,5 +65,8 @@ XVR_API bool Xvr_private_isTruthy(Xvr_Value value);
 XVR_API bool Xvr_private_isEqual(Xvr_Value left, Xvr_Value right);
 
 unsigned int Xvr_hashValue(Xvr_Value value);
+
+XVR_API Xvr_Value Xvr_copyValue(Xvr_Value value);
+XVR_API void Xvr_freeValue(Xvr_Value value);
 
 #endif // !XVR_VALUE_H

@@ -136,7 +136,7 @@ void Xvr_assignScope(Xvr_Scope *scope, Xvr_String *key, Xvr_Value value) {
 
   if (valuePtr == NULL) {
     char buffer[key->length + 256];
-    sprintf(buffer, "Undefined variable: %s", key->as.name.data);
+    sprintf(buffer, "Undefined variable: %s\n", key->as.name.data);
     Xvr_error(buffer);
     return;
   }

@@ -59,11 +59,14 @@ bool Xvr_private_isEqual(Xvr_Value left, Xvr_Value right) {
                                 XVR_VALUE_AS_STRING(right)) == 0;
     }
     return false;
+
   case XVR_VALUE_ARRAY:
-  case XVR_VALUE_DICTIONARY:
+  case XVR_VALUE_TABLE:
   case XVR_VALUE_FUNCTION:
   case XVR_VALUE_OPAQUE:
-  default:
+  case XVR_VALUE_TYPE:
+  case XVR_VALUE_ANY:
+  case XVR_VALUE_UNKNOWN:
     Xvr_error(
         XVR_CC_ERROR
         "Error: unknown types in value equality comparison\n" XVR_CC_RESET);
@@ -96,11 +99,64 @@ unsigned int Xvr_hashValue(Xvr_Value value) {
     return Xvr_hashString(XVR_VALUE_AS_STRING(value));
 
   case XVR_VALUE_ARRAY:
-  case XVR_VALUE_DICTIONARY:
+  case XVR_VALUE_TABLE:
   case XVR_VALUE_FUNCTION:
   case XVR_VALUE_OPAQUE:
-  default:
+  case XVR_VALUE_TYPE:
+  case XVR_VALUE_ANY:
+  case XVR_VALUE_UNKNOWN:
     Xvr_error(XVR_CC_ERROR "Error: can't hash unknown type\n" XVR_CC_RESET);
   }
   return 0;
+}
+
+Xvr_Value Xvr_copyValue(Xvr_Value value) {
+  switch (value.type) {
+  case XVR_VALUE_NULL:
+  case XVR_VALUE_BOOLEAN:
+  case XVR_VALUE_INTEGER:
+  case XVR_VALUE_FLOAT:
+    return value;
+
+  case XVR_VALUE_STRING: {
+    Xvr_String *string = XVR_VALUE_AS_STRING(value);
+    return XVR_VALUE_FROM_STRING(Xvr_copyString(string));
+  }
+
+  case XVR_VALUE_ARRAY:
+  case XVR_VALUE_TABLE:
+  case XVR_VALUE_FUNCTION:
+  case XVR_VALUE_OPAQUE:
+  case XVR_VALUE_TYPE:
+  case XVR_VALUE_ANY:
+  case XVR_VALUE_UNKNOWN:
+    Xvr_error(XVR_CC_ERROR
+              "Error: can't copy copy an unknown type\n" XVR_CC_RESET);
+  }
+  return XVR_VALUE_FROM_NULL();
+}
+
+void Xvr_freeValue(Xvr_Value value) {
+  switch (value.type) {
+  case XVR_VALUE_NULL:
+  case XVR_VALUE_BOOLEAN:
+  case XVR_VALUE_INTEGER:
+  case XVR_VALUE_FLOAT:
+    break;
+
+  case XVR_VALUE_STRING: {
+    Xvr_String *string = XVR_VALUE_AS_STRING(value);
+    Xvr_freeString(string);
+    break;
+  }
+
+  case XVR_VALUE_ARRAY:
+  case XVR_VALUE_TABLE:
+  case XVR_VALUE_FUNCTION:
+  case XVR_VALUE_OPAQUE:
+  case XVR_VALUE_TYPE:
+  case XVR_VALUE_ANY:
+  case XVR_VALUE_UNKNOWN:
+    Xvr_error(XVR_CC_ERROR "Error: can't free an unknown type\n" XVR_CC_RESET);
+  }
 }
