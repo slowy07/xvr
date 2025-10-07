@@ -23,6 +23,10 @@ XVR_API Xvr_Array *Xvr_resizeArray(Xvr_Array *array, unsigned int capacity);
 #define XVR_ARRAY_ALLOCATE() Xvr_resizeArray(NULL, XVR_ARRAY_INITIAL_CAPACITY)
 #endif // !XVR_ARRAY_ALLOCATE
 
+#ifndef XVR_ARRAY_FREE
+#define XVR_ARRAY_FREE(array) Xvr_resizeArray(array, 0)
+#endif // !XVR_ARRAY_FREE
+
 #ifndef XVR_ARRAY_EXPAND
 #define XVR_ARRAY_EXPAND(array)                                                \
   (array = (array != NULL && (array)->count + 1 > (array)->capacity            \
@@ -30,5 +34,9 @@ XVR_API Xvr_Array *Xvr_resizeArray(Xvr_Array *array, unsigned int capacity);
                                              XVR_ARRAY_EXPANSION_RATE)         \
                 : array))
 #endif // !XVR_ARRAY_EXPAND
+
+#ifndef XVR_ARRAY_PUSHBACK
+#define XVR_ARRAY_PUSHBACK(array, value) (XVR_ARRAY_EXPAND(array), (array)->data[(array)->count++] = (value))
+#endif // !XVR_ARRAY_PUSHBACK
 
 #endif // !XVR_ARRAY_H
