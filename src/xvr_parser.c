@@ -256,18 +256,13 @@ static Xvr_AstFlag nameString(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
   // assignment
   if (flag != XVR_AST_FLAG_NONE) {
     Xvr_Ast *expr = NULL;
-    parsePrecedence(
-        bucketHandle, parser, &expr,
-        PREC_ASSIGNMENT);  
+    parsePrecedence(bucketHandle, parser, &expr, PREC_ASSIGNMENT);
     Xvr_private_emitAstVariableAssignment(bucketHandle, rootHandle, name, flag,
                                           expr);
     return XVR_AST_FLAG_NONE;
   }
 
-  printError(
-      parser, parser->previous,
-      "Unexpectedly found a variable access; this is not yet implemented");
-  Xvr_private_emitAstError(bucketHandle, rootHandle);
+  Xvr_private_emitAstVariableAccess(bucketHandle, rootHandle, name);
   return XVR_AST_FLAG_NONE;
 }
 

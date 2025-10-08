@@ -194,6 +194,67 @@ static void writeInstructionBinary(Xvr_Routine **rt, Xvr_AstBinary ast) {
   EMIT_BYTE(rt, code, 0);
 }
 
+static void writeInstructionCompare(Xvr_Routine **rt, Xvr_AstCompare ast) {
+  writeRoutineCode(rt, ast.left);
+  writeRoutineCode(rt, ast.right);
+
+  if (ast.flag == XVR_AST_FLAG_COMPARE_EQUAL) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_EQUAL);
+  } else if (ast.flag == XVR_AST_FLAG_COMPARE_NOT) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_EQUAL);
+    EMIT_BYTE(rt, code, XVR_OPCODE_NEGATE);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+    return;
+  } else if (ast.flag == XVR_AST_FLAG_COMPARE_LESS) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_LESS);
+  } else if (ast.flag == XVR_AST_FLAG_COMPARE_LESS_EQUAL) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_LESS_EQUAL);
+  } else if (ast.flag == XVR_AST_FLAG_COMPARE_GREATER) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_GREATER);
+  } else if (ast.flag == XVR_AST_FLAG_COMPARE_GREATER_EQUAL) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_GREATER_EQUAL);
+  } else {
+    fprintf(stderr, XVR_CC_ERROR
+            "Error: invalid AST compare flag found\n" XVR_CC_RESET);
+    exit(-1);
+  }
+
+  EMIT_BYTE(rt, code, 0);
+  EMIT_BYTE(rt, code, 0);
+  EMIT_BYTE(rt, code, 0);
+}
+
+static void writeInstructionGroup(Xvr_Routine **rt, Xvr_AstGroup ast) {
+  writeRoutineCode(rt, ast.child);
+}
+
+static void writeInstructionPrint(Xvr_Routine **rt, Xvr_AstPrint ast) {
+  // the thing to print
+  writeRoutineCode(rt, ast.child);
+
+  // output the print opcode
+  EMIT_BYTE(rt, code, XVR_OPCODE_PRINT);
+
+  // 4-byte alignment
+  EMIT_BYTE(rt, code, 0);
+  EMIT_BYTE(rt, code, 0);
+  EMIT_BYTE(rt, code, 0);
+}
+
+static void writeInstructionVarDeclare(Xvr_Routine **rt,
+                                       Xvr_AstVarDeclare ast) {
+  writeRoutineCode(rt, ast.expr);
+
+  EMIT_BYTE(rt, code, XVR_OPCODE_DECLARE);
+  EMIT_BYTE(rt, code, Xvr_getNameStringType(ast.name));
+  EMIT_BYTE(rt, code,
+            ast.name->length); // quick optimisation to skip a 'strlen()' call
+  EMIT_BYTE(rt, code, 0);
+
+  emitString(rt, ast.name);
+}
+
 static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
   // name, duplicate, right, opcode
   if (ast.flag == XVR_AST_FLAG_ASSIGN) {
@@ -216,7 +277,7 @@ static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
     emitString(rt, ast.name);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
-    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
 
@@ -233,7 +294,7 @@ static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
     emitString(rt, ast.name);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
-    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
 
@@ -250,7 +311,7 @@ static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
     emitString(rt, ast.name);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
-    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
 
@@ -267,7 +328,7 @@ static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
     emitString(rt, ast.name);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
-    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
 
@@ -305,69 +366,18 @@ static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
   EMIT_BYTE(rt, code, 0);
 }
 
-static void writeInstructionCompare(Xvr_Routine **rt, Xvr_AstCompare ast) {
-  writeRoutineCode(rt, ast.left);
-  writeRoutineCode(rt, ast.right);
-
-  if (ast.flag == XVR_AST_FLAG_COMPARE_EQUAL) {
-    EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_EQUAL);
-  } else if (ast.flag == XVR_AST_FLAG_COMPARE_NOT) {
-    EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_EQUAL);
-    EMIT_BYTE(rt, code, XVR_OPCODE_NEGATE); // squeezed
-    EMIT_BYTE(rt, code, 0);
-    EMIT_BYTE(rt, code, 0);
-
-    return;
-  } else if (ast.flag == XVR_AST_FLAG_COMPARE_LESS) {
-    EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_LESS);
-  } else if (ast.flag == XVR_AST_FLAG_COMPARE_LESS_EQUAL) {
-    EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_LESS_EQUAL);
-  } else if (ast.flag == XVR_AST_FLAG_COMPARE_GREATER) {
-    EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_GREATER);
-  } else if (ast.flag == XVR_AST_FLAG_COMPARE_GREATER_EQUAL) {
-    EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_GREATER_EQUAL);
-  }
-
-  else {
-    fprintf(stderr, XVR_CC_ERROR
-            "ERROR: Invalid AST compare flag found\n" XVR_CC_RESET);
-    exit(-1);
-  }
-
-  // 4-byte alignment (covers most cases)
-  EMIT_BYTE(rt, code, 0);
-  EMIT_BYTE(rt, code, 0);
-  EMIT_BYTE(rt, code, 0);
-}
-
-static void writeInstructionGroup(Xvr_Routine **rt, Xvr_AstGroup ast) {
-  writeRoutineCode(rt, ast.child);
-}
-
-static void writeInstructionPrint(Xvr_Routine **rt, Xvr_AstPrint ast) {
-  // the thing to print
-  writeRoutineCode(rt, ast.child);
-
-  // output the print opcode
-  EMIT_BYTE(rt, code, XVR_OPCODE_PRINT);
-
-  // 4-byte alignment
-  EMIT_BYTE(rt, code, 0);
-  EMIT_BYTE(rt, code, 0);
-  EMIT_BYTE(rt, code, 0);
-}
-
-static void writeInstructionVarDeclare(Xvr_Routine **rt,
-                                       Xvr_AstVarDeclare ast) {
-  writeRoutineCode(rt, ast.expr);
-
-  EMIT_BYTE(rt, code, XVR_OPCODE_DECLARE);
-  EMIT_BYTE(rt, code, Xvr_getNameStringType(ast.name));
-  EMIT_BYTE(rt, code,
-            ast.name->length); // quick optimisation to skip a 'strlen()' call
-  EMIT_BYTE(rt, code, 0);
+static void writeInstructionAccess(Xvr_Routine **rt, Xvr_AstVarAccess ast) {
+  EMIT_BYTE(rt, code, XVR_OPCODE_READ);
+  EMIT_BYTE(rt, code, XVR_VALUE_STRING);
+  EMIT_BYTE(rt, code, XVR_STRING_NAME);
+  EMIT_BYTE(rt, code, ast.name->length);
 
   emitString(rt, ast.name);
+
+  EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
+  EMIT_BYTE(rt, code, 0);
+  EMIT_BYTE(rt, code, 0);
+  EMIT_BYTE(rt, code, 0);
 }
 
 // routine structure
@@ -399,10 +409,6 @@ static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
     writeInstructionBinary(rt, ast->binary);
     break;
 
-  case XVR_AST_VAR_ASSIGN:
-    writeInstructionAssign(rt, ast->varAssign);
-    break;
-
   case XVR_AST_COMPARE:
     writeInstructionCompare(rt, ast->compare);
     break;
@@ -417,6 +423,14 @@ static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
 
   case XVR_AST_VAR_DECLARE:
     writeInstructionVarDeclare(rt, ast->varDeclare);
+    break;
+
+  case XVR_AST_VAR_ASSIGN:
+    writeInstructionAssign(rt, ast->varAssign);
+    break;
+
+  case XVR_AST_VAR_ACCESS:
+    writeInstructionAccess(rt, ast->varAccess);
     break;
 
   case XVR_AST_PASS:

@@ -21,6 +21,7 @@ typedef enum Xvr_AstType {
 
   XVR_AST_VAR_DECLARE,
   XVR_AST_VAR_ASSIGN,
+  XVR_AST_VAR_ACCESS,
 
   XVR_AST_PASS,
   XVR_AST_ERROR,
@@ -123,6 +124,11 @@ typedef struct Xvr_AstVarAssign {
   Xvr_Ast *expr;
 } Xvr_AstVarAssign;
 
+typedef struct Xvr_AstVarAccess {
+  Xvr_AstType type;
+  Xvr_String *name;
+} Xvr_AstVarAccess;
+
 typedef struct Xvr_AstPass {
   Xvr_AstType type;
 } Xvr_AstPass;
@@ -145,6 +151,7 @@ union Xvr_Ast {                 // 32 | 64 BITNESS
   Xvr_AstGroup group;           // 8  | 16
   Xvr_AstVarDeclare varDeclare; // 16 | 24
   Xvr_AstVarAssign varAssign;   // 16 | 24
+  Xvr_AstVarAccess varAccess;   // 8 | 16
   Xvr_AstPrint print;           // 8 | 16
   Xvr_AstPass pass;             // 4  | 4
   Xvr_AstError error;           // 4  | 4
@@ -176,6 +183,9 @@ void Xvr_private_emitAstVariableAssignment(Xvr_Bucket **bucketHandle,
                                            Xvr_Ast **astHandle,
                                            Xvr_String *name, Xvr_AstFlag flag,
                                            Xvr_Ast *expr);
+
+void Xvr_private_emitAstVariableAccess(Xvr_Bucket **bucketHandle,
+                                       Xvr_Ast **astHandle, Xvr_String *name);
 
 void Xvr_private_emitAstPass(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);
 void Xvr_private_emitAstError(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);

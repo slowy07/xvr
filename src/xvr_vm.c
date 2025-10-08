@@ -166,6 +166,21 @@ static void processAssign(Xvr_VM *vm) {
   Xvr_freeValue(name);
 }
 
+static void processAccess(Xvr_VM *vm) {
+  Xvr_Value name = Xvr_popStack(&vm->stack);
+
+  if (!XVR_VALUE_IS_STRING(name) &&
+      XVR_VALUE_AS_STRING(name)->type != XVR_STRING_NAME) {
+    Xvr_error("invalid access target");
+    return;
+  }
+
+  Xvr_Value value = Xvr_accessScope(vm->scope, XVR_VALUE_AS_STRING(name));
+  Xvr_pushStack(&vm->stack, value);
+
+  Xvr_freeValue(name);
+}
+
 static void processArithmetic(Xvr_VM *vm, Xvr_OpcodeType opcode) {
   Xvr_Value right = Xvr_popStack(&vm->stack);
   Xvr_Value left = Xvr_popStack(&vm->stack);
@@ -254,6 +269,11 @@ static void processDuplicate(Xvr_VM *vm) {
   Xvr_Value value = Xvr_copyValue(Xvr_peekStack(&vm->stack));
   Xvr_pushStack(&vm->stack, value);
   Xvr_freeValue(value);
+
+  Xvr_OpcodeType squeezed = READ_BYTE(vm);
+  if (squeezed == XVR_OPCODE_ACCESS) {
+    processAccess(vm);
+  }
 }
 
 static void processComparison(Xvr_VM *vm, Xvr_OpcodeType opcode) {
@@ -444,6 +464,10 @@ static void process(Xvr_VM *vm) {
       processAssign(vm);
       break;
 
+    case XVR_OPCODE_ACCESS:
+      processAccess(vm);
+      break;
+
     case XVR_OPCODE_DUPLICATE:
       processDuplicate(vm);
       break;
@@ -481,13 +505,6 @@ static void process(Xvr_VM *vm) {
     case XVR_OPCODE_CONCAT:
       processConcat(vm);
       break;
-
-    case XVR_OPCODE_ACCESS:
-      fprintf(stderr,
-              XVR_CC_ERROR
-              "ERROR: Incomplete opcode %d found, exiting\n" XVR_CC_RESET,
-              opcode);
-      exit(-1);
 
     case XVR_OPCODE_PASS:
     case XVR_OPCODE_ERROR:
