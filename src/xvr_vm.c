@@ -181,6 +181,17 @@ static void processAccess(Xvr_VM *vm) {
   Xvr_freeValue(name);
 }
 
+static void processDuplicate(Xvr_VM *vm) {
+  Xvr_Value value = Xvr_copyValue(Xvr_peekStack(&vm->stack));
+  Xvr_pushStack(&vm->stack, value);
+  Xvr_freeValue(value);
+
+  Xvr_OpcodeType squeezed = READ_BYTE(vm);
+  if (squeezed == XVR_OPCODE_ACCESS) {
+    processAccess(vm);
+  }
+}
+
 static void processArithmetic(Xvr_VM *vm, Xvr_OpcodeType opcode) {
   Xvr_Value right = Xvr_popStack(&vm->stack);
   Xvr_Value left = Xvr_popStack(&vm->stack);
@@ -265,24 +276,13 @@ static void processArithmetic(Xvr_VM *vm, Xvr_OpcodeType opcode) {
   }
 }
 
-static void processDuplicate(Xvr_VM *vm) {
-  Xvr_Value value = Xvr_copyValue(Xvr_peekStack(&vm->stack));
-  Xvr_pushStack(&vm->stack, value);
-  Xvr_freeValue(value);
-
-  Xvr_OpcodeType squeezed = READ_BYTE(vm);
-  if (squeezed == XVR_OPCODE_ACCESS) {
-    processAccess(vm);
-  }
-}
-
 static void processComparison(Xvr_VM *vm, Xvr_OpcodeType opcode) {
   Xvr_Value right = Xvr_popStack(&vm->stack);
   Xvr_Value left = Xvr_popStack(&vm->stack);
 
   // most things can be equal, so handle it separately
   if (opcode == XVR_OPCODE_COMPARE_EQUAL) {
-    bool equal = XVR_VALUES_ARE_EQUAL(left, right);
+    bool equal = Xvr_checkValuesAreEqual(left, right);
 
     // equality has an optional "negate" opcode within it's word
     if (READ_BYTE(vm) != XVR_OPCODE_NEGATE) {
@@ -294,48 +294,28 @@ static void processComparison(Xvr_VM *vm, Xvr_OpcodeType opcode) {
     return;
   }
 
-  // coerce ints into floats if needed
-  if (XVR_VALUE_IS_INTEGER(left) && XVR_VALUE_IS_FLOAT(right)) {
-    left = XVR_VALUE_FROM_FLOAT((float)XVR_VALUE_AS_INTEGER(left));
-  } else if (XVR_VALUE_IS_FLOAT(left) && XVR_VALUE_IS_INTEGER(right)) {
-    right = XVR_VALUE_FROM_FLOAT((float)XVR_VALUE_AS_INTEGER(right));
+  if (Xvr_checkValuesAreCompareable(left, right) == false) {
+    fprintf(stderr,
+            XVR_CC_ERROR
+            "Error: can't compare value types %d and %d\n" XVR_CC_RESET,
+            left.type, right.type);
+    exit(-1);
   }
 
-  // other opcodes
-  if (opcode == XVR_OPCODE_COMPARE_LESS) {
-    Xvr_pushStack(
-        &vm->stack,
-        XVR_VALUE_FROM_BOOLEAN(
-            XVR_VALUE_IS_FLOAT(left)
-                ? XVR_VALUE_AS_FLOAT(left) < XVR_VALUE_AS_FLOAT(right)
-                : XVR_VALUE_AS_INTEGER(left) < XVR_VALUE_AS_INTEGER(right)));
-  } else if (opcode == XVR_OPCODE_COMPARE_LESS_EQUAL) {
-    Xvr_pushStack(
-        &vm->stack,
-        XVR_VALUE_FROM_BOOLEAN(
-            XVR_VALUE_IS_FLOAT(left)
-                ? XVR_VALUE_AS_FLOAT(left) <= XVR_VALUE_AS_FLOAT(right)
-                : XVR_VALUE_AS_INTEGER(left) <= XVR_VALUE_AS_INTEGER(right)));
-  } else if (opcode == XVR_OPCODE_COMPARE_GREATER) {
-    Xvr_pushStack(
-        &vm->stack,
-        XVR_VALUE_FROM_BOOLEAN(
-            XVR_VALUE_IS_FLOAT(left)
-                ? XVR_VALUE_AS_FLOAT(left) > XVR_VALUE_AS_FLOAT(right)
-                : XVR_VALUE_AS_INTEGER(left) > XVR_VALUE_AS_INTEGER(right)));
-  } else if (opcode == XVR_OPCODE_COMPARE_GREATER_EQUAL) {
-    Xvr_pushStack(
-        &vm->stack,
-        XVR_VALUE_FROM_BOOLEAN(
-            XVR_VALUE_IS_FLOAT(left)
-                ? XVR_VALUE_AS_FLOAT(left) >= XVR_VALUE_AS_FLOAT(right)
-                : XVR_VALUE_AS_INTEGER(left) >= XVR_VALUE_AS_INTEGER(right)));
+  int comparison = Xvr_compareValues(left, right);
+
+  if (opcode == XVR_OPCODE_COMPARE_LESS && comparison < 0) {
+    Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(true));
+  } else if (opcode == XVR_OPCODE_COMPARE_LESS_EQUAL &&
+             (comparison < 0 || comparison == 0)) {
+    Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(true));
+  } else if (opcode == XVR_OPCODE_COMPARE_GREATER && comparison > 0) {
+    Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(true));
+  } else if (opcode == XVR_OPCODE_COMPARE_GREATER_EQUAL &&
+             (comparison > 0 || comparison == 0)) {
+    Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(true));
   } else {
-    fprintf(stderr,
-            XVR_CC_ERROR "ERROR: Invalid opcode %d passed to "
-                         "processComparison, exiting\n" XVR_CC_RESET,
-            opcode);
-    exit(-1);
+    Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(false));
   }
 }
 
@@ -345,24 +325,25 @@ static void processLogical(Xvr_VM *vm, Xvr_OpcodeType opcode) {
     Xvr_Value left = Xvr_popStack(&vm->stack);
 
     Xvr_pushStack(&vm->stack,
-                  XVR_VALUE_FROM_BOOLEAN(XVR_VALUE_IS_TRUTHY(left) &&
-                                         XVR_VALUE_IS_TRUTHY(right)));
+                  XVR_VALUE_FROM_BOOLEAN(Xvr_checkValueIsTruthy(left) &&
+                                         Xvr_checkValueIsTruthy(right)));
   } else if (opcode == XVR_OPCODE_OR) {
     Xvr_Value right = Xvr_popStack(&vm->stack);
     Xvr_Value left = Xvr_popStack(&vm->stack);
 
     Xvr_pushStack(&vm->stack,
-                  XVR_VALUE_FROM_BOOLEAN(XVR_VALUE_IS_TRUTHY(left) ||
-                                         XVR_VALUE_IS_TRUTHY(right)));
+                  XVR_VALUE_FROM_BOOLEAN(Xvr_checkValueIsTruthy(left) ||
+                                         Xvr_checkValueIsTruthy(right)));
   } else if (opcode == XVR_OPCODE_TRUTHY) {
     Xvr_Value top = Xvr_popStack(&vm->stack);
 
-    Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(XVR_VALUE_IS_TRUTHY(top)));
+    Xvr_pushStack(&vm->stack,
+                  XVR_VALUE_FROM_BOOLEAN(!Xvr_checkValueIsTruthy(top)));
   } else if (opcode == XVR_OPCODE_NEGATE) {
     Xvr_Value top = Xvr_popStack(&vm->stack);
 
     Xvr_pushStack(&vm->stack,
-                  XVR_VALUE_FROM_BOOLEAN(!XVR_VALUE_IS_TRUTHY(top)));
+                  XVR_VALUE_FROM_BOOLEAN(!Xvr_checkValueIsTruthy(top)));
   } else {
     fprintf(stderr,
             XVR_CC_ERROR "ERROR: Invalid opcode %d passed to processLogical, "
@@ -432,13 +413,8 @@ static void processConcat(Xvr_VM *vm) {
   Xvr_Value right = Xvr_popStack(&vm->stack);
   Xvr_Value left = Xvr_popStack(&vm->stack);
 
-  if (!XVR_VALUE_IS_STRING(left)) {
-    Xvr_error("Failed to concatenate a value that is not a string");
-    return;
-  }
-
-  if (!XVR_VALUE_IS_STRING(left)) {
-    Xvr_error("Failed to concatenate a value that is not a string");
+  if (!XVR_VALUE_IS_STRING(left) || !XVR_VALUE_IS_STRING(right)) {
+    Xvr_error("failed to concatenate a value that is not a string");
     return;
   }
 

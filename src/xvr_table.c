@@ -13,7 +13,7 @@ static void probeAndInsert(Xvr_Table **tableHandle, Xvr_Value key,
 
   // probe
   while (true) {
-    if (XVR_VALUES_ARE_EQUAL((*tableHandle)->data[probe].key, key)) {
+    if (Xvr_checkValuesAreEqual((*tableHandle)->data[probe].key, key)) {
       (*tableHandle)->data[probe] = entry;
 
       (*tableHandle)->minPsl = entry.psl < (*tableHandle)->minPsl
@@ -128,7 +128,7 @@ Xvr_Value Xvr_lookupTable(Xvr_Table **tableHandle, Xvr_Value key) {
 
   while (true) {
     // found the entry
-    if (XVR_VALUES_ARE_EQUAL((*tableHandle)->data[probe].key, key)) {
+    if (Xvr_checkValuesAreEqual((*tableHandle)->data[probe].key, key)) {
       return (*tableHandle)->data[probe].value;
     }
 
@@ -144,7 +144,7 @@ Xvr_Value Xvr_lookupTable(Xvr_Table **tableHandle, Xvr_Value key) {
 
 void Xvr_removeTable(Xvr_Table **tableHandle, Xvr_Value key) {
   if (XVR_VALUE_IS_NULL(key) ||
-      XVR_VALUE_IS_BOOLEAN(key)) { // TODO: disallow functions and opaques
+      XVR_VALUE_IS_BOOLEAN(key)) { 
     Xvr_error(XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
   }
 
@@ -152,7 +152,7 @@ void Xvr_removeTable(Xvr_Table **tableHandle, Xvr_Value key) {
   unsigned int wipe = probe;
 
   while (true) {
-    if (XVR_VALUES_ARE_EQUAL((*tableHandle)->data[probe].key, key)) {
+    if (Xvr_checkValuesAreEqual((*tableHandle)->data[probe].key, key)) {
       break;
     }
 

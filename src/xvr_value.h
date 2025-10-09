@@ -58,15 +58,14 @@ typedef struct Xvr_Value { // 32 | 64 BITNESS
 #define XVR_VALUE_FROM_STRING(value)                                           \
   ((Xvr_Value){{.string = value}, XVR_VALUE_STRING})
 
-#define XVR_VALUE_IS_TRUTHY(value) Xvr_private_isTruthy(value)
-XVR_API bool Xvr_private_isTruthy(Xvr_Value value);
-
-#define XVR_VALUES_ARE_EQUAL(left, right) Xvr_private_isEqual(left, right)
-XVR_API bool Xvr_private_isEqual(Xvr_Value left, Xvr_Value right);
-
-unsigned int Xvr_hashValue(Xvr_Value value);
+XVR_API unsigned int Xvr_hashValue(Xvr_Value value);
 
 XVR_API Xvr_Value Xvr_copyValue(Xvr_Value value);
 XVR_API void Xvr_freeValue(Xvr_Value value);
+
+XVR_API bool Xvr_checkValueIsTruthy(Xvr_Value value);
+XVR_API bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right);
+XVR_API bool Xvr_checkValuesAreCompareable(Xvr_Value left, Xvr_Value right);
+XVR_API int Xvr_compareValues(Xvr_Value left, Xvr_Value right);
 
 #endif // !XVR_VALUE_H

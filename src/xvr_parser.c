@@ -208,8 +208,8 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_BRACE_RIGHT,
 
     // other operators
-    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_AND,
-    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_OR,
+    {PREC_AND, NULL, binary}, // XVR_TOKEN_OPERATOR_AND,
+    {PREC_OR, NULL, binary},  // XVR_TOKEN_OPERATOR_OR,
     {PREC_NONE, unary, NULL}, // XVR_TOKEN_OPERATOR_NEGATE,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_QUESTION,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_COLON,
@@ -490,6 +490,16 @@ static Xvr_AstFlag binary(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
   case XVR_TOKEN_OPERATOR_COMPARE_GREATER_EQUAL: {
     parsePrecedence(bucketHandle, parser, rootHandle, PREC_COMPARISON + 1);
     return XVR_AST_FLAG_COMPARE_GREATER_EQUAL;
+  }
+
+  case XVR_TOKEN_OPERATOR_AND: {
+    parsePrecedence(bucketHandle, parser, rootHandle, PREC_AND + 1);
+    return XVR_AST_FLAG_AND;
+  }
+
+  case XVR_TOKEN_OPERATOR_OR: {
+    parsePrecedence(bucketHandle, parser, rootHandle, PREC_OR + 1);
+    return XVR_AST_FLAG_OR;
   }
 
   case XVR_TOKEN_OPERATOR_CONCAT: {

@@ -1,0 +1,20 @@
+// true
+print 20 == 20;
+// false
+print 30 == 21;
+
+print 2 < 200;
+print 3 > 1;
+
+print 2 <= 2;
+print 3 >= 3;
+
+print true && true;
+print true && false;
+
+print true || true;
+print false || true;
+print false || false;
+
+print !true;
+print !false;
