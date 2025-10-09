@@ -80,7 +80,7 @@ Xvr_Value Xvr_popStack(Xvr_Stack **stack) {
 
   // shrink if possible
   if ((*stack)->count > XVR_STACK_INITIAL_CAPACITY &&
-      (*stack)->count < (*stack)->capacity * XVR_STACK_CONTRACTION_RATE) {
+      (*stack)->count < (*stack)->capacity * XVR_STACK_CONTRACTION_THRESHOLD) {
     (*stack)->capacity /= 2;
     unsigned int newCapacity = (*stack)->capacity;
 

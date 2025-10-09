@@ -22,6 +22,10 @@ const Xvr_KeywordTypeTuple keywordTuples[] = {
     {XVR_TOKEN_TYPE_FLOAT, "float"},
     {XVR_TOKEN_TYPE_STRING, "string"},
 
+    {XVR_TOKEN_TYPE_ARRAY, "array"},
+    {XVR_TOKEN_TYPE_TABLE, "table"},
+    {XVR_TOKEN_TYPE_FUNCTION, "function"},
+
     {XVR_TOKEN_TYPE_OPAQUE, "opaque"},
     {XVR_TOKEN_TYPE_ANY, "any"},
 
@@ -285,8 +289,7 @@ static Xvr_Token makeKeywordOrName(Xvr_Lexer *lexer) {
   for (int i = 0; keywordTuples[i].keyword; i++) {
     // WONTFIX: could squeeze miniscule performance gain from this, but ROI
     // isn't worth it
-    if (strlen(keywordTuples[i].keyword) ==
-            (lexer->current - lexer->start) &&
+    if (strlen(keywordTuples[i].keyword) == (lexer->current - lexer->start) &&
         !strncmp(keywordTuples[i].keyword, &lexer->source[lexer->start],
                  lexer->current - lexer->start)) {
       // make token (keyword)
