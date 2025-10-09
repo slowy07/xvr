@@ -4,3 +4,13 @@ hasil = 3 + 3;
 
 // variable access
 hasil = hasil + 1;
+
+// shadowing
+var hasil = 32;
+
+print hasil;
+
+{
+  var hasil = 20;
+  print hasil;
+}

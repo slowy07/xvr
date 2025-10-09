@@ -156,6 +156,25 @@ int test_type_emission(Xvr_Bucket **bucketHandle) {
     Xvr_freeString(name);
   }
 
+  {
+    Xvr_Ast *ast = NULL;
+    Xvr_Ast *right = NULL;
+    Xvr_private_emitAstValue(bucketHandle, &ast, XVR_VALUE_FROM_INTEGER(42));
+    Xvr_private_emitAstValue(bucketHandle, &right, XVR_VALUE_FROM_INTEGER(69));
+    Xvr_private_emitAstCompare(bucketHandle, &ast, XVR_AST_FLAG_ADD, right);
+
+    if (ast == NULL || ast->type != XVR_AST_COMPARE ||
+        ast->compare.flag != XVR_AST_FLAG_ADD ||
+        ast->compare.left->type != XVR_AST_VALUE ||
+        XVR_VALUE_AS_INTEGER(ast->compare.left->value.value) != 42 ||
+        ast->compare.right->type != XVR_AST_VALUE ||
+        XVR_VALUE_AS_INTEGER(ast->compare.right->value.value) != 69) {
+      fprintf(stderr, XVR_CC_ERROR "Error: failed to emiitting compare as "
+                                   "`Xvr_Ast`, state unknown\n" XVR_CC_RESET);
+      return -1;
+    }
+  }
+
   return 0;
 }
 

@@ -585,6 +585,10 @@ static void makeExpr(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
   parsePrecedence(bucketHandle, parser, rootHandle, PREC_ASSIGNMENT);
 }
 
+static void makeBlockStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
+                          Xvr_Ast **rootHandle);
+;
+
 static void makePrintStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                           Xvr_Ast **rootHandle) {
   makeExpr(bucketHandle, parser, rootHandle);
@@ -630,7 +634,15 @@ static void makeVariableDeclarationStmt(Xvr_Bucket **bucketHandle,
 
 static void makeStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                      Xvr_Ast **rootHandle) {
-  if (match(parser, XVR_TOKEN_OPERATOR_SEMICOLON)) {
+  if (match(parser, XVR_TOKEN_OPERATOR_BRACE_LEFT)) {
+    makeBlockStmt(bucketHandle, parser, rootHandle);
+    consume(parser, XVR_TOKEN_OPERATOR_BRACE_RIGHT,
+            "Expected `}` at the end of block scope");
+    (*rootHandle)->block.innerScope = true;
+    return;
+  }
+
+  else if (match(parser, XVR_TOKEN_OPERATOR_SEMICOLON)) {
     Xvr_private_emitAstPass(bucketHandle, rootHandle);
     return;
   }
@@ -659,7 +671,8 @@ static void makeBlockStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                           Xvr_Ast **rootHandle) {
   Xvr_private_initAstBlock(bucketHandle, rootHandle);
 
-  while (!match(parser, XVR_TOKEN_EOF)) {
+  while (parser->current.type != XVR_TOKEN_OPERATOR_BRACE_RIGHT &&
+         !match(parser, XVR_TOKEN_EOF)) {
     Xvr_Ast *stmt = NULL;
     makeDeclarationStmt(bucketHandle, parser, &stmt);
 
@@ -692,6 +705,12 @@ Xvr_Ast *Xvr_scanParser(Xvr_Bucket **bucketHandle, Xvr_Parser *parser) {
   }
 
   makeBlockStmt(bucketHandle, parser, &rootHandle);
+
+  if (parser->panic != true && parser->previous.type != XVR_TOKEN_EOF) {
+    printError(parser, parser->previous,
+               "Expected `EOF` and the end of the parser scan (possibly an "
+               "extra `}` was found)");
+  }
 
   return rootHandle;
 }

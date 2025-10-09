@@ -70,6 +70,7 @@ typedef union Xvr_Ast Xvr_Ast;
 
 typedef struct Xvr_AstBlock {
   Xvr_AstType type;
+  bool innerScope;
   Xvr_Ast *child; // begin encoding the line
   Xvr_Ast *next;  //'next' is either an AstBlock or null
   Xvr_Ast *tail;  //'tail' - either points to the tail of the current list, or

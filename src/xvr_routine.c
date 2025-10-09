@@ -393,8 +393,22 @@ static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
   // determine how to write each instruction based on the Ast
   switch (ast->type) {
   case XVR_AST_BLOCK:
+    if (ast->block.innerScope) {
+      EMIT_BYTE(rt, code, XVR_OPCODE_SCOPE_PUSH);
+      EMIT_BYTE(rt, code, 0);
+      EMIT_BYTE(rt, code, 0);
+      EMIT_BYTE(rt, code, 0);
+    }
+
     writeRoutineCode(rt, ast->block.child);
     writeRoutineCode(rt, ast->block.next);
+
+    if (ast->block.innerScope) {
+      EMIT_BYTE(rt, code, XVR_OPCODE_SCOPE_POP);
+      EMIT_BYTE(rt, code, 0);
+      EMIT_BYTE(rt, code, 0);
+      EMIT_BYTE(rt, code, 0);
+    }
     break;
 
   case XVR_AST_VALUE:

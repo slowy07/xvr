@@ -1,6 +1,8 @@
 #include "xvr.h"
 #include "xvr_bucket.h"
 #include "xvr_bytecode.h"
+#include "xvr_common.h"
+#include "xvr_console_colors.h"
 #include "xvr_lexer.h"
 #include "xvr_parser.h"
 #include "xvr_print.h"

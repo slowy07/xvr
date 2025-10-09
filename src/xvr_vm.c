@@ -498,6 +498,14 @@ static void process(Xvr_VM *vm) {
     case XVR_OPCODE_RETURN:
       return;
 
+    case XVR_OPCODE_SCOPE_PUSH:
+      vm->scope = Xvr_pushScope(&vm->scopeBucket, vm->scope);
+      break;
+
+    case XVR_OPCODE_SCOPE_POP:
+      vm->scope = Xvr_popScope(vm->scope);
+      break;
+
     case XVR_OPCODE_PRINT:
       processPrint(vm);
       break;

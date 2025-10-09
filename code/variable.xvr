@@ -2,3 +2,9 @@
 
 var penyanyi = "ambadj";
 var angka = 70;
+
+angka += 1;
+angka -= 1;
+angka *= 3;
+angka /= 2;
+answer %= 10;
