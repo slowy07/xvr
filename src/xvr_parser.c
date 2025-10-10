@@ -321,11 +321,13 @@ static Xvr_AstFlag literal(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
 
   case XVR_TOKEN_LITERAL_STRING: {
     char buffer[parser->previous.length + 1];
+    unsigned int escapeCounter = 0;
 
     unsigned int i = 0, o = 0;
     do {
       buffer[i] = parser->previous.lexeme[o];
       if (buffer[i] == '\\' && parser->previous.lexeme[++o]) {
+        escapeCounter++;
         switch (parser->previous.lexeme[o]) {
         case 'n':
           buffer[i] = '\n';
@@ -345,9 +347,9 @@ static Xvr_AstFlag literal(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
     } while (parser->previous.lexeme[o++] && i < parser->previous.length);
 
     buffer[i] = '\0';
-    Xvr_private_emitAstValue(
-        bucketHandle, rootHandle,
-        XVR_VALUE_FROM_STRING(Xvr_createStringLength(bucketHandle, buffer, i)));
+    Xvr_private_emitAstValue(bucketHandle, rootHandle,
+                             XVR_VALUE_FROM_STRING(Xvr_createStringLength(
+                                 bucketHandle, buffer, i - escapeCounter)));
 
     return XVR_AST_FLAG_NONE;
   }

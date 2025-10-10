@@ -2,3 +2,6 @@
 
 print "arfy slowy";
 print "xaviera " .. "putri";
+
+// escape string
+print "\tDerune\nCitizen";
