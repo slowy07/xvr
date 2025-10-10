@@ -590,7 +590,11 @@ static void parsePrecedence(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
   ParsingRule prefix = getParsingRule(parser->previous.type)->prefix;
 
   if (prefix == NULL) {
-    printError(parser, parser->previous, "Expected expression");
+    if (Xvr_private_findKeywordByType(parser->previous.type)) {
+      printError(parser, parser->previous, "Found reserved keyword instead");
+    } else {
+      printError(parser, parser->previous, "Expected expression");
+    }
     Xvr_private_emitAstError(bucketHandle, rootHandle);
     return;
   }
@@ -782,8 +786,8 @@ Xvr_Ast *Xvr_scanParser(Xvr_Bucket **bucketHandle, Xvr_Parser *parser) {
 void Xvr_resetParser(Xvr_Parser *parser) {
   parser->lexer = NULL;
 
-  parser->current = XVR_BLANK_TOKEN();
-  parser->previous = XVR_BLANK_TOKEN();
+  parser->current = ((Xvr_Token){XVR_TOKEN_NULL, 0, 0, NULL});
+  parser->previous = ((Xvr_Token){XVR_TOKEN_NULL, 0, 0, NULL});
 
   parser->error = false;
   parser->panic = false;

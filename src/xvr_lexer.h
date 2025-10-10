@@ -20,8 +20,9 @@ typedef struct {
 
 XVR_API void Xvr_bindLexer(Xvr_Lexer *lexer, const char *source);
 XVR_API Xvr_Token Xvr_private_scanLexer(Xvr_Lexer *lexer);
-XVR_API void Xvr_private_printToken(Xvr_Token *token); // debugging
 
-#define XVR_BLANK_TOKEN() ((Xvr_Token){XVR_TOKEN_NULL, 0, 0, NULL})
+XVR_API const char *Xvr_private_findKeywordByType(const Xvr_TokenType type);
+XVR_API Xvr_TokenType Xvr_private_findTypeByKeyword(const char *keyword);
+XVR_API void Xvr_private_printToken(Xvr_Token *token);
 
 #endif // !XVR_LEXER_H
