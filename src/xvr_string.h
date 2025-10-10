@@ -32,6 +32,7 @@ typedef struct Xvr_String { // 32 | 64 BITNESS
 
     struct {
       Xvr_ValueType type; // 4 | 4
+      bool constant;      // 1 | 1
       char data[];        // - | -
     } name;
   } as;       // 8  | 16
@@ -46,7 +47,8 @@ XVR_API Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucketHandle,
 XVR_API Xvr_String *Xvr_createNameStringLength(Xvr_Bucket **bucketHandle,
                                                const char *cname,
                                                unsigned int length,
-                                               Xvr_ValueType type);
+                                               Xvr_ValueType type,
+                                               bool constant);
 XVR_API Xvr_String *Xvr_copyString(Xvr_String *str);
 XVR_API Xvr_String *Xvr_deepCopyString(Xvr_Bucket **bucketHandle,
                                        Xvr_String *str);
@@ -59,7 +61,7 @@ XVR_API void Xvr_freeString(Xvr_String *str);
 XVR_API unsigned int Xvr_getStringLength(Xvr_String *str);
 XVR_API unsigned int Xvr_getStringRefCount(Xvr_String *str);
 XVR_API Xvr_ValueType Xvr_getNameStringType(Xvr_String *str);
-
+XVR_API Xvr_ValueType Xvr_getNameStringConstant(Xvr_String *str);
 XVR_API char *Xvr_getStringRawBuffer(Xvr_String *str);
 
 XVR_API int Xvr_compareStrings(Xvr_String *left, Xvr_String *right);

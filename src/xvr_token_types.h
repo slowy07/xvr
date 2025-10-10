@@ -9,7 +9,6 @@ typedef enum Xvr_TokenType {
   XVR_TOKEN_NAME,
 
   // types
-  XVR_TOKEN_TYPE_TYPE,
   XVR_TOKEN_TYPE_BOOLEAN,
   XVR_TOKEN_TYPE_INTEGER,
   XVR_TOKEN_TYPE_FLOAT,
@@ -18,6 +17,7 @@ typedef enum Xvr_TokenType {
   XVR_TOKEN_TYPE_TABLE,
   XVR_TOKEN_TYPE_FUNCTION,
   XVR_TOKEN_TYPE_OPAQUE,
+  XVR_TOKEN_TYPE_TYPE,
   XVR_TOKEN_TYPE_ANY,
 
   // keywords and reserved words

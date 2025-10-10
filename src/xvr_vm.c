@@ -79,7 +79,7 @@ static void processRead(Xvr_VM *vm) {
     } else if (stringType == XVR_STRING_NAME) {
       Xvr_ValueType valueType = XVR_VALUE_UNKNOWN;
       value = XVR_VALUE_FROM_STRING(Xvr_createNameStringLength(
-          &vm->stringBucket, cstring, len, valueType));
+          &vm->stringBucket, cstring, len, valueType, false));
     } else {
       Xvr_error("invalid string type found");
     }
@@ -140,13 +140,13 @@ static void processRead(Xvr_VM *vm) {
 static void processDeclare(Xvr_VM *vm) {
   Xvr_ValueType type = READ_BYTE(vm); // variable type
   unsigned int len = READ_BYTE(vm);   // name length
-  fixAlignment(vm);                   // one spare byte
+  bool constant = READ_BYTE(vm);
 
   unsigned int jump =
       *(unsigned int *)(vm->routine + vm->jumpsAddr + READ_INT(vm));
   char *cstring = (char *)(vm->routine + vm->dataAddr + jump);
   Xvr_String *name =
-      Xvr_createNameStringLength(&vm->stringBucket, cstring, len, type);
+      Xvr_createNameStringLength(&vm->stringBucket, cstring, len, type, constant);
   Xvr_Value value = Xvr_popStack(&vm->stack);
   Xvr_declareScope(vm->scope, name, value);
   Xvr_freeString(name);

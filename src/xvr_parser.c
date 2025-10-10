@@ -76,6 +76,7 @@ static void synchronize(Xvr_Parser *parser) {
     case XVR_TOKEN_KEYWORD_RETURN:
     case XVR_TOKEN_KEYWORD_VAR:
     case XVR_TOKEN_KEYWORD_WHILE:
+    case XVR_TOKEN_KEYWORD_YIELD:
       parser->error = true;
       parser->panic = false;
       return;
@@ -132,7 +133,6 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, nameString, NULL}, // XVR_TOKEN_NAME,
 
     // types
-    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_TYPE,
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_BOOLEAN,
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_INTEGER,
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_FLOAT,
@@ -141,6 +141,7 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_TABLE,
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_FUNCTION,
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_OPAQUE,
+    {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_TYPE
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_TYPE_ANY,
 
     // keywords and reserved words
@@ -231,11 +232,50 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, NULL, NULL}, // XVR_TOKEN_EOF,
 };
 
+static Xvr_ValueType readType(Xvr_Parser *parser) {
+  advance(parser);
+
+  switch (parser->previous.type) {
+  case XVR_TOKEN_TYPE_BOOLEAN:
+    return XVR_VALUE_BOOLEAN;
+  case XVR_TOKEN_TYPE_INTEGER:
+    return XVR_VALUE_INTEGER;
+
+  case XVR_TOKEN_TYPE_FLOAT:
+    return XVR_VALUE_FLOAT;
+
+  case XVR_TOKEN_TYPE_STRING:
+    return XVR_VALUE_STRING;
+
+  case XVR_TOKEN_TYPE_ARRAY:
+    return XVR_VALUE_ARRAY;
+
+  case XVR_TOKEN_TYPE_TABLE:
+    return XVR_VALUE_TABLE;
+
+  case XVR_TOKEN_TYPE_FUNCTION:
+    return XVR_VALUE_FUNCTION;
+
+  case XVR_TOKEN_TYPE_OPAQUE:
+    return XVR_VALUE_OPAQUE;
+
+  case XVR_TOKEN_TYPE_TYPE:
+    return XVR_VALUE_TYPE;
+
+  case XVR_TOKEN_TYPE_ANY:
+    return XVR_VALUE_ANY;
+
+  default:
+    printError(parser, parser->previous, "Expected type identifier");
+    return XVR_VALUE_UNKNOWN;
+  }
+}
+
 static Xvr_AstFlag nameString(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                               Xvr_Ast **rootHandle) {
-  Xvr_String *name =
-      Xvr_createNameStringLength(bucketHandle, parser->previous.lexeme,
-                                 parser->previous.length, XVR_VALUE_UNKNOWN);
+  Xvr_String *name = Xvr_createNameStringLength(
+      bucketHandle, parser->previous.lexeme, parser->previous.length,
+      XVR_VALUE_UNKNOWN, false);
 
   Xvr_AstFlag flag = XVR_AST_FLAG_NONE;
 
@@ -577,7 +617,8 @@ static void parsePrecedence(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
       return;
     } else if (flag >= 10 && flag <= 19) {
       Xvr_String *name = Xvr_createNameStringLength(
-          bucketHandle, prevToken.lexeme, prevToken.length, XVR_VALUE_UNKNOWN);
+          bucketHandle, prevToken.lexeme, prevToken.length, XVR_VALUE_UNKNOWN,
+          false);
       Xvr_private_emitAstVariableAssignment(bucketHandle, rootHandle, name,
                                             flag, ptr);
     } else if (flag >= 20 && flag <= 29) {
@@ -630,8 +671,19 @@ static void makeVariableDeclarationStmt(Xvr_Bucket **bucketHandle,
   }
 
   Xvr_Token nameToken = parser->previous;
+
+  Xvr_ValueType varType = XVR_VALUE_ANY;
+  bool constant = false;
+
+  if (match(parser, XVR_TOKEN_OPERATOR_COLON)) {
+    varType = readType(parser);
+    if (match(parser, XVR_TOKEN_KEYWORD_CONST)) {
+      constant = true;
+    }
+  }
+
   Xvr_String *nameStr = Xvr_createNameStringLength(
-      bucketHandle, nameToken.lexeme, nameToken.length, XVR_VALUE_NULL);
+      bucketHandle, nameToken.lexeme, nameToken.length, varType, constant);
 
   Xvr_Ast *expr = NULL;
   if (match(parser, XVR_TOKEN_OPERATOR_ASSIGN)) {

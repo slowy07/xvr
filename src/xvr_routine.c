@@ -250,7 +250,7 @@ static void writeInstructionVarDeclare(Xvr_Routine **rt,
   EMIT_BYTE(rt, code, Xvr_getNameStringType(ast.name));
   EMIT_BYTE(rt, code,
             ast.name->length); // quick optimisation to skip a 'strlen()' call
-  EMIT_BYTE(rt, code, 0);
+  EMIT_BYTE(rt, code, Xvr_getNameStringConstant(ast.name) ? 1 : 0);
 
   emitString(rt, ast.name);
 }

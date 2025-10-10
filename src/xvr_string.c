@@ -107,7 +107,7 @@ Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucketHandle,
 
 Xvr_String *Xvr_createNameStringLength(Xvr_Bucket **bucketHandle,
                                        const char *cname, unsigned int length,
-                                       Xvr_ValueType type) {
+                                       Xvr_ValueType type, bool constant) {
   if (sizeof(Xvr_String) + length + 1 > (*bucketHandle)->capacity) {
     fprintf(
         stderr,
@@ -116,6 +116,13 @@ Xvr_String *Xvr_createNameStringLength(Xvr_Bucket **bucketHandle,
         "length (%d total) but buckets have a capacity of %d\n" XVR_CC_RESET,
         (int)length, (int)(sizeof(Xvr_String) + length + 1),
         (int)((*bucketHandle)->capacity));
+    exit(-1);
+  }
+
+  if (type == XVR_VALUE_NULL) {
+    fprintf(
+        stderr, XVR_CC_ERROR
+        "Error: can't declare a name string with type `null`\n" XVR_CC_RESET);
     exit(-1);
   }
 
@@ -129,6 +136,7 @@ Xvr_String *Xvr_createNameStringLength(Xvr_Bucket **bucketHandle,
   memcpy(ret->as.name.data, cname, length + 1);
   ret->as.name.data[length] = '\0';
   ret->as.name.type = type;
+  ret->as.name.constant = constant;
 
   return ret;
 }
@@ -226,6 +234,15 @@ Xvr_ValueType Xvr_getNameStringType(Xvr_String *str) {
   }
 
   return str->as.name.type;
+}
+
+Xvr_ValueType Xvr_getNameStringConstant(Xvr_String *str) {
+  if (str->type != XVR_STRING_NAME) {
+    fprintf(stderr, XVR_CC_ERROR "Error: can't get the variable constness of "
+                                 "non-name string\n" XVR_CC_RESET);
+    exit(-1);
+  }
+  return str->as.name.constant;
 }
 
 char *Xvr_getStringRawBuffer(Xvr_String *str) {

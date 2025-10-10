@@ -25,8 +25,8 @@ static void decrementRefCount(Xvr_Scope *scope) {
   }
 }
 
-static Xvr_Value *lookupScope(Xvr_Scope *scope, Xvr_String *key,
-                              unsigned int hash, bool recursive) {
+static Xvr_TableEntry *lookupScope(Xvr_Scope *scope, Xvr_String *key,
+                                   unsigned int hash, bool recursive) {
   // terminate
   if (scope == NULL) {
     return NULL;
@@ -41,7 +41,7 @@ static Xvr_Value *lookupScope(Xvr_Scope *scope, Xvr_String *key,
     if (XVR_VALUE_IS_STRING(scope->table->data[probe].key) &&
         Xvr_compareStrings(XVR_VALUE_AS_STRING(scope->table->data[probe].key),
                            key) == 0) {
-      return &(scope->table->data[probe].value);
+      return &(scope->table->data[probe]);
     }
 
     // if its an empty slot (didn't find it here)
@@ -111,12 +111,31 @@ void Xvr_declareScope(Xvr_Scope *scope, Xvr_String *key, Xvr_Value value) {
     exit(-1);
   }
 
-  Xvr_Value *valuePtr = lookupScope(scope, key, Xvr_hashString(key), false);
+  Xvr_TableEntry *entryPtr =
+      lookupScope(scope, key, Xvr_hashString(key), false);
 
-  if (valuePtr != NULL) {
-
+  if (entryPtr != NULL) {
     char buffer[key->length + 256];
     sprintf(buffer, "Can't redefine a variable: %s", key->as.name.data);
+    Xvr_error(buffer);
+    return;
+  }
+
+  Xvr_ValueType kt = Xvr_getNameStringType(key);
+  if (kt != XVR_VALUE_ANY && value.type != XVR_VALUE_NULL && kt != value.type) {
+    char buffer[key->length + 256];
+    sprintf(buffer,
+            "incorrect value type assigned to in variable declaration `%s` "
+            "(expected %d, got %d)",
+            key->as.name.data, (int)kt, (int)value.type);
+    Xvr_error(buffer);
+    return;
+  }
+
+  if (Xvr_getNameStringConstant(key) && value.type == XVR_VALUE_NULL) {
+    char buffer[key->length + 256];
+    sprintf(buffer, "can't declare %s as cont with value `null`",
+            key->as.name.data);
     Xvr_error(buffer);
     return;
   }
@@ -132,16 +151,22 @@ void Xvr_assignScope(Xvr_Scope *scope, Xvr_String *key, Xvr_Value value) {
     exit(-1);
   }
 
-  Xvr_Value *valuePtr = lookupScope(scope, key, Xvr_hashString(key), true);
+  Xvr_TableEntry *entryPtr = lookupScope(scope, key, Xvr_hashString(key), true);
 
-  if (valuePtr == NULL) {
+  if (entryPtr == NULL) {
     char buffer[key->length + 256];
     sprintf(buffer, "Undefined variable: %s\n", key->as.name.data);
     Xvr_error(buffer);
     return;
   }
 
-  *valuePtr = value;
+  if (Xvr_getNameStringConstant(XVR_VALUE_AS_STRING(entryPtr->key))) {
+    char buffer[key->length + 256];
+    sprintf(buffer, "can't assign to const %s", key->as.name.data);
+    Xvr_error(buffer);
+    return;
+  }
+  entryPtr->value = value;
 }
 
 Xvr_Value Xvr_accessScope(Xvr_Scope *scope, Xvr_String *key) {
@@ -151,16 +176,16 @@ Xvr_Value Xvr_accessScope(Xvr_Scope *scope, Xvr_String *key) {
     exit(-1);
   }
 
-  Xvr_Value *valuePtr = lookupScope(scope, key, Xvr_hashString(key), true);
+  Xvr_TableEntry *entryPtr = lookupScope(scope, key, Xvr_hashString(key), true);
 
-  if (valuePtr == NULL) {
+  if (entryPtr == NULL) {
     char buffer[key->length + 256];
     sprintf(buffer, "Undefined variable: %s", key->as.name.data);
     Xvr_error(buffer);
     return XVR_VALUE_FROM_NULL();
   }
 
-  return *valuePtr;
+  return entryPtr->value;
 }
 
 bool Xvr_isDeclaredScope(Xvr_Scope *scope, Xvr_String *key) {
@@ -170,7 +195,7 @@ bool Xvr_isDeclaredScope(Xvr_Scope *scope, Xvr_String *key) {
     exit(-1);
   }
 
-  Xvr_Value *valuePtr = lookupScope(scope, key, Xvr_hashString(key), true);
+  Xvr_TableEntry *entryPtr = lookupScope(scope, key, Xvr_hashString(key), true);
 
-  return valuePtr != NULL;
+  return entryPtr != NULL;
 }

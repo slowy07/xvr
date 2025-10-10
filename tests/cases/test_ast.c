@@ -136,7 +136,7 @@ int test_type_emission(Xvr_Bucket **bucketHandle) {
   {
     Xvr_Ast *ast = NULL;
     Xvr_String *name =
-        Xvr_createNameStringLength(bucketHandle, "foobar", 6, XVR_VALUE_NULL);
+        Xvr_createNameStringLength(bucketHandle, "foobar", 6, XVR_VALUE_ANY, false);
 
     Xvr_private_emitAstVariableDeclaration(bucketHandle, &ast, name, NULL);
 

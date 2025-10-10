@@ -100,7 +100,8 @@ int test_string_allocation() {
     Xvr_Bucket *bucket = Xvr_allocateBucket(1024);
 
     const char *cstring = "hello world";
-    Xvr_String *str = Xvr_createNameStringLength(&bucket, cstring, strlen(cstring), XVR_VALUE_NULL);
+    Xvr_String *str = Xvr_createNameStringLength(
+        &bucket, cstring, strlen(cstring), XVR_VALUE_UNKNOWN, false);
 
     Xvr_String *shallow = Xvr_copyString(str);
     Xvr_String *deep = Xvr_deepCopyString(&bucket, str);

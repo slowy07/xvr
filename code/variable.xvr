@@ -8,3 +8,13 @@ angka -= 1;
 angka *= 3;
 angka /= 2;
 answer %= 10;
+
+// declare with typehint
+
+// empty var
+var angka_hint: int;
+// with value
+var angka_hint_value: int = 90;
+
+// with constant
+var angka_hint_const: int const = 20;
