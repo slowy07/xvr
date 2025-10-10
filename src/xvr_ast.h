@@ -16,6 +16,7 @@ typedef enum Xvr_AstType {
   XVR_AST_BINARY,
   XVR_AST_COMPARE,
   XVR_AST_GROUP,
+  XVR_AST_COMPOUND,
 
   XVR_AST_PRINT,
 
@@ -38,8 +39,8 @@ typedef enum Xvr_AstFlag {
   XVR_AST_FLAG_MULTIPLY = 3,
   XVR_AST_FLAG_DIVIDE = 4,
   XVR_AST_FLAG_MODULO = 5,
-  XVR_AST_FLAG_ASSIGN = 10,
 
+  XVR_AST_FLAG_ASSIGN = 10,
   XVR_AST_FLAG_ADD_ASSIGN = 11,
   XVR_AST_FLAG_SUBTRACT_ASSIGN = 12,
   XVR_AST_FLAG_MULTIPLY_ASSIGN = 13,
@@ -53,14 +54,17 @@ typedef enum Xvr_AstFlag {
   XVR_AST_FLAG_COMPARE_GREATER = 25,
   XVR_AST_FLAG_COMPARE_GREATER_EQUAL = 25,
 
-  XVR_AST_FLAG_AND = 30,
-  XVR_AST_FLAG_OR = 31,
-  XVR_AST_FLAG_CONCAT = 32,
+  XVR_AST_FLAG_COMPOUND_COLLECTION = 30,
+  XVR_AST_FLAG_COMPOUND_INDEX = 31,
+
+  XVR_AST_FLAG_AND = 40,
+  XVR_AST_FLAG_OR = 41,
+  XVR_AST_FLAG_CONCAT = 42,
 
   // unary flags
-  XVR_AST_FLAG_NEGATE = 33,
-  XVR_AST_FLAG_INCREMENT = 34,
-  XVR_AST_FLAG_DECREMENT = 35,
+  XVR_AST_FLAG_NEGATE = 43,
+  XVR_AST_FLAG_INCREMENT = 44,
+  XVR_AST_FLAG_DECREMENT = 45,
 
   // XVR_AST_FLAG_TERNARY,
 } Xvr_AstFlag;
@@ -107,6 +111,13 @@ typedef struct Xvr_AstGroup {
   Xvr_Ast *child;
 } Xvr_AstGroup;
 
+typedef struct Xvr_AstCompound {
+  Xvr_AstType type;
+  Xvr_AstFlag flag;
+  Xvr_Ast *left;
+  Xvr_Ast *right;
+} Xvr_AstCompound;
+
 typedef struct Xvr_AstPrint {
   Xvr_AstType type;
   Xvr_Ast *child;
@@ -150,6 +161,7 @@ union Xvr_Ast {                 // 32 | 64 BITNESS
   Xvr_AstBinary binary;         // 16 | 24
   Xvr_AstCompare compare;       // 16 | 24
   Xvr_AstGroup group;           // 8  | 16
+  Xvr_AstCompound compound;     // 16 | 24
   Xvr_AstVarDeclare varDeclare; // 16 | 24
   Xvr_AstVarAssign varAssign;   // 16 | 24
   Xvr_AstVarAccess varAccess;   // 8 | 16
@@ -174,6 +186,8 @@ void Xvr_private_emitAstCompare(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle,
                                 Xvr_AstFlag flag, Xvr_Ast *right);
 
 void Xvr_private_emitAstGroup(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);
+void Xvr_private_emitAstCompound(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle,
+                                 Xvr_AstFlag flag, Xvr_Ast *right);
 void Xvr_private_emitAstPrint(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);
 
 void Xvr_private_emitAstVariableDeclaration(Xvr_Bucket **bucketHandle,

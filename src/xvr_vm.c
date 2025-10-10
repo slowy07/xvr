@@ -145,8 +145,8 @@ static void processDeclare(Xvr_VM *vm) {
   unsigned int jump =
       *(unsigned int *)(vm->routine + vm->jumpsAddr + READ_INT(vm));
   char *cstring = (char *)(vm->routine + vm->dataAddr + jump);
-  Xvr_String *name =
-      Xvr_createNameStringLength(&vm->stringBucket, cstring, len, type, constant);
+  Xvr_String *name = Xvr_createNameStringLength(&vm->stringBucket, cstring, len,
+                                                type, constant);
   Xvr_Value value = Xvr_popStack(&vm->stack);
   Xvr_declareScope(vm->scope, name, value);
   Xvr_freeString(name);
@@ -423,6 +423,63 @@ static void processConcat(Xvr_VM *vm) {
   Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_STRING(result));
 }
 
+static void processIndex(Xvr_VM *vm) {
+  unsigned char count = READ_BYTE(vm);
+
+  Xvr_Value value = XVR_VALUE_FROM_NULL();
+  Xvr_Value index = XVR_VALUE_FROM_NULL();
+  Xvr_Value length = XVR_VALUE_FROM_NULL();
+
+  if (count == 3) {
+    length = Xvr_popStack(&vm->stack);
+    index = Xvr_popStack(&vm->stack);
+    value = Xvr_popStack(&vm->stack);
+  } else if (count == 2) {
+    index = Xvr_popStack(&vm->stack);
+    value = Xvr_popStack(&vm->stack);
+  } else {
+    Xvr_error("incorrect number of elements found in index");
+    return;
+  }
+
+  if (XVR_VALUE_IS_STRING(value)) {
+    if (!XVR_VALUE_IS_INTEGER(index)) {
+      Xvr_error("failed to index a string");
+      return;
+    }
+    if (!(XVR_VALUE_IS_NULL(length) || XVR_VALUE_IS_INTEGER(length))) {
+      Xvr_error("failed to index-length a string");
+      return;
+    }
+
+    int i = XVR_VALUE_AS_INTEGER(index);
+    int l = XVR_VALUE_IS_INTEGER(length) ? XVR_VALUE_AS_INTEGER(length) : 1;
+
+    Xvr_String *str = XVR_VALUE_AS_STRING(value);
+    Xvr_String *result = NULL;
+
+    if (str->type == XVR_STRING_LEAF) {
+      const char *cstr = str->as.leaf.data;
+      result = Xvr_createStringLength(&vm->stringBucket, cstr + 1, l);
+    } else if (str->type == XVR_STRING_NODE) {
+      char *cstr = Xvr_getStringRawBuffer(str);
+      result = Xvr_createStringLength(&vm->stringBucket, cstr + i, l);
+      free(cstr);
+    } else {
+      fprintf(stderr, XVR_CC_ERROR "Error: Unknown string type found in "
+                                   "processIndex, exit\n" XVR_CC_RESET);
+      exit(-1);
+    }
+    Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_STRING(result));
+  } else {
+    fprintf(stderr,
+            XVR_CC_ERROR "Error: Unknown value type %d found in processIndex, "
+                         "exiting\n" XVR_CC_RESET,
+            value.type);
+    exit(-1);
+  }
+}
+
 static void process(Xvr_VM *vm) {
   while (true) {
     Xvr_OpcodeType opcode = READ_BYTE(vm);
@@ -488,6 +545,10 @@ static void process(Xvr_VM *vm) {
 
     case XVR_OPCODE_CONCAT:
       processConcat(vm);
+      break;
+
+    case XVR_OPCODE_INDEX:
+      processIndex(vm);
       break;
 
     case XVR_OPCODE_PASS:

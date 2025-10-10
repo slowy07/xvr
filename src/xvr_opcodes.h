@@ -40,6 +40,7 @@ typedef enum Xvr_OpcodeType {
   // print
   XVR_OPCODE_PRINT,
   XVR_OPCODE_CONCAT,
+  XVR_OPCODE_INDEX,
 
   // meta instructions
   XVR_OPCODE_PASS,

@@ -68,7 +68,7 @@ static void emitToJumpTable(Xvr_Routine **rt, unsigned int startAddr) {
   EMIT_INT(rt, jumps, startAddr);        // save address at the jump index
 }
 
-static void emitString(Xvr_Routine **rt, Xvr_String *str) {
+static unsigned int emitString(Xvr_Routine **rt, Xvr_String *str) {
   // 4-byte alignment
   unsigned int length = str->length + 1;
   if (length % 4 != 0) {
@@ -96,12 +96,15 @@ static void emitString(Xvr_Routine **rt, Xvr_String *str) {
 
   // mark the jump position
   emitToJumpTable(rt, startAddr);
+
+  return 1;
 }
 
-static void writeRoutineCode(Xvr_Routine **rt,
-                             Xvr_Ast *ast); // forward declare for recursion
+static unsigned int
+writeRoutineCode(Xvr_Routine **rt,
+                 Xvr_Ast *ast); // forward declare for recursion
 
-static void writeInstructionValue(Xvr_Routine **rt, Xvr_AstValue ast) {
+static unsigned int writeInstructionValue(Xvr_Routine **rt, Xvr_AstValue ast) {
   EMIT_BYTE(rt, code, XVR_OPCODE_READ);
   EMIT_BYTE(rt, code, ast.value.type);
 
@@ -134,17 +137,19 @@ static void writeInstructionValue(Xvr_Routine **rt, Xvr_AstValue ast) {
     EMIT_BYTE(rt, code, XVR_STRING_LEAF);
     EMIT_BYTE(rt, code, 0);
 
-    emitString(rt, XVR_VALUE_AS_STRING(ast.value));
+    return emitString(rt, XVR_VALUE_AS_STRING(ast.value));
   } else {
     fprintf(stderr, XVR_CC_ERROR
             "ERROR: Invalid AST type found: Unknown value type\n" XVR_CC_RESET);
     exit(-1);
   }
+
+  return 1;
 }
 
-static void writeInstructionUnary(Xvr_Routine **rt, Xvr_AstUnary ast) {
+static unsigned int writeInstructionUnary(Xvr_Routine **rt, Xvr_AstUnary ast) {
   // working with a stack means the child gets placed first
-  writeRoutineCode(rt, ast.child);
+  unsigned int result = writeRoutineCode(rt, ast.child);
 
   if (ast.flag == XVR_AST_FLAG_NEGATE) {
     EMIT_BYTE(rt, code, XVR_OPCODE_NEGATE);
@@ -158,9 +163,12 @@ static void writeInstructionUnary(Xvr_Routine **rt, Xvr_AstUnary ast) {
             XVR_CC_ERROR "ERROR: Invalid AST unary flag found\n" XVR_CC_RESET);
     exit(-1);
   }
+
+  return result;
 }
 
-static void writeInstructionBinary(Xvr_Routine **rt, Xvr_AstBinary ast) {
+static unsigned int writeInstructionBinary(Xvr_Routine **rt,
+                                           Xvr_AstBinary ast) {
   // left, then right, then the binary's operation
   writeRoutineCode(rt, ast.left);
   writeRoutineCode(rt, ast.right);
@@ -192,9 +200,11 @@ static void writeInstructionBinary(Xvr_Routine **rt, Xvr_AstBinary ast) {
   EMIT_BYTE(rt, code, XVR_OPCODE_PASS);
   EMIT_BYTE(rt, code, 0);
   EMIT_BYTE(rt, code, 0);
+  return 1;
 }
 
-static void writeInstructionCompare(Xvr_Routine **rt, Xvr_AstCompare ast) {
+static unsigned int writeInstructionCompare(Xvr_Routine **rt,
+                                            Xvr_AstCompare ast) {
   writeRoutineCode(rt, ast.left);
   writeRoutineCode(rt, ast.right);
 
@@ -205,7 +215,7 @@ static void writeInstructionCompare(Xvr_Routine **rt, Xvr_AstCompare ast) {
     EMIT_BYTE(rt, code, XVR_OPCODE_NEGATE);
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
-    return;
+    return 1;
   } else if (ast.flag == XVR_AST_FLAG_COMPARE_LESS) {
     EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_LESS);
   } else if (ast.flag == XVR_AST_FLAG_COMPARE_LESS_EQUAL) {
@@ -223,13 +233,38 @@ static void writeInstructionCompare(Xvr_Routine **rt, Xvr_AstCompare ast) {
   EMIT_BYTE(rt, code, 0);
   EMIT_BYTE(rt, code, 0);
   EMIT_BYTE(rt, code, 0);
+  return 1;
 }
 
-static void writeInstructionGroup(Xvr_Routine **rt, Xvr_AstGroup ast) {
-  writeRoutineCode(rt, ast.child);
+static unsigned int writeInstructionGroup(Xvr_Routine **rt, Xvr_AstGroup ast) {
+  return writeRoutineCode(rt, ast.child);
 }
 
-static void writeInstructionPrint(Xvr_Routine **rt, Xvr_AstPrint ast) {
+static unsigned int writeInstructionCompound(Xvr_Routine **rt,
+                                             Xvr_AstCompound ast) {
+  unsigned int result = 0;
+
+  result += writeRoutineCode(rt, ast.left);
+  result += writeRoutineCode(rt, ast.right);
+
+  if (ast.flag == XVR_AST_FLAG_COMPOUND_COLLECTION) {
+    return result;
+  } else if (ast.flag == XVR_AST_FLAG_COMPOUND_INDEX) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_INDEX);
+    EMIT_BYTE(rt, code, result);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+
+    return 1;
+  } else {
+    fprintf(stderr, XVR_CC_ERROR
+            "Error: invalid AST compund flag found\n" XVR_CC_RESET);
+    exit(-1);
+    return 0;
+  }
+}
+
+static unsigned int writeInstructionPrint(Xvr_Routine **rt, Xvr_AstPrint ast) {
   // the thing to print
   writeRoutineCode(rt, ast.child);
 
@@ -240,10 +275,12 @@ static void writeInstructionPrint(Xvr_Routine **rt, Xvr_AstPrint ast) {
   EMIT_BYTE(rt, code, 0);
   EMIT_BYTE(rt, code, 0);
   EMIT_BYTE(rt, code, 0);
+
+  return 0;
 }
 
-static void writeInstructionVarDeclare(Xvr_Routine **rt,
-                                       Xvr_AstVarDeclare ast) {
+static unsigned int writeInstructionVarDeclare(Xvr_Routine **rt,
+                                               Xvr_AstVarDeclare ast) {
   writeRoutineCode(rt, ast.expr);
 
   EMIT_BYTE(rt, code, XVR_OPCODE_DECLARE);
@@ -253,9 +290,13 @@ static void writeInstructionVarDeclare(Xvr_Routine **rt,
   EMIT_BYTE(rt, code, Xvr_getNameStringConstant(ast.name) ? 1 : 0);
 
   emitString(rt, ast.name);
+
+  return 0;
 }
 
-static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
+static unsigned int writeInstructionAssign(Xvr_Routine **rt,
+                                           Xvr_AstVarAssign ast) {
+  unsigned int result = 0;
   // name, duplicate, right, opcode
   if (ast.flag == XVR_AST_FLAG_ASSIGN) {
     EMIT_BYTE(rt, code, XVR_OPCODE_READ);
@@ -264,7 +305,7 @@ static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
     EMIT_BYTE(rt, code, ast.name->length);
 
     emitString(rt, ast.name);
-    writeRoutineCode(rt, ast.expr);
+    result += writeRoutineCode(rt, ast.expr);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
     EMIT_BYTE(rt, code, 0);
@@ -281,7 +322,7 @@ static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
 
-    writeRoutineCode(rt, ast.expr);
+    result += writeRoutineCode(rt, ast.expr);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_ADD);
     EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
@@ -298,7 +339,7 @@ static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
 
-    writeRoutineCode(rt, ast.expr);
+    result += writeRoutineCode(rt, ast.expr);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_SUBTRACT);
     EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN); // squeezed
@@ -315,7 +356,7 @@ static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
 
-    writeRoutineCode(rt, ast.expr);
+    result += writeRoutineCode(rt, ast.expr);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_MULTIPLY);
     EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN); // squeezed
@@ -332,7 +373,7 @@ static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
 
-    writeRoutineCode(rt, ast.expr);
+    result += writeRoutineCode(rt, ast.expr);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_DIVIDE);
     EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN); // squeezed
@@ -349,7 +390,7 @@ static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
 
-    writeRoutineCode(rt, ast.expr);
+    result += writeRoutineCode(rt, ast.expr);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_MODULO);
     EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN); // squeezed
@@ -364,9 +405,12 @@ static void writeInstructionAssign(Xvr_Routine **rt, Xvr_AstVarAssign ast) {
   // 4-byte alignment
   EMIT_BYTE(rt, code, 0);
   EMIT_BYTE(rt, code, 0);
+
+  return result;
 }
 
-static void writeInstructionAccess(Xvr_Routine **rt, Xvr_AstVarAccess ast) {
+static unsigned int writeInstructionAccess(Xvr_Routine **rt,
+                                           Xvr_AstVarAccess ast) {
   EMIT_BYTE(rt, code, XVR_OPCODE_READ);
   EMIT_BYTE(rt, code, XVR_VALUE_STRING);
   EMIT_BYTE(rt, code, XVR_STRING_NAME);
@@ -378,6 +422,8 @@ static void writeInstructionAccess(Xvr_Routine **rt, Xvr_AstVarAccess ast) {
   EMIT_BYTE(rt, code, 0);
   EMIT_BYTE(rt, code, 0);
   EMIT_BYTE(rt, code, 0);
+
+  return 1;
 }
 
 // routine structure
@@ -385,10 +431,12 @@ static void writeInstructionAccess(Xvr_Routine **rt, Xvr_AstVarAccess ast) {
 //  	//
 //  }
 
-static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
+static unsigned int writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
   if (ast == NULL) {
-    return;
+    return 0;
   }
+
+  unsigned int result = 0;
 
   // determine how to write each instruction based on the Ast
   switch (ast->type) {
@@ -400,8 +448,8 @@ static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
       EMIT_BYTE(rt, code, 0);
     }
 
-    writeRoutineCode(rt, ast->block.child);
-    writeRoutineCode(rt, ast->block.next);
+    result += writeRoutineCode(rt, ast->block.child);
+    result += writeRoutineCode(rt, ast->block.next);
 
     if (ast->block.innerScope) {
       EMIT_BYTE(rt, code, XVR_OPCODE_SCOPE_POP);
@@ -412,39 +460,43 @@ static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
     break;
 
   case XVR_AST_VALUE:
-    writeInstructionValue(rt, ast->value);
+    result += writeInstructionValue(rt, ast->value);
     break;
 
   case XVR_AST_UNARY:
-    writeInstructionUnary(rt, ast->unary);
+    result += writeInstructionUnary(rt, ast->unary);
     break;
 
   case XVR_AST_BINARY:
-    writeInstructionBinary(rt, ast->binary);
+    result += writeInstructionBinary(rt, ast->binary);
     break;
 
   case XVR_AST_COMPARE:
-    writeInstructionCompare(rt, ast->compare);
+    result += writeInstructionCompare(rt, ast->compare);
     break;
 
   case XVR_AST_GROUP:
-    writeInstructionGroup(rt, ast->group);
+    result += writeInstructionGroup(rt, ast->group);
+    break;
+
+  case XVR_AST_COMPOUND:
+    result += writeInstructionCompound(rt, ast->compound);
     break;
 
   case XVR_AST_PRINT:
-    writeInstructionPrint(rt, ast->print);
+    result += writeInstructionPrint(rt, ast->print);
     break;
 
   case XVR_AST_VAR_DECLARE:
-    writeInstructionVarDeclare(rt, ast->varDeclare);
+    result += writeInstructionVarDeclare(rt, ast->varDeclare);
     break;
 
   case XVR_AST_VAR_ASSIGN:
-    writeInstructionAssign(rt, ast->varAssign);
+    result += writeInstructionAssign(rt, ast->varAssign);
     break;
 
   case XVR_AST_VAR_ACCESS:
-    writeInstructionAccess(rt, ast->varAccess);
+    result += writeInstructionAccess(rt, ast->varAccess);
     break;
 
   case XVR_AST_PASS:
@@ -465,6 +517,8 @@ static void writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
     exit(-1);
     break;
   }
+
+  return result;
 }
 
 static void *writeRoutine(Xvr_Routine *rt, Xvr_Ast *ast) {
