@@ -376,7 +376,7 @@ static void processAssert(Xvr_VM *vm) {
   }
 
   if (XVR_VALUE_IS_NULL(value) || Xvr_checkValueIsTruthy(value) == false) {
-    Xvr_stringifyValue(message, Xvr_error);
+    Xvr_stringifyValue(message, Xvr_assertFailure);
   }
 
   Xvr_freeValue(value);

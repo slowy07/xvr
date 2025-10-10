@@ -15,10 +15,13 @@ typedef struct Xvr_Parser {
 
   bool error;
   bool panic; // currently processing an error
+  bool removeAssert;
 } Xvr_Parser;
 
 XVR_API void Xvr_bindParser(Xvr_Parser *parser, Xvr_Lexer *lexer);
 XVR_API Xvr_Ast *Xvr_scanParser(Xvr_Bucket **bucket, Xvr_Parser *parser);
 XVR_API void Xvr_resetParser(Xvr_Parser *parser);
+
+XVR_API void Xvr_configureParser(Xvr_Parser *parser, bool removeAssert);
 
 #endif // !XVR_PARSER_H

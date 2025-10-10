@@ -13,6 +13,10 @@ void Xvr_print(const char *msg) { printCallback(msg); }
 
 void Xvr_error(const char *msg) { assertCallback(msg); }
 
+void Xvr_assertFailure(const char *msg) {
+  assertCallback(msg);
+}
+
 void Xvr_setPrintCallback(Xvr_callbackType cb) { printCallback = cb; }
 
 void Xvr_setErrorCallback(Xvr_callbackType cb) { errorCallback = cb; }

@@ -675,11 +675,15 @@ static void makeAssertStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
   Xvr_Ast *ast = NULL;
   makeExpr(bucketHandle, parser, &ast);
 
-  if (ast->type == XVR_AST_COMPOUND) {
-    Xvr_private_emitAstAssert(bucketHandle, rootHandle, ast->compound.left,
-                              ast->compound.right);
+  if (parser->removeAssert) {
+    Xvr_private_emitAstPass(bucketHandle, rootHandle);
   } else {
-    Xvr_private_emitAstAssert(bucketHandle, rootHandle, ast, NULL);
+    if (ast->type == XVR_AST_COMPOUND) {
+      Xvr_private_emitAstAssert(bucketHandle, rootHandle, ast->compound.left,
+                                ast->compound.right);
+    } else {
+      Xvr_private_emitAstAssert(bucketHandle, rootHandle, ast, NULL);
+    }
   }
 
   consume(parser, XVR_TOKEN_OPERATOR_SEMICOLON,
@@ -835,4 +839,9 @@ void Xvr_resetParser(Xvr_Parser *parser) {
 
   parser->error = false;
   parser->panic = false;
+  parser->removeAssert = false;
+}
+
+void Xvr_configureParser(Xvr_Parser *parser, bool removeAssert) {
+  parser->removeAssert = removeAssert;
 }

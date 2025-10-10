@@ -106,12 +106,32 @@ int getFileName(char *dest, const char *src) {
   return len;
 }
 
+static void printCallback(const char *msg) { fprintf(stdout, "%s\n", msg); }
+
+static void errorAndExitCallback(const char *msg) {
+  fprintf(stderr, "%s", msg);
+  exit(-1);
+}
+
+static void errorAndContinueCallback(const char *msg) {
+  fprintf(stderr, "%s\n", msg);
+}
+
+static void noOpCallback(const char *msg) {
+  // pass
+}
+
+static void silentExitCallback(const char *msg) { exit(-1); }
+
 typedef struct CmdLine {
   bool error;
   bool help;
   bool version;
   char *infile;
   int infileLength;
+  bool silentPrint;
+  bool silentAssert;
+  bool removeAssert;
 } CmdLine;
 
 void usageCmdLine(int argc, const char *argv[]) {
@@ -126,6 +146,10 @@ void helpCmdLine(int argc, const char *argv[]) {
   printf("  -h, --help\t\t\tShow this help\n");
   printf("  -v, --version\t\t\tShow version\n");
   printf("  -f, --file infile\t\tParse, compile and run\n");
+  printf("      --silent-print\t\tSuppress output from the print keywords\n");
+  printf("      --silent-assert\t\tSuppress output from the assert keywords\n");
+  printf("      --remove-assert\t\tDo not include the assert statement in the "
+         "bytecode\n");
 }
 
 void versionCmdLine(int argc, const char *argv[]) {
@@ -139,7 +163,10 @@ CmdLine parseCmdLine(int argc, const char *argv[]) {
                  .help = false,
                  .version = false,
                  .infile = NULL,
-                 .infileLength = 0};
+                 .infileLength = 0,
+                 .silentPrint = false,
+                 .silentAssert = false,
+                 .removeAssert = false};
 
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
@@ -175,6 +202,18 @@ CmdLine parseCmdLine(int argc, const char *argv[]) {
       }
     }
 
+    else if (!strcmp(argv[i], "--silent-print")) {
+      cmd.silentPrint = true;
+    }
+
+    else if (!strcmp(argv[i], "--silent-assert")) {
+      cmd.silentAssert = true;
+    }
+
+    else if (!strcmp(argv[i], "--remove-assert")) {
+      cmd.removeAssert = true;
+    }
+
     else {
       cmd.error = true;
     }
@@ -183,13 +222,19 @@ CmdLine parseCmdLine(int argc, const char *argv[]) {
   return cmd;
 }
 
-static void errorAndContinueCallback(const char *msg) {
-  fprintf(stderr, "%s\n", msg);
-}
+int repl(const char *filepath, CmdLine cmd) {
 
-int repl(const char *filepath) {
-  Xvr_setErrorCallback(errorAndContinueCallback);
-  Xvr_setAssertFailureCallback(errorAndContinueCallback);
+  if (cmd.silentPrint) {
+    Xvr_setPrintCallback(noOpCallback);
+  } else {
+    Xvr_setPrintCallback(printCallback);
+  }
+
+  if (cmd.silentAssert) {
+    Xvr_setAssertFailureCallback(silentExitCallback);
+  } else {
+    Xvr_setAssertFailureCallback(errorAndContinueCallback);
+  }
 
   char prompt[256];
   getFileName(prompt, filepath);
@@ -224,6 +269,7 @@ int repl(const char *filepath) {
     Xvr_bindLexer(&lexer, inputBuffer);
     Xvr_Parser parser;
     Xvr_bindParser(&parser, &lexer);
+    Xvr_configureParser(&parser, cmd.removeAssert);
     Xvr_Ast *ast = Xvr_scanParser(&bucket, &parser);
 
     if (parser.error) {
@@ -248,7 +294,7 @@ int repl(const char *filepath) {
 
 static void debugStackPrint(Xvr_Stack *stack) {
   if (stack->count > 0) {
-    printf("stacl Dump\n\ntype\tvalue\n");
+    printf("stack Dump\n\ntype\tvalue\n");
     for (int i = 0; i < stack->count; i++) {
       Xvr_Value v = ((Xvr_Value *)(stack + 1))[i];
 
@@ -370,23 +416,20 @@ static void debugScopePrint(Xvr_Scope *scope, int depth) {
   }
 }
 
-static void printCallback(const char *msg) { fprintf(stdout, "%s\n", msg); }
-
-static void errorAndExitCallback(const char *msg) {
-  fprintf(stderr, "%s", msg);
-  exit(-1);
-}
-
 int main(int argc, const char *argv[]) {
-  Xvr_setPrintCallback(printCallback);
+  Xvr_setPrintCallback(noOpCallback);
   Xvr_setErrorCallback(errorAndExitCallback);
   Xvr_setAssertFailureCallback(errorAndExitCallback);
 
-  if (argc == 1) {
-    return repl(argv[0]);
+  CmdLine cmd = parseCmdLine(argc, argv);
+
+  if (cmd.silentPrint) {
+    Xvr_setPrintCallback(noOpCallback);
   }
 
-  CmdLine cmd = parseCmdLine(argc, argv);
+  if (cmd.silentAssert) {
+    Xvr_setAssertFailureCallback(silentExitCallback);
+  }
 
   if (cmd.error) {
     usageCmdLine(argc, argv);
@@ -436,6 +479,8 @@ int main(int argc, const char *argv[]) {
     Xvr_Parser parser;
     Xvr_bindParser(&parser, &lexer);
 
+    Xvr_configureParser(&parser, cmd.removeAssert);
+
     Xvr_Bucket *bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
     Xvr_Ast *ast = Xvr_scanParser(&bucket, &parser);
 
@@ -446,7 +491,6 @@ int main(int argc, const char *argv[]) {
     Xvr_initVM(&vm);
     Xvr_bindVM(&vm, bc.ptr);
 
-    // run
     Xvr_runVM(&vm);
 
     debugStackPrint(vm.stack);
@@ -456,7 +500,7 @@ int main(int argc, const char *argv[]) {
     Xvr_freeBucket(&bucket);
     free(source);
   } else {
-    usageCmdLine(argc, argv);
+    repl(argv[0], cmd);
   }
 
   return 0;
