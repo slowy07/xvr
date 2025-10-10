@@ -264,6 +264,20 @@ static unsigned int writeInstructionCompound(Xvr_Routine **rt,
   }
 }
 
+static unsigned int writeInstructionAssert(Xvr_Routine **rt,
+                                           Xvr_AstAssert ast) {
+  writeRoutineCode(rt, ast.child);
+  writeRoutineCode(rt, ast.message);
+
+  EMIT_BYTE(rt, code, XVR_OPCODE_ASSERT);
+
+  EMIT_BYTE(rt, code, ast.message != NULL ? 2 : 1);
+  EMIT_BYTE(rt, code, 0);
+  EMIT_BYTE(rt, code, 0);
+
+  return 0;
+}
+
 static unsigned int writeInstructionPrint(Xvr_Routine **rt, Xvr_AstPrint ast) {
   // the thing to print
   writeRoutineCode(rt, ast.child);
@@ -481,6 +495,10 @@ static unsigned int writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
 
   case XVR_AST_COMPOUND:
     result += writeInstructionCompound(rt, ast->compound);
+    break;
+
+  case XVR_AST_ASSERT:
+    result += writeInstructionAssert(rt, ast->assert);
     break;
 
   case XVR_AST_PRINT:

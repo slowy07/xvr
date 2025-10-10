@@ -2,6 +2,7 @@
 #define XVR_VALUE_H
 
 #include "xvr_common.h"
+#include "xvr_print.h"
 
 struct Xvr_String;
 
@@ -67,5 +68,7 @@ XVR_API bool Xvr_checkValueIsTruthy(Xvr_Value value);
 XVR_API bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right);
 XVR_API bool Xvr_checkValuesAreCompareable(Xvr_Value left, Xvr_Value right);
 XVR_API int Xvr_compareValues(Xvr_Value left, Xvr_Value right);
+
+XVR_API void Xvr_stringifyValue(Xvr_Value value, Xvr_callbackType callback);
 
 #endif // !XVR_VALUE_H

@@ -2,6 +2,7 @@
 #include "xvr_console_colors.h"
 #include "xvr_print.h"
 #include "xvr_string.h"
+#include <stdio.h>
 #include <stdlib.h>
 
 static unsigned int hashUInt(unsigned int x) {
@@ -35,7 +36,9 @@ unsigned int Xvr_hashValue(Xvr_Value value) {
   case XVR_VALUE_TYPE:
   case XVR_VALUE_ANY:
   case XVR_VALUE_UNKNOWN:
-    break;
+    fprintf(stderr, XVR_CC_ERROR
+            "Error: can't hash an unknown value type, exit\n" XVR_CC_RESET);
+    exit(-1);
   }
   return 0;
 }
@@ -60,7 +63,9 @@ Xvr_Value Xvr_copyValue(Xvr_Value value) {
   case XVR_VALUE_TYPE:
   case XVR_VALUE_ANY:
   case XVR_VALUE_UNKNOWN:
-    break;
+    fprintf(stderr, XVR_CC_ERROR
+            "Error: can't copy unknown value type, exit\n" XVR_CC_RESET);
+    exit(-1);
   }
   return XVR_VALUE_FROM_NULL();
 }
@@ -86,7 +91,9 @@ void Xvr_freeValue(Xvr_Value value) {
   case XVR_VALUE_TYPE:
   case XVR_VALUE_ANY:
   case XVR_VALUE_UNKNOWN:
-    Xvr_error(XVR_CC_ERROR "Error: can't free an unknown type\n" XVR_CC_RESET);
+    fprintf(stderr, XVR_CC_ERROR
+            "Error: can't free an unknown value type, exit\n" XVR_CC_RESET);
+    exit(-1);
   }
 }
 
@@ -94,6 +101,7 @@ bool Xvr_checkValueIsTruthy(Xvr_Value value) {
   if (XVR_VALUE_IS_NULL(value)) {
     Xvr_error(XVR_CC_ERROR
               "Error: `null` is neither true or false\n" XVR_CC_RESET);
+    return false;
   }
 
   // only 'false' is falsy
@@ -153,7 +161,9 @@ bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right) {
   case XVR_VALUE_TYPE:
   case XVR_VALUE_ANY:
   case XVR_VALUE_UNKNOWN:
-    break;
+    fprintf(stderr, XVR_CC_ERROR
+            "Error: unknown types in value equality, exit\n" XVR_CC_RESET);
+    exit(-1);
   }
   return 0;
 }
@@ -180,11 +190,10 @@ bool Xvr_checkValuesAreCompareable(Xvr_Value left, Xvr_Value right) {
   case XVR_VALUE_TYPE:
   case XVR_VALUE_ANY:
   case XVR_VALUE_UNKNOWN:
-    break;
+    fprintf(stderr, XVR_CC_ERROR
+            "unknown types in value comparison check, exit\n" XVR_CC_RESET);
+    exit(-1);
   }
-
-  Xvr_error(XVR_CC_ERROR
-            "Error: unknown types in value in comparison check\n" XVR_CC_RESET);
 
   return false;
 }
@@ -227,10 +236,62 @@ int Xvr_compareValues(Xvr_Value left, Xvr_Value right) {
   case XVR_VALUE_TYPE:
   case XVR_VALUE_ANY:
   case XVR_VALUE_UNKNOWN:
+    fprintf(stderr, XVR_CC_ERROR
+            "unknown types in value comparison, exit\n" XVR_CC_RESET);
+    exit(-1);
+  }
+
+  return -1;
+}
+
+void Xvr_stringifyValue(Xvr_Value value, Xvr_callbackType callback) {
+  switch (value.type) {
+  case XVR_VALUE_NULL:
+    callback("null");
+    break;
+
+  case XVR_VALUE_BOOLEAN:
+    callback(XVR_VALUE_AS_BOOLEAN(value) ? "true" : "false");
+    break;
+
+  case XVR_VALUE_INTEGER: {
+    char buffer[16];
+    sprintf(buffer, "%d", XVR_VALUE_AS_INTEGER(value));
+    callback(buffer);
     break;
   }
 
-  Xvr_error(XVR_CC_ERROR
-            "Error: unknown types in value comparison\n" XVR_CC_RESET);
-  return -1;
+  case XVR_VALUE_FLOAT: {
+    char buffer[16];
+    sprintf(buffer, "%f", XVR_VALUE_AS_FLOAT(value));
+    callback(buffer);
+    break;
+  }
+
+  case XVR_VALUE_STRING: {
+    Xvr_String *str = XVR_VALUE_AS_STRING(value);
+
+    if (str->type == XVR_STRING_NODE) {
+      char *buffer = Xvr_getStringRawBuffer(str);
+      callback(buffer);
+      free(buffer);
+    } else if (str->type == XVR_STRING_LEAF) {
+      callback(str->as.leaf.data);
+    } else if (str->type == XVR_STRING_NAME) {
+      callback(str->as.name.data);
+    }
+    break;
+  }
+
+  case XVR_VALUE_ARRAY:
+  case XVR_VALUE_TABLE:
+  case XVR_VALUE_FUNCTION:
+  case XVR_VALUE_OPAQUE:
+  case XVR_VALUE_TYPE:
+  case XVR_VALUE_ANY:
+  case XVR_VALUE_UNKNOWN:
+    fprintf(stderr, XVR_CC_ERROR
+            "unknown types in value stringify, exiting\n" XVR_CC_RESET);
+    exit(-1);
+  }
 }

@@ -353,60 +353,40 @@ static void processLogical(Xvr_VM *vm, Xvr_OpcodeType opcode) {
   }
 }
 
-static void processPrint(Xvr_VM *vm) {
-  Xvr_Value value = Xvr_popStack(&vm->stack);
+static void processAssert(Xvr_VM *vm) {
+  unsigned int count = READ_BYTE(vm);
 
-  switch (value.type) {
-  case XVR_VALUE_NULL:
-    Xvr_print("null");
-    break;
+  Xvr_Value value = XVR_VALUE_FROM_NULL();
+  Xvr_Value message = XVR_VALUE_FROM_NULL();
 
-  case XVR_VALUE_BOOLEAN:
-    Xvr_print(XVR_VALUE_AS_BOOLEAN(value) ? "true" : "false");
-    break;
-
-  case XVR_VALUE_INTEGER: {
-    char buffer[16];
-    sprintf(buffer, "%d", XVR_VALUE_AS_INTEGER(value));
-    Xvr_print(buffer);
-    break;
-  }
-
-  case XVR_VALUE_FLOAT: {
-    char buffer[16];
-    sprintf(buffer, "%f", XVR_VALUE_AS_FLOAT(value));
-    Xvr_print(buffer);
-    break;
-  }
-
-  case XVR_VALUE_STRING: {
-    Xvr_String *str = XVR_VALUE_AS_STRING(value);
-
-    if (str->type == XVR_STRING_NODE) {
-      char *buffer = Xvr_getStringRawBuffer(str);
-      Xvr_print(buffer);
-      free(buffer);
-    } else if (str->type == XVR_STRING_LEAF) {
-      Xvr_print(str->as.leaf.data);
-    } else if (str->type == XVR_STRING_NAME) {
-      Xvr_print(str->as.name.data);
-    }
-    break;
-  }
-
-  case XVR_VALUE_ARRAY:
-  case XVR_VALUE_TABLE:
-  case XVR_VALUE_FUNCTION:
-  case XVR_VALUE_OPAQUE:
-  case XVR_VALUE_TYPE:
-  case XVR_VALUE_ANY:
-  case XVR_VALUE_UNKNOWN:
-    fprintf(stderr,
-            XVR_CC_ERROR "ERROR: Unknown value type %d passed to processPrint, "
-                         "exiting\n" XVR_CC_RESET,
-            value.type);
+  if (count == 1) {
+    message = XVR_VALUE_FROM_STRING(
+        Xvr_createString(&vm->stringBucket, "assertion failed"));
+    value = Xvr_popStack(&vm->stack);
+  } else if (count == 2) {
+    message = Xvr_popStack(&vm->stack);
+    value = Xvr_popStack(&vm->stack);
+  } else {
+    fprintf(
+        stderr,
+        XVR_CC_ERROR
+        "Error: invalid assert argument count %d found, exit\n" XVR_CC_RESET,
+        (int)count);
     exit(-1);
   }
+
+  if (XVR_VALUE_IS_NULL(value) || Xvr_checkValueIsTruthy(value) == false) {
+    Xvr_stringifyValue(message, Xvr_error);
+  }
+
+  Xvr_freeValue(value);
+  Xvr_freeValue(message);
+}
+
+static void processPrint(Xvr_VM *vm) {
+  Xvr_Value value = Xvr_popStack(&vm->stack);
+  Xvr_stringifyValue(value, Xvr_print);
+  Xvr_freeValue(value);
 }
 
 static void processConcat(Xvr_VM *vm) {
@@ -445,10 +425,16 @@ static void processIndex(Xvr_VM *vm) {
   if (XVR_VALUE_IS_STRING(value)) {
     if (!XVR_VALUE_IS_INTEGER(index)) {
       Xvr_error("failed to index a string");
+      Xvr_freeValue(value);
+      Xvr_freeValue(index);
+      Xvr_freeValue(length);
       return;
     }
     if (!(XVR_VALUE_IS_NULL(length) || XVR_VALUE_IS_INTEGER(length))) {
       Xvr_error("failed to index-length a string");
+      Xvr_freeValue(value);
+      Xvr_freeValue(index);
+      Xvr_freeValue(length);
       return;
     }
 
@@ -478,6 +464,10 @@ static void processIndex(Xvr_VM *vm) {
             value.type);
     exit(-1);
   }
+
+  Xvr_freeValue(value);
+  Xvr_freeValue(index);
+  Xvr_freeValue(length);
 }
 
 static void process(Xvr_VM *vm) {
@@ -537,6 +527,10 @@ static void process(Xvr_VM *vm) {
 
     case XVR_OPCODE_SCOPE_POP:
       vm->scope = Xvr_popScope(vm->scope);
+      break;
+
+    case XVR_OPCODE_ASSERT:
+      processAssert(vm);
       break;
 
     case XVR_OPCODE_PRINT:

@@ -100,6 +100,16 @@ void Xvr_private_emitAstCompound(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle,
   (*astHandle) = tmp;
 }
 
+void Xvr_private_emitAstAssert(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle,
+                               Xvr_Ast *child, Xvr_Ast *msg) {
+  Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
+
+  tmp->type = XVR_AST_ASSERT;
+  tmp->assert.child = child;
+  tmp->assert.message = msg;
+  (*astHandle) = tmp;
+}
+
 void Xvr_private_emitAstPrint(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle) {
   Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
   tmp->type = XVR_AST_PRINT;
