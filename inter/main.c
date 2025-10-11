@@ -232,7 +232,6 @@ CmdLine parseCmdLine(int argc, const char *argv[]) {
 }
 
 int repl(const char *filepath) {
-
   Xvr_setPrintCallback(printCallback);
   Xvr_setErrorCallback(errorAndContinueCallback);
   Xvr_setAssertFailureCallback(errorAndContinueCallback);
@@ -290,12 +289,13 @@ int repl(const char *filepath) {
 
   Xvr_freeVM(&vm);
   Xvr_freeBucket(&bucket);
+
   return 0;
 }
 
 static void debugStackPrint(Xvr_Stack *stack) {
   if (stack->count > 0) {
-    printf("stack Dump\n==========\ntype\tvalue\n");
+    printf("Stack Dump\n==========\ntype\tvalue\n");
     for (int i = 0; i < stack->count; i++) {
       Xvr_Value v = ((Xvr_Value *)(stack + 1))[i];
 
@@ -340,7 +340,7 @@ static void debugStackPrint(Xvr_Stack *stack) {
       case XVR_VALUE_TYPE:
       case XVR_VALUE_ANY:
       case XVR_VALUE_UNKNOWN:
-        printf("what???");
+        printf("???");
         break;
       }
 
@@ -405,7 +405,7 @@ static void debugScopePrint(Xvr_Scope *scope, int depth) {
       case XVR_VALUE_TYPE:
       case XVR_VALUE_ANY:
       case XVR_VALUE_UNKNOWN:
-        printf("what???");
+        printf("Unknown, what is that?");
         break;
       }
 
@@ -419,7 +419,7 @@ static void debugScopePrint(Xvr_Scope *scope, int depth) {
 }
 
 int main(int argc, const char *argv[]) {
-  Xvr_setPrintCallback(noOpCallback);
+  Xvr_setPrintCallback(printCallback);
   Xvr_setErrorCallback(errorAndExitCallback);
   Xvr_setAssertFailureCallback(errorAndExitCallback);
 
