@@ -18,3 +18,6 @@ var angka_hint_value: int = 90;
 
 // with constant
 var angka_hint_const: int const = 20;
+
+// print with indexing
+print penyanyi[1, 3];

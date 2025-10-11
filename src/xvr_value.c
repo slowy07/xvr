@@ -295,3 +295,34 @@ void Xvr_stringifyValue(Xvr_Value value, Xvr_callbackType callback) {
     exit(-1);
   }
 }
+
+const char *Xvr_private_getValueTypeAsCString(Xvr_ValueType type) {
+  switch (type) {
+  case XVR_VALUE_NULL:
+    return "null";
+  case XVR_VALUE_BOOLEAN:
+    return "bool";
+  case XVR_VALUE_INTEGER:
+    return "int";
+  case XVR_VALUE_FLOAT:
+    return "float";
+  case XVR_VALUE_STRING:
+    return "string";
+  case XVR_VALUE_ARRAY:
+    return "array";
+  case XVR_VALUE_TABLE:
+    return "table";
+  case XVR_VALUE_FUNCTION:
+    return "function";
+  case XVR_VALUE_OPAQUE:
+    return "opaque";
+  case XVR_VALUE_TYPE:
+    return "type";
+  case XVR_VALUE_ANY:
+    return "any";
+  case XVR_VALUE_UNKNOWN:
+    return "unknown";
+  }
+
+  return NULL;
+}

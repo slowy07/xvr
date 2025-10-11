@@ -198,28 +198,33 @@ static void processArithmetic(Xvr_VM *vm, Xvr_OpcodeType opcode) {
 
   if ((!XVR_VALUE_IS_INTEGER(left) && !XVR_VALUE_IS_FLOAT(left)) ||
       (!XVR_VALUE_IS_INTEGER(right) && !XVR_VALUE_IS_FLOAT(right))) {
-    fprintf(stderr,
-            XVR_CC_ERROR "ERROR: Invalid types %d and %d passed to "
-                         "processArithmetic, exiting\n" XVR_CC_RESET,
-            left.type, right.type);
-    exit(-1);
+    char buffer[256];
+    snprintf(buffer, 256, "invalid types '%s' and '%s' passed in arithmetic",
+             Xvr_private_getValueTypeAsCString(left.type),
+             Xvr_private_getValueTypeAsCString(right.type));
+    Xvr_error(buffer);
+    Xvr_freeValue(left);
+    Xvr_freeValue(right);
+    return;
   }
 
   // check for divide by zero
   if (opcode == XVR_OPCODE_DIVIDE || opcode == XVR_OPCODE_MODULO) {
     if ((XVR_VALUE_IS_INTEGER(right) && XVR_VALUE_AS_INTEGER(right) == 0) ||
         (XVR_VALUE_IS_FLOAT(right) && XVR_VALUE_AS_FLOAT(right) == 0)) {
-      fprintf(stderr, XVR_CC_ERROR
-              "ERROR: Can't divide by zero, exiting\n" XVR_CC_RESET);
-      exit(-1);
+      Xvr_error("can't divide or modulo by zero");
+      Xvr_freeValue(left);
+      Xvr_freeValue(right);
+      return;
     }
   }
 
   // check for modulo by a float
   if (opcode == XVR_OPCODE_MODULO && XVR_VALUE_IS_FLOAT(right)) {
-    fprintf(stderr, XVR_CC_ERROR
-            "ERROR: Can't modulo by a float, exiting\n" XVR_CC_RESET);
-    exit(-1);
+    Xvr_error("can't modulo by float");
+    Xvr_freeValue(left);
+    Xvr_freeValue(right);
+    return;
   }
 
   // coerce ints into floats if needed
@@ -295,11 +300,14 @@ static void processComparison(Xvr_VM *vm, Xvr_OpcodeType opcode) {
   }
 
   if (Xvr_checkValuesAreCompareable(left, right) == false) {
-    fprintf(stderr,
-            XVR_CC_ERROR
-            "Error: can't compare value types %d and %d\n" XVR_CC_RESET,
-            left.type, right.type);
-    exit(-1);
+    char buffer[256];
+    snprintf(buffer, 256, "can't compare value types '%s' and '%s'",
+             Xvr_private_getValueTypeAsCString(left.type),
+             Xvr_private_getValueTypeAsCString(right.type));
+    Xvr_error(buffer);
+    Xvr_freeValue(left);
+    Xvr_freeValue(right);
+    return;
   }
 
   int comparison = Xvr_compareValues(left, right);
@@ -459,9 +467,10 @@ static void processIndex(Xvr_VM *vm) {
     Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_STRING(result));
   } else {
     fprintf(stderr,
-            XVR_CC_ERROR "Error: Unknown value type %d found in processIndex, "
-                         "exiting\n" XVR_CC_RESET,
-            value.type);
+            XVR_CC_ERROR
+            "Error: Unknown value type '%s' found in processIndex, "
+            "exiting\n" XVR_CC_RESET,
+            Xvr_private_getValueTypeAsCString(value.type));
     exit(-1);
   }
 
@@ -472,6 +481,7 @@ static void processIndex(Xvr_VM *vm) {
 
 static void process(Xvr_VM *vm) {
   while (true) {
+    fixAlignment(vm);
     Xvr_OpcodeType opcode = READ_BYTE(vm);
 
     switch (opcode) {
@@ -554,8 +564,6 @@ static void process(Xvr_VM *vm) {
               opcode);
       exit(-1);
     }
-
-    fixAlignment(vm);
   }
 }
 

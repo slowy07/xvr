@@ -71,4 +71,6 @@ XVR_API int Xvr_compareValues(Xvr_Value left, Xvr_Value right);
 
 XVR_API void Xvr_stringifyValue(Xvr_Value value, Xvr_callbackType callback);
 
+XVR_API const char *Xvr_private_getValueTypeAsCString(Xvr_ValueType type);
+
 #endif // !XVR_VALUE_H

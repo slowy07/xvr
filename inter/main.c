@@ -132,6 +132,7 @@ typedef struct CmdLine {
   bool silentPrint;
   bool silentAssert;
   bool removeAssert;
+  bool verboseDebugPrint;
 } CmdLine;
 
 void usageCmdLine(int argc, const char *argv[]) {
@@ -150,6 +151,7 @@ void helpCmdLine(int argc, const char *argv[]) {
   printf("      --silent-assert\t\tSuppress output from the assert keywords\n");
   printf("      --remove-assert\t\tDo not include the assert statement in the "
          "bytecode\n");
+  printf("  -d, --verbose\t\tPrint debug information about Xvr internals\n");
 }
 
 void versionCmdLine(int argc, const char *argv[]) {
@@ -159,14 +161,17 @@ void versionCmdLine(int argc, const char *argv[]) {
 }
 
 CmdLine parseCmdLine(int argc, const char *argv[]) {
-  CmdLine cmd = {.error = false,
-                 .help = false,
-                 .version = false,
-                 .infile = NULL,
-                 .infileLength = 0,
-                 .silentPrint = false,
-                 .silentAssert = false,
-                 .removeAssert = false};
+  CmdLine cmd = {
+      .error = false,
+      .help = false,
+      .version = false,
+      .infile = NULL,
+      .infileLength = 0,
+      .silentPrint = false,
+      .silentAssert = false,
+      .removeAssert = false,
+      .verboseDebugPrint = false,
+  };
 
   for (int i = 1; i < argc; i++) {
     if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
@@ -214,6 +219,10 @@ CmdLine parseCmdLine(int argc, const char *argv[]) {
       cmd.removeAssert = true;
     }
 
+    else if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--verbose")) {
+      cmd.verboseDebugPrint = true;
+    }
+
     else {
       cmd.error = true;
     }
@@ -222,19 +231,11 @@ CmdLine parseCmdLine(int argc, const char *argv[]) {
   return cmd;
 }
 
-int repl(const char *filepath, CmdLine cmd) {
+int repl(const char *filepath) {
 
-  if (cmd.silentPrint) {
-    Xvr_setPrintCallback(noOpCallback);
-  } else {
-    Xvr_setPrintCallback(printCallback);
-  }
-
-  if (cmd.silentAssert) {
-    Xvr_setAssertFailureCallback(silentExitCallback);
-  } else {
-    Xvr_setAssertFailureCallback(errorAndContinueCallback);
-  }
+  Xvr_setPrintCallback(printCallback);
+  Xvr_setErrorCallback(errorAndContinueCallback);
+  Xvr_setAssertFailureCallback(errorAndContinueCallback);
 
   char prompt[256];
   getFileName(prompt, filepath);
@@ -269,7 +270,7 @@ int repl(const char *filepath, CmdLine cmd) {
     Xvr_bindLexer(&lexer, inputBuffer);
     Xvr_Parser parser;
     Xvr_bindParser(&parser, &lexer);
-    Xvr_configureParser(&parser, cmd.removeAssert);
+    Xvr_configureParser(&parser, false);
     Xvr_Ast *ast = Xvr_scanParser(&bucket, &parser);
 
     if (parser.error) {
@@ -294,11 +295,11 @@ int repl(const char *filepath, CmdLine cmd) {
 
 static void debugStackPrint(Xvr_Stack *stack) {
   if (stack->count > 0) {
-    printf("stack Dump\n\ntype\tvalue\n");
+    printf("stack Dump\n==========\ntype\tvalue\n");
     for (int i = 0; i < stack->count; i++) {
       Xvr_Value v = ((Xvr_Value *)(stack + 1))[i];
 
-      printf("%d\t", v.type);
+      printf("%s\t", Xvr_private_getValueTypeAsCString(v.type));
 
       switch (v.type) {
       case XVR_VALUE_NULL:
@@ -350,7 +351,7 @@ static void debugStackPrint(Xvr_Stack *stack) {
 
 static void debugScopePrint(Xvr_Scope *scope, int depth) {
   if (scope->table->count > 0) {
-    printf("Scope %d Dump\n\ntype\tname\tvalue\n", depth);
+    printf("Scope %d Dump\n==========\ntype\tname\tvalue\n", depth);
     for (int i = 0; i < scope->table->capacity; i++) {
       if ((XVR_VALUE_IS_STRING(scope->table->data[i].key) &&
            XVR_VALUE_AS_STRING(scope->table->data[i].key)->type ==
@@ -361,7 +362,8 @@ static void debugScopePrint(Xvr_Scope *scope, int depth) {
       Xvr_Value k = scope->table->data[i].key;
       Xvr_Value v = scope->table->data[i].value;
 
-      printf("%d\t%s\t", v.type, XVR_VALUE_AS_STRING(k)->as.name.data);
+      printf("%s\t%s\t", Xvr_private_getValueTypeAsCString(v.type),
+             XVR_VALUE_AS_STRING(k)->as.name.data);
 
       switch (v.type) {
       case XVR_VALUE_NULL:
@@ -493,14 +495,16 @@ int main(int argc, const char *argv[]) {
 
     Xvr_runVM(&vm);
 
-    debugStackPrint(vm.stack);
-    debugScopePrint(vm.scope, 0);
+    if (cmd.verboseDebugPrint) {
+      debugStackPrint(vm.stack);
+      debugScopePrint(vm.scope, 0);
+    }
 
     Xvr_freeVM(&vm);
     Xvr_freeBucket(&bucket);
     free(source);
   } else {
-    repl(argv[0], cmd);
+    repl(argv[0]);
   }
 
   return 0;
