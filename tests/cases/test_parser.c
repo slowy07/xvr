@@ -2,6 +2,7 @@
 #include "xvr_bucket.h"
 #include "xvr_console_colors.h"
 #include "xvr_parser.h"
+#include "xvr_string.h"
 #include "xvr_value.h"
 
 #include <stddef.h>
@@ -108,34 +109,50 @@ int test_var_declare(Xvr_Bucket **bucketHandle) {
   return 0;
 }
 
-int test_var_assign(Xvr_Bucket **bucketHandle) {
-#define TEST_VAR_ASSIGN(ARG_SOURCE, ARG_FLAG, ARG_NAME, ARG_VALUE)             \
-  {                                                                            \
-    const char *source = ARG_SOURCE;                                           \
-    Xvr_Ast *ast = makeAstFromSource(bucketHandle, source);                    \
-    if (ast == NULL || ast->type != XVR_AST_BLOCK ||                           \
-        ast->block.child == NULL ||                                            \
-        ast->block.child->type != XVR_AST_VAR_ASSIGN ||                        \
-        ast->block.child->varAssign.flag != ARG_FLAG ||                        \
-        ast->block.child->varAssign.name == NULL ||                            \
-        ast->block.child->varAssign.name->type != XVR_STRING_NAME ||           \
-        strcmp(ast->block.child->varAssign.name->as.name.data, ARG_NAME) !=    \
-            0 ||                                                               \
-        ast->block.child->varAssign.expr == NULL ||                            \
-        ast->block.child->varAssign.expr->type != XVR_AST_VALUE ||             \
-        XVR_VALUE_IS_INTEGER(ast->block.child->varAssign.expr->value.value) == \
-            false ||                                                           \
-        XVR_VALUE_AS_INTEGER(ast->block.child->varAssign.expr->value.value) != \
-            ARG_VALUE) {                                                       \
-      fprintf(stderr,                                                          \
-              XVR_CC_ERROR                                                     \
-              "Error: assign ast failed, source %s\n" XVR_CC_RESET,            \
-              source);                                                         \
-    }                                                                          \
-  }
-  return -1;
+int test_keywords(Xvr_Bucket **bucketHandle) {
+  {
+    char *source = "assert true;";
+    Xvr_Ast *ast = makeAstFromSource(bucketHandle, source);
 
-  TEST_VAR_ASSIGN("hasil = 42;", XVR_AST_FLAG_ASSIGN, "hasil", 42);
+    if (ast == NULL || ast->type != XVR_AST_BLOCK || ast->block.child == NULL ||
+        ast->block.child->type != XVR_AST_ASSERT ||
+        ast->block.child->assert.child == NULL ||
+        ast->block.child->assert.child->type != XVR_AST_VALUE ||
+        XVR_VALUE_IS_BOOLEAN(ast->block.child->assert.child->value.value) ==
+            false ||
+        XVR_VALUE_AS_BOOLEAN(ast->block.child->assert.child->value.value) !=
+            true ||
+        ast->block.child->assert.message != NULL) {
+      fprintf(stderr,
+              XVR_CC_ERROR
+              "Error: failed to runt the parser, source '%s'\n" XVR_CC_RESET,
+              source);
+      return -1;
+    }
+  }
+
+  {
+    char *source = "print \"woilah cik\";";
+    Xvr_Ast *ast = makeAstFromSource(bucketHandle, source);
+
+    if (ast == NULL || ast->type != XVR_AST_BLOCK || ast->block.child == NULL ||
+        ast->block.child->type != XVR_AST_PRINT ||
+        ast->block.child->print.child == NULL ||
+        ast->block.child->print.child->type != XVR_AST_VALUE ||
+        XVR_VALUE_IS_STRING(ast->block.child->print.child->value.value) ==
+            false ||
+        XVR_VALUE_AS_STRING(ast->block.child->print.child->value.value)->type !=
+            XVR_STRING_LEAF ||
+        strncmp(XVR_VALUE_AS_STRING(ast->block.child->print.child->value.value)
+                    ->as.leaf.data,
+                "woilah cik", 10) != 0) {
+      fprintf(stderr,
+              XVR_CC_ERROR
+              "Error: failed to run the parser, source: %s\n" XVR_CC_RESET,
+              source);
+      return -1;
+    }
+  }
 
   return 0;
 }
@@ -165,15 +182,16 @@ int main() {
     total += res;
   }
 
-  // {
-  //   Xvr_Bucket *bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
-  //   res = test_var_assign(&bucket);
-  //   Xvr_freeBucket(&bucket);
-  //   if (res == 0) {
-  //     printf(XVR_CC_NOTICE "test_var_assign(): jalan loh ya\n" XVR_CC_RESET);
-  //   }
-  //   total += res;
-  // }
+  {
+    Xvr_Bucket *bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
+    res = test_keywords(&bucket);
+    Xvr_freeBucket(&bucket);
+    if (res == 0) {
+      printf(XVR_CC_NOTICE
+             "test_keywords(): woilah cik jalan loh ya\n" XVR_CC_RESET);
+    }
+    total += res;
+  }
 
   return total;
 }
