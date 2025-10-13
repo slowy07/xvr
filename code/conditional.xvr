@@ -1,0 +1,5 @@
+if (true) {
+  print "nice one cik";
+} else {
+  print "kena gesek tipis ekonomi loh ya";
+}

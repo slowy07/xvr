@@ -33,6 +33,7 @@ typedef enum Xvr_OpcodeType {
 
   // control instructions
   XVR_OPCODE_RETURN,
+  XVR_OPCODE_JUMP,
 
   XVR_OPCODE_SCOPE_PUSH,
   XVR_OPCODE_SCOPE_POP,
@@ -47,5 +48,16 @@ typedef enum Xvr_OpcodeType {
   XVR_OPCODE_ERROR,
   XVR_OPCODE_EOF = 255,
 } Xvr_OpcodeType;
+
+typedef enum Xvr_OpParamJumpType {
+  XVR_OP_PARAM_JUMP_ABSOLUTE = 0,
+  XVR_OP_PARAM_JUMP_RELATIVE = 1,
+} Xvr_OpJumpType;
+
+typedef enum Xvr_OpParamJumpConditional {
+  XVR_OP_PARAM_JUMP_ALWAYS = 0,
+  XVR_OP_PARAM_JUMP_IF_TRUE = 1,
+  XVR_OP_PARAM_JUMP_IF_FALSE = 2,
+} Xvr_OpParamJumpConditional;
 
 #endif // !XVR_OPCODES_H

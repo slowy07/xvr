@@ -20,12 +20,18 @@ int test_sizeof_ast_64bit() {
 
   TEST_SIZEOF(Xvr_AstType, 4);
   TEST_SIZEOF(Xvr_AstBlock, 32);
-  TEST_SIZEOF(Xvr_AstVarDeclare, 24);
   TEST_SIZEOF(Xvr_AstValue, 24);
   TEST_SIZEOF(Xvr_AstUnary, 16);
   TEST_SIZEOF(Xvr_AstBinary, 24);
+  TEST_SIZEOF(Xvr_AstCompare, 24);
   TEST_SIZEOF(Xvr_AstGroup, 16);
+  TEST_SIZEOF(Xvr_AstCompound, 24);
+  TEST_SIZEOF(Xvr_AstAssert, 24);
+  TEST_SIZEOF(Xvr_AstIfThenElse, 32);
   TEST_SIZEOF(Xvr_AstPrint, 16);
+  TEST_SIZEOF(Xvr_AstVarDeclare, 24);
+  TEST_SIZEOF(Xvr_AstVarAssign, 24);
+  TEST_SIZEOF(Xvr_AstVarAccess, 16);
   TEST_SIZEOF(Xvr_AstPass, 4);
   TEST_SIZEOF(Xvr_AstError, 4);
   TEST_SIZEOF(Xvr_AstEnd, 4);
@@ -48,18 +54,23 @@ int test_sizeof_ast_32bit() {
   int err = 0;
 
   TEST_SIZEOF(Xvr_AstType, 4);
-  TEST_SIZEOF(Xvr_AstBlock, 16);
-  TEST_SIZEOF(Xvr_AstVarDeclare, 12);
+  TEST_SIZEOF(Xvr_AstBlock, 20);
   TEST_SIZEOF(Xvr_AstValue, 12);
   TEST_SIZEOF(Xvr_AstUnary, 12);
   TEST_SIZEOF(Xvr_AstBinary, 16);
+  TEST_SIZEOF(Xvr_AstCompare, 16);
   TEST_SIZEOF(Xvr_AstGroup, 8);
+  TEST_SIZEOF(Xvr_AstCompound, 16);
+  TEST_SIZEOF(Xvr_AstAssert, 12);
+  TEST_SIZEOF(Xvr_AstIfThenElse, 16);
   TEST_SIZEOF(Xvr_AstPrint, 8);
+  TEST_SIZEOF(Xvr_AstVarDeclare, 12);
+  TEST_SIZEOF(Xvr_AstVarAssign, 16);
+  TEST_SIZEOF(Xvr_AstVarAccess, 8);
   TEST_SIZEOF(Xvr_AstPass, 4);
   TEST_SIZEOF(Xvr_AstError, 4);
   TEST_SIZEOF(Xvr_AstEnd, 4);
-  TEST_SIZEOF(Xvr_Ast, 16);
-
+  TEST_SIZEOF(Xvr_Ast, 20);
 #undef TEST_SIZEOF
 
   return -err;
@@ -135,8 +146,8 @@ int test_type_emission(Xvr_Bucket **bucketHandle) {
 
   {
     Xvr_Ast *ast = NULL;
-    Xvr_String *name =
-        Xvr_createNameStringLength(bucketHandle, "foobar", 6, XVR_VALUE_ANY, false);
+    Xvr_String *name = Xvr_createNameStringLength(bucketHandle, "foobar", 6,
+                                                  XVR_VALUE_ANY, false);
 
     Xvr_private_emitAstVariableDeclaration(bucketHandle, &ast, name, NULL);
 

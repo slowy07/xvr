@@ -668,7 +668,9 @@ static void makeExpr(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
 
 static void makeBlockStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                           Xvr_Ast **rootHandle);
-;
+
+static void makeDeclarationStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
+                                Xvr_Ast **rootHandle);
 
 static void makeAssertStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                            Xvr_Ast **rootHandle) {
@@ -688,6 +690,28 @@ static void makeAssertStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
 
   consume(parser, XVR_TOKEN_OPERATOR_SEMICOLON,
           "Expected `;` at the end of assert statement");
+}
+
+static void makeIfThenElseStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
+                               Xvr_Ast **rootHandle) {
+  Xvr_Ast *condBranch = NULL;
+  Xvr_Ast *thenBranch = NULL;
+  Xvr_Ast *elseBranch = NULL;
+
+  consume(parser, XVR_TOKEN_OPERATOR_PAREN_LEFT,
+          "Expected `(` after `if` keyword");
+  makeExpr(bucketHandle, parser, &condBranch);
+  consume(parser, XVR_TOKEN_OPERATOR_PAREN_RIGHT,
+          "Expected `)` after `if` condition");
+
+  makeDeclarationStmt(bucketHandle, parser, &thenBranch);
+
+  if (match(parser, XVR_TOKEN_KEYWORD_ELSE)) {
+    makeDeclarationStmt(bucketHandle, parser, &elseBranch);
+  }
+
+  Xvr_private_emitAstIfThenElse(bucketHandle, rootHandle, condBranch,
+                                thenBranch, elseBranch);
 }
 
 static void makePrintStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
@@ -758,13 +782,17 @@ static void makeStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
     makeAssertStmt(bucketHandle, parser, rootHandle);
   }
 
-  else if (match(parser, XVR_TOKEN_OPERATOR_SEMICOLON)) {
-    Xvr_private_emitAstPass(bucketHandle, rootHandle);
-    return;
+  else if (match(parser, XVR_TOKEN_KEYWORD_IF)) {
+    makeIfThenElseStmt(bucketHandle, parser, rootHandle);
   }
 
   else if (match(parser, XVR_TOKEN_KEYWORD_PRINT)) {
     makePrintStmt(bucketHandle, parser, rootHandle);
+    return;
+  }
+
+  else if (match(parser, XVR_TOKEN_OPERATOR_SEMICOLON)) {
+    Xvr_private_emitAstPass(bucketHandle, rootHandle);
     return;
   }
 

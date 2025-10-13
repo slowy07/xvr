@@ -34,7 +34,7 @@ static inline int readPostfixUtil(unsigned int *ptr, int amount) {
 }
 
 static inline void fixAlignment(Xvr_VM *vm) {
-  vm->programCounter = (vm->programCounter + 3) & ~0b11;
+  vm->programCounter = (vm->programCounter + 3) & ~3;
 }
 
 // instruction handlers
@@ -360,6 +360,49 @@ static void processLogical(Xvr_VM *vm, Xvr_OpcodeType opcode) {
   }
 }
 
+static void processJump(Xvr_VM *vm) {
+  Xvr_OpJumpType type = READ_BYTE(vm);
+  Xvr_OpParamJumpConditional cond = READ_BYTE(vm);
+  fixAlignment(vm);
+
+  int param = READ_INT(vm);
+
+  switch (cond) {
+  case XVR_OP_PARAM_JUMP_ALWAYS:
+    break;
+
+  case XVR_OP_PARAM_JUMP_IF_TRUE: {
+    Xvr_Value value = Xvr_popStack(&vm->stack);
+    if (Xvr_checkValueIsTruthy(value) == true) {
+      Xvr_freeValue(value);
+      break;
+    }
+    Xvr_freeValue(value);
+    return;
+  }
+
+  case XVR_OP_PARAM_JUMP_IF_FALSE: {
+    Xvr_Value value = Xvr_popStack(&vm->stack);
+    if (Xvr_checkValueIsTruthy(value) != true) {
+      Xvr_freeValue(value);
+      break;
+    }
+    Xvr_freeValue(value);
+    return;
+  }
+  }
+
+  switch (type) {
+  case XVR_OP_PARAM_JUMP_ABSOLUTE:
+    vm->programCounter = vm->codeAddr + param;
+    return;
+
+  case XVR_OP_PARAM_JUMP_RELATIVE:
+    vm->programCounter += param;
+    return;
+  }
+}
+
 static void processAssert(Xvr_VM *vm) {
   unsigned int count = READ_BYTE(vm);
 
@@ -529,6 +572,10 @@ static void process(Xvr_VM *vm) {
 
     case XVR_OPCODE_RETURN:
       return;
+
+    case XVR_OPCODE_JUMP:
+      processJump(vm);
+      break;
 
     case XVR_OPCODE_SCOPE_PUSH:
       vm->scope = Xvr_pushScope(&vm->scopeBucket, vm->scope);

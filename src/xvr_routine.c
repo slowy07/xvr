@@ -55,13 +55,21 @@ static void emitFloat(void **handle, unsigned int *capacity,
 // write instructions based on the AST types
 #define EMIT_BYTE(rt, part, byte)                                              \
   emitByte((void **)(&((*rt)->part)), &((*rt)->part##Capacity),                \
-           &((*rt)->part##Count), byte);
+           &((*rt)->part##Count), byte)
 #define EMIT_INT(rt, part, bytes)                                              \
   emitInt((void **)(&((*rt)->part)), &((*rt)->part##Capacity),                 \
-          &((*rt)->part##Count), bytes);
+          &((*rt)->part##Count), bytes)
 #define EMIT_FLOAT(rt, part, bytes)                                            \
   emitFloat((void **)(&((*rt)->part)), &((*rt)->part##Capacity),               \
-            &((*rt)->part##Count), bytes);
+            &((*rt)->part##Count), bytes)
+
+#define SKIP_BYTE(rt, part) (EMIT_BYTE(rt, part, 0), ((*rt)->part##Count - 1))
+#define SKIP_INT(rt, part) (EMIT_INT(rt, part, 0), ((*rt)->part##Count - 4))
+
+#define OVERWRITE_INT(rt, part, addr, bytes)                                   \
+  emitInt((void **)(&((*rt)->part)), &((*rt)->part##Capacity), &(addr), bytes);
+
+#define CURRENT_ADDRESS(rt, part) ((*rt)->part##Count)
 
 static void emitToJumpTable(Xvr_Routine **rt, unsigned int startAddr) {
   EMIT_INT(rt, code, (*rt)->jumpsCount); // mark the jump index in the code
@@ -274,6 +282,41 @@ static unsigned int writeInstructionAssert(Xvr_Routine **rt,
   EMIT_BYTE(rt, code, ast.message != NULL ? 2 : 1);
   EMIT_BYTE(rt, code, 0);
   EMIT_BYTE(rt, code, 0);
+
+  return 0;
+}
+
+static unsigned writeInstructionIfThenElse(Xvr_Routine **rt,
+                                           Xvr_AstIfThenElse ast) {
+  writeRoutineCode(rt, ast.condBranch);
+
+  EMIT_BYTE(rt, code, XVR_OPCODE_JUMP);
+  EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_RELATIVE);
+  EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_IF_FALSE);
+  EMIT_BYTE(rt, code, 0);
+
+  unsigned int thenEndAddr = SKIP_INT(rt, code);
+
+  writeRoutineCode(rt, ast.thenBranch);
+
+  if (ast.elseBranch != NULL) {
+    EMIT_BYTE(rt, code, XVR_OPCODE_JUMP);
+    EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_RELATIVE);
+    EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_ALWAYS);
+    EMIT_BYTE(rt, code, 0);
+
+    unsigned int elseEndAddr = SKIP_INT(rt, code);
+
+    OVERWRITE_INT(rt, code, thenEndAddr,
+                  CURRENT_ADDRESS(rt, code) - thenEndAddr);
+
+    writeRoutineCode(rt, ast.elseBranch);
+    OVERWRITE_INT(rt, code, elseEndAddr,
+                  CURRENT_ADDRESS(rt, code) - elseEndAddr);
+  } else {
+    OVERWRITE_INT(rt, code, thenEndAddr,
+                  CURRENT_ADDRESS(rt, code) - thenEndAddr);
+  }
 
   return 0;
 }
@@ -518,6 +561,10 @@ static unsigned int writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
 
   case XVR_AST_ASSERT:
     result += writeInstructionAssert(rt, ast->assert);
+    break;
+
+  case XVR_AST_IF_THEN_ELSE:
+    result += writeInstructionIfThenElse(rt, ast->ifThenElse);
     break;
 
   case XVR_AST_PRINT:
