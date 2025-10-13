@@ -26,6 +26,8 @@ typedef struct Xvr_Routine {
   unsigned char *subs; // subroutines, recursively
   unsigned int subsCapacity;
   unsigned int subsCount;
+
+  bool panic;
 } Xvr_Routine;
 
 XVR_API void *Xvr_compileRoutine(Xvr_Ast *ast);

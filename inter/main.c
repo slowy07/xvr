@@ -278,11 +278,12 @@ int repl(const char *filepath) {
     }
 
     Xvr_Bytecode bc = Xvr_compileBytecode(ast);
-    Xvr_bindVM(&vm, bc.ptr);
+    Xvr_bindVM(&vm, &bc);
 
     Xvr_runVM(&vm);
 
     Xvr_resetVM(&vm);
+    Xvr_freeBytecode(bc);
 
     printf("%s >> ", prompt);
   }
@@ -491,7 +492,7 @@ int main(int argc, const char *argv[]) {
     // run the setup
     Xvr_VM vm;
     Xvr_initVM(&vm);
-    Xvr_bindVM(&vm, bc.ptr);
+    Xvr_bindVM(&vm, &bc);
 
     Xvr_runVM(&vm);
 
@@ -501,6 +502,7 @@ int main(int argc, const char *argv[]) {
     }
 
     Xvr_freeVM(&vm);
+    Xvr_freeBytecode(bc);
     Xvr_freeBucket(&bucket);
     free(source);
   } else {

@@ -311,6 +311,21 @@ static unsigned int writeInstructionVarDeclare(Xvr_Routine **rt,
 static unsigned int writeInstructionAssign(Xvr_Routine **rt,
                                            Xvr_AstVarAssign ast) {
   unsigned int result = 0;
+
+  switch (ast.expr->type) {
+  case XVR_AST_BLOCK:
+  case XVR_AST_COMPOUND:
+  case XVR_AST_ASSERT:
+  case XVR_AST_PRINT:
+  case XVR_AST_VAR_DECLARE:
+    fprintf(stderr, XVR_CC_ERROR "COMPILER ERROR!: invalid AST type founds "
+                                 "[malformed assignment]\n" XVR_CC_RESET);
+    (*rt)->panic = true;
+    return 0;
+  default:
+    break;
+  }
+
   // name, duplicate, right, opcode
   if (ast.flag == XVR_AST_FLAG_ASSIGN) {
     EMIT_BYTE(rt, code, XVR_OPCODE_READ);
@@ -450,6 +465,10 @@ static unsigned int writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
     return 0;
   }
 
+  if (rt == NULL || (*rt) == NULL || (*rt)->panic) {
+    return 0;
+  }
+
   unsigned int result = 0;
 
   // determine how to write each instruction based on the Ast
@@ -524,14 +543,15 @@ static unsigned int writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
     break;
 
   case XVR_AST_ERROR:
-    fprintf(stderr, XVR_CC_ERROR
-            "ERROR: Invalid AST type found: Unknown error\n" XVR_CC_RESET);
+    fprintf(stderr, XVR_CC_ERROR "COMPILER ERROR!: Invalid AST type found: "
+                                 "Unknown error\n" XVR_CC_RESET);
     exit(-1);
     break;
 
   case XVR_AST_END:
-    fprintf(stderr, XVR_CC_ERROR
-            "ERROR: Invalid AST type found: Unknown end\n" XVR_CC_RESET);
+    fprintf(
+        stderr, XVR_CC_ERROR
+        "COMPILER ERROR!: Invalid AST type found: Unknown end\n" XVR_CC_RESET);
     exit(-1);
     break;
   }
@@ -545,6 +565,10 @@ static void *writeRoutine(Xvr_Routine *rt, Xvr_Ast *ast) {
   EMIT_BYTE(&rt, code, 0);                 // 4-byte alignment
   EMIT_BYTE(&rt, code, 0);
   EMIT_BYTE(&rt, code, 0);
+
+  if (rt->panic) {
+    return NULL;
+  }
 
   void *buffer = NULL;
   unsigned int capacity = 0, count = 0;
@@ -640,6 +664,8 @@ void *Xvr_compileRoutine(Xvr_Ast *ast) {
   rt.subs = NULL;
   rt.subsCapacity = 0;
   rt.subsCount = 0;
+
+  rt.panic = false;
 
   // build
   void *buffer = writeRoutine(&rt, ast);

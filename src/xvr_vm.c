@@ -1,6 +1,7 @@
 #include "xvr_vm.h"
 #include "xvr_ast.h"
 #include "xvr_bucket.h"
+#include "xvr_bytecode.h"
 #include "xvr_console_colors.h"
 
 #include "xvr_opcodes.h"
@@ -15,16 +16,16 @@
 #include <string.h>
 
 // utilities
-#define READ_BYTE(vm) vm->routine[vm->routineCounter++]
+#define READ_BYTE(vm) vm->module[vm->programCounter++]
 
 #define READ_UNSIGNED_INT(vm)                                                  \
-  *((unsigned int *)(vm->routine + readPostfixUtil(&(vm->routineCounter), 4)))
+  *((unsigned int *)(vm->module + readPostfixUtil(&(vm->programCounter), 4)))
 
 #define READ_INT(vm)                                                           \
-  *((int *)(vm->routine + readPostfixUtil(&(vm->routineCounter), 4)))
+  *((int *)(vm->module + readPostfixUtil(&(vm->programCounter), 4)))
 
 #define READ_FLOAT(vm)                                                         \
-  *((float *)(vm->routine + readPostfixUtil(&(vm->routineCounter), 4)))
+  *((float *)(vm->module + readPostfixUtil(&(vm->programCounter), 4)))
 
 static inline int readPostfixUtil(unsigned int *ptr, int amount) {
   int ret = *ptr;
@@ -33,9 +34,7 @@ static inline int readPostfixUtil(unsigned int *ptr, int amount) {
 }
 
 static inline void fixAlignment(Xvr_VM *vm) {
-  if (vm->routineCounter % 4 != 0) {
-    vm->routineCounter = (vm->routineCounter + 3) & ~0b11;
-  }
+  vm->programCounter = (vm->programCounter + 3) & ~0b11;
 }
 
 // instruction handlers
@@ -70,8 +69,8 @@ static void processRead(Xvr_VM *vm) {
   case XVR_VALUE_STRING: {
     enum Xvr_StringType stringType = READ_BYTE(vm);
     int len = (int)READ_BYTE(vm);
-    unsigned int jump = vm->routine[vm->jumpsAddr + READ_INT(vm)];
-    char *cstring = (char *)(vm->routine + vm->dataAddr + jump);
+    unsigned int jump = vm->module[vm->jumpsAddr + READ_INT(vm)];
+    char *cstring = (char *)(vm->module + vm->dataAddr + jump);
 
     if (stringType == XVR_STRING_LEAF) {
       value =
@@ -143,8 +142,8 @@ static void processDeclare(Xvr_VM *vm) {
   bool constant = READ_BYTE(vm);
 
   unsigned int jump =
-      *(unsigned int *)(vm->routine + vm->jumpsAddr + READ_INT(vm));
-  char *cstring = (char *)(vm->routine + vm->dataAddr + jump);
+      *(unsigned int *)(vm->module + vm->jumpsAddr + READ_INT(vm));
+  char *cstring = (char *)(vm->module + vm->dataAddr + jump);
   Xvr_String *name = Xvr_createNameStringLength(&vm->stringBucket, cstring, len,
                                                 type, constant);
   Xvr_Value value = Xvr_popStack(&vm->stack);
@@ -156,7 +155,7 @@ static void processAssign(Xvr_VM *vm) {
   Xvr_Value value = Xvr_popStack(&vm->stack);
   Xvr_Value name = Xvr_popStack(&vm->stack);
 
-  if (!XVR_VALUE_IS_STRING(name) &&
+  if (!XVR_VALUE_IS_STRING(name) ||
       XVR_VALUE_AS_STRING(name)->type != XVR_STRING_NAME) {
     Xvr_error("invalid assignment target");
     return;
@@ -576,29 +575,29 @@ void Xvr_initVM(Xvr_VM *vm) {
   Xvr_resetVM(vm);
 }
 
-void Xvr_bindVM(Xvr_VM *vm, unsigned char *bytecode) {
-  if (bytecode[0] != XVR_VERSION_MAJOR || bytecode[1] > XVR_VERSION_MINOR) {
+void Xvr_bindVM(Xvr_VM *vm, struct Xvr_Bytecode *bc) {
+  if (bc->ptr[0] != XVR_VERSION_MAJOR || bc->ptr[1] > XVR_VERSION_MINOR) {
     fprintf(stderr,
             XVR_CC_ERROR "ERROR: Wrong bytecode version found: expected "
                          "%d.%d.%d found %d.%d.%d, exiting\n" XVR_CC_RESET,
-            XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH,
-            bytecode[0], bytecode[1], bytecode[2]);
+            XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH, bc->ptr[0],
+            bc->ptr[1], bc->ptr[2]);
     exit(-1);
   }
 
-  if (bytecode[2] != XVR_VERSION_PATCH) {
+  if (bc->ptr[2] != XVR_VERSION_PATCH) {
     fprintf(stderr,
             XVR_CC_WARN "WARNING: Wrong bytecode version found: expected "
                         "%d.%d.%d found %d.%d.%d, continuing\n" XVR_CC_RESET,
-            XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH,
-            bytecode[0], bytecode[1], bytecode[2]);
+            XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH, bc->ptr[0],
+            bc->ptr[1], bc->ptr[2]);
   }
 
-  if (strcmp((char *)(bytecode + 3), XVR_VERSION_BUILD) != 0) {
+  if (strcmp((char *)(bc->ptr + 3), XVR_VERSION_BUILD) != 0) {
     fprintf(stderr,
             XVR_CC_WARN "WARNING: Wrong bytecode build info found: expected "
                         "'%s' found '%s', continuing\n" XVR_CC_RESET,
-            XVR_VERSION_BUILD, (char *)(bytecode + 3));
+            XVR_VERSION_BUILD, (char *)(bc->ptr + 3));
   }
 
   int offset = 3 + strlen(XVR_VERSION_BUILD) + 1;
@@ -606,15 +605,15 @@ void Xvr_bindVM(Xvr_VM *vm, unsigned char *bytecode) {
     offset += 4 - (offset % 4);
   }
 
-  Xvr_bindVMToRoutine(vm, bytecode + offset);
-
-  vm->bc = bytecode;
+  if (bc->moduleCount != 0) {
+    Xvr_bindVMToModule(vm, bc->ptr + offset);
+  }
 }
 
-void Xvr_bindVMToRoutine(Xvr_VM *vm, unsigned char *routine) {
-  vm->routine = routine;
+void Xvr_bindVMToModule(Xvr_VM *vm, unsigned char *module) {
+  vm->module = module;
 
-  vm->routineSize = READ_UNSIGNED_INT(vm);
+  vm->moduleSize = READ_UNSIGNED_INT(vm);
   vm->paramSize = READ_UNSIGNED_INT(vm);
   vm->jumpsSize = READ_UNSIGNED_INT(vm);
   vm->dataSize = READ_UNSIGNED_INT(vm);
@@ -647,27 +646,27 @@ void Xvr_bindVMToRoutine(Xvr_VM *vm, unsigned char *routine) {
 }
 
 void Xvr_runVM(Xvr_VM *vm) {
-  vm->routineCounter = vm->codeAddr;
+  if (vm->module == NULL) {
+    return;
+  }
+  vm->programCounter = vm->codeAddr;
 
   process(vm);
 }
 
 void Xvr_freeVM(Xvr_VM *vm) {
+
   Xvr_freeStack(vm->stack);
   Xvr_popScope(vm->scope);
   Xvr_freeBucket(&vm->stringBucket);
   Xvr_freeBucket(&vm->scopeBucket);
 
-  free(vm->bc);
-
   Xvr_resetVM(vm);
 }
 
 void Xvr_resetVM(Xvr_VM *vm) {
-  vm->bc = NULL;
-
-  vm->routine = NULL;
-  vm->routineSize = 0;
+  vm->module = NULL;
+  vm->moduleSize = 0;
 
   vm->paramSize = 0;
   vm->jumpsSize = 0;
@@ -680,5 +679,5 @@ void Xvr_resetVM(Xvr_VM *vm) {
   vm->dataAddr = 0;
   vm->subsAddr = 0;
 
-  vm->routineCounter = 0;
+  vm->programCounter = 0;
 }

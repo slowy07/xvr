@@ -8,6 +8,8 @@ typedef struct Xvr_Bytecode {
   unsigned char *ptr;
   unsigned int capacity;
   unsigned int count;
+
+  unsigned int moduleCount;
 } Xvr_Bytecode;
 
 XVR_API Xvr_Bytecode Xvr_compileBytecode(Xvr_Ast *ast);

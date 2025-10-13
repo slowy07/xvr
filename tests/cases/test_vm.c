@@ -40,14 +40,14 @@ int test_setup_and_teardown(Xvr_Bucket **bucketHandle) {
 
     Xvr_VM vm;
     Xvr_initVM(&vm);
-    Xvr_bindVM(&vm, bc.ptr);
+    Xvr_bindVM(&vm, &bc);
 
     int headerSize = 3 + strlen(XVR_VERSION_BUILD) + 1;
     if (headerSize % 4 != 0) {
       headerSize += 4 - (headerSize % 4);
     }
 
-    if (vm.routine - vm.bc != headerSize || vm.routineSize != 72 ||
+    if (vm.module - bc.ptr != headerSize || vm.moduleSize != 72 ||
         vm.paramSize != 0 || vm.jumpsSize != 0 || vm.dataSize != 0 ||
         vm.subsSize != 0) {
       fprintf(stderr,
@@ -56,10 +56,12 @@ int test_setup_and_teardown(Xvr_Bucket **bucketHandle) {
               source);
 
       Xvr_freeVM(&vm);
+      Xvr_freeBytecode(bc);
       return -1;
     }
 
     Xvr_freeVM(&vm);
+    Xvr_freeBytecode(bc);
   }
 
   return 0;
@@ -81,7 +83,7 @@ int test_simple_execution(Xvr_Bucket **bucketHandle) {
 
     Xvr_VM vm;
     Xvr_initVM(&vm);
-    Xvr_bindVM(&vm, bc.ptr);
+    Xvr_bindVM(&vm, &bc);
 
     Xvr_runVM(&vm);
 
@@ -93,9 +95,11 @@ int test_simple_execution(Xvr_Bucket **bucketHandle) {
               "Error: Unexpected result in `Xvr_VM`, souce: %s\n" XVR_CC_RESET,
               source);
       Xvr_freeVM(&vm);
+      Xvr_freeBytecode(bc);
       return -1;
     }
     Xvr_freeVM(&vm);
+    Xvr_freeBytecode(bc);
   }
   return 0;
 }

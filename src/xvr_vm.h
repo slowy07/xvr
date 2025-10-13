@@ -2,15 +2,14 @@
 #define XVR_WM_H
 
 #include "xvr_bucket.h"
+#include "xvr_bytecode.h"
 #include "xvr_common.h"
-#include "xvr_stack.h"
 #include "xvr_scope.h"
+#include "xvr_stack.h"
 
 typedef struct Xvr_VM {
-  unsigned char *bc;
-
-  unsigned char *routine;
-  unsigned int routineSize;
+  unsigned char *module;
+  unsigned int moduleSize;
 
   unsigned int paramSize;
   unsigned int jumpsSize;
@@ -23,20 +22,21 @@ typedef struct Xvr_VM {
   unsigned int dataAddr;
   unsigned int subsAddr;
 
-  unsigned int routineCounter;
+  unsigned int programCounter;
   Xvr_Stack *stack;
-  
-  Xvr_Scope* scope;
+
+  Xvr_Scope *scope;
   Xvr_Bucket *stringBucket;
   Xvr_Bucket *scopeBucket;
 } Xvr_VM;
 
-XVR_API void Xvr_initVM(Xvr_VM* vm);
+XVR_API void Xvr_initVM(Xvr_VM *vm);
 XVR_API void Xvr_bindVM(Xvr_VM *vm,
-                        unsigned char *bytecode); // process the version data
+                        struct Xvr_Bytecode *bc); // process the version data
+
 XVR_API void
-Xvr_bindVMToRoutine(Xvr_VM *vm,
-                    unsigned char *routine); // process the routine only
+Xvr_bindVMToModule(Xvr_VM *vm,
+                   unsigned char *module); // process the routine only
 
 XVR_API void Xvr_runVM(Xvr_VM *vm);
 XVR_API void Xvr_freeVM(Xvr_VM *vm);

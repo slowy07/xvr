@@ -55,11 +55,16 @@ static void writeBytecodeHeader(Xvr_Bytecode *bc) {
 static void writeBytecodeBody(Xvr_Bytecode *bc, Xvr_Ast *ast) {
   void *module = Xvr_compileRoutine(ast);
 
+  if (module == NULL) {
+    return;
+  }
+
   size_t len = (size_t)(((int *)module)[0]);
 
   expand(bc, len);
   memcpy(bc->ptr + bc->count, module, len);
   bc->count += len;
+  bc->moduleCount++;
 }
 
 // exposed functions
@@ -70,6 +75,8 @@ Xvr_Bytecode Xvr_compileBytecode(Xvr_Ast *ast) {
   bc.ptr = NULL;
   bc.capacity = 0;
   bc.count = 0;
+
+  bc.moduleCount = 0;
 
   // build
   writeBytecodeHeader(&bc);
