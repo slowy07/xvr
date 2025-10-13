@@ -1,5 +1,13 @@
 if (true) {
   print "nice one cik";
 } else {
-  print "kena gesek tipis ekonomi loh ya";
+  print "tidak nice one loh ya";
+}
+
+var angka: int = 42;
+
+if (angka) {
+  print "angka kamu 42";
+} else {
+  print "angka kamu bukan 42";
 }

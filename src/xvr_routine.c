@@ -308,14 +308,14 @@ static unsigned writeInstructionIfThenElse(Xvr_Routine **rt,
     unsigned int elseEndAddr = SKIP_INT(rt, code);
 
     OVERWRITE_INT(rt, code, thenEndAddr,
-                  CURRENT_ADDRESS(rt, code) - thenEndAddr);
+                  CURRENT_ADDRESS(rt, code) - (thenEndAddr + 4));
 
     writeRoutineCode(rt, ast.elseBranch);
     OVERWRITE_INT(rt, code, elseEndAddr,
-                  CURRENT_ADDRESS(rt, code) - elseEndAddr);
+                  CURRENT_ADDRESS(rt, code) - (thenEndAddr + 4));
   } else {
     OVERWRITE_INT(rt, code, thenEndAddr,
-                  CURRENT_ADDRESS(rt, code) - thenEndAddr);
+                  CURRENT_ADDRESS(rt, code) - (thenEndAddr + 4));
   }
 
   return 0;
