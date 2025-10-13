@@ -1,3 +1,27 @@
+/**
+MIT License
+
+Copyright (c) 2025 arfy slowy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include "xvr_vm.h"
 #include "xvr_ast.h"
 #include "xvr_bucket.h"
@@ -69,7 +93,7 @@ static void processRead(Xvr_VM *vm) {
   case XVR_VALUE_STRING: {
     enum Xvr_StringType stringType = READ_BYTE(vm);
     int len = (int)READ_BYTE(vm);
-    unsigned int jump = vm->module[vm->jumpsAddr + READ_INT(vm)];
+    unsigned int jump = *((int *)(vm->module + vm->jumpsAddr + READ_INT(vm)));
     char *cstring = (char *)(vm->module + vm->dataAddr + jump);
 
     if (stringType == XVR_STRING_LEAF) {
@@ -295,6 +319,8 @@ static void processComparison(Xvr_VM *vm, Xvr_OpcodeType opcode) {
       Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(!equal));
     }
 
+    Xvr_freeValue(left);
+    Xvr_freeValue(right);
     return;
   }
 
@@ -324,6 +350,9 @@ static void processComparison(Xvr_VM *vm, Xvr_OpcodeType opcode) {
   } else {
     Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(false));
   }
+
+  Xvr_freeValue(left);
+  Xvr_freeValue(right);
 }
 
 static void processLogical(Xvr_VM *vm, Xvr_OpcodeType opcode) {

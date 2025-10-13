@@ -1,3 +1,27 @@
+/**
+MIT License
+
+Copyright (c) 2025 arfy slowy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
 #include "xvr_routine.h"
 #include "xvr_ast.h"
 #include "xvr_console_colors.h"
@@ -361,10 +385,11 @@ static unsigned int writeInstructionAssign(Xvr_Routine **rt,
   case XVR_AST_ASSERT:
   case XVR_AST_PRINT:
   case XVR_AST_VAR_DECLARE:
-    fprintf(stderr, XVR_CC_ERROR "COMPILER ERROR!: invalid AST type founds "
-                                 "[malformed assignment]\n" XVR_CC_RESET);
+    fprintf(stderr, XVR_CC_ERROR "COMPILER ERROR: Invalid AST type found: "
+                                 "[Malformed assignment]\n" XVR_CC_RESET);
     (*rt)->panic = true;
     return 0;
+
   default:
     break;
   }
@@ -458,7 +483,7 @@ static unsigned int writeInstructionAssign(Xvr_Routine **rt,
     emitString(rt, ast.name);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
-    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
 
