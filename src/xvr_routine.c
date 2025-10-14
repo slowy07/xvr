@@ -345,6 +345,33 @@ static unsigned writeInstructionIfThenElse(Xvr_Routine **rt,
   return 0;
 }
 
+static unsigned int writeInstructionWhileThen(Xvr_Routine **rt,
+                                              Xvr_AstWhileThen ast) {
+  unsigned int beginAddr = CURRENT_ADDRESS(rt, code);
+
+  writeRoutineCode(rt, ast.condBranch);
+
+  EMIT_BYTE(rt, code, XVR_OPCODE_JUMP);
+  EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_RELATIVE);
+  EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_IF_FALSE);
+  EMIT_BYTE(rt, code, 0);
+
+  unsigned int endAddr = SKIP_INT(rt, code);
+
+  writeRoutineCode(rt, ast.thenBranch);
+
+  EMIT_BYTE(rt, code, XVR_OPCODE_JUMP);
+  EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_RELATIVE);
+  EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_ALWAYS);
+  EMIT_BYTE(rt, code, 0);
+
+  EMIT_INT(rt, code, beginAddr - (CURRENT_ADDRESS(rt, code) + 4));
+
+  OVERWRITE_INT(rt, code, endAddr, CURRENT_ADDRESS(rt, code) - (endAddr + 4));
+
+  return 0;
+}
+
 static unsigned int writeInstructionPrint(Xvr_Routine **rt, Xvr_AstPrint ast) {
   // the thing to print
   writeRoutineCode(rt, ast.child);
@@ -590,6 +617,10 @@ static unsigned int writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
 
   case XVR_AST_IF_THEN_ELSE:
     result += writeInstructionIfThenElse(rt, ast->ifThenElse);
+    break;
+
+  case XVR_AST_WHILE_THEN:
+    result += writeInstructionWhileThen(rt, ast->whileThen);
     break;
 
   case XVR_AST_PRINT:

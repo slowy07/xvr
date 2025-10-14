@@ -28,6 +28,7 @@ int test_sizeof_ast_64bit() {
   TEST_SIZEOF(Xvr_AstCompound, 24);
   TEST_SIZEOF(Xvr_AstAssert, 24);
   TEST_SIZEOF(Xvr_AstIfThenElse, 32);
+  TEST_SIZEOF(Xvr_AstWhileThen, 24);
   TEST_SIZEOF(Xvr_AstPrint, 16);
   TEST_SIZEOF(Xvr_AstVarDeclare, 24);
   TEST_SIZEOF(Xvr_AstVarAssign, 24);
@@ -63,6 +64,7 @@ int test_sizeof_ast_32bit() {
   TEST_SIZEOF(Xvr_AstCompound, 16);
   TEST_SIZEOF(Xvr_AstAssert, 12);
   TEST_SIZEOF(Xvr_AstIfThenElse, 16);
+  TEST_SIZEOF(Xvr_AstWhileThen, 12);
   TEST_SIZEOF(Xvr_AstPrint, 8);
   TEST_SIZEOF(Xvr_AstVarDeclare, 12);
   TEST_SIZEOF(Xvr_AstVarAssign, 16);

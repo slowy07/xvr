@@ -147,6 +147,17 @@ void Xvr_private_emitAstIfThenElse(Xvr_Bucket **bucketHandle,
   (*astHandle) = tmp;
 }
 
+void Xvr_private_emitAstWhileThen(Xvr_Bucket **bucketHandle,
+                                  Xvr_Ast **astHandle, Xvr_Ast *condBranch,
+                                  Xvr_Ast *thenBranch) {
+  Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
+
+  tmp->type = XVR_AST_WHILE_THEN;
+  tmp->whileThen.condBranch = condBranch;
+  tmp->whileThen.thenBranch = thenBranch;
+  (*astHandle) = tmp;
+}
+
 void Xvr_private_emitAstPrint(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle) {
   Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
   tmp->type = XVR_AST_PRINT;

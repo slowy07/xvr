@@ -390,27 +390,30 @@ static Xvr_AstFlag literal(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
     unsigned int escapeCounter = 0;
 
     unsigned int i = 0, o = 0;
-    do {
-      buffer[i] = parser->previous.lexeme[o];
-      if (buffer[i] == '\\' && parser->previous.lexeme[++o]) {
-        escapeCounter++;
-        switch (parser->previous.lexeme[o]) {
-        case 'n':
-          buffer[i] = '\n';
-          break;
-        case 't':
-          buffer[i] = '\t';
-          break;
-        case '\\':
-          buffer[i] = '\\';
-          break;
-        case '"':
-          buffer[i] = '"';
-          break;
+    if (parser->previous.length > 0) {
+
+      do {
+        buffer[i] = parser->previous.lexeme[o];
+        if (buffer[i] == '\\' && parser->previous.lexeme[++o]) {
+          escapeCounter++;
+          switch (parser->previous.lexeme[o]) {
+          case 'n':
+            buffer[i] = '\n';
+            break;
+          case 't':
+            buffer[i] = '\t';
+            break;
+          case '\\':
+            buffer[i] = '\\';
+            break;
+          case '"':
+            buffer[i] = '"';
+            break;
+          }
         }
-      }
-      i++;
-    } while (parser->previous.lexeme[o++] && i < parser->previous.length);
+        i++;
+      } while (parser->previous.lexeme[o++] && i < parser->previous.length);
+    }
 
     buffer[i] = '\0';
     unsigned int len = i - escapeCounter;
@@ -739,6 +742,22 @@ static void makeIfThenElseStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                                 thenBranch, elseBranch);
 }
 
+static void makeWhileStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
+                          Xvr_Ast **rootHandle) {
+  Xvr_Ast *condBranch = NULL;
+  Xvr_Ast *thenBranch = NULL;
+
+  consume(parser, XVR_TOKEN_OPERATOR_PAREN_LEFT,
+          "Expected `(` after `while` keyword");
+  makeExpr(bucketHandle, parser, &condBranch);
+  consume(parser, XVR_TOKEN_OPERATOR_PAREN_RIGHT,
+          "Expected `)` after `while` condition");
+
+  makeDeclarationStmt(bucketHandle, parser, &thenBranch);
+  Xvr_private_emitAstWhileThen(bucketHandle, rootHandle, condBranch,
+                               thenBranch);
+}
+
 static void makePrintStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                           Xvr_Ast **rootHandle) {
   makeExpr(bucketHandle, parser, rootHandle);
@@ -809,6 +828,11 @@ static void makeStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
 
   else if (match(parser, XVR_TOKEN_KEYWORD_IF)) {
     makeIfThenElseStmt(bucketHandle, parser, rootHandle);
+  }
+
+  else if (match(parser, XVR_TOKEN_KEYWORD_WHILE)) {
+    makeWhileStmt(bucketHandle, parser, rootHandle);
+    return;
   }
 
   else if (match(parser, XVR_TOKEN_KEYWORD_PRINT)) {
