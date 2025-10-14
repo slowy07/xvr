@@ -45,6 +45,8 @@ typedef enum Xvr_AstType {
   XVR_AST_ASSERT,
   XVR_AST_IF_THEN_ELSE,
   XVR_AST_WHILE_THEN,
+  XVR_AST_BREAK,
+  XVR_AST_CONTINUE,
   XVR_AST_PRINT,
 
   XVR_AST_VAR_DECLARE,
@@ -164,6 +166,14 @@ typedef struct Xvr_AstWhileThen {
   Xvr_Ast *thenBranch;
 } Xvr_AstWhileThen;
 
+typedef struct Xvr_AstBreak {
+  Xvr_AstType type;
+} Xvr_AstBreak;
+
+typedef struct Xvr_AstContinue {
+  Xvr_AstType type;
+} Xvr_AstContinue;
+
 typedef struct Xvr_AstPrint {
   Xvr_AstType type;
   Xvr_Ast *child;
@@ -214,6 +224,8 @@ union Xvr_Ast {                 // 32 | 64 BITNESS
   Xvr_AstAssert assert;         // 16 | 24
   Xvr_AstIfThenElse ifThenElse; // 16 | 32
   Xvr_AstWhileThen whileThen;   // 16 | 24
+  Xvr_AstBreak breakPoint;      // 4 | 4
+  Xvr_AstContinue continuePoint;   // 4 | 4
   Xvr_AstPrint print;           // 8 | 16
   Xvr_AstPass pass;             // 4  | 4
   Xvr_AstError error;           // 4  | 4
@@ -245,6 +257,8 @@ void Xvr_private_emitAstIfThenElse(Xvr_Bucket **bucketHandle,
 void Xvr_private_emitAstWhileThen(Xvr_Bucket **bucketHandle,
                                   Xvr_Ast **astHandle, Xvr_Ast *condBranch,
                                   Xvr_Ast *thenBranch);
+void Xvr_private_emitAstBreak(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle);
+void Xvr_private_emitAstContinue(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle);
 void Xvr_private_emitAstPrint(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle);
 
 void Xvr_private_emitAstVariableDeclaration(Xvr_Bucket **bucketHandle,

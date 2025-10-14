@@ -758,6 +758,20 @@ static void makeWhileStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                                thenBranch);
 }
 
+static void makeBreakStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
+                          Xvr_Ast **rootHandle) {
+  Xvr_private_emitAstBreak(bucketHandle, rootHandle);
+  consume(parser, XVR_TOKEN_OPERATOR_SEMICOLON,
+          "Expected `;` ate the end of break statement");
+}
+
+static void makeContinueStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
+                             Xvr_Ast **rootHandle) {
+  Xvr_private_emitAstContinue(bucketHandle, rootHandle);
+  consume(parser, XVR_TOKEN_OPERATOR_SEMICOLON,
+          "Expecter `;` at the end of continue statement");
+}
+
 static void makePrintStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
                           Xvr_Ast **rootHandle) {
   makeExpr(bucketHandle, parser, rootHandle);
@@ -832,6 +846,16 @@ static void makeStmt(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
 
   else if (match(parser, XVR_TOKEN_KEYWORD_WHILE)) {
     makeWhileStmt(bucketHandle, parser, rootHandle);
+    return;
+  }
+
+  else if (match(parser, XVR_TOKEN_KEYWORD_BREAK)) {
+    makeBreakStmt(bucketHandle, parser, rootHandle);
+    return;
+  }
+
+  else if (match(parser, XVR_TOKEN_KEYWORD_CONTINUE)) {
+    makeContinueStmt(bucketHandle, parser, rootHandle);
     return;
   }
 

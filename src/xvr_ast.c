@@ -158,6 +158,18 @@ void Xvr_private_emitAstWhileThen(Xvr_Bucket **bucketHandle,
   (*astHandle) = tmp;
 }
 
+void Xvr_private_emitAstBreak(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle) {
+  Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
+  tmp->type = XVR_AST_BREAK;
+  (*astHandle) = tmp;
+}
+
+void Xvr_private_emitAstContinue(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle) {
+  Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
+  tmp->type = XVR_AST_CONTINUE;
+  (*astHandle) = tmp;
+}
+
 void Xvr_private_emitAstPrint(Xvr_Bucket **bucketHandle, Xvr_Ast **astHandle) {
   Xvr_Ast *tmp = (Xvr_Ast *)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
   tmp->type = XVR_AST_PRINT;

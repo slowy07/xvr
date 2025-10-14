@@ -372,6 +372,22 @@ static unsigned int writeInstructionWhileThen(Xvr_Routine **rt,
   return 0;
 }
 
+static unsigned int writeInstructionBreak(Xvr_Routine **rt, Xvr_AstBreak ast) {
+  fprintf(stderr, XVR_CC_ERROR
+          "COMPILER ERROR: Keyword `break` not yet implemented\n" XVR_CC_RESET);
+  (*rt)->panic = true;
+  return 0;
+}
+
+static unsigned int writeInstructionContinue(Xvr_Routine **rt,
+                                             Xvr_AstContinue ast) {
+  fprintf(
+      stderr, XVR_CC_ERROR
+      "COMPILER ERROR: keyword `continue` not ye implemented\n" XVR_CC_RESET);
+  (*rt)->panic = true;
+  return 0;
+}
+
 static unsigned int writeInstructionPrint(Xvr_Routine **rt, Xvr_AstPrint ast) {
   // the thing to print
   writeRoutineCode(rt, ast.child);
@@ -621,6 +637,14 @@ static unsigned int writeRoutineCode(Xvr_Routine **rt, Xvr_Ast *ast) {
 
   case XVR_AST_WHILE_THEN:
     result += writeInstructionWhileThen(rt, ast->whileThen);
+    break;
+
+  case XVR_AST_BREAK:
+    result += writeInstructionBreak(rt, ast->breakPoint);
+    break;
+
+  case XVR_AST_CONTINUE:
+    result += writeInstructionContinue(rt, ast->continuePoint);
     break;
 
   case XVR_AST_PRINT:
