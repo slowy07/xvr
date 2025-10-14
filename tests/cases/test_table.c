@@ -107,14 +107,14 @@ int test_table_expansion() {
 }
 
 int main() {
-  printf(XVR_CC_WARN "testing: xvr table\n" XVR_CC_RESET);
+  printf(XVR_CC_WARN "TESTING: XVR TABLE\n" XVR_CC_RESET);
   int total = 0, res = 0;
 
   {
     res = test_table_allocation();
     if (res == 0) {
       printf(XVR_CC_NOTICE
-             "test_table_allocation(): jalan lho ya rek\n" XVR_CC_RESET);
+             "TABLE ALLOCATION: PASSED jalan lho ya rek\n" XVR_CC_RESET);
     }
     total += res;
   }
@@ -122,7 +122,8 @@ int main() {
   {
     res = test_table_simple_insert_lookup_and_remove_data();
     if (res == 0) {
-      printf(XVR_CC_NOTICE "nice one test table nya rek\n" XVR_CC_RESET);
+      printf(XVR_CC_NOTICE "TABLE SIMPLE INSERT LOOKUP AND REMOVE DATA: PASSED "
+                           "nice one test table nya rek\n" XVR_CC_RESET);
     }
     total += res;
   }
@@ -130,8 +131,7 @@ int main() {
   {
     res = test_table_expansion();
     if (res == 0) {
-      printf(XVR_CC_NOTICE
-             "nice one test_table_expansion(): aman rek\n" XVR_CC_RESET);
+      printf(XVR_CC_NOTICE "TABLE EXPANSION: PASSED aman rek\n" XVR_CC_RESET);
     }
     total += res;
   }

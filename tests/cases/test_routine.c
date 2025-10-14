@@ -1,7 +1,9 @@
 #include "xvr_ast.h"
 #include "xvr_bucket.h"
 #include "xvr_console_colors.h"
+#include "xvr_lexer.h"
 #include "xvr_opcodes.h"
+#include "xvr_parser.h"
 #include "xvr_routine.h"
 #include <stdio.h>
 #include <stdlib.h>
@@ -39,6 +41,36 @@ int test_routine_expression(Xvr_Bucket **bucketHandle) {
   return 0;
 }
 
+int test_routine_keywords(Xvr_Bucket **bucketHandle) {
+  {
+    const char *source = "if (true) print \"woilah cik\";";
+    Xvr_Lexer lexer;
+    Xvr_Parser parser;
+
+    Xvr_bindLexer(&lexer, source);
+    Xvr_bindParser(&parser, &lexer);
+    Xvr_Ast *ast = Xvr_scanParser(bucketHandle, &parser);
+
+    void *buffer = Xvr_compileRoutine(ast);
+    int len = ((int *)buffer)[0];
+
+    int *ptr = (int *)buffer;
+    if ((ptr++)[0] != 76 || (ptr++)[0] != 0 || (ptr++)[0] != 4 ||
+        (ptr++)[0] != 12 || (ptr++)[0] != 0 || (ptr++)[0] != 32 ||
+        (ptr++)[0] != 60 || (ptr++)[0] != 64 || false) {
+      fprintf(stderr,
+              XVR_CC_ERROR "Error: failed to produce the expected routine "
+                           "header, source: %s\n" XVR_CC_RESET,
+              source);
+      free(buffer);
+      return -1;
+    }
+    free(buffer);
+  }
+
+  return 0;
+}
+
 int main() {
   printf(XVR_CC_WARN "testing: xvr routine\n" XVR_CC_RESET);
   int total = 0, res = 0;
@@ -48,7 +80,17 @@ int main() {
     res = test_routine_expression(&bucket);
     Xvr_freeBucket(&bucket);
     if (res == 0) {
-      printf(XVR_CC_NOTICE "Xvr_allocateBucket(): aman loh ya\n" XVR_CC_RESET);
+      printf(XVR_CC_NOTICE
+             "test_routine_expression(): aman loh ya\n" XVR_CC_RESET);
+    }
+    total += res;
+  }
+
+  {
+    Xvr_Bucket *bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
+    res = test_routine_keywords(&bucket);
+    if (res == 0) {
+      printf(XVR_CC_NOTICE "test_routine_keywords(): aman cik\n" XVR_CC_RESET);
     }
     total += res;
   }

@@ -35,7 +35,7 @@ int test_buckets() {
 }
 
 int main() {
-  printf(XVR_CC_WARN "testing: xvr bucket\n" XVR_CC_RESET);
+  printf(XVR_CC_WARN "TESTING: XVR BUCKET\n" XVR_CC_RESET);
 
   int total = 0, res = 0;
 
@@ -45,7 +45,7 @@ int main() {
 
     if (res == 0) {
       printf(XVR_CC_NOTICE
-             "test_buckets(): nice one cik aman loh ya\n" XVR_CC_RESET);
+             "BUCKETS: PASSED nice one cik aman loh ya\n" XVR_CC_RESET);
     }
   }
 

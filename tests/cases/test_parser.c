@@ -1,5 +1,6 @@
 #include "xvr_ast.h"
 #include "xvr_bucket.h"
+#include "xvr_common.h"
 #include "xvr_console_colors.h"
 #include "xvr_parser.h"
 #include "xvr_string.h"
@@ -157,8 +158,63 @@ int test_keywords(Xvr_Bucket **bucketHandle) {
   return 0;
 }
 
+int test_compound(Xvr_Bucket **bucketHandle) {
+  {
+    char *source = "1, 2, 3;";
+    Xvr_Ast *ast = makeAstFromSource(bucketHandle, source);
+
+    if (ast == NULL || ast->type != XVR_AST_BLOCK || ast->block.child == NULL ||
+
+        ast->block.child->type != XVR_AST_COMPOUND ||
+        ast->block.child->compound.flag != XVR_AST_FLAG_COMPOUND_COLLECTION ||
+
+        ast->block.child->compound.left == NULL ||
+        ast->block.child->compound.left->type != XVR_AST_VALUE ||
+        XVR_VALUE_IS_INTEGER(ast->block.child->compound.left->value.value) !=
+            true ||
+        XVR_VALUE_AS_INTEGER(ast->block.child->compound.left->value.value) !=
+            1 ||
+
+        ast->block.child->compound.right == NULL ||
+        ast->block.child->compound.right->type != XVR_AST_COMPOUND ||
+        ast->block.child->compound.right->compound.flag !=
+            XVR_AST_FLAG_COMPOUND_COLLECTION ||
+
+        ast->block.child->compound.right->compound.left == NULL ||
+        ast->block.child->compound.right->compound.left->type !=
+            XVR_AST_VALUE ||
+        XVR_VALUE_IS_INTEGER(
+            ast->block.child->compound.right->compound.left->value.value) !=
+            true ||
+        XVR_VALUE_AS_INTEGER(
+            ast->block.child->compound.right->compound.left->value.value) !=
+            2 ||
+
+        ast->block.child->compound.right->compound.right == NULL ||
+        ast->block.child->compound.right->compound.right->type !=
+            XVR_AST_VALUE ||
+        XVR_VALUE_IS_INTEGER(
+            ast->block.child->compound.right->compound.right->value.value) !=
+            true ||
+        XVR_VALUE_AS_INTEGER(
+            ast->block.child->compound.right->compound.right->value.value) !=
+            3 ||
+
+        false) {
+
+      fprintf(stderr,
+              XVR_CC_ERROR
+              "Error: failed to run the parser, source: %s\n" XVR_CC_RESET,
+              source);
+      return -1;
+    }
+  }
+
+  return 0;
+}
+
 int main() {
-  printf(XVR_CC_WARN "testing: xvr parser\n" XVR_CC_RESET);
+  printf(XVR_CC_WARN "TESTING: XVR PARSER\n" XVR_CC_RESET);
   int total = 0, res = 0;
 
   {
@@ -167,7 +223,7 @@ int main() {
     Xvr_freeBucket(&bucket);
 
     if (res == 0) {
-      printf(XVR_CC_NOTICE "test_parser(): nice one reks\n" XVR_CC_RESET);
+      printf(XVR_CC_NOTICE "PARSER: PASSED nice one reks\n" XVR_CC_RESET);
     }
     total += res;
   }
@@ -177,7 +233,7 @@ int main() {
     res = test_var_declare(&bucket);
     Xvr_freeBucket(&bucket);
     if (res == 0) {
-      printf(XVR_CC_NOTICE "test_var_declare(): nice one cik\n" XVR_CC_RESET);
+      printf(XVR_CC_NOTICE "VAR DECLARE: PASSED nice one cik\n" XVR_CC_RESET);
     }
     total += res;
   }
@@ -188,7 +244,18 @@ int main() {
     Xvr_freeBucket(&bucket);
     if (res == 0) {
       printf(XVR_CC_NOTICE
-             "test_keywords(): woilah cik jalan loh ya\n" XVR_CC_RESET);
+             "KEYWORDS: PASSED woilah cik jalan loh ya\n" XVR_CC_RESET);
+    }
+    total += res;
+  }
+
+  {
+    Xvr_Bucket *bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
+    res = test_compound(&bucket);
+    Xvr_freeBucket(&bucket);
+    if (res == 0) {
+      printf(XVR_CC_NOTICE
+             "COMPOUND: PASSED woilah cik jalan loh ya\n" XVR_CC_RESET);
     }
     total += res;
   }

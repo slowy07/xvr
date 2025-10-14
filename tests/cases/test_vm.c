@@ -105,7 +105,7 @@ int test_simple_execution(Xvr_Bucket **bucketHandle) {
 }
 
 int main() {
-  printf(XVR_CC_WARN "testing: xvr VM\n" XVR_CC_RESET);
+  printf(XVR_CC_WARN "TESTING: XVR VM\n" XVR_CC_RESET);
   int total = 0, res = 0;
 
   {
@@ -113,7 +113,7 @@ int main() {
     res = test_setup_and_teardown(&bucket);
     Xvr_freeBucket(&bucket);
     if (res == 0) {
-      printf(XVR_CC_NOTICE "test_setup_and_teardown(): nice one rek jalan loh "
+      printf(XVR_CC_NOTICE "SETUP AND TEARDOWN: PASSED nice one rek jalan loh "
                            "ya cik\n" XVR_CC_RESET);
     }
     total += res;
@@ -126,7 +126,7 @@ int main() {
     if (res == 0) {
       printf(
           XVR_CC_NOTICE
-          "test_simple_execution(): nice one cik jalan loh ya\n" XVR_CC_RESET);
+          "SIMPLE EXECUTION: PASSED nice one cik jalan loh ya\n" XVR_CC_RESET);
     }
     total += res;
   }

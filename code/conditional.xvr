@@ -11,3 +11,15 @@ if (angka) {
 } else {
   print "angka kamu bukan 42";
 }
+
+// working without brace
+
+if (true)
+  print "woilah cik jalan loh ya";
+else
+  print "woilah cik kok bisa loh ya error";
+
+if ("arfy" == "ar" .. "fy")
+  print "jalan bisa";
+else
+  print "tidak bisa";

@@ -4,7 +4,7 @@
 #include <string.h>
 
 int main() {
-  printf(XVR_CC_WARN "testing: xvr lexer\n" XVR_CC_RESET);
+  printf(XVR_CC_WARN "TESTING: XVR LEXER\n" XVR_CC_RESET);
   {
     char *source = "print null;";
 
@@ -46,6 +46,6 @@ int main() {
     }
   }
 
-  printf(XVR_CC_NOTICE "test_lexer(): nice one rek gass\n" XVR_CC_RESET);
+  printf(XVR_CC_NOTICE "LEXER: PASSED nice one rek gass\n" XVR_CC_RESET);
   return 0;
 }

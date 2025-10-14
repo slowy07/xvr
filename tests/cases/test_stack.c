@@ -41,7 +41,7 @@ int test_stack_stress() {
 }
 
 int main() {
-  printf(XVR_CC_WARN "testing: xvr stack\n" XVR_CC_RESET);
+  printf(XVR_CC_WARN "TESTING: XVR STACK\n" XVR_CC_RESET);
 
   int total = 0, res = 0;
 
@@ -49,7 +49,7 @@ int main() {
     res = test_stack_basics();
     if (res == 0) {
       printf(XVR_CC_NOTICE
-             "test_stack_basics(): jalan loh ya cik\n" XVR_CC_RESET);
+             "STACK BASICS: PASSED jalan loh ya cik\n" XVR_CC_RESET);
     }
     total += res;
   }
@@ -58,7 +58,7 @@ int main() {
     res = test_stack_stress();
     if (res == 0) {
       printf(XVR_CC_NOTICE
-             "test_stack_stress(): jalan loh ya juga cik\n" XVR_CC_RESET);
+             "STACK STRESS: PASSED jalan loh ya juga cik\n" XVR_CC_RESET);
     }
     total += res;
   }

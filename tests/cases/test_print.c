@@ -34,13 +34,13 @@ int test_callback() {
 }
 
 int main() {
-  printf(XVR_CC_WARN "testing: xvr print\n" XVR_CC_RESET);
+  printf(XVR_CC_WARN "TESTING: XVR PRINT\n" XVR_CC_RESET);
   int total = 0, res = 0;
 
   {
     res = test_callback();
     if (res == 0) {
-      printf(XVR_CC_NOTICE "test_callback(): nice one rek\n" XVR_CC_RESET);
+      printf(XVR_CC_NOTICE "CALLBACK: PASSED nice one rek\n" XVR_CC_RESET);
     }
     total += res;
   }

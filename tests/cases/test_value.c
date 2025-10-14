@@ -61,7 +61,7 @@ int test_comparison() {
 }
 
 int main() {
-  printf(XVR_CC_WARN "testing: xvr value\n" XVR_CC_RESET);
+  printf(XVR_CC_WARN "TESTING: XVR VALUE\n" XVR_CC_RESET);
 
   int total = 0, res = 0;
 
@@ -69,7 +69,7 @@ int main() {
     res = test_value_creation();
     if (res == 0) {
       printf(XVR_CC_NOTICE
-             "test_value_creation(): aman loh ya cik\n" XVR_CC_RESET);
+             "VALUE CREATION: PASSED aman loh ya cik\n" XVR_CC_RESET);
     }
     total += res;
   }
@@ -77,7 +77,7 @@ int main() {
   {
     res = test_comparison();
     if (res == 0) {
-      printf(XVR_CC_NOTICE "test_comparison(): aman loh ya cik\n" XVR_CC_RESET);
+      printf(XVR_CC_NOTICE "COMPARISON: PASSED aman loh ya cik\n" XVR_CC_RESET);
     }
   }
 

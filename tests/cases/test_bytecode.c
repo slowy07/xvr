@@ -49,7 +49,7 @@ int test_bytecode_header(Xvr_Bucket **bucketHandle) {
 }
 
 int main() {
-  printf(XVR_CC_WARN "testing: xvr bytecode\n" XVR_CC_RESET);
+  printf(XVR_CC_WARN "TESTING: XVR BYTECODE\n" XVR_CC_RESET);
   int total = 0, res = 0;
 
   {
@@ -58,7 +58,7 @@ int main() {
     Xvr_freeBucket(&bucket);
     if (res == 0) {
       printf(XVR_CC_NOTICE
-             "test_bytecode_header(): nice one cik\n" XVR_CC_RESET);
+             "BYTECODE HEADER: PASSED nice one cik\n" XVR_CC_RESET);
     }
     total += res;
   }

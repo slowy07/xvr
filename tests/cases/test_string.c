@@ -187,7 +187,7 @@ int test_string_fragmenting() {
 }
 
 int main() {
-  printf(XVR_CC_WARN "testing: xvr string\n" XVR_CC_RESET);
+  printf(XVR_CC_WARN "TESTING: XVR STRING\n" XVR_CC_RESET);
   int total = 0, res = 0;
 
   {
@@ -197,7 +197,8 @@ int main() {
     res = test_sizeof_string_32bit();
 #endif /* if XVR_BITNESS == 64 */
     if (res == 0) {
-      printf(XVR_CC_NOTICE "test_sizeof(): nice one reks\n" XVR_CC_RESET);
+      printf(XVR_CC_NOTICE
+             "SIZEOF 32 / 64: PASSED nice one reks\n" XVR_CC_RESET);
     }
     total += res;
   }
@@ -205,7 +206,7 @@ int main() {
   {
     res = test_string_equal();
     if (res == 0) {
-      printf(XVR_CC_NOTICE "test_string_equal(): nice one reks\n" XVR_CC_RESET);
+      printf(XVR_CC_NOTICE "STRING EQUAL: PASSED nice one reks\n" XVR_CC_RESET);
     }
     total += res;
   }
@@ -214,7 +215,7 @@ int main() {
     res = test_string_allocation();
     if (res == 0) {
       printf(XVR_CC_NOTICE
-             "test_string_allocation(): nice one aman rek\n" XVR_CC_RESET);
+             "STRING ALLOCATION: PASSED nice one aman rek\n" XVR_CC_RESET);
     }
     total += res;
   }
@@ -223,7 +224,7 @@ int main() {
     res = test_string_diffs();
     if (res == 0) {
       printf(XVR_CC_NOTICE
-             "test_string_diffs(): nice one loh ya rek\n" XVR_CC_RESET);
+             "STRING DIFFS: PASSED nice one loh ya rek\n" XVR_CC_RESET);
     }
     total += res;
   }
@@ -232,7 +233,7 @@ int main() {
     res = test_string_fragmenting();
     if (res == 0) {
       printf(XVR_CC_NOTICE
-             "test_string_fragmenting(): dah bisa test fragment loh ya XD. XVR "
+             "STRING FRAGMENTING: PASSED dah bisa test fragment loh ya XD. XVR "
              "dah nda ngambek lagi XD.\n" XVR_CC_RESET);
     }
     total += res;

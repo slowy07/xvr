@@ -1,0 +1,29 @@
+BasedOnStyle: Google
+Language: C
+
+IndentWidth: 4
+UseTab: Never
+ColumnLimit: 80
+SpaceBeforeParens: ControlStatements
+
+AllowAllArgumentsOnNextLine: false
+BinPackArguments: true
+BinPackParameters: true
+
+PenaltyBreakBeforeFirstCallParameter: 1
+PenaltyBreakComment: 300
+PenaltyBreakFirstLessLess: 120
+PenaltyBreakString: 1000
+
+IndentPPDirectives: AfterHash
+
+SortIncludes: true
+
+SpacesBeforeTrailingComments: 2
+MaxEmptyLinesToKeep: 1
+KeepEmptyLinesAtTheStartOfBlocks: false
+
+DerivePointerAlignment: false
+IndentCaseLabels: false
+IndentGotoLabels: true
+IndentPPDirectives: None

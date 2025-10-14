@@ -31,7 +31,7 @@ int test_resizeArray() {
 }
 
 int main() {
-  printf(XVR_CC_WARN "testing: xvr array\n" XVR_CC_RESET);
+  printf(XVR_CC_WARN "TESTING: XVR ARRAY\n" XVR_CC_RESET);
   int total = 0, res = 0;
 
   {
@@ -39,7 +39,7 @@ int main() {
     total += res;
 
     if (res == 0) {
-      printf(XVR_CC_NOTICE "test_resizeArray(): nice one rek\n" XVR_CC_RESET);
+      printf(XVR_CC_NOTICE "RESIZE ARRAY: PASSED cik\n" XVR_CC_RESET);
     }
   }
 

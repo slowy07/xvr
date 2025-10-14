@@ -190,7 +190,7 @@ int test_type_emission(Xvr_Bucket **bucketHandle) {
 }
 
 int main() {
-  printf(XVR_CC_WARN "testing: xvr ast\n" XVR_CC_RESET);
+  printf(XVR_CC_WARN "TESTING: XVR AST\n" XVR_CC_RESET);
   int total = 0, res = 0;
 
 #if XVR_BITNESS == 64
@@ -198,14 +198,15 @@ int main() {
   total += res;
   if (res == 0) {
     printf(XVR_CC_NOTICE
-           "test_sizeof_ast_64bit(): aman loh ya cik\n" XVR_CC_RESET);
+           "SIZEOF WITH 64 BIT: PASSED aman loh ya cik\n" XVR_CC_RESET);
   }
 #elif XVR_BITNESS == 32
   res = test_sizeof_ast_32bit();
   total += res;
 
   if (res == 0) {
-    printf(XVR_CC_NOTICE "All good\n" XVR_CC_RESET);
+    printf(XVR_CC_NOTICE
+           "SIZEOF WITH 64 BIT: PASSED aman loh ya cik\n" XVR_CC_RESET);
   }
 
 #else
@@ -222,8 +223,8 @@ int main() {
     res = test_type_emission(&bucketHandle);
     Xvr_freeBucket(&bucketHandle);
     if (res == 0) {
-      printf(XVR_CC_NOTICE "test_type_emission(): aman cik, gak bad mood loh "
-                           "ya atmint\n" XVR_CC_RESET);
+      printf(XVR_CC_NOTICE
+             "TYPE EMISSION: PASSED aman cik atmint\n" XVR_CC_RESET);
     }
     total += res;
   }

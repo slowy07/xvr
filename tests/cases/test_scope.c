@@ -209,14 +209,14 @@ int test_scope_elements() {
 }
 
 int main() {
-  printf(XVR_CC_WARN "testing: xvr scope\n" XVR_CC_RESET);
+  printf(XVR_CC_WARN "TESTING: PASSED XVR SCOPE\n" XVR_CC_RESET);
   int total = 0, res = 0;
 
   {
     res = test_scope_allocation();
     if (res == 0) {
       printf(XVR_CC_NOTICE
-             "test_scope_allocation(): nice one cik\n" XVR_CC_RESET);
+             "SCOPE ALLOCATION: PASSED nice one cik\n" XVR_CC_RESET);
     }
     total += res;
   }
@@ -225,7 +225,7 @@ int main() {
     res = test_scope_elements();
     if (res == 0) {
       printf(XVR_CC_NOTICE
-             "test_scope_allocation(): nice one cik\n" XVR_CC_RESET);
+             "SCOPE ELEMENTS: PASSED nice one cik\n" XVR_CC_RESET);
     }
     total += res;
   }

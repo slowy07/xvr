@@ -413,6 +413,7 @@ static Xvr_AstFlag literal(Xvr_Bucket **bucketHandle, Xvr_Parser *parser,
     } while (parser->previous.lexeme[o++] && i < parser->previous.length);
 
     buffer[i] = '\0';
+    unsigned int len = i - escapeCounter;
     Xvr_private_emitAstValue(bucketHandle, rootHandle,
                              XVR_VALUE_FROM_STRING(Xvr_createStringLength(
                                  bucketHandle, buffer, i - escapeCounter)));
