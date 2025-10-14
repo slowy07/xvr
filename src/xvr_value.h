@@ -25,10 +25,13 @@ SOFTWARE.
 #ifndef XVR_VALUE_H
 #define XVR_VALUE_H
 
+#include "xvr_bucket.h"
 #include "xvr_common.h"
 #include "xvr_print.h"
 
+struct Xvr_Bucket;
 struct Xvr_String;
+struct Xvr_Array;
 
 typedef enum Xvr_ValueType {
   XVR_VALUE_NULL,
@@ -53,6 +56,7 @@ typedef struct Xvr_Value { // 32 | 64 BITNESS
     int integer;               // 4  | 4
     float number;              // 4  | 4
     struct Xvr_String *string; // 4 | 8
+    struct Xvr_Array *array;   // 4 | 8
   } as;                        // 4  | 4
 
   Xvr_ValueType type; // 4  | 4
@@ -72,6 +76,7 @@ typedef struct Xvr_Value { // 32 | 64 BITNESS
 #define XVR_VALUE_AS_INTEGER(value) ((value).as.integer)
 #define XVR_VALUE_AS_FLOAT(value) ((value).as.number)
 #define XVR_VALUE_AS_STRING(value) ((value).as.string)
+#define XVR_VALUE_AS_ARRAY(value) ((value).as.array)
 
 #define XVR_VALUE_FROM_NULL() ((Xvr_Value){{.integer = 0}, XVR_VALUE_NULL})
 #define XVR_VALUE_FROM_BOOLEAN(value)                                          \
@@ -82,6 +87,8 @@ typedef struct Xvr_Value { // 32 | 64 BITNESS
   ((Xvr_Value){{.number = value}, XVR_VALUE_FLOAT})
 #define XVR_VALUE_FROM_STRING(value)                                           \
   ((Xvr_Value){{.string = value}, XVR_VALUE_STRING})
+#define XVR_VALUE_FROM_ARRAY(value)                                            \
+  ((Xvr_Value){{.array = value}, XVR_VALUE_ARRAY})
 
 XVR_API unsigned int Xvr_hashValue(Xvr_Value value);
 
@@ -93,7 +100,8 @@ XVR_API bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right);
 XVR_API bool Xvr_checkValuesAreCompareable(Xvr_Value left, Xvr_Value right);
 XVR_API int Xvr_compareValues(Xvr_Value left, Xvr_Value right);
 
-XVR_API void Xvr_stringifyValue(Xvr_Value value, Xvr_callbackType callback);
+XVR_API struct Xvr_String *Xvr_stringifyValue(struct Xvr_Bucket **bucketHandle,
+                                              Xvr_Value value);
 
 XVR_API const char *Xvr_private_getValueTypeAsCString(Xvr_ValueType type);
 

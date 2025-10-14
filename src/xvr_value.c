@@ -23,6 +23,7 @@ SOFTWARE.
 */
 
 #include "xvr_value.h"
+#include "xvr_array.h"
 #include "xvr_console_colors.h"
 #include "xvr_print.h"
 #include "xvr_string.h"
@@ -53,7 +54,16 @@ unsigned int Xvr_hashValue(Xvr_Value value) {
   case XVR_VALUE_STRING:
     return Xvr_hashString(XVR_VALUE_AS_STRING(value));
 
-  case XVR_VALUE_ARRAY:
+  case XVR_VALUE_ARRAY: {
+    Xvr_Array *array = XVR_VALUE_AS_ARRAY(value);
+    unsigned int hash = 0;
+
+    for (unsigned int i = 0; i < array->count; i++) {
+      hash ^= Xvr_hashValue(array->data[i]);
+    }
+    return hash;
+  }
+
   case XVR_VALUE_TABLE:
   case XVR_VALUE_FUNCTION:
   case XVR_VALUE_OPAQUE:
@@ -80,7 +90,16 @@ Xvr_Value Xvr_copyValue(Xvr_Value value) {
     return XVR_VALUE_FROM_STRING(Xvr_copyString(string));
   }
 
-  case XVR_VALUE_ARRAY:
+  case XVR_VALUE_ARRAY: {
+    Xvr_Array *array = XVR_VALUE_AS_ARRAY(value);
+    Xvr_Array *result = Xvr_resizeArray(NULL, array->capacity);
+
+    for (unsigned int i = 0; i < array->count; i++) {
+      result->data[i] = Xvr_copyValue(array->data[i]);
+    }
+    return XVR_VALUE_FROM_ARRAY(result);
+  }
+
   case XVR_VALUE_TABLE:
   case XVR_VALUE_FUNCTION:
   case XVR_VALUE_OPAQUE:
@@ -108,7 +127,15 @@ void Xvr_freeValue(Xvr_Value value) {
     break;
   }
 
-  case XVR_VALUE_ARRAY:
+  case XVR_VALUE_ARRAY: {
+    Xvr_Array *array = XVR_VALUE_AS_ARRAY(value);
+
+    for (unsigned int i = 0; i < array->count; i++) {
+      Xvr_freeValue(array->data[i]);
+    }
+    XVR_ARRAY_FREE(array);
+  }
+
   case XVR_VALUE_TABLE:
   case XVR_VALUE_FUNCTION:
   case XVR_VALUE_OPAQUE:
@@ -178,7 +205,22 @@ bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right) {
     }
     return false;
 
-  case XVR_VALUE_ARRAY:
+  case XVR_VALUE_ARRAY: {
+    Xvr_Array *leftArray = XVR_VALUE_AS_ARRAY(left);
+    Xvr_Array *rightArray = XVR_VALUE_AS_ARRAY(right);
+
+    if (leftArray->count != rightArray->count) {
+      return false;
+    }
+
+    for (unsigned int i = 0; i < leftArray->count; i++) {
+      if (Xvr_checkValuesAreEqual(leftArray->data[i], rightArray->data[i])) {
+        return false;
+      }
+    }
+    return true;
+  }
+
   case XVR_VALUE_TABLE:
   case XVR_VALUE_FUNCTION:
   case XVR_VALUE_OPAQUE:
@@ -208,6 +250,8 @@ bool Xvr_checkValuesAreCompareable(Xvr_Value left, Xvr_Value right) {
     return XVR_VALUE_IS_STRING(right);
 
   case XVR_VALUE_ARRAY:
+    return false;
+
   case XVR_VALUE_TABLE:
   case XVR_VALUE_FUNCTION:
   case XVR_VALUE_OPAQUE:
@@ -254,6 +298,8 @@ int Xvr_compareValues(Xvr_Value left, Xvr_Value right) {
     }
 
   case XVR_VALUE_ARRAY:
+    break;
+
   case XVR_VALUE_TABLE:
   case XVR_VALUE_FUNCTION:
   case XVR_VALUE_OPAQUE:
@@ -268,46 +314,53 @@ int Xvr_compareValues(Xvr_Value left, Xvr_Value right) {
   return -1;
 }
 
-void Xvr_stringifyValue(Xvr_Value value, Xvr_callbackType callback) {
+Xvr_String *Xvr_stringifyValue(Xvr_Bucket **bucketHandle, Xvr_Value value) {
   switch (value.type) {
   case XVR_VALUE_NULL:
-    callback("null");
-    break;
+    return Xvr_createString(bucketHandle, "null");
 
   case XVR_VALUE_BOOLEAN:
-    callback(XVR_VALUE_AS_BOOLEAN(value) ? "true" : "false");
-    break;
+    return Xvr_createString(bucketHandle,
+                            XVR_VALUE_AS_BOOLEAN(value) ? "true" : "false");
 
   case XVR_VALUE_INTEGER: {
     char buffer[16];
     sprintf(buffer, "%d", XVR_VALUE_AS_INTEGER(value));
-    callback(buffer);
-    break;
+    return Xvr_createString(bucketHandle, buffer);
   }
 
   case XVR_VALUE_FLOAT: {
     char buffer[16];
     sprintf(buffer, "%f", XVR_VALUE_AS_FLOAT(value));
-    callback(buffer);
-    break;
+    return Xvr_createString(bucketHandle, buffer);
   }
 
   case XVR_VALUE_STRING: {
-    Xvr_String *str = XVR_VALUE_AS_STRING(value);
-
-    if (str->type == XVR_STRING_NODE) {
-      char *buffer = Xvr_getStringRawBuffer(str);
-      callback(buffer);
-      free(buffer);
-    } else if (str->type == XVR_STRING_LEAF) {
-      callback(str->as.leaf.data);
-    } else if (str->type == XVR_STRING_NAME) {
-      callback(str->as.name.data);
-    }
-    break;
+    return Xvr_copyString(XVR_VALUE_AS_STRING(value));
   }
 
-  case XVR_VALUE_ARRAY:
+  case XVR_VALUE_ARRAY: {
+    Xvr_Array *array = XVR_VALUE_AS_ARRAY(value);
+    Xvr_String *string = Xvr_createStringLength(bucketHandle, "[", 1);
+    Xvr_String *comma = Xvr_createStringLength(bucketHandle, ",", 1);
+
+    for (unsigned int i = 0; i < array->count; i++) {
+      Xvr_String *tmp =
+          Xvr_concatStrings(bucketHandle, string,
+                            Xvr_stringifyValue(bucketHandle, array->data[i]));
+      Xvr_freeString(string);
+      string = tmp;
+
+      if (i + 1 < array->count) {
+        Xvr_String *tmp = Xvr_concatStrings(bucketHandle, string, comma);
+        Xvr_freeString(string);
+        string = tmp;
+      }
+    }
+    Xvr_freeString(comma);
+    return string;
+  }
+
   case XVR_VALUE_TABLE:
   case XVR_VALUE_FUNCTION:
   case XVR_VALUE_OPAQUE:
@@ -318,6 +371,8 @@ void Xvr_stringifyValue(Xvr_Value value, Xvr_callbackType callback) {
             "unknown types in value stringify, exiting\n" XVR_CC_RESET);
     exit(-1);
   }
+
+  return NULL;
 }
 
 const char *Xvr_private_getValueTypeAsCString(Xvr_ValueType type) {

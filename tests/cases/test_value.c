@@ -1,3 +1,4 @@
+#include "xvr_array.h"
 #include "xvr_console_colors.h"
 #include "xvr_value.h"
 
@@ -37,6 +38,30 @@ int test_value_creation() {
                   XVR_CC_ERROR "Error: `boolean` value failed\n" XVR_CC_RESET);
         }
       }
+    }
+  }
+
+  {
+    Xvr_Array *array = XVR_ARRAY_ALLOCATE();
+    XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(42));
+    XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(69));
+    XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(8891));
+
+    Xvr_Value v = XVR_VALUE_FROM_ARRAY(array);
+
+    if (XVR_VALUE_AS_ARRAY(v) == false ||
+        XVR_VALUE_AS_ARRAY(v)->capacity != 8 ||
+        XVR_VALUE_AS_ARRAY(v)->count != 3 ||
+        XVR_VALUE_IS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[0]) != true ||
+        XVR_VALUE_AS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[0]) != 42 ||
+        XVR_VALUE_IS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[1]) != true ||
+        XVR_VALUE_AS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[1]) != 69 ||
+        XVR_VALUE_IS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[2]) != true ||
+        XVR_VALUE_AS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[2]) != 8891) {
+      fprintf(stderr,
+              XVR_CC_ERROR "Error: `array` value failed\n" XVR_CC_RESET);
+      XVR_ARRAY_FREE(array);
+      return -1;
     }
   }
 

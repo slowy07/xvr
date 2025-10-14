@@ -455,7 +455,13 @@ static void processAssert(Xvr_VM *vm) {
   }
 
   if (XVR_VALUE_IS_NULL(value) || Xvr_checkValueIsTruthy(value) == false) {
-    Xvr_stringifyValue(message, Xvr_assertFailure);
+    Xvr_String *string = Xvr_stringifyValue(&vm->stringBucket, message);
+    char *buffer = Xvr_getStringRawBuffer(string);
+
+    Xvr_assertFailure(buffer);
+    free(buffer);
+    Xvr_freeString(string);
+    return;
   }
 
   Xvr_freeValue(value);
@@ -464,7 +470,12 @@ static void processAssert(Xvr_VM *vm) {
 
 static void processPrint(Xvr_VM *vm) {
   Xvr_Value value = Xvr_popStack(&vm->stack);
-  Xvr_stringifyValue(value, Xvr_print);
+
+  Xvr_String *string = Xvr_stringifyValue(&vm->stringBucket, value);
+  char *buffer = Xvr_getStringRawBuffer(string);
+  Xvr_print(buffer);
+  free(buffer);
+  Xvr_freeString(string);
   Xvr_freeValue(value);
 }
 
