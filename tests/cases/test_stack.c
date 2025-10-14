@@ -1,67 +1,67 @@
+#include <stdio.h>
+
 #include "xvr_console_colors.h"
 #include "xvr_stack.h"
 #include "xvr_value.h"
 
-#include <stdio.h>
-
 int test_stack_basics() {
-  {
-    Xvr_Stack *stack = Xvr_allocateStack();
+    {
+        Xvr_Stack* stack = Xvr_allocateStack();
 
-    if (stack == NULL || stack->capacity != 8 || stack->count != 0) {
-      fprintf(stderr, XVR_CC_ERROR
-              "Error: failed to allocate Xvr_Stack\n" XVR_CC_ERROR);
-      Xvr_freeStack(stack);
-      return -1;
+        if (stack == NULL || stack->capacity != 8 || stack->count != 0) {
+            fprintf(stderr, XVR_CC_ERROR
+                    "Error: failed to allocate Xvr_Stack\n" XVR_CC_ERROR);
+            Xvr_freeStack(stack);
+            return -1;
+        }
+
+        Xvr_freeStack(stack);
     }
-
-    Xvr_freeStack(stack);
-  }
-  return 0;
+    return 0;
 }
 
 int test_stack_stress() {
-  {
-    Xvr_Stack *stack = Xvr_allocateStack();
+    {
+        Xvr_Stack* stack = Xvr_allocateStack();
 
-    for (int i = 0; i < 500; i++) {
-      Xvr_pushStack(&stack, XVR_VALUE_FROM_INTEGER(i));
+        for (int i = 0; i < 500; i++) {
+            Xvr_pushStack(&stack, XVR_VALUE_FROM_INTEGER(i));
+        }
+
+        if (stack == NULL || stack->capacity != 512 || stack->count != 500) {
+            fprintf(stderr, XVR_CC_ERROR
+                    "Error: failed to stress the Xvr_Stack\n" XVR_CC_RESET);
+            Xvr_freeStack(stack);
+            return -1;
+        }
+
+        Xvr_freeStack(stack);
     }
-
-    if (stack == NULL || stack->capacity != 512 || stack->count != 500) {
-      fprintf(stderr, XVR_CC_ERROR
-              "Error: failed to stress the Xvr_Stack\n" XVR_CC_RESET);
-      Xvr_freeStack(stack);
-      return -1;
-    }
-
-    Xvr_freeStack(stack);
-  }
-  return 0;
+    return 0;
 }
 
 int main() {
-  printf(XVR_CC_WARN "TESTING: XVR STACK\n" XVR_CC_RESET);
+    printf(XVR_CC_WARN "TESTING: XVR STACK\n" XVR_CC_RESET);
 
-  int total = 0, res = 0;
+    int total = 0, res = 0;
 
-  {
-    res = test_stack_basics();
-    if (res == 0) {
-      printf(XVR_CC_NOTICE
-             "STACK BASICS: PASSED jalan loh ya cik\n" XVR_CC_RESET);
+    {
+        res = test_stack_basics();
+        if (res == 0) {
+            printf(XVR_CC_NOTICE
+                   "STACK BASICS: PASSED jalan loh ya cik\n" XVR_CC_RESET);
+        }
+        total += res;
     }
-    total += res;
-  }
 
-  {
-    res = test_stack_stress();
-    if (res == 0) {
-      printf(XVR_CC_NOTICE
-             "STACK STRESS: PASSED jalan loh ya juga cik\n" XVR_CC_RESET);
+    {
+        res = test_stack_stress();
+        if (res == 0) {
+            printf(XVR_CC_NOTICE
+                   "STACK STRESS: PASSED jalan loh ya juga cik\n" XVR_CC_RESET);
+        }
+        total += res;
     }
-    total += res;
-  }
 
-  return total;
+    return total;
 }

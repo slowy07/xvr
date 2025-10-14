@@ -1,110 +1,113 @@
+#include <stdio.h>
+
 #include "xvr_array.h"
 #include "xvr_console_colors.h"
 #include "xvr_value.h"
 
-#include <stdio.h>
-
 int test_value_creation() {
-  {
+    {
 #if XVR_BITNESS == 64
-    if (sizeof(Xvr_Value) != 16) {
+        if (sizeof(Xvr_Value) != 16) {
 #else
-    if (sizeof(Xvr_Value) != 8) {
-      fprintf(stderr,
-              XVR_CC_ERROR "Error: `Xvr_Value` is an unxpected size in memory, "
-                           "expected %d found %d\n" XVR_CC_RESET,
-              XVR_BITNESS, sizeof(Xvr_Value));
+        if (sizeof(Xvr_Value) != 8) {
+            fprintf(stderr,
+                    XVR_CC_ERROR
+                    "Error: `Xvr_Value` is an unxpected size in memory, "
+                    "expected %d found %d\n" XVR_CC_RESET,
+                    XVR_BITNESS, sizeof(Xvr_Value));
+        }
     }
-  }
 #endif /* if XVR_BITNESS == 64 */
 
-      {
-        Xvr_Value v = XVR_VALUE_FROM_NULL();
+            {
+                Xvr_Value v = XVR_VALUE_FROM_NULL();
 
-        if (!XVR_VALUE_IS_NULL(v)) {
-          fprintf(stderr, XVR_CC_ERROR
-                  "Error: creating `null` value failed\n" XVR_CC_RESET);
-          return -1;
+                if (!XVR_VALUE_IS_NULL(v)) {
+                    fprintf(
+                        stderr, XVR_CC_ERROR
+                        "Error: creating `null` value failed\n" XVR_CC_RESET);
+                    return -1;
+                }
+            }
+
+            {
+                // TEST: make boolean
+                Xvr_Value t = XVR_VALUE_FROM_BOOLEAN(true);
+                Xvr_Value f = XVR_VALUE_FROM_BOOLEAN(false);
+
+                if (!Xvr_checkValueIsTruthy(t) || Xvr_checkValueIsTruthy(f)) {
+                    fprintf(stderr, XVR_CC_ERROR
+                            "Error: `boolean` value failed\n" XVR_CC_RESET);
+                }
+            }
         }
-      }
+    }
 
-      {
-        // TEST: make boolean
-        Xvr_Value t = XVR_VALUE_FROM_BOOLEAN(true);
-        Xvr_Value f = XVR_VALUE_FROM_BOOLEAN(false);
+    {
+        Xvr_Array* array = XVR_ARRAY_ALLOCATE();
+        XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(42));
+        XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(69));
+        XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(8891));
 
-        if (!Xvr_checkValueIsTruthy(t) || Xvr_checkValueIsTruthy(f)) {
-          fprintf(stderr,
-                  XVR_CC_ERROR "Error: `boolean` value failed\n" XVR_CC_RESET);
+        Xvr_Value v = XVR_VALUE_FROM_ARRAY(array);
+
+        if (XVR_VALUE_AS_ARRAY(v) == false ||
+            XVR_VALUE_AS_ARRAY(v)->capacity != 8 ||
+            XVR_VALUE_AS_ARRAY(v)->count != 3 ||
+            XVR_VALUE_IS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[0]) != true ||
+            XVR_VALUE_AS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[0]) != 42 ||
+            XVR_VALUE_IS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[1]) != true ||
+            XVR_VALUE_AS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[1]) != 69 ||
+            XVR_VALUE_IS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[2]) != true ||
+            XVR_VALUE_AS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[2]) != 8891) {
+            fprintf(stderr,
+                    XVR_CC_ERROR "Error: `array` value failed\n" XVR_CC_RESET);
+            XVR_ARRAY_FREE(array);
+            return -1;
         }
-      }
     }
-  }
 
-  {
-    Xvr_Array *array = XVR_ARRAY_ALLOCATE();
-    XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(42));
-    XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(69));
-    XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(8891));
-
-    Xvr_Value v = XVR_VALUE_FROM_ARRAY(array);
-
-    if (XVR_VALUE_AS_ARRAY(v) == false ||
-        XVR_VALUE_AS_ARRAY(v)->capacity != 8 ||
-        XVR_VALUE_AS_ARRAY(v)->count != 3 ||
-        XVR_VALUE_IS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[0]) != true ||
-        XVR_VALUE_AS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[0]) != 42 ||
-        XVR_VALUE_IS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[1]) != true ||
-        XVR_VALUE_AS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[1]) != 69 ||
-        XVR_VALUE_IS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[2]) != true ||
-        XVR_VALUE_AS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[2]) != 8891) {
-      fprintf(stderr,
-              XVR_CC_ERROR "Error: `array` value failed\n" XVR_CC_RESET);
-      XVR_ARRAY_FREE(array);
-      return -1;
-    }
-  }
-
-  return 0;
+    return 0;
 }
 
 int test_comparison() {
-  {
-    Xvr_Value ans = XVR_VALUE_FROM_INTEGER(42);
-    Xvr_Value quest = XVR_VALUE_FROM_INTEGER(42);
-    Xvr_Value no = XVR_VALUE_FROM_NULL();
+    {
+        Xvr_Value ans = XVR_VALUE_FROM_INTEGER(42);
+        Xvr_Value quest = XVR_VALUE_FROM_INTEGER(42);
+        Xvr_Value no = XVR_VALUE_FROM_NULL();
 
-    if (Xvr_checkValuesAreCompareable(ans, quest) != true) {
-      fprintf(
-          stderr, XVR_CC_ERROR
-          "Error: value comparison check failed, expected true\n" XVR_CC_RESET);
-      return -1;
+        if (Xvr_checkValuesAreCompareable(ans, quest) != true) {
+            fprintf(stderr, XVR_CC_ERROR
+                    "Error: value comparison check failed, expected "
+                    "true\n" XVR_CC_RESET);
+            return -1;
+        }
     }
-  }
 
-  return 0;
+    return 0;
 }
 
 int main() {
-  printf(XVR_CC_WARN "TESTING: XVR VALUE\n" XVR_CC_RESET);
+    printf(XVR_CC_WARN "TESTING: XVR VALUE\n" XVR_CC_RESET);
 
-  int total = 0, res = 0;
+    int total = 0, res = 0;
 
-  {
-    res = test_value_creation();
-    if (res == 0) {
-      printf(XVR_CC_NOTICE
-             "VALUE CREATION: PASSED aman loh ya cik\n" XVR_CC_RESET);
+    {
+        res = test_value_creation();
+        if (res == 0) {
+            printf(XVR_CC_NOTICE
+                   "VALUE CREATION: PASSED aman loh ya cik\n" XVR_CC_RESET);
+        }
+        total += res;
     }
-    total += res;
-  }
 
-  {
-    res = test_comparison();
-    if (res == 0) {
-      printf(XVR_CC_NOTICE "COMPARISON: PASSED aman loh ya cik\n" XVR_CC_RESET);
+    {
+        res = test_comparison();
+        if (res == 0) {
+            printf(XVR_CC_NOTICE
+                   "COMPARISON: PASSED aman loh ya cik\n" XVR_CC_RESET);
+        }
     }
-  }
 
-  return total;
+    return total;
 }

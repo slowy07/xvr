@@ -1,7 +1,9 @@
-BasedOnStyle: Google
+# .clang-format
 Language: C
+BasedOnStyle: Google
 
 IndentWidth: 4
+TabWidth: 4
 UseTab: Never
 ColumnLimit: 80
 SpaceBeforeParens: ControlStatements
@@ -26,4 +28,3 @@ KeepEmptyLinesAtTheStartOfBlocks: false
 DerivePointerAlignment: false
 IndentCaseLabels: false
 IndentGotoLabels: true
-IndentPPDirectives: None

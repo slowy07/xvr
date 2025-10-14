@@ -1,18 +1,19 @@
-#include "../../src/xvr_array.h"
 #include <stdio.h>
 #include <stdlib.h>
 
-int main(int argc, char *argv[]) {
-  unsigned int iterations = atoi(argv[1]);
+#include "../../src/xvr_array.h"
 
-  Xvr_Array *array = XVR_ARRAY_ALLOCATE();
+int main(int argc, char* argv[]) {
+    unsigned int iterations = atoi(argv[1]);
 
-  printf("found %d iteration\n", iterations);
+    Xvr_Array* array = XVR_ARRAY_ALLOCATE();
 
-  for (int i = 0; i < iterations; i++) {
-    XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(i));
-  }
+    printf("found %d iteration\n", iterations);
 
-  XVR_ARRAY_FREE(array);
-  return 0;
+    for (int i = 0; i < iterations; i++) {
+        XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(i));
+    }
+
+    XVR_ARRAY_FREE(array);
+    return 0;
 }
