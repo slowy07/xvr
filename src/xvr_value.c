@@ -26,6 +26,7 @@ SOFTWARE.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "xvr_array.h"
 #include "xvr_console_colors.h"
@@ -338,7 +339,19 @@ Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
     case XVR_VALUE_FLOAT: {
         char buffer[16];
         sprintf(buffer, "%f", XVR_VALUE_AS_FLOAT(value));
-        return Xvr_createString(bucketHandle, buffer);
+
+        unsigned int length = strlen(buffer);
+        unsigned int decimal = 0;
+
+        while (decimal != length && buffer[decimal] != '.') {
+            decimal++;
+        }
+
+        while (decimal != length && buffer[length - 1] == '0') {
+            buffer[--length] = '\0';
+        }
+
+        return Xvr_createStringLength(bucketHandle, buffer, length);
     }
 
     case XVR_VALUE_STRING: {
