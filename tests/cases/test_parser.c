@@ -175,38 +175,35 @@ int test_compound(Xvr_Bucket** bucketHandle) {
         if (ast == NULL || ast->type != XVR_AST_BLOCK ||
             ast->block.child == NULL ||
 
-            ast->block.child->type != XVR_AST_COMPOUND ||
-            ast->block.child->compound.flag !=
-                XVR_AST_FLAG_COMPOUND_COLLECTION ||
+            ast->block.child->type != XVR_AST_AGGREGATE ||
+            ast->block.child->aggregate.flag != XVR_AST_FLAG_COLLECTION ||
 
-            ast->block.child->compound.left == NULL ||
-            ast->block.child->compound.left->type != XVR_AST_VALUE ||
+            ast->block.child->aggregate.left == NULL ||
+            ast->block.child->aggregate.left->type != XVR_AST_VALUE ||
             XVR_VALUE_IS_INTEGER(
-                ast->block.child->compound.left->value.value) != true ||
+                ast->block.child->aggregate.left->value.value) != true ||
             XVR_VALUE_AS_INTEGER(
-                ast->block.child->compound.left->value.value) != 1 ||
+                ast->block.child->aggregate.left->value.value) != 1 ||
 
-            ast->block.child->compound.right == NULL ||
-            ast->block.child->compound.right->type != XVR_AST_COMPOUND ||
-            ast->block.child->compound.right->compound.flag !=
-                XVR_AST_FLAG_COMPOUND_COLLECTION ||
+            ast->block.child->aggregate.right == NULL ||
+            ast->block.child->aggregate.right->type != XVR_AST_AGGREGATE ||
+            ast->block.child->aggregate.right->aggregate.flag !=
+                XVR_AST_FLAG_COLLECTION ||
 
-            ast->block.child->compound.right->compound.left == NULL ||
-            ast->block.child->compound.right->compound.left->type !=
+            ast->block.child->aggregate.right->aggregate.left == NULL ||
+            ast->block.child->aggregate.right->aggregate.left->type !=
                 XVR_AST_VALUE ||
-            XVR_VALUE_IS_INTEGER(
-                ast->block.child->compound.right->compound.left->value.value) !=
-                true ||
-            XVR_VALUE_AS_INTEGER(
-                ast->block.child->compound.right->compound.left->value.value) !=
-                2 ||
+            XVR_VALUE_IS_INTEGER(ast->block.child->aggregate.right->aggregate
+                                     .left->value.value) != true ||
+            XVR_VALUE_AS_INTEGER(ast->block.child->aggregate.right->aggregate
+                                     .left->value.value) != 2 ||
 
-            ast->block.child->compound.right->compound.right == NULL ||
-            ast->block.child->compound.right->compound.right->type !=
+            ast->block.child->aggregate.right->aggregate.right == NULL ||
+            ast->block.child->aggregate.right->aggregate.right->type !=
                 XVR_AST_VALUE ||
-            XVR_VALUE_IS_INTEGER(ast->block.child->compound.right->compound
+            XVR_VALUE_IS_INTEGER(ast->block.child->aggregate.right->aggregate
                                      .right->value.value) != true ||
-            XVR_VALUE_AS_INTEGER(ast->block.child->compound.right->compound
+            XVR_VALUE_AS_INTEGER(ast->block.child->aggregate.right->aggregate
                                      .right->value.value) != 3 ||
 
             false) {

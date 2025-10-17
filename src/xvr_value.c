@@ -40,29 +40,38 @@ static unsigned int hashUInt(unsigned int x) {
     return x;
 }
 
+Xvr_Value Xvr_unwrapValue(Xvr_Value value) {
+    if (value.type == XVR_VALUE_REFERENCE) {
+        return Xvr_unwrapValue(*(value.as.reference));
+    } else {
+        return value;
+    }
+}
+
 unsigned int Xvr_hashValue(Xvr_Value value) {
+    value = Xvr_unwrapValue(value);
     switch (value.type) {
     case XVR_VALUE_NULL:
         return 0;
 
     case XVR_VALUE_BOOLEAN:
-        return XVR_VALUE_AS_BOOLEAN(value) ? 1 : 0;
+        return value.as.boolean ? 1 : 0;
 
     case XVR_VALUE_INTEGER:
-        return hashUInt(XVR_VALUE_AS_INTEGER(value));
+        return hashUInt((unsigned int)value.as.integer);
 
     case XVR_VALUE_FLOAT:
-        return hashUInt(*((int*)(&XVR_VALUE_AS_FLOAT(value))));
+        return hashUInt(*((unsigned int*)(&value.as.number)));
 
     case XVR_VALUE_STRING:
-        return Xvr_hashString(XVR_VALUE_AS_STRING(value));
+        return Xvr_hashString(value.as.string);
 
     case XVR_VALUE_ARRAY: {
-        Xvr_Array* array = XVR_VALUE_AS_ARRAY(value);
+        Xvr_Array* ptr = value.as.array;
         unsigned int hash = 0;
 
-        for (unsigned int i = 0; i < array->count; i++) {
-            hash ^= Xvr_hashValue(array->data[i]);
+        for (unsigned int i = 0; i < ptr->count; i++) {
+            hash ^= Xvr_hashValue(ptr->data[i]);
         }
         return hash;
     }
@@ -72,6 +81,7 @@ unsigned int Xvr_hashValue(Xvr_Value value) {
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
+    case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
         fprintf(stderr, XVR_CC_ERROR
                 "Error: can't hash an unknown value type, exit\n" XVR_CC_RESET);
@@ -81,6 +91,8 @@ unsigned int Xvr_hashValue(Xvr_Value value) {
 }
 
 Xvr_Value Xvr_copyValue(Xvr_Value value) {
+    value = Xvr_unwrapValue(value);
+
     switch (value.type) {
     case XVR_VALUE_NULL:
     case XVR_VALUE_BOOLEAN:
@@ -89,20 +101,19 @@ Xvr_Value Xvr_copyValue(Xvr_Value value) {
         return value;
 
     case XVR_VALUE_STRING: {
-        Xvr_String* string = XVR_VALUE_AS_STRING(value);
-        return XVR_VALUE_FROM_STRING(Xvr_copyString(string));
+        return XVR_VALUE_FROM_STRING(Xvr_copyString(value.as.string));
     }
 
     case XVR_VALUE_ARRAY: {
-        Xvr_Array* array = XVR_VALUE_AS_ARRAY(value);
-        Xvr_Array* result = Xvr_resizeArray(NULL, array->capacity);
+        Xvr_Array* ptr = value.as.array;
+        Xvr_Array* result = Xvr_resizeArray(NULL, ptr->capacity);
 
-        for (unsigned int i = 0; i < array->count; i++) {
-            result->data[i] = Xvr_copyValue(array->data[i]);
+        for (unsigned int i = 0; i < ptr->count; i++) {
+            result->data[i] = Xvr_copyValue(ptr->data[i]);
         }
 
-        result->capacity = array->capacity;
-        result->count = array->count;
+        result->capacity = ptr->capacity;
+        result->count = ptr->count;
         return XVR_VALUE_FROM_ARRAY(result);
     }
 
@@ -111,6 +122,7 @@ Xvr_Value Xvr_copyValue(Xvr_Value value) {
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
+    case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
         fprintf(stderr, XVR_CC_ERROR
                 "Error: can't copy unknown value type, exit\n" XVR_CC_RESET);
@@ -128,18 +140,18 @@ void Xvr_freeValue(Xvr_Value value) {
         break;
 
     case XVR_VALUE_STRING: {
-        Xvr_String* string = XVR_VALUE_AS_STRING(value);
-        Xvr_freeString(string);
+        Xvr_freeString(value.as.string);
         break;
     }
 
     case XVR_VALUE_ARRAY: {
-        Xvr_Array* array = XVR_VALUE_AS_ARRAY(value);
+        Xvr_Array* ptr = value.as.array;
 
-        for (unsigned int i = 0; i < array->count; i++) {
-            Xvr_freeValue(array->data[i]);
+        for (unsigned int i = 0; i < ptr->count; i++) {
+            Xvr_freeValue(ptr->data[i]);
         }
-        XVR_ARRAY_FREE(array);
+        XVR_ARRAY_FREE(ptr);
+        break;
     }
 
     case XVR_VALUE_TABLE:
@@ -147,6 +159,7 @@ void Xvr_freeValue(Xvr_Value value) {
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
+    case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
         fprintf(stderr, XVR_CC_ERROR
                 "Error: can't free an unknown value type, exit\n" XVR_CC_RESET);
@@ -155,15 +168,17 @@ void Xvr_freeValue(Xvr_Value value) {
 }
 
 bool Xvr_checkValueIsTruthy(Xvr_Value value) {
-    if (XVR_VALUE_IS_NULL(value)) {
+    value = Xvr_unwrapValue(value);
+
+    if (value.type == XVR_VALUE_NULL) {
         Xvr_error(XVR_CC_ERROR
                   "Error: `null` is neither true or false\n" XVR_CC_RESET);
         return false;
     }
 
     // only 'false' is falsy
-    if (XVR_VALUE_IS_BOOLEAN(value)) {
-        return XVR_VALUE_AS_BOOLEAN(value);
+    if (value.type == XVR_VALUE_BOOLEAN) {
+        return value.as.boolean;
     }
 
     // anything else is truthy
@@ -171,60 +186,61 @@ bool Xvr_checkValueIsTruthy(Xvr_Value value) {
 }
 
 bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right) {
-    // temp check
-    if (right.type > XVR_VALUE_STRING) {
-        Xvr_error(
-            XVR_CC_ERROR
-            "Error: unknown types in value equality comparison\n" XVR_CC_RESET);
-    }
+    left = Xvr_unwrapValue(left);
+    right = Xvr_unwrapValue(right);
 
     switch (left.type) {
     case XVR_VALUE_NULL:
-        return XVR_VALUE_IS_NULL(right);
+        return right.type == XVR_VALUE_NULL;
 
     case XVR_VALUE_BOOLEAN:
-        return XVR_VALUE_IS_BOOLEAN(right) &&
-               XVR_VALUE_AS_BOOLEAN(left) == XVR_VALUE_AS_BOOLEAN(right);
+        return right.type == XVR_VALUE_NULL &&
+               left.as.boolean == right.as.boolean;
 
     case XVR_VALUE_INTEGER:
-        if (XVR_VALUE_AS_INTEGER(right)) {
-            return XVR_VALUE_AS_INTEGER(left) == XVR_VALUE_AS_INTEGER(right);
+        if (right.type == XVR_VALUE_INTEGER) {
+            return left.as.integer == right.as.integer;
+        } else if (right.type == XVR_VALUE_FLOAT) {
+            return left.as.integer == right.as.number;
+        } else {
+            break;
         }
-        if (XVR_VALUE_AS_FLOAT(right)) {
-            return XVR_VALUE_AS_INTEGER(left) == XVR_VALUE_AS_FLOAT(right);
-        }
-        return false;
 
     case XVR_VALUE_FLOAT:
-        if (XVR_VALUE_AS_FLOAT(right)) {
-            return XVR_VALUE_AS_FLOAT(left) == XVR_VALUE_AS_FLOAT(right);
+        if (right.type == XVR_VALUE_INTEGER) {
+            return left.as.number == right.as.integer;
+        } else if (right.type == XVR_VALUE_FLOAT) {
+            return left.as.number == right.as.number;
+        } else {
+            break;
         }
-        if (XVR_VALUE_AS_INTEGER(right)) {
-            return XVR_VALUE_AS_FLOAT(left) == XVR_VALUE_AS_INTEGER(right);
-        }
-        return false;
 
     case XVR_VALUE_STRING:
-        if (XVR_VALUE_IS_STRING(right)) {
-            return Xvr_compareStrings(XVR_VALUE_AS_STRING(left),
-                                      XVR_VALUE_AS_STRING(right)) == 0;
+        if (right.type == XVR_VALUE_STRING) {
+            return Xvr_compareStrings(left.as.string, right.as.string) == 0;
+        } else {
+            break;
         }
-        return false;
 
     case XVR_VALUE_ARRAY: {
-        Xvr_Array* leftArray = XVR_VALUE_AS_ARRAY(left);
-        Xvr_Array* rightArray = XVR_VALUE_AS_ARRAY(right);
+        if (right.type == XVR_VALUE_ARRAY) {
+            Xvr_Array* leftArray = left.as.array;
+            Xvr_Array* rightArray = right.as.array;
 
-        if (leftArray->count != rightArray->count) {
-            return false;
-        }
-
-        for (unsigned int i = 0; i < leftArray->count; i++) {
-            if (Xvr_checkValuesAreEqual(leftArray->data[i],
-                                        rightArray->data[i])) {
+            if (leftArray->count != rightArray->count) {
                 return false;
             }
+
+            for (unsigned int i = 0; i < leftArray->count; i++) {
+                if (Xvr_checkValuesAreEqual(leftArray->data[i],
+                                            rightArray->data[i])) {
+                    return false;
+                }
+            }
+        } else {
+            break;
         }
+
         return true;
     }
 
@@ -233,6 +249,7 @@ bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right) {
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
+    case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
         fprintf(stderr, XVR_CC_ERROR
                 "Error: unknown types in value equality, exit\n" XVR_CC_RESET);
@@ -241,20 +258,23 @@ bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right) {
     return 0;
 }
 
-bool Xvr_checkValuesAreCompareable(Xvr_Value left, Xvr_Value right) {
+bool Xvr_checkValuesAreComparable(Xvr_Value left, Xvr_Value right) {
+    left = Xvr_unwrapValue(left);
+    right = Xvr_unwrapValue(right);
+
     switch (left.type) {
     case XVR_VALUE_NULL:
         return false;
 
     case XVR_VALUE_BOOLEAN:
-        return XVR_VALUE_IS_BOOLEAN(right);
+        return right.type == XVR_VALUE_BOOLEAN;
 
     case XVR_VALUE_INTEGER:
     case XVR_VALUE_FLOAT:
-        return XVR_VALUE_IS_INTEGER(right) || XVR_VALUE_IS_FLOAT(right);
+        return right.type == XVR_VALUE_INTEGER || right.type == XVR_VALUE_FLOAT;
 
     case XVR_VALUE_STRING:
-        return XVR_VALUE_IS_STRING(right);
+        return right.type == XVR_VALUE_STRING;
 
     case XVR_VALUE_ARRAY:
         return false;
@@ -264,9 +284,11 @@ bool Xvr_checkValuesAreCompareable(Xvr_Value left, Xvr_Value right) {
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
+    case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
-        fprintf(stderr, XVR_CC_ERROR
-                "unknown types in value comparison check, exit\n" XVR_CC_RESET);
+        fprintf(
+            stderr, XVR_CC_ERROR
+            "Unknown types in value comparison check, exiting\n" XVR_CC_RESET);
         exit(-1);
     }
 
@@ -274,34 +296,35 @@ bool Xvr_checkValuesAreCompareable(Xvr_Value left, Xvr_Value right) {
 }
 
 int Xvr_compareValues(Xvr_Value left, Xvr_Value right) {
+    left = Xvr_unwrapValue(left);
+    right = Xvr_unwrapValue(right);
+
     switch (left.type) {
     case XVR_VALUE_NULL:
     case XVR_VALUE_BOOLEAN:
         break;
 
     case XVR_VALUE_INTEGER:
-        if (XVR_VALUE_IS_INTEGER(right)) {
-            return XVR_VALUE_AS_INTEGER(left) - XVR_VALUE_AS_INTEGER(right);
-        } else if (XVR_VALUE_IS_FLOAT(right)) {
-            return XVR_VALUE_AS_INTEGER(left) - XVR_VALUE_AS_FLOAT(right);
-
+        if (right.type == XVR_VALUE_INTEGER) {
+            return left.as.integer - right.as.integer;
+        } else if (right.type == XVR_VALUE_FLOAT) {
+            return left.as.integer - right.as.number;
         } else {
             break;
         }
 
     case XVR_VALUE_FLOAT:
-        if (XVR_VALUE_IS_INTEGER(right)) {
-            return XVR_VALUE_AS_FLOAT(left) - XVR_VALUE_AS_INTEGER(right);
-        } else if (XVR_VALUE_IS_FLOAT(right)) {
-            return XVR_VALUE_AS_FLOAT(left) - XVR_VALUE_AS_FLOAT(right);
+        if (right.type == XVR_VALUE_INTEGER) {
+            return left.as.number - right.as.integer;
+        } else if (right.type == XVR_VALUE_FLOAT) {
+            return left.as.number - right.as.number;
         } else {
             break;
         }
 
     case XVR_VALUE_STRING:
-        if (XVR_VALUE_IS_STRING(right)) {
-            return Xvr_compareStrings(XVR_VALUE_AS_STRING(left),
-                                      XVR_VALUE_AS_STRING(right));
+        if (right.type == XVR_VALUE_STRING) {
+            return Xvr_compareStrings(left.as.string, right.as.string);
         }
 
     case XVR_VALUE_ARRAY:
@@ -312,23 +335,28 @@ int Xvr_compareValues(Xvr_Value left, Xvr_Value right) {
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
+    case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
-        fprintf(stderr, XVR_CC_ERROR
-                "unknown types in value comparison, exit\n" XVR_CC_RESET);
-        exit(-1);
+        break;
     }
+
+    fprintf(stderr, XVR_CC_ERROR
+            "unknown types in value comparison, exit\n" XVR_CC_RESET);
+    exit(-1);
 
     return -1;
 }
 
 Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
+    value = Xvr_unwrapValue(value);
+
     switch (value.type) {
     case XVR_VALUE_NULL:
         return Xvr_createString(bucketHandle, "null");
 
     case XVR_VALUE_BOOLEAN:
         return Xvr_createString(bucketHandle,
-                                XVR_VALUE_AS_BOOLEAN(value) ? "true" : "false");
+                                value.as.boolean ? "true" : "false");
 
     case XVR_VALUE_INTEGER: {
         char buffer[16];
@@ -355,28 +383,33 @@ Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
     }
 
     case XVR_VALUE_STRING: {
-        return Xvr_copyString(XVR_VALUE_AS_STRING(value));
+        return Xvr_copyString(value.as.string);
     }
 
     case XVR_VALUE_ARRAY: {
-        Xvr_Array* array = XVR_VALUE_AS_ARRAY(value);
+        Xvr_Array* ptr = value.as.array;
         Xvr_String* string = Xvr_createStringLength(bucketHandle, "[", 1);
         Xvr_String* comma = Xvr_createStringLength(bucketHandle, ",", 1);
 
-        for (unsigned int i = 0; i < array->count; i++) {
+        for (unsigned int i = 0; i < ptr->count; i++) {
             Xvr_String* tmp = Xvr_concatStrings(
                 bucketHandle, string,
-                Xvr_stringifyValue(bucketHandle, array->data[i]));
+                Xvr_stringifyValue(bucketHandle, ptr->data[i]));
             Xvr_freeString(string);
             string = tmp;
 
-            if (i + 1 < array->count) {
+            if (i + 1 < ptr->count) {
                 Xvr_String* tmp =
                     Xvr_concatStrings(bucketHandle, string, comma);
                 Xvr_freeString(string);
                 string = tmp;
             }
         }
+        Xvr_String* tmp = Xvr_concatStrings(
+            bucketHandle, string, Xvr_createStringLength(bucketHandle, "]", 1));
+        Xvr_freeString(string);
+        string = tmp;
+
         Xvr_freeString(comma);
         return string;
     }
@@ -386,6 +419,7 @@ Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
+    case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
         fprintf(stderr, XVR_CC_ERROR
                 "unknown types in value stringify, exiting\n" XVR_CC_RESET);
@@ -419,6 +453,8 @@ const char* Xvr_private_getValueTypeAsCString(Xvr_ValueType type) {
         return "type";
     case XVR_VALUE_ANY:
         return "any";
+    case XVR_VALUE_REFERENCE:
+        return "reference";
     case XVR_VALUE_UNKNOWN:
         return "unknown";
     }

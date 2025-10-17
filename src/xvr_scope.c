@@ -198,7 +198,7 @@ void Xvr_assignScope(Xvr_Scope* scope, Xvr_String* key, Xvr_Value value) {
     entryPtr->value = value;
 }
 
-Xvr_Value Xvr_accessScope(Xvr_Scope* scope, Xvr_String* key) {
+Xvr_Value* Xvr_accessScopeAsPointer(Xvr_Scope* scope, Xvr_String* key) {
     if (key->type != XVR_STRING_NAME) {
         fprintf(
             stderr, XVR_CC_ERROR
@@ -213,10 +213,9 @@ Xvr_Value Xvr_accessScope(Xvr_Scope* scope, Xvr_String* key) {
         char buffer[key->length + 256];
         sprintf(buffer, "Undefined variable: %s", key->as.name.data);
         Xvr_error(buffer);
-        return XVR_VALUE_FROM_NULL();
+        NULL;
     }
-
-    return entryPtr->value;
+    return &(entryPtr->value);
 }
 
 bool Xvr_isDeclaredScope(Xvr_Scope* scope, Xvr_String* key) {

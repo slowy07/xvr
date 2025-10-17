@@ -61,13 +61,13 @@ int test_scope_elements() {
             return -1;
         }
 
-        Xvr_Value result = Xvr_accessScope(scope, hello2);
+        Xvr_Value* result = Xvr_accessScopeAsPointer(scope, hello2);
 
         if (scope == NULL || scope->next != NULL || scope->table == NULL ||
             scope->table->capacity != 8 || scope->refCount != 1 ||
 
-            XVR_VALUE_IS_INTEGER(result) != true ||
-            XVR_VALUE_AS_INTEGER(result) != 42 ||
+            XVR_VALUE_IS_INTEGER(*result) != true ||
+            XVR_VALUE_AS_INTEGER(*result) != 42 ||
 
             false) {
             fprintf(stderr, XVR_CC_ERROR
@@ -81,13 +81,13 @@ int test_scope_elements() {
 
         Xvr_assignScope(scope, hello1, XVR_VALUE_FROM_FLOAT(3.1415f));
 
-        Xvr_Value resultTwo = Xvr_accessScope(scope, hello2);
+        Xvr_Value* resultTwo = Xvr_accessScopeAsPointer(scope, hello2);
 
         if (scope == NULL || scope->next != NULL || scope->table == NULL ||
             scope->table->capacity != 8 || scope->refCount != 1 ||
 
-            XVR_VALUE_IS_FLOAT(resultTwo) != true ||
-            XVR_VALUE_AS_FLOAT(resultTwo) != 3.1415f ||
+            XVR_VALUE_IS_FLOAT(*resultTwo) != true ||
+            XVR_VALUE_AS_FLOAT(*resultTwo) != 3.1415f ||
 
             false) {
             fprintf(stderr, XVR_CC_ERROR
@@ -118,10 +118,10 @@ int test_scope_elements() {
         scope = Xvr_pushScope(&bucket, scope);
 
         {
-            Xvr_Value result1 = Xvr_accessScope(scope, hello);
+            Xvr_Value* result1 = Xvr_accessScopeAsPointer(scope, hello);
 
-            if (XVR_VALUE_IS_INTEGER(result1) != true ||
-                XVR_VALUE_AS_INTEGER(result1) != 42) {
+            if (XVR_VALUE_IS_INTEGER(*result1) != true ||
+                XVR_VALUE_AS_INTEGER(*result1) != 42) {
                 fprintf(stderr, XVR_CC_ERROR
                         "ERROR: Failed to access from an ancestor "
                         "Xvr_Scope\n" XVR_CC_RESET);
@@ -135,10 +135,10 @@ int test_scope_elements() {
         Xvr_declareScope(scope, hello, XVR_VALUE_FROM_FLOAT(3.1415f));
 
         {
-            Xvr_Value result2 = Xvr_accessScope(scope, hello);
+            Xvr_Value* result2 = Xvr_accessScopeAsPointer(scope, hello);
 
-            if (XVR_VALUE_IS_FLOAT(result2) != true ||
-                XVR_VALUE_AS_FLOAT(result2) != 3.1415f) {
+            if (XVR_VALUE_IS_FLOAT(*result2) != true ||
+                XVR_VALUE_AS_FLOAT(*result2) != 3.1415f) {
                 fprintf(stderr, XVR_CC_ERROR
                         "ERROR: Failed to shadow an entry in "
                         "Xvr_Scope\n" XVR_CC_RESET);
@@ -152,10 +152,10 @@ int test_scope_elements() {
         scope = Xvr_popScope(scope);
 
         {
-            Xvr_Value result3 = Xvr_accessScope(scope, hello);
+            Xvr_Value* result3 = Xvr_accessScopeAsPointer(scope, hello);
 
-            if (XVR_VALUE_IS_INTEGER(result3) != true ||
-                XVR_VALUE_AS_INTEGER(result3) != 42) {
+            if (XVR_VALUE_IS_INTEGER(*result3) != true ||
+                XVR_VALUE_AS_INTEGER(*result3) != 42) {
                 fprintf(stderr, XVR_CC_ERROR
                         "ERROR: Failed to recover an entry in "
                         "Xvr_Scope\n" XVR_CC_RESET);
@@ -169,13 +169,13 @@ int test_scope_elements() {
         Xvr_assignScope(scope, hello, XVR_VALUE_FROM_INTEGER(8891));
 
         {
-            Xvr_Value result4 = Xvr_accessScope(scope, hello);
+            Xvr_Value* result4 = Xvr_accessScopeAsPointer(scope, hello);
 
-            if (XVR_VALUE_IS_INTEGER(result4) != true ||
-                XVR_VALUE_AS_INTEGER(result4) != 8891) {
+            if (XVR_VALUE_IS_INTEGER(*result4) != true ||
+                XVR_VALUE_AS_INTEGER(*result4) != 8891) {
                 fprintf(stderr, XVR_CC_ERROR
-                        "ERROR: Failed to assign to an ancestor "
-                        "in Xvr_Scope\n" XVR_CC_RESET);
+                        "ERROR: Failed to assign to an ancestor in "
+                        "Xvr_Scope\n" XVR_CC_RESET);
                 Xvr_freeString(hello);
                 while ((scope = Xvr_popScope(scope)) != NULL);
                 Xvr_freeBucket(&bucket);
@@ -186,10 +186,10 @@ int test_scope_elements() {
         scope = Xvr_popScope(scope);
 
         {
-            Xvr_Value result5 = Xvr_accessScope(scope, hello);
+            Xvr_Value* result5 = Xvr_accessScopeAsPointer(scope, hello);
 
-            if (XVR_VALUE_IS_INTEGER(result5) != true ||
-                XVR_VALUE_AS_INTEGER(result5) != 8891) {
+            if (XVR_VALUE_IS_INTEGER(*result5) != true ||
+                XVR_VALUE_AS_INTEGER(*result5) != 8891) {
                 fprintf(stderr, XVR_CC_ERROR
                         "ERROR: Failed to access an altered entry of an "
                         "ancestor in Xvr_Scope\n" XVR_CC_RESET);
@@ -204,7 +204,6 @@ int test_scope_elements() {
         while ((scope = Xvr_popScope(scope)) != NULL);
         Xvr_freeBucket(&bucket);
     }
-
     return 0;
 }
 

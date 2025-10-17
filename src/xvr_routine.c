@@ -278,23 +278,46 @@ static unsigned int writeInstructionGroup(Xvr_Routine** rt, Xvr_AstGroup ast) {
 
 static unsigned int writeInstructionCompound(Xvr_Routine** rt,
                                              Xvr_AstCompound ast) {
+    unsigned int result = writeRoutineCode(rt, ast.child);
+
+    if (ast.flag == XVR_AST_FLAG_COMPOUND_ARRAY) {
+        EMIT_BYTE(rt, code, XVR_OPCODE_READ);
+        EMIT_BYTE(rt, code, XVR_VALUE_ARRAY);
+
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+
+        EMIT_INT(rt, code, result);
+
+        return 1;
+    } else {
+        fprintf(stderr, XVR_CC_ERROR
+                "Error: invalid AST compund flag found\n" XVR_CC_RESET);
+        exit(-1);
+        return 0;
+    }
+}
+
+static unsigned int writeInstructionAggregate(Xvr_Routine** rt,
+                                              Xvr_AstAggregate ast) {
     unsigned int result = 0;
 
     result += writeRoutineCode(rt, ast.left);
     result += writeRoutineCode(rt, ast.right);
 
-    if (ast.flag == XVR_AST_FLAG_COMPOUND_COLLECTION) {
+    if (ast.flag == XVR_AST_FLAG_COLLECTION) {
         return result;
-    } else if (ast.flag == XVR_AST_FLAG_COMPOUND_INDEX) {
+    } else if (ast.flag == XVR_AST_FLAG_INDEX) {
         EMIT_BYTE(rt, code, XVR_OPCODE_INDEX);
         EMIT_BYTE(rt, code, result);
+
         EMIT_BYTE(rt, code, 0);
         EMIT_BYTE(rt, code, 0);
 
         return 1;
     } else {
         fprintf(stderr, XVR_CC_ERROR
-                "Error: invalid AST compund flag found\n" XVR_CC_RESET);
+                "ERROR: Invalid AST aggregate flag found\n" XVR_CC_RESET);
         exit(-1);
         return 0;
     }
@@ -430,7 +453,7 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
 
     switch (ast.expr->type) {
     case XVR_AST_BLOCK:
-    case XVR_AST_COMPOUND:
+    case XVR_AST_AGGREGATE:
     case XVR_AST_ASSERT:
     case XVR_AST_PRINT:
     case XVR_AST_VAR_DECLARE:
@@ -632,6 +655,10 @@ static unsigned int writeRoutineCode(Xvr_Routine** rt, Xvr_Ast* ast) {
 
     case XVR_AST_COMPOUND:
         result += writeInstructionCompound(rt, ast->compound);
+        break;
+
+    case XVR_AST_AGGREGATE:
+        result += writeInstructionAggregate(rt, ast->aggregate);
         break;
 
     case XVR_AST_ASSERT:

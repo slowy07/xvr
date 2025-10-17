@@ -81,7 +81,7 @@ int test_comparison() {
         Xvr_Value quest = XVR_VALUE_FROM_INTEGER(42);
         Xvr_Value no = XVR_VALUE_FROM_NULL();
 
-        if (Xvr_checkValuesAreCompareable(ans, quest) != true) {
+        if (Xvr_checkValuesAreComparable(ans, quest) != true) {
             fprintf(stderr, XVR_CC_ERROR
                     "Error: value comparison check failed, expected "
                     "true\n" XVR_CC_RESET);

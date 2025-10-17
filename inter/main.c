@@ -305,6 +305,8 @@ static void debugStackPrint(Xvr_Stack* stack) {
 
             printf("%s\t", Xvr_private_getValueTypeAsCString(v.type));
 
+            v = Xvr_unwrapValue(v);
+
             switch (v.type) {
             case XVR_VALUE_NULL:
                 printf("null");
@@ -343,6 +345,7 @@ static void debugStackPrint(Xvr_Stack* stack) {
             case XVR_VALUE_OPAQUE:
             case XVR_VALUE_TYPE:
             case XVR_VALUE_ANY:
+            case XVR_VALUE_REFERENCE:
             case XVR_VALUE_UNKNOWN:
                 printf("???");
                 break;
@@ -368,6 +371,9 @@ static void debugScopePrint(Xvr_Scope* scope, int depth) {
 
             printf("%s\t%s\t", Xvr_private_getValueTypeAsCString(v.type),
                    XVR_VALUE_AS_STRING(k)->as.name.data);
+
+            k = Xvr_unwrapValue(k);
+            v = Xvr_unwrapValue(v);
 
             switch (v.type) {
             case XVR_VALUE_NULL:
@@ -408,6 +414,7 @@ static void debugScopePrint(Xvr_Scope* scope, int depth) {
             case XVR_VALUE_OPAQUE:
             case XVR_VALUE_TYPE:
             case XVR_VALUE_ANY:
+            case XVR_VALUE_REFERENCE:
             case XVR_VALUE_UNKNOWN:
                 printf("Unknown, what is that?");
                 break;

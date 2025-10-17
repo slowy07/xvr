@@ -28,6 +28,7 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
+#include "xvr_array.h"
 #include "xvr_ast.h"
 #include "xvr_bucket.h"
 #include "xvr_bytecode.h"
@@ -112,8 +113,31 @@ static void processRead(Xvr_VM* vm) {
     }
 
     case XVR_VALUE_ARRAY: {
-        //
-        // break;
+        fixAlignment(vm);
+
+        unsigned int count = (unsigned int)READ_INT(vm);
+        unsigned int capacity = count > XVR_ARRAY_INITIAL_CAPACITY
+                                    ? count
+                                    : XVR_ARRAY_INITIAL_CAPACITY;
+
+        capacity--;
+        capacity |= capacity >> 1;
+        capacity |= capacity >> 2;
+        capacity |= capacity >> 4;
+        capacity |= capacity >> 8;
+        capacity |= capacity >> 16;
+        capacity++;
+
+        Xvr_Array* array = Xvr_resizeArray(NULL, capacity);
+        array->capacity = capacity;
+        array->count = count;
+
+        for (int i = count - 1; i >= 0; i--) {
+            array->data[i] = Xvr_popStack(&vm->stack);
+        }
+
+        value = XVR_VALUE_FROM_ARRAY(array);
+        break;
     }
 
     case XVR_VALUE_TABLE: {
@@ -199,16 +223,20 @@ static void processAccess(Xvr_VM* vm) {
         return;
     }
 
-    Xvr_Value value = Xvr_accessScope(vm->scope, XVR_VALUE_AS_STRING(name));
-    Xvr_pushStack(&vm->stack, value);
-
+    Xvr_Value* valuePtr =
+        Xvr_accessScopeAsPointer(vm->scope, XVR_VALUE_AS_STRING(name));
+    if (XVR_VALUE_IS_REFERENCE(*valuePtr) || XVR_VALUE_IS_ARRAY(*valuePtr)) {
+        Xvr_Value ref = XVR_REFERENCE_FROM_POINTER(valuePtr);
+        Xvr_pushStack(&vm->stack, ref);
+    } else {
+        Xvr_pushStack(&vm->stack, Xvr_copyValue(*valuePtr));
+    }
     Xvr_freeValue(name);
 }
 
 static void processDuplicate(Xvr_VM* vm) {
     Xvr_Value value = Xvr_copyValue(Xvr_peekStack(&vm->stack));
     Xvr_pushStack(&vm->stack, value);
-    Xvr_freeValue(value);
 
     Xvr_OpcodeType squeezed = READ_BYTE(vm);
     if (squeezed == XVR_OPCODE_ACCESS) {
@@ -228,8 +256,14 @@ static void processArithmetic(Xvr_VM* vm, Xvr_OpcodeType opcode) {
                  Xvr_private_getValueTypeAsCString(left.type),
                  Xvr_private_getValueTypeAsCString(right.type));
         Xvr_error(buffer);
-        Xvr_freeValue(left);
-        Xvr_freeValue(right);
+
+        if (XVR_VALUE_IS_REFERENCE(left) != true) {
+            Xvr_freeValue(left);
+        }
+
+        if (XVR_VALUE_IS_REFERENCE(right) != true) {
+            Xvr_freeValue(right);
+        }
         return;
     }
 
@@ -322,19 +356,30 @@ static void processComparison(Xvr_VM* vm, Xvr_OpcodeType opcode) {
             Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(!equal));
         }
 
-        Xvr_freeValue(left);
-        Xvr_freeValue(right);
+        if (XVR_VALUE_IS_REFERENCE(left) != true) {
+            Xvr_freeValue(left);
+        }
+
+        if (XVR_VALUE_IS_REFERENCE(right) != true) {
+            Xvr_freeValue(right);
+        }
         return;
     }
 
-    if (Xvr_checkValuesAreCompareable(left, right) == false) {
+    if (Xvr_checkValuesAreComparable(left, right) != true) {
         char buffer[256];
         snprintf(buffer, 256, "can't compare value types '%s' and '%s'",
                  Xvr_private_getValueTypeAsCString(left.type),
                  Xvr_private_getValueTypeAsCString(right.type));
         Xvr_error(buffer);
-        Xvr_freeValue(left);
-        Xvr_freeValue(right);
+
+        if (XVR_VALUE_IS_REFERENCE(left) != true) {
+            Xvr_freeValue(left);
+        }
+
+        if (XVR_VALUE_IS_REFERENCE(right) != true) {
+            Xvr_freeValue(right);
+        }
         return;
     }
 
@@ -354,8 +399,13 @@ static void processComparison(Xvr_VM* vm, Xvr_OpcodeType opcode) {
         Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(false));
     }
 
-    Xvr_freeValue(left);
-    Xvr_freeValue(right);
+    if (XVR_VALUE_IS_REFERENCE(left) != true) {
+        Xvr_freeValue(left);
+    }
+
+    if (XVR_VALUE_IS_REFERENCE(right) != true) {
+        Xvr_freeValue(right);
+    }
 }
 
 static void processLogical(Xvr_VM* vm, Xvr_OpcodeType opcode) {
@@ -377,7 +427,7 @@ static void processLogical(Xvr_VM* vm, Xvr_OpcodeType opcode) {
         Xvr_Value top = Xvr_popStack(&vm->stack);
 
         Xvr_pushStack(&vm->stack,
-                      XVR_VALUE_FROM_BOOLEAN(!Xvr_checkValueIsTruthy(top)));
+                      XVR_VALUE_FROM_BOOLEAN(Xvr_checkValueIsTruthy(top)));
     } else if (opcode == XVR_OPCODE_NEGATE) {
         Xvr_Value top = Xvr_popStack(&vm->stack);
 
@@ -407,20 +457,29 @@ static void processJump(Xvr_VM* vm) {
     case XVR_OP_PARAM_JUMP_IF_TRUE: {
         Xvr_Value value = Xvr_popStack(&vm->stack);
         if (Xvr_checkValueIsTruthy(value) == true) {
-            Xvr_freeValue(value);
+            if (XVR_VALUE_IS_REFERENCE(value) != true) {
+                Xvr_freeValue(value);
+            }
             break;
         }
-        Xvr_freeValue(value);
+
+        if (XVR_VALUE_IS_REFERENCE(value) != true) {
+            Xvr_freeValue(value);
+        }
         return;
     }
 
     case XVR_OP_PARAM_JUMP_IF_FALSE: {
         Xvr_Value value = Xvr_popStack(&vm->stack);
         if (Xvr_checkValueIsTruthy(value) != true) {
-            Xvr_freeValue(value);
+            if (XVR_VALUE_IS_REFERENCE(value) != true) {
+                Xvr_freeValue(value);
+            }
             break;
         }
-        Xvr_freeValue(value);
+        if (XVR_VALUE_IS_REFERENCE(value) != true) {
+            Xvr_freeValue(value);
+        }
         return;
     }
     }
@@ -452,24 +511,30 @@ static void processAssert(Xvr_VM* vm) {
     } else {
         fprintf(stderr,
                 XVR_CC_ERROR
-                "Error: invalid assert argument count %d found, "
-                "exit\n" XVR_CC_RESET,
+                "ERROR: Invalid assert argument count %d found, "
+                "exiting\n" XVR_CC_RESET,
                 (int)count);
         exit(-1);
     }
 
-    if (XVR_VALUE_IS_NULL(value) || Xvr_checkValueIsTruthy(value) == false) {
+    if (XVR_VALUE_IS_NULL(value) || Xvr_checkValueIsTruthy(value) != true) {
         Xvr_String* string = Xvr_stringifyValue(&vm->stringBucket, message);
         char* buffer = Xvr_getStringRawBuffer(string);
 
         Xvr_assertFailure(buffer);
+
         free(buffer);
         Xvr_freeString(string);
         return;
     }
 
-    Xvr_freeValue(value);
-    Xvr_freeValue(message);
+    if (XVR_VALUE_IS_REFERENCE(value) != true) {
+        Xvr_freeValue(value);
+    }
+
+    if (XVR_VALUE_IS_REFERENCE(message) != true) {
+        Xvr_freeValue(message);
+    }
 }
 
 static void processPrint(Xvr_VM* vm) {
@@ -480,7 +545,10 @@ static void processPrint(Xvr_VM* vm) {
     Xvr_print(buffer);
     free(buffer);
     Xvr_freeString(string);
-    Xvr_freeValue(value);
+
+    if (XVR_VALUE_IS_REFERENCE(value) != true) {
+        Xvr_freeValue(value);
+    }
 }
 
 static void processConcat(Xvr_VM* vm) {
@@ -488,7 +556,14 @@ static void processConcat(Xvr_VM* vm) {
     Xvr_Value left = Xvr_popStack(&vm->stack);
 
     if (!XVR_VALUE_IS_STRING(left) || !XVR_VALUE_IS_STRING(right)) {
-        Xvr_error("failed to concatenate a value that is not a string");
+        Xvr_error("Failed to concatenate a value that is not a string");
+
+        if (XVR_VALUE_IS_REFERENCE(left) != true) {
+            Xvr_freeValue(left);
+        }
+        if (XVR_VALUE_IS_REFERENCE(right) != true) {
+            Xvr_freeValue(right);
+        }
         return;
     }
 
@@ -513,58 +588,155 @@ static void processIndex(Xvr_VM* vm) {
         index = Xvr_popStack(&vm->stack);
         value = Xvr_popStack(&vm->stack);
     } else {
-        Xvr_error("incorrect number of elements found in index");
+        Xvr_error("Incorrect number of elements found in index");
         return;
     }
 
     if (XVR_VALUE_IS_STRING(value)) {
         if (!XVR_VALUE_IS_INTEGER(index)) {
-            Xvr_error("failed to index a string");
-            Xvr_freeValue(value);
-            Xvr_freeValue(index);
-            Xvr_freeValue(length);
+            Xvr_error("Failed to index a string");
+            if (XVR_VALUE_IS_REFERENCE(value) != true) {
+                Xvr_freeValue(value);
+            }
+            if (XVR_VALUE_IS_REFERENCE(index) != true) {
+                Xvr_freeValue(index);
+            }
+            if (XVR_VALUE_IS_REFERENCE(length) != true) {
+                Xvr_freeValue(length);
+            }
             return;
         }
+
         if (!(XVR_VALUE_IS_NULL(length) || XVR_VALUE_IS_INTEGER(length))) {
-            Xvr_error("failed to index-length a string");
-            Xvr_freeValue(value);
-            Xvr_freeValue(index);
-            Xvr_freeValue(length);
+            Xvr_error("Failed to index-length a string");
+            if (XVR_VALUE_IS_REFERENCE(value) != true) {
+                Xvr_freeValue(value);
+            }
+            if (XVR_VALUE_IS_REFERENCE(index) != true) {
+                Xvr_freeValue(index);
+            }
+            if (XVR_VALUE_IS_REFERENCE(length) != true) {
+                Xvr_freeValue(length);
+            }
             return;
         }
 
         int i = XVR_VALUE_AS_INTEGER(index);
         int l = XVR_VALUE_IS_INTEGER(length) ? XVR_VALUE_AS_INTEGER(length) : 1;
-
         Xvr_String* str = XVR_VALUE_AS_STRING(value);
+
+        if ((i < 0 || i >= str->length) ||
+            (i + l <= 0 || i + l > str->length)) {
+            Xvr_error("String index is out of bounds");
+            if (XVR_VALUE_IS_REFERENCE(value) != true) {
+                Xvr_freeValue(value);
+            }
+            if (XVR_VALUE_IS_REFERENCE(index) != true) {
+                Xvr_freeValue(index);
+            }
+            if (XVR_VALUE_IS_REFERENCE(length) != true) {
+                Xvr_freeValue(length);
+            }
+            return;
+        }
+
         Xvr_String* result = NULL;
 
         if (str->type == XVR_STRING_LEAF) {
             const char* cstr = str->as.leaf.data;
-            result = Xvr_createStringLength(&vm->stringBucket, cstr + 1, l);
+            result = Xvr_createStringLength(&vm->stringBucket, cstr + i, l);
         } else if (str->type == XVR_STRING_NODE) {
             char* cstr = Xvr_getStringRawBuffer(str);
             result = Xvr_createStringLength(&vm->stringBucket, cstr + i, l);
             free(cstr);
         } else {
             fprintf(stderr, XVR_CC_ERROR
-                    "Error: Unknown string type found in "
-                    "processIndex, exit\n" XVR_CC_RESET);
+                    "ERROR: Unknown string type found in processIndex, "
+                    "exiting\n" XVR_CC_RESET);
             exit(-1);
         }
+
         Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_STRING(result));
-    } else {
+    }
+
+    else if (XVR_VALUE_IS_ARRAY(value)) {
+        if (!XVR_VALUE_IS_INTEGER(index)) {
+            Xvr_error("Failed to index a string");
+            if (XVR_VALUE_IS_REFERENCE(value) != true) {
+                Xvr_freeValue(value);
+            }
+            if (XVR_VALUE_IS_REFERENCE(index) != true) {
+                Xvr_freeValue(index);
+            }
+            if (XVR_VALUE_IS_REFERENCE(length) != true) {
+                Xvr_freeValue(length);
+            }
+            return;
+        }
+
+        if (!(XVR_VALUE_IS_NULL(length) || XVR_VALUE_IS_INTEGER(length))) {
+            Xvr_error("Failed to index-length a string");
+            if (XVR_VALUE_IS_REFERENCE(value) != true) {
+                Xvr_freeValue(value);
+            }
+            if (XVR_VALUE_IS_REFERENCE(index) != true) {
+                Xvr_freeValue(index);
+            }
+            if (XVR_VALUE_IS_REFERENCE(length) != true) {
+                Xvr_freeValue(length);
+            }
+            return;
+        }
+
+        int i = XVR_VALUE_AS_INTEGER(index);
+        int l = XVR_VALUE_IS_INTEGER(length) ? XVR_VALUE_AS_INTEGER(length) : 1;
+        Xvr_Array* array = XVR_VALUE_AS_ARRAY(value);
+
+        if ((i < 0 || i >= array->count) ||
+            (i + l <= 0 || i + l > array->count)) {
+            Xvr_error("Array index is out of bounds");
+            if (XVR_VALUE_IS_REFERENCE(value) != true) {
+                Xvr_freeValue(value);
+            }
+            if (XVR_VALUE_IS_REFERENCE(index) != true) {
+                Xvr_freeValue(index);
+            }
+            if (XVR_VALUE_IS_REFERENCE(length) != true) {
+                Xvr_freeValue(length);
+            }
+            return;
+        }
+
+        if (XVR_VALUE_IS_REFERENCE(array->data[i]) ||
+            XVR_VALUE_IS_ARRAY(array->data[i])) {
+            Xvr_Value ref = XVR_REFERENCE_FROM_POINTER(&(array->data[i]));
+
+            Xvr_pushStack(&vm->stack, ref);
+        }
+
+        else {
+            Xvr_pushStack(&vm->stack, Xvr_copyValue(array->data[i]));
+        }
+    }
+
+    else {
         fprintf(stderr,
                 XVR_CC_ERROR
-                "Error: Unknown value type '%s' found in processIndex, "
+                "ERROR: Unknown value type '%s' found in processIndex, "
                 "exiting\n" XVR_CC_RESET,
                 Xvr_private_getValueTypeAsCString(value.type));
         exit(-1);
     }
 
-    Xvr_freeValue(value);
-    Xvr_freeValue(index);
-    Xvr_freeValue(length);
+    if (XVR_VALUE_IS_REFERENCE(value) != true) {
+        Xvr_freeValue(value);
+    }
+    if (XVR_VALUE_IS_REFERENCE(index) != true) {
+        Xvr_freeValue(index);
+    }
+    if (XVR_VALUE_IS_REFERENCE(length) != true) {
+        Xvr_freeValue(length);
+    }
 }
 
 static void process(Xvr_VM* vm) {
