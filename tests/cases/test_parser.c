@@ -167,6 +167,36 @@ int test_keywords(Xvr_Bucket** bucketHandle) {
     return 0;
 }
 
+int test_binary(Xvr_Bucket** bucketHandle) {
+    {
+        Xvr_Ast* ast = makeAstFromSource(bucketHandle, "1 + 2;");
+
+        if (ast == NULL || ast->type != XVR_AST_BLOCK ||
+            ast->block.child == NULL ||
+            ast->block.child->type != XVR_AST_BINARY ||
+            ast->block.child->binary.flag != XVR_AST_FLAG_ADD ||
+
+            ast->block.child->binary.left == NULL ||
+            ast->block.child->binary.left->type != XVR_AST_VALUE ||
+            XVR_VALUE_IS_INTEGER(ast->block.child->binary.left->value.value) ==
+                false ||
+            XVR_VALUE_AS_INTEGER(ast->block.child->binary.left->value.value) !=
+                1 ||
+            ast->block.child->binary.right == NULL ||
+            ast->block.child->binary.right->type != XVR_AST_VALUE ||
+            XVR_VALUE_IS_INTEGER(ast->block.child->binary.right->value.value) ==
+                false ||
+            XVR_VALUE_AS_INTEGER(ast->block.child->binary.right->value.value) !=
+                2) {
+            fprintf(stderr, XVR_CC_ERROR
+                    "Error: faild to run the parser with binary add '1 + 2' "
+                    "(term)\n" XVR_CC_RESET);
+            return -1;
+        }
+    }
+    return 0;
+}
+
 int test_compound(Xvr_Bucket** bucketHandle) {
     {
         char* source = "1, 2, 3;";
@@ -263,6 +293,17 @@ int main() {
         if (res == 0) {
             printf(XVR_CC_NOTICE
                    "COMPOUND: PASSED woilah cik jalan loh ya\n" XVR_CC_RESET);
+        }
+        total += res;
+    }
+
+    {
+        Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
+        res = test_binary(&bucket);
+        Xvr_freeBucket(&bucket);
+        if (res == 0) {
+            printf(XVR_CC_NOTICE
+                   "BINARY: PASSED jalan cik nice one loh ya\n" XVR_CC_RESET);
         }
         total += res;
     }

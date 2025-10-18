@@ -483,6 +483,17 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
         EMIT_BYTE(rt, code, target->length);
 
         emitString(rt, target);
+    } else if (ast.target->type == XVR_AST_AGGREGATE &&
+               ast.target->aggregate.flag == XVR_AST_FLAG_INDEX) {
+        writeRoutineCode(rt, ast.target->aggregate.left);
+        writeRoutineCode(rt, ast.target->aggregate.right);
+        writeRoutineCode(rt, ast.expr);
+
+        EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN_COMPOUND);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+        return 0;
     } else {
         fprintf(stderr,
                 XVR_CC_ERROR "COMPILER ERROR: TODO at %s %d\n" XVR_CC_RESET,

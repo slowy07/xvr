@@ -214,11 +214,55 @@ static void processAssign(Xvr_VM* vm) {
     if (!XVR_VALUE_IS_STRING(name) ||
         XVR_VALUE_AS_STRING(name)->type != XVR_STRING_NAME) {
         Xvr_error("Invalid assignment target");
+        Xvr_freeValue(name);
+        Xvr_freeValue(value);
         return;
     }
 
     Xvr_assignScope(vm->scope, XVR_VALUE_AS_STRING(name), value);
     Xvr_freeValue(name);
+}
+
+static void processAssignCompound(Xvr_VM* vm) {
+    Xvr_Value value = Xvr_popStack(&vm->stack);
+    Xvr_Value key = Xvr_popStack(&vm->stack);
+    Xvr_Value target = Xvr_popStack(&vm->stack);
+
+    if (XVR_VALUE_IS_STRING(target) &&
+        XVR_VALUE_AS_STRING(target)->type == XVR_STRING_NAME) {
+        Xvr_Value* valuePtr =
+            Xvr_accessScopeAsPointer(vm->scope, XVR_VALUE_AS_STRING(target));
+        Xvr_freeValue(target);
+        target = XVR_REFERENCE_FROM_POINTER(valuePtr);
+    }
+
+    if (XVR_VALUE_IS_ARRAY(target)) {
+        if (XVR_VALUE_IS_INTEGER(key) != true) {
+            Xvr_error("bad key type of assignment target");
+            Xvr_freeValue(target);
+            Xvr_freeValue(key);
+            Xvr_freeValue(value);
+            return;
+        }
+
+        Xvr_Array* array = XVR_VALUE_AS_ARRAY(target);
+        int index = XVR_VALUE_AS_INTEGER(key);
+
+        if (index < 0 || index >= array->count) {
+            Xvr_error("index of assignment target out of bounds");
+            Xvr_freeValue(target);
+            Xvr_freeValue(key);
+            Xvr_freeValue(value);
+        }
+
+        array->data[index] = Xvr_copyValue(Xvr_unwrapValue(value));
+        Xvr_freeValue(value);
+    } else {
+        Xvr_error("invalid assignment target");
+        Xvr_freeValue(key);
+        Xvr_freeValue(value);
+        return;
+    }
 }
 
 static void processAccess(Xvr_VM* vm) {
@@ -772,6 +816,10 @@ static void process(Xvr_VM* vm) {
             processAssign(vm);
             break;
 
+        case XVR_OPCODE_ASSIGN_COMPOUND:
+            processAssignCompound(vm);
+            break;
+
         case XVR_OPCODE_ACCESS:
             processAccess(vm);
             break;
@@ -834,6 +882,7 @@ static void process(Xvr_VM* vm) {
             processIndex(vm);
             break;
 
+        case XVR_OPCODE_UNUSED:
         case XVR_OPCODE_PASS:
         case XVR_OPCODE_ERROR:
         case XVR_OPCODE_EOF:

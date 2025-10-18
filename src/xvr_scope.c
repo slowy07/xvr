@@ -145,12 +145,13 @@ void Xvr_declareScope(Xvr_Scope* scope, Xvr_String* key, Xvr_Value value) {
 
     Xvr_ValueType kt = Xvr_getNameStringType(key);
     if (kt != XVR_VALUE_ANY && value.type != XVR_VALUE_NULL &&
-        kt != value.type) {
+        kt != value.type && value.type != XVR_VALUE_REFERENCE) {
         char buffer[key->length + 256];
         sprintf(buffer,
                 "Incorrect value type assigned to in variable declaration '%s' "
-                "(expected %d, got %d)",
-                key->as.name.data, (int)kt, (int)value.type);
+                "(expected %s, got %s)",
+                key->as.name.data, Xvr_private_getValueTypeAsCString(kt),
+                Xvr_private_getValueTypeAsCString(value.type));
         Xvr_error(buffer);
         return;
     }

@@ -7,3 +7,22 @@ while (hitung < 5) {
 }
 
 print(hasil);
+
+// assign new value on array
+var angka = [1, 2, 3];
+angka[1] = 20;
+
+var nilai = [
+  [1, 2, 3], 
+  [4, 5, 6]
+];
+nilai[1][2] = 50;
+
+var nilai_kedua: array = [
+  [2, 3, 4],
+  [5, 6, 7]
+];
+
+print angka;
+print nilai;
+print nilai_kedua;

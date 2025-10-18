@@ -258,8 +258,8 @@ void Xvr_private_emitAstGroup(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle);
 void Xvr_private_emitAstCompound(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
                                  Xvr_AstFlag flag);
 void Xvr_private_emitAstAggregate(Xvr_Bucket** bucketHandle,
-                                   Xvr_Ast** astHandle, Xvr_AstFlag flag,
-                                   Xvr_Ast* right);
+                                  Xvr_Ast** astHandle, Xvr_AstFlag flag,
+                                  Xvr_Ast* right);
 
 void Xvr_private_emitAstAssert(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
                                Xvr_Ast* child, Xvr_Ast* msg);
