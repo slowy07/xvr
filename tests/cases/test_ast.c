@@ -4,6 +4,7 @@
 #include "xvr_ast.h"
 #include "xvr_bucket.h"
 #include "xvr_console_colors.h"
+#include "xvr_string.h"
 #include "xvr_value.h"
 
 int test_sizeof_ast_64bit() {
@@ -205,6 +206,27 @@ int test_type_emission(Xvr_Bucket** bucketHandle) {
                     "`Xvr_Ast`, state unknown\n" XVR_CC_RESET);
             return -1;
         }
+    }
+
+    {
+        Xvr_Ast* ast = NULL;
+        Xvr_String* name = Xvr_createNameStringLength(
+            bucketHandle, "woilah cik", 10, XVR_VALUE_ANY, false);
+
+        Xvr_private_emitAstVariableDeclaration(bucketHandle, &ast, name, NULL);
+
+        if (ast == NULL || ast->type != XVR_AST_VAR_DECLARE ||
+            ast->varDeclare.name == NULL ||
+            ast->varDeclare.name->type != XVR_STRING_NAME ||
+            strcmp(ast->varDeclare.name->as.name.data, "woilah cik") != 0 ||
+            ast->varDeclare.expr != NULL) {
+            fprintf(stderr, XVR_CC_ERROR
+                    "Error: failed to emit var declare as 'Xvr_Ast', state "
+                    "unknown cik\n" XVR_CC_RESET);
+            Xvr_freeString(name);
+            return -1;
+        }
+        Xvr_freeString(name);
     }
 
     return 0;

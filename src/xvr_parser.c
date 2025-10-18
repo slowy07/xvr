@@ -158,7 +158,6 @@ static Xvr_AstFlag aggregate(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
 static ParsingTuple parsingRulesetTable[] = {
     {PREC_PRIMARY, literal, NULL},  // XVR_TOKEN_NULL,
 
-    // variable names
     {PREC_NONE, nameString, NULL},  // XVR_TOKEN_NAME,
 
     // types
@@ -170,7 +169,7 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_TYPE_TABLE,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_TYPE_FUNCTION,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_TYPE_OPAQUE,
-    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_TYPE_TYPE
+    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_TYPE_TYPE,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_TYPE_ANY,
 
     // keywords and reserved words
@@ -267,6 +266,7 @@ static Xvr_ValueType readType(Xvr_Parser* parser) {
     switch (parser->previous.type) {
     case XVR_TOKEN_TYPE_BOOLEAN:
         return XVR_VALUE_BOOLEAN;
+
     case XVR_TOKEN_TYPE_INTEGER:
         return XVR_VALUE_INTEGER;
 
@@ -305,6 +305,8 @@ static Xvr_AstFlag nameString(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
     Xvr_String* name = Xvr_createNameStringLength(
         bucketHandle, parser->previous.lexeme, parser->previous.length,
         XVR_VALUE_UNKNOWN, false);
+    Xvr_Value value = XVR_VALUE_FROM_STRING(name);
+    Xvr_private_emitAstValue(bucketHandle, rootHandle, value);
 
     Xvr_AstFlag flag = XVR_AST_FLAG_NONE;
 
@@ -322,16 +324,15 @@ static Xvr_AstFlag nameString(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
         flag = XVR_AST_FLAG_MODULO_ASSIGN;
     }
 
-    // assignment
     if (flag != XVR_AST_FLAG_NONE) {
         Xvr_Ast* expr = NULL;
         parsePrecedence(bucketHandle, parser, &expr, PREC_ASSIGNMENT);
-        Xvr_private_emitAstVariableAssignment(bucketHandle, rootHandle, name,
-                                              flag, expr);
+        Xvr_private_emitAstVariableAssignment(bucketHandle, rootHandle, flag,
+                                              expr);
         return XVR_AST_FLAG_NONE;
     }
 
-    Xvr_private_emitAstVariableAccess(bucketHandle, rootHandle, name);
+    Xvr_private_emitAstVariableAccess(bucketHandle, rootHandle);
     return XVR_AST_FLAG_NONE;
 }
 
@@ -390,13 +391,14 @@ static Xvr_AstFlag literal(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
     case XVR_TOKEN_LITERAL_STRING: {
         char buffer[parser->previous.length + 1];
         unsigned int escapeCounter = 0;
-
         unsigned int i = 0, o = 0;
+
         if (parser->previous.length > 0) {
             do {
                 buffer[i] = parser->previous.lexeme[o];
                 if (buffer[i] == '\\' && parser->previous.lexeme[++o]) {
                     escapeCounter++;
+
                     switch (parser->previous.lexeme[o]) {
                     case 'n':
                         buffer[i] = '\n';
@@ -421,7 +423,7 @@ static Xvr_AstFlag literal(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
         unsigned int len = i - escapeCounter;
         Xvr_private_emitAstValue(bucketHandle, rootHandle,
                                  XVR_VALUE_FROM_STRING(Xvr_createStringLength(
-                                     bucketHandle, buffer, i - escapeCounter)));
+                                     bucketHandle, buffer, len)));
 
         return XVR_AST_FLAG_NONE;
     }
@@ -506,7 +508,6 @@ static Xvr_AstFlag binary(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
         return XVR_AST_FLAG_MODULO;
     }
 
-    // assignment
     case XVR_TOKEN_OPERATOR_ASSIGN: {
         parsePrecedence(bucketHandle, parser, rootHandle, PREC_ASSIGNMENT + 1);
         return XVR_AST_FLAG_ASSIGN;
@@ -614,14 +615,15 @@ static Xvr_AstFlag compound(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
     if (parser->previous.type == XVR_TOKEN_OPERATOR_BRACKET_LEFT) {
         parsePrecedence(bucketHandle, parser, rootHandle, PREC_GROUP);
         consume(parser, XVR_TOKEN_OPERATOR_BRACKET_RIGHT,
-                "Expected `]` at the end of compound expression");
+                "Expected ']' at the end of compound expression");
         Xvr_private_emitAstCompound(bucketHandle, rootHandle,
                                     XVR_AST_FLAG_COMPOUND_ARRAY);
 
         return XVR_AST_FLAG_NONE;
+
     } else {
         printError(parser, parser->previous,
-                   "Unexpected token passing to compound precedence rule");
+                   "Unexpected token passed to compound precedence rule");
         Xvr_private_emitAstError(bucketHandle, rootHandle);
         return XVR_AST_FLAG_NONE;
     }
@@ -651,13 +653,10 @@ static ParsingTuple* getParsingRule(Xvr_TokenType type) {
     return &parsingRulesetTable[type];
 }
 
-// grammar rules
 static void parsePrecedence(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
                             Xvr_Ast** rootHandle, ParsingPrecedence precRule) {
-    //'step over' the token to parse
     advance(parser);
 
-    // every valid expression has a prefix rule
     ParsingRule prefix = getParsingRule(parser->previous.type)->prefix;
 
     if (prefix == NULL) {
@@ -683,8 +682,6 @@ static void parsePrecedence(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
             return;
         }
 
-        Xvr_Token prevToken = parser->previous;
-
         Xvr_Ast* ptr = NULL;
         Xvr_AstFlag flag = infix(bucketHandle, parser, &ptr);
 
@@ -692,15 +689,12 @@ static void parsePrecedence(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
             (*rootHandle) = ptr;
             return;
         } else if (flag >= 10 && flag <= 19) {
-            Xvr_String* name = Xvr_createNameStringLength(
-                bucketHandle, prevToken.lexeme, prevToken.length,
-                XVR_VALUE_UNKNOWN, false);
             Xvr_private_emitAstVariableAssignment(bucketHandle, rootHandle,
-                                                  name, flag, ptr);
+                                                  flag, ptr);
         } else if (flag >= 20 && flag <= 29) {
             Xvr_private_emitAstCompare(bucketHandle, rootHandle, flag, ptr);
         } else if (flag >= 30 && flag <= 39) {
-            Xvr_private_emit_AstAggregate(bucketHandle, rootHandle, flag, ptr);
+            Xvr_private_emitAstAggregate(bucketHandle, rootHandle, flag, ptr);
         } else {
             Xvr_private_emitAstBinary(bucketHandle, rootHandle, flag, ptr);
         }
@@ -719,7 +713,6 @@ static void makeExpr(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
 
 static void makeBlockStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
                           Xvr_Ast** rootHandle);
-
 static void makeDeclarationStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
                                 Xvr_Ast** rootHandle);
 
@@ -741,7 +734,7 @@ static void makeAssertStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
     }
 
     consume(parser, XVR_TOKEN_OPERATOR_SEMICOLON,
-            "Expected `;` at the end of assert statement");
+            "Expected ';' at the end of assert statement");
 }
 
 static void makeIfThenElseStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
@@ -751,10 +744,10 @@ static void makeIfThenElseStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
     Xvr_Ast* elseBranch = NULL;
 
     consume(parser, XVR_TOKEN_OPERATOR_PAREN_LEFT,
-            "Expected `(` after `if` keyword");
+            "Expected '(' after 'if' keyword");
     makeExpr(bucketHandle, parser, &condBranch);
     consume(parser, XVR_TOKEN_OPERATOR_PAREN_RIGHT,
-            "Expected `)` after `if` condition");
+            "Expected ')' after 'if' condition");
 
     makeDeclarationStmt(bucketHandle, parser, &thenBranch);
 
@@ -772,12 +765,13 @@ static void makeWhileStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
     Xvr_Ast* thenBranch = NULL;
 
     consume(parser, XVR_TOKEN_OPERATOR_PAREN_LEFT,
-            "Expected `(` after `while` keyword");
+            "Expected '(' after 'while' keyword");
     makeExpr(bucketHandle, parser, &condBranch);
     consume(parser, XVR_TOKEN_OPERATOR_PAREN_RIGHT,
-            "Expected `)` after `while` condition");
+            "Expected ')' after 'while' condition");
 
     makeDeclarationStmt(bucketHandle, parser, &thenBranch);
+
     Xvr_private_emitAstWhileThen(bucketHandle, rootHandle, condBranch,
                                  thenBranch);
 }
@@ -786,14 +780,14 @@ static void makeBreakStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
                           Xvr_Ast** rootHandle) {
     Xvr_private_emitAstBreak(bucketHandle, rootHandle);
     consume(parser, XVR_TOKEN_OPERATOR_SEMICOLON,
-            "Expected `;` ate the end of break statement");
+            "Expected ';' at the end of break statement");
 }
 
 static void makeContinueStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
                              Xvr_Ast** rootHandle) {
     Xvr_private_emitAstContinue(bucketHandle, rootHandle);
     consume(parser, XVR_TOKEN_OPERATOR_SEMICOLON,
-            "Expecter `;` at the end of continue statement");
+            "Expected ';' at the end of continue statement");
 }
 
 static void makePrintStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
@@ -832,6 +826,7 @@ static void makeVariableDeclarationStmt(Xvr_Bucket** bucketHandle,
 
     if (match(parser, XVR_TOKEN_OPERATOR_COLON)) {
         varType = readType(parser);
+
         if (match(parser, XVR_TOKEN_KEYWORD_CONST)) {
             constant = true;
         }
@@ -856,25 +851,25 @@ static void makeStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
     if (match(parser, XVR_TOKEN_OPERATOR_BRACE_LEFT)) {
         makeBlockStmt(bucketHandle, parser, rootHandle);
         consume(parser, XVR_TOKEN_OPERATOR_BRACE_RIGHT,
-                "Expected `}` at the end of block scope");
+                "Expected '}' at the end of block scope");
         (*rootHandle)->block.innerScope = true;
         return;
     }
 
     else if (match(parser, XVR_TOKEN_KEYWORD_ASSERT)) {
         makeAssertStmt(bucketHandle, parser, rootHandle);
+        return;
     }
 
     else if (match(parser, XVR_TOKEN_KEYWORD_IF)) {
         makeIfThenElseStmt(bucketHandle, parser, rootHandle);
+        return;
     }
 
     else if (match(parser, XVR_TOKEN_KEYWORD_WHILE)) {
         makeWhileStmt(bucketHandle, parser, rootHandle);
         return;
-    }
-
-    else if (match(parser, XVR_TOKEN_KEYWORD_BREAK)) {
+    } else if (match(parser, XVR_TOKEN_KEYWORD_BREAK)) {
         makeBreakStmt(bucketHandle, parser, rootHandle);
         return;
     }
@@ -911,13 +906,17 @@ static void makeDeclarationStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
 
 static void makeBlockStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
                           Xvr_Ast** rootHandle) {
+    // begin the block
     Xvr_private_initAstBlock(bucketHandle, rootHandle);
 
+    // read a series of statements into the block
     while (parser->current.type != XVR_TOKEN_OPERATOR_BRACE_RIGHT &&
            !match(parser, XVR_TOKEN_EOF)) {
+        // process the grammar rules
         Xvr_Ast* stmt = NULL;
         makeDeclarationStmt(bucketHandle, parser, &stmt);
 
+        // if something went wrong
         if (parser->panic) {
             synchronize(parser);
 
@@ -950,8 +949,8 @@ Xvr_Ast* Xvr_scanParser(Xvr_Bucket** bucketHandle, Xvr_Parser* parser) {
 
     if (parser->panic != true && parser->previous.type != XVR_TOKEN_EOF) {
         printError(parser, parser->previous,
-                   "Expected `EOF` and the end of the parser scan (possibly an "
-                   "extra `}` was found)");
+                   "Expected 'EOF' and the end of the parser scan (possibly an "
+                   "extra '}' was found)");
     }
 
     return rootHandle;
@@ -965,6 +964,7 @@ void Xvr_resetParser(Xvr_Parser* parser) {
 
     parser->error = false;
     parser->panic = false;
+
     parser->removeAssert = false;
 }
 

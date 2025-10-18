@@ -26,15 +26,16 @@ SOFTWARE.
 
 #include "xvr_bucket.h"
 
-void Xvr_private_initAstBlock(Xvr_Bucket** bucketHandle, Xvr_Ast** handle) {
+void Xvr_private_initAstBlock(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
 
     tmp->type = XVR_AST_BLOCK;
+    tmp->block.innerScope = false;
     tmp->block.child = NULL;
     tmp->block.next = NULL;
     tmp->block.tail = NULL;
 
-    (*handle) = tmp;
+    (*astHandle) = tmp;
 }
 
 void Xvr_private_appendAstBlock(Xvr_Bucket** bucketHandle, Xvr_Ast* block,
@@ -60,37 +61,37 @@ void Xvr_private_appendAstBlock(Xvr_Bucket** bucketHandle, Xvr_Ast* block,
     block->block.tail = iter->block.next;
 }
 
-void Xvr_private_emitAstValue(Xvr_Bucket** bucketHandle, Xvr_Ast** handle,
+void Xvr_private_emitAstValue(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
                               Xvr_Value value) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
 
     tmp->type = XVR_AST_VALUE;
     tmp->value.value = value;
 
-    (*handle) = tmp;
+    (*astHandle) = tmp;
 }
 
-void Xvr_private_emitAstUnary(Xvr_Bucket** bucketHandle, Xvr_Ast** handle,
+void Xvr_private_emitAstUnary(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
                               Xvr_AstFlag flag) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
 
     tmp->type = XVR_AST_UNARY;
     tmp->unary.flag = flag;
-    tmp->unary.child = *handle;
+    tmp->unary.child = *astHandle;
 
-    (*handle) = tmp;
+    (*astHandle) = tmp;
 }
 
-void Xvr_private_emitAstBinary(Xvr_Bucket** bucketHandle, Xvr_Ast** handle,
+void Xvr_private_emitAstBinary(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
                                Xvr_AstFlag flag, Xvr_Ast* right) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
 
     tmp->type = XVR_AST_BINARY;
     tmp->binary.flag = flag;
-    tmp->binary.left = *handle;  // left-recursive
+    tmp->binary.left = *astHandle;
     tmp->binary.right = right;
 
-    (*handle) = tmp;
+    (*astHandle) = tmp;
 }
 
 void Xvr_private_emitAstCompare(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
@@ -105,13 +106,13 @@ void Xvr_private_emitAstCompare(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
     (*astHandle) = tmp;
 }
 
-void Xvr_private_emitAstGroup(Xvr_Bucket** bucketHandle, Xvr_Ast** handle) {
+void Xvr_private_emitAstGroup(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
 
     tmp->type = XVR_AST_GROUP;
-    tmp->group.child = (*handle);
+    tmp->group.child = (*astHandle);
 
-    (*handle) = tmp;
+    (*astHandle) = tmp;
 }
 
 void Xvr_private_emitAstCompound(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
@@ -125,9 +126,9 @@ void Xvr_private_emitAstCompound(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
     (*astHandle) = tmp;
 }
 
-void Xvr_private_emit_AstAggregate(Xvr_Bucket** bucketHandle,
-                                   Xvr_Ast** astHandle, Xvr_AstFlag flag,
-                                   Xvr_Ast* right) {
+void Xvr_private_emitAstAggregate(Xvr_Bucket** bucketHandle,
+                                  Xvr_Ast** astHandle, Xvr_AstFlag flag,
+                                  Xvr_Ast* right) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
 
     tmp->type = XVR_AST_AGGREGATE;
@@ -145,6 +146,7 @@ void Xvr_private_emitAstAssert(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
     tmp->type = XVR_AST_ASSERT;
     tmp->assert.child = child;
     tmp->assert.message = msg;
+
     (*astHandle) = tmp;
 }
 
@@ -169,26 +171,33 @@ void Xvr_private_emitAstWhileThen(Xvr_Bucket** bucketHandle,
     tmp->type = XVR_AST_WHILE_THEN;
     tmp->whileThen.condBranch = condBranch;
     tmp->whileThen.thenBranch = thenBranch;
+
     (*astHandle) = tmp;
 }
 
 void Xvr_private_emitAstBreak(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
+
     tmp->type = XVR_AST_BREAK;
+
     (*astHandle) = tmp;
 }
 
 void Xvr_private_emitAstContinue(Xvr_Bucket** bucketHandle,
                                  Xvr_Ast** astHandle) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
+
     tmp->type = XVR_AST_CONTINUE;
+
     (*astHandle) = tmp;
 }
 
 void Xvr_private_emitAstPrint(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
+
     tmp->type = XVR_AST_PRINT;
     tmp->print.child = (*astHandle);
+
     (*astHandle) = tmp;
 }
 
@@ -206,47 +215,47 @@ void Xvr_private_emitAstVariableDeclaration(Xvr_Bucket** bucketHandle,
 
 void Xvr_private_emitAstVariableAssignment(Xvr_Bucket** bucketHandle,
                                            Xvr_Ast** astHandle,
-                                           Xvr_String* name, Xvr_AstFlag flag,
-                                           Xvr_Ast* expr) {
+                                           Xvr_AstFlag flag, Xvr_Ast* expr) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
 
     tmp->type = XVR_AST_VAR_ASSIGN;
     tmp->varAssign.flag = flag;
-    tmp->varAssign.name = name;
+    tmp->varAssign.target = (*astHandle);
     tmp->varAssign.expr = expr;
 
     (*astHandle) = tmp;
 }
 
 void Xvr_private_emitAstVariableAccess(Xvr_Bucket** bucketHandle,
-                                       Xvr_Ast** astHandle, Xvr_String* name) {
+                                       Xvr_Ast** astHandle) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
 
     tmp->type = XVR_AST_VAR_ACCESS;
-    tmp->varAccess.name = name;
+    tmp->varAccess.child = (*astHandle);
+
     (*astHandle) = tmp;
 }
 
-void Xvr_private_emitAstPass(Xvr_Bucket** bucketHandle, Xvr_Ast** handle) {
+void Xvr_private_emitAstPass(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
 
     tmp->type = XVR_AST_PASS;
 
-    (*handle) = tmp;
+    (*astHandle) = tmp;
 }
 
-void Xvr_private_emitAstError(Xvr_Bucket** bucketHandle, Xvr_Ast** handle) {
+void Xvr_private_emitAstError(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
 
     tmp->type = XVR_AST_ERROR;
 
-    (*handle) = tmp;
+    (*astHandle) = tmp;
 }
 
-void Xvr_private_emitAstEnd(Xvr_Bucket** bucketHandle, Xvr_Ast** handle) {
+void Xvr_private_emitAstEnd(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
 
     tmp->type = XVR_AST_END;
 
-    (*handle) = tmp;
+    (*astHandle) = tmp;
 }

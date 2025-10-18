@@ -135,9 +135,7 @@ static unsigned int emitString(Xvr_Routine** rt, Xvr_String* str) {
     return 1;
 }
 
-static unsigned int writeRoutineCode(
-    Xvr_Routine** rt,
-    Xvr_Ast* ast);  // forward declare for recursion
+static unsigned int writeRoutineCode(Xvr_Routine** rt, Xvr_Ast* ast);
 
 static unsigned int writeInstructionValue(Xvr_Routine** rt, Xvr_AstValue ast) {
     EMIT_BYTE(rt, code, XVR_OPCODE_READ);
@@ -236,6 +234,7 @@ static unsigned int writeInstructionBinary(Xvr_Routine** rt,
     EMIT_BYTE(rt, code, XVR_OPCODE_PASS);
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
+
     return 1;
 }
 
@@ -251,6 +250,7 @@ static unsigned int writeInstructionCompare(Xvr_Routine** rt,
         EMIT_BYTE(rt, code, XVR_OPCODE_NEGATE);
         EMIT_BYTE(rt, code, 0);
         EMIT_BYTE(rt, code, 0);
+
         return 1;
     } else if (ast.flag == XVR_AST_FLAG_COMPARE_LESS) {
         EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_LESS);
@@ -260,15 +260,18 @@ static unsigned int writeInstructionCompare(Xvr_Routine** rt,
         EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_GREATER);
     } else if (ast.flag == XVR_AST_FLAG_COMPARE_GREATER_EQUAL) {
         EMIT_BYTE(rt, code, XVR_OPCODE_COMPARE_GREATER_EQUAL);
-    } else {
+    }
+
+    else {
         fprintf(stderr, XVR_CC_ERROR
-                "Error: invalid AST compare flag found\n" XVR_CC_RESET);
+                "ERROR: Invalid AST compare flag found\n" XVR_CC_RESET);
         exit(-1);
     }
 
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
+
     return 1;
 }
 
@@ -292,7 +295,7 @@ static unsigned int writeInstructionCompound(Xvr_Routine** rt,
         return 1;
     } else {
         fprintf(stderr, XVR_CC_ERROR
-                "Error: invalid AST compund flag found\n" XVR_CC_RESET);
+                "ERROR: Invalid AST compound flag found\n" XVR_CC_RESET);
         exit(-1);
         return 0;
     }
@@ -314,7 +317,7 @@ static unsigned int writeInstructionAggregate(Xvr_Routine** rt,
         EMIT_BYTE(rt, code, 0);
         EMIT_BYTE(rt, code, 0);
 
-        return 1;
+        return 1;  // leaves only 1 value on the stack
     } else {
         fprintf(stderr, XVR_CC_ERROR
                 "ERROR: Invalid AST aggregate flag found\n" XVR_CC_RESET);
@@ -337,8 +340,8 @@ static unsigned int writeInstructionAssert(Xvr_Routine** rt,
     return 0;
 }
 
-static unsigned writeInstructionIfThenElse(Xvr_Routine** rt,
-                                           Xvr_AstIfThenElse ast) {
+static unsigned int writeInstructionIfThenElse(Xvr_Routine** rt,
+                                               Xvr_AstIfThenElse ast) {
     writeRoutineCode(rt, ast.condBranch);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_JUMP);
@@ -362,9 +365,12 @@ static unsigned writeInstructionIfThenElse(Xvr_Routine** rt,
                       CURRENT_ADDRESS(rt, code) - (thenEndAddr + 4));
 
         writeRoutineCode(rt, ast.elseBranch);
+
         OVERWRITE_INT(rt, code, elseEndAddr,
-                      CURRENT_ADDRESS(rt, code) - (thenEndAddr + 4));
-    } else {
+                      CURRENT_ADDRESS(rt, code) - (elseEndAddr + 4));
+    }
+
+    else {
         OVERWRITE_INT(rt, code, thenEndAddr,
                       CURRENT_ADDRESS(rt, code) - (thenEndAddr + 4));
     }
@@ -402,17 +408,19 @@ static unsigned int writeInstructionWhileThen(Xvr_Routine** rt,
 static unsigned int writeInstructionBreak(Xvr_Routine** rt, Xvr_AstBreak ast) {
     fprintf(
         stderr, XVR_CC_ERROR
-        "COMPILER ERROR: Keyword `break` not yet implemented\n" XVR_CC_RESET);
+        "COMPILER ERROR: Keyword 'break' not yet implemented\n" XVR_CC_RESET);
     (*rt)->panic = true;
+
     return 0;
 }
 
 static unsigned int writeInstructionContinue(Xvr_Routine** rt,
                                              Xvr_AstContinue ast) {
-    fprintf(
-        stderr, XVR_CC_ERROR
-        "COMPILER ERROR: keyword `continue` not ye implemented\n" XVR_CC_RESET);
+    fprintf(stderr, XVR_CC_ERROR
+            "COMPILER ERROR: Keyword 'continue' not yet "
+            "implemented\n" XVR_CC_RESET);
     (*rt)->panic = true;
+
     return 0;
 }
 
@@ -437,9 +445,7 @@ static unsigned int writeInstructionVarDeclare(Xvr_Routine** rt,
 
     EMIT_BYTE(rt, code, XVR_OPCODE_DECLARE);
     EMIT_BYTE(rt, code, Xvr_getNameStringType(ast.name));
-    EMIT_BYTE(
-        rt, code,
-        ast.name->length);  // quick optimisation to skip a 'strlen()' call
+    EMIT_BYTE(rt, code, ast.name->length);
     EMIT_BYTE(rt, code, Xvr_getNameStringConstant(ast.name) ? 1 : 0);
 
     emitString(rt, ast.name);
@@ -450,7 +456,6 @@ static unsigned int writeInstructionVarDeclare(Xvr_Routine** rt,
 static unsigned int writeInstructionAssign(Xvr_Routine** rt,
                                            Xvr_AstVarAssign ast) {
     unsigned int result = 0;
-
     switch (ast.expr->type) {
     case XVR_AST_BLOCK:
     case XVR_AST_AGGREGATE:
@@ -458,8 +463,8 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
     case XVR_AST_PRINT:
     case XVR_AST_VAR_DECLARE:
         fprintf(stderr, XVR_CC_ERROR
-                "COMPILER ERROR: Invalid AST type found: "
-                "[Malformed assignment]\n" XVR_CC_RESET);
+                "COMPILER ERROR: Invalid AST type found: Malformed "
+                "assignment\n" XVR_CC_RESET);
         (*rt)->panic = true;
         return 0;
 
@@ -467,26 +472,33 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
         break;
     }
 
-    // name, duplicate, right, opcode
-    if (ast.flag == XVR_AST_FLAG_ASSIGN) {
+    if (ast.target->type == XVR_AST_VALUE &&
+        XVR_VALUE_IS_STRING(ast.target->value.value) &&
+        XVR_VALUE_AS_STRING(ast.target->value.value)->type == XVR_STRING_NAME) {
+        Xvr_String* target = XVR_VALUE_AS_STRING(ast.target->value.value);
+
         EMIT_BYTE(rt, code, XVR_OPCODE_READ);
         EMIT_BYTE(rt, code, XVR_VALUE_STRING);
         EMIT_BYTE(rt, code, XVR_STRING_NAME);
-        EMIT_BYTE(rt, code, ast.name->length);
+        EMIT_BYTE(rt, code, target->length);
 
-        emitString(rt, ast.name);
+        emitString(rt, target);
+    } else {
+        fprintf(stderr,
+                XVR_CC_ERROR "COMPILER ERROR: TODO at %s %d\n" XVR_CC_RESET,
+                __FILE__, __LINE__);
+        (*rt)->panic = true;
+        return 0;
+    }
+
+    if (ast.flag == XVR_AST_FLAG_ASSIGN) {
         result += writeRoutineCode(rt, ast.expr);
 
         EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
         EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
     } else if (ast.flag == XVR_AST_FLAG_ADD_ASSIGN) {
-        EMIT_BYTE(rt, code, XVR_OPCODE_READ);
-        EMIT_BYTE(rt, code, XVR_VALUE_STRING);
-        EMIT_BYTE(rt, code, XVR_STRING_NAME);
-        EMIT_BYTE(rt, code, ast.name->length);
-
-        emitString(rt, ast.name);
-
         EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
         EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
         EMIT_BYTE(rt, code, 0);
@@ -496,14 +508,9 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
 
         EMIT_BYTE(rt, code, XVR_OPCODE_ADD);
         EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
     } else if (ast.flag == XVR_AST_FLAG_SUBTRACT_ASSIGN) {
-        EMIT_BYTE(rt, code, XVR_OPCODE_READ);
-        EMIT_BYTE(rt, code, XVR_VALUE_STRING);
-        EMIT_BYTE(rt, code, XVR_STRING_NAME);
-        EMIT_BYTE(rt, code, ast.name->length);
-
-        emitString(rt, ast.name);
-
         EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
         EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
         EMIT_BYTE(rt, code, 0);
@@ -512,15 +519,10 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
         result += writeRoutineCode(rt, ast.expr);
 
         EMIT_BYTE(rt, code, XVR_OPCODE_SUBTRACT);
-        EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);  // squeezed
+        EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
     } else if (ast.flag == XVR_AST_FLAG_MULTIPLY_ASSIGN) {
-        EMIT_BYTE(rt, code, XVR_OPCODE_READ);
-        EMIT_BYTE(rt, code, XVR_VALUE_STRING);
-        EMIT_BYTE(rt, code, XVR_STRING_NAME);
-        EMIT_BYTE(rt, code, ast.name->length);  // store the length (max 255)
-
-        emitString(rt, ast.name);
-
         EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
         EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
         EMIT_BYTE(rt, code, 0);
@@ -529,15 +531,10 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
         result += writeRoutineCode(rt, ast.expr);
 
         EMIT_BYTE(rt, code, XVR_OPCODE_MULTIPLY);
-        EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);  // squeezed
+        EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
     } else if (ast.flag == XVR_AST_FLAG_DIVIDE_ASSIGN) {
-        EMIT_BYTE(rt, code, XVR_OPCODE_READ);
-        EMIT_BYTE(rt, code, XVR_VALUE_STRING);
-        EMIT_BYTE(rt, code, XVR_STRING_NAME);
-        EMIT_BYTE(rt, code, ast.name->length);  // store the length (max 255)
-
-        emitString(rt, ast.name);
-
         EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
         EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
         EMIT_BYTE(rt, code, 0);
@@ -546,15 +543,10 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
         result += writeRoutineCode(rt, ast.expr);
 
         EMIT_BYTE(rt, code, XVR_OPCODE_DIVIDE);
-        EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);  // squeezed
+        EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
     } else if (ast.flag == XVR_AST_FLAG_MODULO_ASSIGN) {
-        EMIT_BYTE(rt, code, XVR_OPCODE_READ);
-        EMIT_BYTE(rt, code, XVR_VALUE_STRING);
-        EMIT_BYTE(rt, code, XVR_STRING_NAME);
-        EMIT_BYTE(rt, code, ast.name->length);  // store the length (max 255)
-
-        emitString(rt, ast.name);
-
         EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
         EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
         EMIT_BYTE(rt, code, 0);
@@ -563,7 +555,9 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
         result += writeRoutineCode(rt, ast.expr);
 
         EMIT_BYTE(rt, code, XVR_OPCODE_MODULO);
-        EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);  // squeezed
+        EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
     }
 
     else {
@@ -572,21 +566,29 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
         exit(-1);
     }
 
-    // 4-byte alignment
-    EMIT_BYTE(rt, code, 0);
-    EMIT_BYTE(rt, code, 0);
-
     return result;
 }
 
 static unsigned int writeInstructionAccess(Xvr_Routine** rt,
                                            Xvr_AstVarAccess ast) {
+    if (!(ast.child->type == XVR_AST_VALUE &&
+          XVR_VALUE_IS_STRING(ast.child->value.value) &&
+          XVR_VALUE_AS_STRING(ast.child->value.value)->type ==
+              XVR_STRING_NAME)) {
+        fprintf(stderr, XVR_CC_ERROR
+                "COMPILER ERROR: Found a non-name-string in a value node when "
+                "trying to write access\n" XVR_CC_RESET);
+        exit(-1);
+    }
+
+    Xvr_String* name = XVR_VALUE_AS_STRING(ast.child->value.value);
+
     EMIT_BYTE(rt, code, XVR_OPCODE_READ);
     EMIT_BYTE(rt, code, XVR_VALUE_STRING);
     EMIT_BYTE(rt, code, XVR_STRING_NAME);
-    EMIT_BYTE(rt, code, ast.name->length);
+    EMIT_BYTE(rt, code, name->length);
 
-    emitString(rt, ast.name);
+    emitString(rt, name);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
     EMIT_BYTE(rt, code, 0);
@@ -606,6 +608,7 @@ static unsigned int writeRoutineCode(Xvr_Routine** rt, Xvr_Ast* ast) {
         return 0;
     }
 
+    // if an error occured, just exit
     if (rt == NULL || (*rt) == NULL || (*rt)->panic) {
         return 0;
     }
@@ -698,24 +701,20 @@ static unsigned int writeRoutineCode(Xvr_Routine** rt, Xvr_Ast* ast) {
         break;
 
     case XVR_AST_PASS:
-        // NOTE: this should be disallowed, but for now it's required for
-        // testing
-        //  fprintf(stderr, XVR_CC_ERROR "ERROR: Invalid AST type found: Unknown
-        //  pass\n" XVR_CC_RESET); exit(-1);
         break;
 
     case XVR_AST_ERROR:
         fprintf(stderr, XVR_CC_ERROR
-                "COMPILER ERROR!: Invalid AST type found: "
-                "Unknown error\n" XVR_CC_RESET);
-        exit(-1);
+                "COMPILER ERROR: Invalid AST type found: Unknown "
+                "'error'\n" XVR_CC_RESET);
+        (*rt)->panic = true;
         break;
 
     case XVR_AST_END:
         fprintf(stderr, XVR_CC_ERROR
-                "COMPILER ERROR!: Invalid AST type found: Unknown "
-                "end\n" XVR_CC_RESET);
-        exit(-1);
+                "COMPILER ERROR: Invalid AST type found: Unknown "
+                "'end'\n" XVR_CC_RESET);
+        (*rt)->panic = true;
         break;
     }
 

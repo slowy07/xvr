@@ -94,8 +94,10 @@ static void processRead(Xvr_VM* vm) {
     case XVR_VALUE_STRING: {
         enum Xvr_StringType stringType = READ_BYTE(vm);
         int len = (int)READ_BYTE(vm);
+
         unsigned int jump =
             *((int*)(vm->module + vm->jumpsAddr + READ_INT(vm)));
+
         char* cstring = (char*)(vm->module + vm->dataAddr + jump);
 
         if (stringType == XVR_STRING_LEAF) {
@@ -103,10 +105,11 @@ static void processRead(Xvr_VM* vm) {
                 Xvr_createString(&vm->stringBucket, cstring));
         } else if (stringType == XVR_STRING_NAME) {
             Xvr_ValueType valueType = XVR_VALUE_UNKNOWN;
+
             value = XVR_VALUE_FROM_STRING(Xvr_createNameStringLength(
                 &vm->stringBucket, cstring, len, valueType, false));
         } else {
-            Xvr_error("invalid string type found");
+            Xvr_error("Invalid string type found");
         }
 
         break;
@@ -119,7 +122,6 @@ static void processRead(Xvr_VM* vm) {
         unsigned int capacity = count > XVR_ARRAY_INITIAL_CAPACITY
                                     ? count
                                     : XVR_ARRAY_INITIAL_CAPACITY;
-
         capacity--;
         capacity |= capacity >> 1;
         capacity |= capacity >> 2;
@@ -137,6 +139,7 @@ static void processRead(Xvr_VM* vm) {
         }
 
         value = XVR_VALUE_FROM_ARRAY(array);
+
         break;
     }
 
@@ -157,7 +160,7 @@ static void processRead(Xvr_VM* vm) {
 
     case XVR_VALUE_TYPE: {
         //
-        // berak;
+        // break;
     }
 
     case XVR_VALUE_ANY: {
@@ -181,7 +184,6 @@ static void processRead(Xvr_VM* vm) {
     // push onto the stack
     Xvr_pushStack(&vm->stack, value);
 
-    // leave the counter in a good spot
     fixAlignment(vm);
 }
 
@@ -192,11 +194,16 @@ static void processDeclare(Xvr_VM* vm) {
 
     unsigned int jump =
         *(unsigned int*)(vm->module + vm->jumpsAddr + READ_INT(vm));
+
     char* cstring = (char*)(vm->module + vm->dataAddr + jump);
+
     Xvr_String* name = Xvr_createNameStringLength(&vm->stringBucket, cstring,
                                                   len, type, constant);
+
     Xvr_Value value = Xvr_popStack(&vm->stack);
+
     Xvr_declareScope(vm->scope, name, value);
+
     Xvr_freeString(name);
 }
 
@@ -206,7 +213,7 @@ static void processAssign(Xvr_VM* vm) {
 
     if (!XVR_VALUE_IS_STRING(name) ||
         XVR_VALUE_AS_STRING(name)->type != XVR_STRING_NAME) {
-        Xvr_error("invalid assignment target");
+        Xvr_error("Invalid assignment target");
         return;
     }
 
@@ -219,7 +226,7 @@ static void processAccess(Xvr_VM* vm) {
 
     if (!XVR_VALUE_IS_STRING(name) &&
         XVR_VALUE_AS_STRING(name)->type != XVR_STRING_NAME) {
-        Xvr_error("invalid access target");
+        Xvr_error("Invalid access target");
         return;
     }
 
@@ -227,10 +234,14 @@ static void processAccess(Xvr_VM* vm) {
         Xvr_accessScopeAsPointer(vm->scope, XVR_VALUE_AS_STRING(name));
     if (XVR_VALUE_IS_REFERENCE(*valuePtr) || XVR_VALUE_IS_ARRAY(*valuePtr)) {
         Xvr_Value ref = XVR_REFERENCE_FROM_POINTER(valuePtr);
+
         Xvr_pushStack(&vm->stack, ref);
-    } else {
+    }
+
+    else {
         Xvr_pushStack(&vm->stack, Xvr_copyValue(*valuePtr));
     }
+
     Xvr_freeValue(name);
 }
 
@@ -248,11 +259,12 @@ static void processArithmetic(Xvr_VM* vm, Xvr_OpcodeType opcode) {
     Xvr_Value right = Xvr_popStack(&vm->stack);
     Xvr_Value left = Xvr_popStack(&vm->stack);
 
+    // check types
     if ((!XVR_VALUE_IS_INTEGER(left) && !XVR_VALUE_IS_FLOAT(left)) ||
         (!XVR_VALUE_IS_INTEGER(right) && !XVR_VALUE_IS_FLOAT(right))) {
         char buffer[256];
         snprintf(buffer, 256,
-                 "invalid types '%s' and '%s' passed in arithmetic",
+                 "Invalid types '%s' and '%s' passed in arithmetic",
                  Xvr_private_getValueTypeAsCString(left.type),
                  Xvr_private_getValueTypeAsCString(right.type));
         Xvr_error(buffer);
@@ -264,23 +276,22 @@ static void processArithmetic(Xvr_VM* vm, Xvr_OpcodeType opcode) {
         if (XVR_VALUE_IS_REFERENCE(right) != true) {
             Xvr_freeValue(right);
         }
+
         return;
     }
 
-    // check for divide by zero
     if (opcode == XVR_OPCODE_DIVIDE || opcode == XVR_OPCODE_MODULO) {
         if ((XVR_VALUE_IS_INTEGER(right) && XVR_VALUE_AS_INTEGER(right) == 0) ||
             (XVR_VALUE_IS_FLOAT(right) && XVR_VALUE_AS_FLOAT(right) == 0)) {
-            Xvr_error("can't divide or modulo by zero");
+            Xvr_error("Can't divide or modulo by zero");
             Xvr_freeValue(left);
             Xvr_freeValue(right);
             return;
         }
     }
 
-    // check for modulo by a float
     if (opcode == XVR_OPCODE_MODULO && XVR_VALUE_IS_FLOAT(right)) {
-        Xvr_error("can't modulo by float");
+        Xvr_error("Can't modulo by a float");
         Xvr_freeValue(left);
         Xvr_freeValue(right);
         return;
@@ -326,8 +337,8 @@ static void processArithmetic(Xvr_VM* vm, Xvr_OpcodeType opcode) {
     } else {
         fprintf(stderr,
                 XVR_CC_ERROR
-                "ERROR: Invalid opcode %d passed to "
-                "processArithmetic, exiting\n" XVR_CC_RESET,
+                "ERROR: Invalid opcode %d passed to processArithmetic, "
+                "exiting\n" XVR_CC_RESET,
                 opcode);
         exit(-1);
     }
@@ -345,11 +356,9 @@ static void processComparison(Xvr_VM* vm, Xvr_OpcodeType opcode) {
     Xvr_Value right = Xvr_popStack(&vm->stack);
     Xvr_Value left = Xvr_popStack(&vm->stack);
 
-    // most things can be equal, so handle it separately
     if (opcode == XVR_OPCODE_COMPARE_EQUAL) {
         bool equal = Xvr_checkValuesAreEqual(left, right);
 
-        // equality has an optional "negate" opcode within it's word
         if (READ_BYTE(vm) != XVR_OPCODE_NEGATE) {
             Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(equal));
         } else {
@@ -363,12 +372,13 @@ static void processComparison(Xvr_VM* vm, Xvr_OpcodeType opcode) {
         if (XVR_VALUE_IS_REFERENCE(right) != true) {
             Xvr_freeValue(right);
         }
+
         return;
     }
 
     if (Xvr_checkValuesAreComparable(left, right) != true) {
         char buffer[256];
-        snprintf(buffer, 256, "can't compare value types '%s' and '%s'",
+        snprintf(buffer, 256, "Can't compare value types '%s' and '%s'",
                  Xvr_private_getValueTypeAsCString(left.type),
                  Xvr_private_getValueTypeAsCString(right.type));
         Xvr_error(buffer);
@@ -380,6 +390,7 @@ static void processComparison(Xvr_VM* vm, Xvr_OpcodeType opcode) {
         if (XVR_VALUE_IS_REFERENCE(right) != true) {
             Xvr_freeValue(right);
         }
+
         return;
     }
 
@@ -395,7 +406,9 @@ static void processComparison(Xvr_VM* vm, Xvr_OpcodeType opcode) {
     } else if (opcode == XVR_OPCODE_COMPARE_GREATER_EQUAL &&
                (comparison > 0 || comparison == 0)) {
         Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(true));
-    } else {
+    }
+
+    else {
         Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_BOOLEAN(false));
     }
 
@@ -517,6 +530,7 @@ static void processAssert(Xvr_VM* vm) {
         exit(-1);
     }
 
+    // do the check
     if (XVR_VALUE_IS_NULL(value) || Xvr_checkValueIsTruthy(value) != true) {
         Xvr_String* string = Xvr_stringifyValue(&vm->stringBucket, message);
         char* buffer = Xvr_getStringRawBuffer(string);
@@ -539,10 +553,11 @@ static void processAssert(Xvr_VM* vm) {
 
 static void processPrint(Xvr_VM* vm) {
     Xvr_Value value = Xvr_popStack(&vm->stack);
-
     Xvr_String* string = Xvr_stringifyValue(&vm->stringBucket, value);
     char* buffer = Xvr_getStringRawBuffer(string);
+
     Xvr_print(buffer);
+
     free(buffer);
     Xvr_freeString(string);
 
@@ -575,7 +590,6 @@ static void processConcat(Xvr_VM* vm) {
 
 static void processIndex(Xvr_VM* vm) {
     unsigned char count = READ_BYTE(vm);
-
     Xvr_Value value = XVR_VALUE_FROM_NULL();
     Xvr_Value index = XVR_VALUE_FROM_NULL();
     Xvr_Value length = XVR_VALUE_FROM_NULL();
@@ -742,6 +756,7 @@ static void processIndex(Xvr_VM* vm) {
 static void process(Xvr_VM* vm) {
     while (true) {
         fixAlignment(vm);
+
         Xvr_OpcodeType opcode = READ_BYTE(vm);
 
         switch (opcode) {
@@ -844,8 +859,8 @@ void Xvr_bindVM(Xvr_VM* vm, struct Xvr_Bytecode* bc) {
     if (bc->ptr[0] != XVR_VERSION_MAJOR || bc->ptr[1] > XVR_VERSION_MINOR) {
         fprintf(stderr,
                 XVR_CC_ERROR
-                "ERROR: Wrong bytecode version found: expected "
-                "%d.%d.%d found %d.%d.%d, exiting\n" XVR_CC_RESET,
+                "ERROR: Wrong bytecode version found: expected %d.%d.%d found "
+                "%d.%d.%d, exiting\n" XVR_CC_RESET,
                 XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH,
                 bc->ptr[0], bc->ptr[1], bc->ptr[2]);
         exit(-1);
@@ -854,8 +869,8 @@ void Xvr_bindVM(Xvr_VM* vm, struct Xvr_Bytecode* bc) {
     if (bc->ptr[2] != XVR_VERSION_PATCH) {
         fprintf(stderr,
                 XVR_CC_WARN
-                "WARNING: Wrong bytecode version found: expected "
-                "%d.%d.%d found %d.%d.%d, continuing\n" XVR_CC_RESET,
+                "WARNING: Wrong bytecode version found: expected %d.%d.%d "
+                "found %d.%d.%d, continuing\n" XVR_CC_RESET,
                 XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH,
                 bc->ptr[0], bc->ptr[1], bc->ptr[2]);
     }
@@ -863,8 +878,8 @@ void Xvr_bindVM(Xvr_VM* vm, struct Xvr_Bytecode* bc) {
     if (strcmp((char*)(bc->ptr + 3), XVR_VERSION_BUILD) != 0) {
         fprintf(stderr,
                 XVR_CC_WARN
-                "WARNING: Wrong bytecode build info found: expected "
-                "'%s' found '%s', continuing\n" XVR_CC_RESET,
+                "WARNING: Wrong bytecode build info found: expected '%s' found "
+                "'%s', continuing\n" XVR_CC_RESET,
                 XVR_VERSION_BUILD, (char*)(bc->ptr + 3));
     }
 
@@ -905,9 +920,15 @@ void Xvr_bindVMToModule(Xvr_VM* vm, unsigned char* module) {
         vm->subsAddr = READ_UNSIGNED_INT(vm);
     }
 
-    vm->stringBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
-    vm->scopeBucket = Xvr_allocateBucket(XVR_BUCKET_SMALL);
-    vm->stack = Xvr_allocateStack();
+    if (vm->stringBucket == NULL) {
+        vm->stringBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
+    }
+    if (vm->scopeBucket == NULL) {
+        vm->scopeBucket = Xvr_allocateBucket(XVR_BUCKET_SMALL);
+    }
+    if (vm->stack == NULL) {
+        vm->stack = Xvr_allocateStack();
+    }
     if (vm->scope == NULL) {
         vm->scope = Xvr_pushScope(&vm->scopeBucket, NULL);
     }

@@ -50,6 +50,7 @@ Xvr_Value Xvr_unwrapValue(Xvr_Value value) {
 
 unsigned int Xvr_hashValue(Xvr_Value value) {
     value = Xvr_unwrapValue(value);
+
     switch (value.type) {
     case XVR_VALUE_NULL:
         return 0;
@@ -73,6 +74,7 @@ unsigned int Xvr_hashValue(Xvr_Value value) {
         for (unsigned int i = 0; i < ptr->count; i++) {
             hash ^= Xvr_hashValue(ptr->data[i]);
         }
+
         return hash;
     }
 
@@ -83,10 +85,12 @@ unsigned int Xvr_hashValue(Xvr_Value value) {
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
-        fprintf(stderr, XVR_CC_ERROR
-                "Error: can't hash an unknown value type, exit\n" XVR_CC_RESET);
+        fprintf(
+            stderr, XVR_CC_ERROR
+            "ERROR: Can't hash an unknown value type, exiting\n" XVR_CC_RESET);
         exit(-1);
     }
+
     return 0;
 }
 
@@ -114,6 +118,7 @@ Xvr_Value Xvr_copyValue(Xvr_Value value) {
 
         result->capacity = ptr->capacity;
         result->count = ptr->count;
+
         return XVR_VALUE_FROM_ARRAY(result);
     }
 
@@ -124,10 +129,12 @@ Xvr_Value Xvr_copyValue(Xvr_Value value) {
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
-        fprintf(stderr, XVR_CC_ERROR
-                "Error: can't copy unknown value type, exit\n" XVR_CC_RESET);
+        fprintf(
+            stderr, XVR_CC_ERROR
+            "ERROR: Can't copy an unknown value type, exiting\n" XVR_CC_RESET);
         exit(-1);
     }
+
     return XVR_VALUE_FROM_NULL();
 }
 
@@ -150,6 +157,7 @@ void Xvr_freeValue(Xvr_Value value) {
         for (unsigned int i = 0; i < ptr->count; i++) {
             Xvr_freeValue(ptr->data[i]);
         }
+
         XVR_ARRAY_FREE(ptr);
         break;
     }
@@ -161,8 +169,9 @@ void Xvr_freeValue(Xvr_Value value) {
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
-        fprintf(stderr, XVR_CC_ERROR
-                "Error: can't free an unknown value type, exit\n" XVR_CC_RESET);
+        fprintf(
+            stderr, XVR_CC_ERROR
+            "ERROR: Can't free an unknown value type, exiting\n" XVR_CC_RESET);
         exit(-1);
     }
 }
@@ -171,8 +180,7 @@ bool Xvr_checkValueIsTruthy(Xvr_Value value) {
     value = Xvr_unwrapValue(value);
 
     if (value.type == XVR_VALUE_NULL) {
-        Xvr_error(XVR_CC_ERROR
-                  "Error: `null` is neither true or false\n" XVR_CC_RESET);
+        Xvr_error("'null' is neither true nor false");
         return false;
     }
 
@@ -251,17 +259,18 @@ bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right) {
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
-        fprintf(stderr, XVR_CC_ERROR
-                "Error: unknown types in value equality, exit\n" XVR_CC_RESET);
+        fprintf(
+            stderr, XVR_CC_ERROR
+            "ERROR: Unknown types in value equality, exiting\n" XVR_CC_RESET);
         exit(-1);
     }
-    return 0;
+
+    return false;
 }
 
 bool Xvr_checkValuesAreComparable(Xvr_Value left, Xvr_Value right) {
     left = Xvr_unwrapValue(left);
     right = Xvr_unwrapValue(right);
-
     switch (left.type) {
     case XVR_VALUE_NULL:
         return false;
@@ -298,7 +307,6 @@ bool Xvr_checkValuesAreComparable(Xvr_Value left, Xvr_Value right) {
 int Xvr_compareValues(Xvr_Value left, Xvr_Value right) {
     left = Xvr_unwrapValue(left);
     right = Xvr_unwrapValue(right);
-
     switch (left.type) {
     case XVR_VALUE_NULL:
     case XVR_VALUE_BOOLEAN:
@@ -341,10 +349,10 @@ int Xvr_compareValues(Xvr_Value left, Xvr_Value right) {
     }
 
     fprintf(stderr, XVR_CC_ERROR
-            "unknown types in value comparison, exit\n" XVR_CC_RESET);
+            "Unknown types in value comparison, exiting\n" XVR_CC_RESET);
     exit(-1);
 
-    return -1;
+    return ~0;
 }
 
 Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
@@ -360,31 +368,27 @@ Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
 
     case XVR_VALUE_INTEGER: {
         char buffer[16];
-        sprintf(buffer, "%d", XVR_VALUE_AS_INTEGER(value));
+        sprintf(buffer, "%d", value.as.integer);
         return Xvr_createString(bucketHandle, buffer);
     }
 
     case XVR_VALUE_FLOAT: {
         char buffer[16];
-        sprintf(buffer, "%f", XVR_VALUE_AS_FLOAT(value));
+        sprintf(buffer, "%f", value.as.number);
 
         unsigned int length = strlen(buffer);
+
         unsigned int decimal = 0;
+        while (decimal != length && buffer[decimal] != '.') decimal++;
 
-        while (decimal != length && buffer[decimal] != '.') {
-            decimal++;
-        }
-
-        while (decimal != length && buffer[length - 1] == '0') {
+        while (decimal != length && buffer[length - 1] == '0')
             buffer[--length] = '\0';
-        }
 
         return Xvr_createStringLength(bucketHandle, buffer, length);
     }
 
-    case XVR_VALUE_STRING: {
+    case XVR_VALUE_STRING:
         return Xvr_copyString(value.as.string);
-    }
 
     case XVR_VALUE_ARRAY: {
         Xvr_Array* ptr = value.as.array;
@@ -405,12 +409,14 @@ Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
                 string = tmp;
             }
         }
+
         Xvr_String* tmp = Xvr_concatStrings(
             bucketHandle, string, Xvr_createStringLength(bucketHandle, "]", 1));
         Xvr_freeString(string);
         string = tmp;
 
         Xvr_freeString(comma);
+
         return string;
     }
 
@@ -422,7 +428,7 @@ Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
     case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
         fprintf(stderr, XVR_CC_ERROR
-                "unknown types in value stringify, exiting\n" XVR_CC_RESET);
+                "Unknown types in value stringify, exiting\n" XVR_CC_RESET);
         exit(-1);
     }
 

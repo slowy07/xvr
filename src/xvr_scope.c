@@ -36,7 +36,6 @@ SOFTWARE.
 #include "xvr_table.h"
 #include "xvr_value.h"
 
-// utils
 static void incrementRefCount(Xvr_Scope* scope) {
     for (Xvr_Scope* iter = scope; iter; iter = iter->next) {
         iter->refCount++;
@@ -46,6 +45,10 @@ static void incrementRefCount(Xvr_Scope* scope) {
 static void decrementRefCount(Xvr_Scope* scope) {
     for (Xvr_Scope* iter = scope; iter; iter = iter->next) {
         iter->refCount--;
+        if (iter->refCount == 0 && iter->table != NULL) {
+            Xvr_freeTable(iter->table);
+            iter->table = NULL;
+        }
     }
 }
 
@@ -98,17 +101,10 @@ Xvr_Scope* Xvr_popScope(Xvr_Scope* scope) {
     }
 
     decrementRefCount(scope);
-
-    if (scope->refCount == 0) {
-        Xvr_freeTable(scope->table);
-        scope->table = NULL;
-    }
-
     return scope->next;
 }
 
 Xvr_Scope* Xvr_deepCopyScope(Xvr_Bucket** bucketHandle, Xvr_Scope* scope) {
-    // copy/pasted from pushScope, so I can allocate the table manually
     Xvr_Scope* newScope = Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Scope));
 
     newScope->next = scope->next;
@@ -118,11 +114,11 @@ Xvr_Scope* Xvr_deepCopyScope(Xvr_Bucket** bucketHandle, Xvr_Scope* scope) {
 
     incrementRefCount(newScope);
 
-    // forcibly copy the contents
     for (int i = 0; i < scope->table->capacity; i++) {
         if (!XVR_VALUE_IS_NULL(scope->table->data[i].key)) {
-            Xvr_insertTable(&newScope->table, scope->table->data[i].key,
-                            scope->table->data[i].value);
+            Xvr_insertTable(&newScope->table,
+                            Xvr_copyValue(scope->table->data[i].key),
+                            Xvr_copyValue(scope->table->data[i].value));
         }
     }
 
@@ -152,16 +148,17 @@ void Xvr_declareScope(Xvr_Scope* scope, Xvr_String* key, Xvr_Value value) {
         kt != value.type) {
         char buffer[key->length + 256];
         sprintf(buffer,
-                "incorrect value type assigned to in variable declaration `%s` "
+                "Incorrect value type assigned to in variable declaration '%s' "
                 "(expected %d, got %d)",
                 key->as.name.data, (int)kt, (int)value.type);
         Xvr_error(buffer);
         return;
     }
 
+    // constness check
     if (Xvr_getNameStringConstant(key) && value.type == XVR_VALUE_NULL) {
         char buffer[key->length + 256];
-        sprintf(buffer, "can't declare %s as cont with value `null`",
+        sprintf(buffer, "Can't declare %s as const with value 'null'",
                 key->as.name.data);
         Xvr_error(buffer);
         return;
@@ -184,17 +181,31 @@ void Xvr_assignScope(Xvr_Scope* scope, Xvr_String* key, Xvr_Value value) {
 
     if (entryPtr == NULL) {
         char buffer[key->length + 256];
-        sprintf(buffer, "Undefined variable: %s\n", key->as.name.data);
+        sprintf(buffer, "Undefined variable: %s", key->as.name.data);
+        Xvr_error(buffer);
+        return;
+    }
+
+    Xvr_ValueType kt =
+        Xvr_getNameStringType(XVR_VALUE_AS_STRING(entryPtr->key));
+    if (kt != XVR_VALUE_ANY && value.type != XVR_VALUE_NULL &&
+        kt != value.type) {
+        char buffer[key->length + 256];
+        sprintf(buffer,
+                "Incorrect value type assigned to in variable assignment '%s' "
+                "(expected %d, got %d)",
+                key->as.name.data, (int)kt, (int)value.type);
         Xvr_error(buffer);
         return;
     }
 
     if (Xvr_getNameStringConstant(XVR_VALUE_AS_STRING(entryPtr->key))) {
         char buffer[key->length + 256];
-        sprintf(buffer, "can't assign to const %s", key->as.name.data);
+        sprintf(buffer, "Can't assign to const %s", key->as.name.data);
         Xvr_error(buffer);
         return;
     }
+
     entryPtr->value = value;
 }
 
@@ -211,10 +222,11 @@ Xvr_Value* Xvr_accessScopeAsPointer(Xvr_Scope* scope, Xvr_String* key) {
 
     if (entryPtr == NULL) {
         char buffer[key->length + 256];
-        sprintf(buffer, "Undefined variable: %s", key->as.name.data);
+        sprintf(buffer, "Undefined variable: %s\n", key->as.name.data);
         Xvr_error(buffer);
         NULL;
     }
+
     return &(entryPtr->value);
 }
 

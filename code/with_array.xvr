@@ -1,0 +1,9 @@
+var hasil: array = [1, 2, 3, 4, 5];
+
+var hitung: int = 0;
+while (hitung < 5) {
+  print hasil[hitung];
+  hitung += 1;
+}
+
+print(hasil);

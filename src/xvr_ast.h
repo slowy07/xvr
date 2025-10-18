@@ -33,7 +33,6 @@ SOFTWARE.
 // each major type
 typedef enum Xvr_AstType {
     XVR_AST_BLOCK,
-
     XVR_AST_VALUE,
     XVR_AST_UNARY,
     XVR_AST_BINARY,
@@ -196,13 +195,13 @@ typedef struct Xvr_AstVarDeclare {
 typedef struct Xvr_AstVarAssign {
     Xvr_AstType type;
     Xvr_AstFlag flag;
-    Xvr_String* name;
+    Xvr_Ast* target;
     Xvr_Ast* expr;
 } Xvr_AstVarAssign;
 
 typedef struct Xvr_AstVarAccess {
     Xvr_AstType type;
-    Xvr_String* name;
+    Xvr_Ast* child;
 } Xvr_AstVarAccess;
 
 typedef struct Xvr_AstPass {
@@ -258,7 +257,7 @@ void Xvr_private_emitAstCompare(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
 void Xvr_private_emitAstGroup(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle);
 void Xvr_private_emitAstCompound(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
                                  Xvr_AstFlag flag);
-void Xvr_private_emit_AstAggregate(Xvr_Bucket** bucketHandle,
+void Xvr_private_emitAstAggregate(Xvr_Bucket** bucketHandle,
                                    Xvr_Ast** astHandle, Xvr_AstFlag flag,
                                    Xvr_Ast* right);
 
@@ -281,11 +280,9 @@ void Xvr_private_emitAstVariableDeclaration(Xvr_Bucket** bucketHandle,
 
 void Xvr_private_emitAstVariableAssignment(Xvr_Bucket** bucketHandle,
                                            Xvr_Ast** astHandle,
-                                           Xvr_String* name, Xvr_AstFlag flag,
-                                           Xvr_Ast* expr);
-
+                                           Xvr_AstFlag flag, Xvr_Ast* expr);
 void Xvr_private_emitAstVariableAccess(Xvr_Bucket** bucketHandle,
-                                       Xvr_Ast** astHandle, Xvr_String* name);
+                                       Xvr_Ast** astHandle);
 
 void Xvr_private_emitAstPass(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle);
 void Xvr_private_emitAstError(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle);
