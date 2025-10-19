@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
 #include "xvr_array.h"
@@ -132,6 +133,32 @@ int test_value_stringify() {
 
         Xvr_freeString(string);
         Xvr_freeValue(value);
+        Xvr_freeBucket(&bucket);
+    }
+
+    {
+        Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_SMALL);
+
+        Xvr_Array* array = XVR_ARRAY_ALLOCATE();
+        XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(42));
+        XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(60));
+        XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(8891));
+
+        Xvr_Value value = XVR_VALUE_FROM_ARRAY(array);
+        Xvr_String* string = Xvr_stringifyValue(&bucket, value);
+        char* buffer = Xvr_getStringRawBuffer(string);
+
+        if (buffer == NULL || strcmp(buffer, "[42,60,8891]") != 0) {
+            fprintf(
+                stderr, XVR_CC_ERROR
+                " ERROR: stringify array [42, 60, 8891] failed\n" XVR_CC_RESET);
+            free(buffer);
+            XVR_ARRAY_FREE(array);
+            Xvr_freeBucket(&bucket);
+            return -1;
+        }
+        free(buffer);
+        XVR_ARRAY_FREE(array);
         Xvr_freeBucket(&bucket);
     }
 

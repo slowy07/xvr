@@ -108,12 +108,21 @@ int getFileName(char* dest, const char* src) {
 static void printCallback(const char* msg) { fprintf(stdout, "%s\n", msg); }
 
 static void errorAndExitCallback(const char* msg) {
-    fprintf(stderr, "%s", msg);
+    fprintf(stderr, "Error: %s", msg);
     exit(-1);
 }
 
 static void errorAndContinueCallback(const char* msg) {
-    fprintf(stderr, "%s\n", msg);
+    fprintf(stderr, "Error: %s\n", msg);
+}
+
+static void assertFailureAndExitCallback(const char* msg) {
+    fprintf(stderr, "Assert failure: %s\n", msg);
+    exit(-1);
+}
+
+static void assertFailureAndContinueCallback(const char* msg) {
+    fprintf(stderr, "Assert Failure: %s\n", msg);
 }
 
 static void noOpCallback(const char* msg) {
@@ -236,7 +245,7 @@ CmdLine parseCmdLine(int argc, const char* argv[]) {
 int repl(const char* filepath) {
     Xvr_setPrintCallback(printCallback);
     Xvr_setErrorCallback(errorAndContinueCallback);
-    Xvr_setAssertFailureCallback(errorAndContinueCallback);
+    Xvr_setAssertFailureCallback(assertFailureAndContinueCallback);
 
     char prompt[256];
     getFileName(prompt, filepath);
@@ -432,7 +441,7 @@ static void debugScopePrint(Xvr_Scope* scope, int depth) {
 int main(int argc, const char* argv[]) {
     Xvr_setPrintCallback(printCallback);
     Xvr_setErrorCallback(errorAndExitCallback);
-    Xvr_setAssertFailureCallback(errorAndExitCallback);
+    Xvr_setAssertFailureCallback(assertFailureAndExitCallback);
 
     CmdLine cmd = parseCmdLine(argc, argv);
 

@@ -30,9 +30,11 @@ static void outDefault(const char* msg) { fprintf(stdout, "%s", msg); }
 
 static void errDefault(const char* msg) { fprintf(stderr, "%s", msg); }
 
+static void assertDefault(const char* msg) { fprintf(stderr, "%s\n", msg); }
+
 static Xvr_callbackType printCallback = outDefault;
 static Xvr_callbackType errorCallback = errDefault;
-static Xvr_callbackType assertCallback = errDefault;
+static Xvr_callbackType assertCallback = assertDefault;
 
 void Xvr_print(const char* msg) { printCallback(msg); }
 
@@ -50,4 +52,4 @@ void Xvr_resetPrintCallback() { printCallback = outDefault; }
 
 void Xvr_resetErrorCallback() { errorCallback = errDefault; }
 
-void Xvr_resetAssertFailureCallback() { assertCallback = errDefault; }
+void Xvr_resetAssertFailureCallback() { assertCallback = assertDefault; }

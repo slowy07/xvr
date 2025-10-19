@@ -241,7 +241,7 @@ bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right) {
 
             for (unsigned int i = 0; i < leftArray->count; i++) {
                 if (Xvr_checkValuesAreEqual(leftArray->data[i],
-                                            rightArray->data[i])) {
+                                            rightArray->data[i]) != true) {
                     return false;
                 }
             }

@@ -1,8 +1,29 @@
 var hitung: int = 1;
 
 while (hitung < 10) {
-  print hitung;
+  print (hitung);
   hitung += 1;
 }
 
-print "woilah cik kelar loh ya";
+print ("woilah cik kelar loh ya");
+
+
+{
+  var iterasi = 0;
+  while (iterasi < 10) {
+    print (iteration);
+    iteration += 1;
+  }
+}
+
+{
+  var hitung = 1;
+  while (hitung <= 10) {
+    if (hitung % 2 == 0) {
+      print ("genap");
+    } else {
+      print ("ganjil");
+    }
+    hitung += 1;
+  }
+}

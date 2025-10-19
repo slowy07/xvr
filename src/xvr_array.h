@@ -48,7 +48,7 @@ XVR_API Xvr_Array *Xvr_resizeArray(Xvr_Array *array, unsigned int capacity);
 #endif // !XVR_ARRAY_ALLOCATE
 
 #ifndef XVR_ARRAY_FREE
-#define XVR_ARRAY_FREE(array) Xvr_resizeArray(array, 0)
+#define XVR_ARRAY_FREE(array) (array = Xvr_resizeArray(array, 0))
 #endif // !XVR_ARRAY_FREE
 
 #ifndef XVR_ARRAY_EXPAND
