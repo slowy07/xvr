@@ -116,7 +116,7 @@ Xvr_Table* Xvr_private_adjustTableCapacity(Xvr_Table* oldTable,
     return newTable;
 }
 
-Xvr_Table* Xvr_allocateTable() {
+Xvr_Table* Xvr_allocateTable(void) {
     return Xvr_private_adjustTableCapacity(NULL, XVR_TABLE_INITIAL_CAPACITY);
 }
 

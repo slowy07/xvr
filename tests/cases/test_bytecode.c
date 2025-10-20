@@ -49,7 +49,7 @@ int test_bytecode_header(Xvr_Bucket** bucketHandle) {
     return 0;
 }
 
-int main() {
+int main(void) {
     printf(XVR_CC_WARN "TESTING: XVR BYTECODE\n" XVR_CC_RESET);
     int total = 0, res = 0;
 

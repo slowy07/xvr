@@ -2,4 +2,4 @@
 -xc
 -Wall
 -Wextra
--Wpointer-arith
+-Wpedantic

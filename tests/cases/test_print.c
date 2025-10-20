@@ -10,7 +10,7 @@ void count(const char* msg) {
     counter++;
 }
 
-int test_callback() {
+int test_callback(void) {
     {
         Xvr_setPrintCallback(count);
 
@@ -37,7 +37,7 @@ int test_callback() {
     return 0;
 }
 
-int main() {
+int main(void) {
     printf(XVR_CC_WARN "TESTING: XVR PRINT\n" XVR_CC_RESET);
     int total = 0, res = 0;
 

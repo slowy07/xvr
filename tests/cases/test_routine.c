@@ -73,7 +73,7 @@ int test_routine_keywords(Xvr_Bucket** bucketHandle) {
     return 0;
 }
 
-int main() {
+int main(void) {
     printf(XVR_CC_WARN "testing: xvr routine\n" XVR_CC_RESET);
     int total = 0, res = 0;
 

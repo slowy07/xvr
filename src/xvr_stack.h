@@ -34,7 +34,7 @@ typedef struct Xvr_Stack { // 32 | 64 BITNESS
   Xvr_Value data[];             //-  | -
 } Xvr_Stack;               // 8  | 8
 
-XVR_API Xvr_Stack *Xvr_allocateStack();
+XVR_API Xvr_Stack *Xvr_allocateStack(void);
 XVR_API void Xvr_freeStack(Xvr_Stack *stack);
 
 XVR_API void Xvr_pushStack(Xvr_Stack **stack, Xvr_Value value);

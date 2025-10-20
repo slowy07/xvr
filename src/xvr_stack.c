@@ -29,7 +29,7 @@ SOFTWARE.
 
 #include "xvr_console_colors.h"
 
-Xvr_Stack* Xvr_allocateStack() {
+Xvr_Stack* Xvr_allocateStack(void) {
     Xvr_Stack* stack = malloc(XVR_STACK_INITIAL_CAPACITY * sizeof(Xvr_Value) +
                               sizeof(Xvr_Stack));
 

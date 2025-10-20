@@ -95,7 +95,7 @@ int test_var_declare(Xvr_Bucket** bucketHandle) {
         if (ast == NULL || ast->type != XVR_AST_BLOCK ||
             ast->block.child == NULL ||
             ast->block.child->type != XVR_AST_VAR_DECLARE ||
-            strcmp(ast->block.child->varDeclare.name->as.name.data, "hasil") !=
+            strcmp(ast->block.child->varDeclare.name->name.data, "hasil") !=
                 0 ||
             ast->block.child->varDeclare.expr == NULL ||
             ast->block.child->varDeclare.expr->type != XVR_AST_VALUE ||
@@ -150,10 +150,10 @@ int test_keywords(Xvr_Bucket** bucketHandle) {
             XVR_VALUE_IS_STRING(ast->block.child->print.child->value.value) ==
                 false ||
             XVR_VALUE_AS_STRING(ast->block.child->print.child->value.value)
-                    ->type != XVR_STRING_LEAF ||
+                    ->info.type != XVR_STRING_LEAF ||
             strncmp(
                 XVR_VALUE_AS_STRING(ast->block.child->print.child->value.value)
-                    ->as.leaf.data,
+                    ->leaf.data,
                 "woilah cik", 10) != 0) {
             fprintf(
                 stderr,
@@ -249,7 +249,7 @@ int test_compound(Xvr_Bucket** bucketHandle) {
     return 0;
 }
 
-int main() {
+int main(void) {
     printf(XVR_CC_WARN "TESTING: XVR PARSER\n" XVR_CC_RESET);
     int total = 0, res = 0;
 

@@ -4,7 +4,7 @@
 #include "xvr_stack.h"
 #include "xvr_value.h"
 
-int test_stack_basics() {
+int test_stack_basics(void) {
     {
         Xvr_Stack* stack = Xvr_allocateStack();
 
@@ -20,7 +20,7 @@ int test_stack_basics() {
     return 0;
 }
 
-int test_stack_stress() {
+int test_stack_stress(void) {
     {
         Xvr_Stack* stack = Xvr_allocateStack();
 
@@ -40,7 +40,7 @@ int test_stack_stress() {
     return 0;
 }
 
-int main() {
+int main(void) {
     printf(XVR_CC_WARN "TESTING: XVR STACK\n" XVR_CC_RESET);
 
     int total = 0, res = 0;

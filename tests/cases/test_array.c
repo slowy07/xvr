@@ -4,7 +4,7 @@
 #include "xvr_console_colors.h"
 #include "xvr_value.h"
 
-int test_resizeArray() {
+int test_resizeArray(void) {
     {
         Xvr_Array* array = Xvr_resizeArray(NULL, 1);
         array = Xvr_resizeArray(array, 0);
@@ -30,7 +30,7 @@ int test_resizeArray() {
     return 0;
 }
 
-int main() {
+int main(void) {
     printf(XVR_CC_WARN "TESTING: XVR ARRAY\n" XVR_CC_RESET);
     int total = 0, res = 0;
 

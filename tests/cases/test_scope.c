@@ -6,7 +6,7 @@
 #include "xvr_string.h"
 #include "xvr_value.h"
 
-int test_scope_allocation() {
+int test_scope_allocation(void) {
     {
         Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
         Xvr_Scope* scope = Xvr_pushScope(&bucket, NULL);
@@ -27,7 +27,7 @@ int test_scope_allocation() {
     return 0;
 }
 
-int test_scope_elements() {
+int test_scope_element(void) {
     {
         Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
         Xvr_Scope* scope = Xvr_pushScope(&bucket, NULL);
@@ -207,7 +207,7 @@ int test_scope_elements() {
     return 0;
 }
 
-int main() {
+int main(void) {
     printf(XVR_CC_WARN "TESTING: PASSED XVR SCOPE\n" XVR_CC_RESET);
     int total = 0, res = 0;
 
@@ -221,7 +221,7 @@ int main() {
     }
 
     {
-        res = test_scope_elements();
+        res = test_scope_element();
         if (res == 0) {
             printf(XVR_CC_NOTICE
                    "SCOPE ELEMENTS: PASSED nice one cik\n" XVR_CC_RESET);

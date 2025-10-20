@@ -42,7 +42,7 @@ typedef struct Xvr_Table { // 32 | 64 BITNESS
   Xvr_TableEntry data[];   //-  | -
 } Xvr_Table;               // 16 | 16
 
-XVR_API Xvr_Table *Xvr_allocateTable();
+XVR_API Xvr_Table *Xvr_allocateTable(void);
 XVR_API void Xvr_freeTable(Xvr_Table *table);
 XVR_API void Xvr_insertTable(Xvr_Table **table, Xvr_Value key, Xvr_Value value);
 XVR_API Xvr_Value Xvr_lookupTable(Xvr_Table **table, Xvr_Value key);

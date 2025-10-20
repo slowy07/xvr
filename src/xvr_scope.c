@@ -126,7 +126,7 @@ Xvr_Scope* Xvr_deepCopyScope(Xvr_Bucket** bucketHandle, Xvr_Scope* scope) {
 }
 
 void Xvr_declareScope(Xvr_Scope* scope, Xvr_String* key, Xvr_Value value) {
-    if (key->type != XVR_STRING_NAME) {
+    if (key->info.type != XVR_STRING_NAME) {
         fprintf(
             stderr, XVR_CC_ERROR
             "ERROR: Xvr_Scope only allows name strings as keys\n" XVR_CC_RESET);
@@ -137,30 +137,30 @@ void Xvr_declareScope(Xvr_Scope* scope, Xvr_String* key, Xvr_Value value) {
         lookupScope(scope, key, Xvr_hashString(key), false);
 
     if (entryPtr != NULL) {
-        char buffer[key->length + 256];
-        sprintf(buffer, "Can't redefine a variable: %s", key->as.name.data);
+        char buffer[key->info.length + 256];
+        sprintf(buffer, "Can't redefine a variable: %s", key->name.data);
         Xvr_error(buffer);
         return;
     }
 
-    Xvr_ValueType kt = Xvr_getNameStringType(key);
+    Xvr_ValueType kt = Xvr_getNameStringVarType(key);
     if (kt != XVR_VALUE_ANY && value.type != XVR_VALUE_NULL &&
         kt != value.type && value.type != XVR_VALUE_REFERENCE) {
-        char buffer[key->length + 256];
+        char buffer[key->info.length + 256];
         sprintf(buffer,
                 "Incorrect value type assigned to in variable declaration '%s' "
                 "(expected %s, got %s)",
-                key->as.name.data, Xvr_private_getValueTypeAsCString(kt),
+                key->name.data, Xvr_private_getValueTypeAsCString(kt),
                 Xvr_private_getValueTypeAsCString(value.type));
         Xvr_error(buffer);
         return;
     }
 
     // constness check
-    if (Xvr_getNameStringConstant(key) && value.type == XVR_VALUE_NULL) {
-        char buffer[key->length + 256];
+    if (Xvr_getNameStringVarConstant(key) && value.type == XVR_VALUE_NULL) {
+        char buffer[key->info.length + 256];
         sprintf(buffer, "Can't declare %s as const with value 'null'",
-                key->as.name.data);
+                key->name.data);
         Xvr_error(buffer);
         return;
     }
@@ -170,7 +170,7 @@ void Xvr_declareScope(Xvr_Scope* scope, Xvr_String* key, Xvr_Value value) {
 }
 
 void Xvr_assignScope(Xvr_Scope* scope, Xvr_String* key, Xvr_Value value) {
-    if (key->type != XVR_STRING_NAME) {
+    if (key->info.type != XVR_STRING_NAME) {
         fprintf(
             stderr, XVR_CC_ERROR
             "ERROR: Xvr_Scope only allows name strings as keys\n" XVR_CC_RESET);
@@ -181,28 +181,28 @@ void Xvr_assignScope(Xvr_Scope* scope, Xvr_String* key, Xvr_Value value) {
         lookupScope(scope, key, Xvr_hashString(key), true);
 
     if (entryPtr == NULL) {
-        char buffer[key->length + 256];
-        sprintf(buffer, "Undefined variable: %s", key->as.name.data);
+        char buffer[key->info.length + 256];
+        sprintf(buffer, "Undefined variable: %s", key->name.data);
         Xvr_error(buffer);
         return;
     }
 
     Xvr_ValueType kt =
-        Xvr_getNameStringType(XVR_VALUE_AS_STRING(entryPtr->key));
+        Xvr_getNameStringVarType(XVR_VALUE_AS_STRING(entryPtr->key));
     if (kt != XVR_VALUE_ANY && value.type != XVR_VALUE_NULL &&
         kt != value.type) {
-        char buffer[key->length + 256];
+        char buffer[key->info.length + 256];
         sprintf(buffer,
                 "Incorrect value type assigned to in variable assignment '%s' "
                 "(expected %d, got %d)",
-                key->as.name.data, (int)kt, (int)value.type);
+                key->name.data, (int)kt, (int)value.type);
         Xvr_error(buffer);
         return;
     }
 
-    if (Xvr_getNameStringConstant(XVR_VALUE_AS_STRING(entryPtr->key))) {
-        char buffer[key->length + 256];
-        sprintf(buffer, "Can't assign to const %s", key->as.name.data);
+    if (Xvr_getNameStringVarConstant(XVR_VALUE_AS_STRING(entryPtr->key))) {
+        char buffer[key->info.length + 256];
+        sprintf(buffer, "Can't assign to const %s", key->name.data);
         Xvr_error(buffer);
         return;
     }
@@ -211,7 +211,7 @@ void Xvr_assignScope(Xvr_Scope* scope, Xvr_String* key, Xvr_Value value) {
 }
 
 Xvr_Value* Xvr_accessScopeAsPointer(Xvr_Scope* scope, Xvr_String* key) {
-    if (key->type != XVR_STRING_NAME) {
+    if (key->info.type != XVR_STRING_NAME) {
         fprintf(
             stderr, XVR_CC_ERROR
             "ERROR: Xvr_Scope only allows name strings as keys\n" XVR_CC_RESET);
@@ -222,8 +222,8 @@ Xvr_Value* Xvr_accessScopeAsPointer(Xvr_Scope* scope, Xvr_String* key) {
         lookupScope(scope, key, Xvr_hashString(key), true);
 
     if (entryPtr == NULL) {
-        char buffer[key->length + 256];
-        sprintf(buffer, "Undefined variable: %s\n", key->as.name.data);
+        char buffer[key->info.length + 256];
+        sprintf(buffer, "Undefined variable: %s\n", key->name.data);
         Xvr_error(buffer);
         NULL;
     }
@@ -232,7 +232,7 @@ Xvr_Value* Xvr_accessScopeAsPointer(Xvr_Scope* scope, Xvr_String* key) {
 }
 
 bool Xvr_isDeclaredScope(Xvr_Scope* scope, Xvr_String* key) {
-    if (key->type != XVR_STRING_NAME) {
+    if (key->info.type != XVR_STRING_NAME) {
         fprintf(
             stderr, XVR_CC_ERROR
             "ERROR: Xvr_Scope only allows name strings as keys\n" XVR_CC_RESET);

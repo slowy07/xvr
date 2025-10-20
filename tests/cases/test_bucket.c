@@ -3,7 +3,7 @@
 #include "xvr_bucket.h"
 #include "xvr_console_colors.h"
 
-int test_buckets() {
+int test_buckets(void) {
     {
         Xvr_Bucket* bucket = Xvr_allocateBucket(sizeof(int) * 32);
         if (bucket == NULL || bucket->capacity != 32 * sizeof(int)) {
@@ -37,7 +37,7 @@ int test_buckets() {
     return 0;
 }
 
-int main() {
+int main(void) {
     printf(XVR_CC_WARN "TESTING: XVR BUCKET\n" XVR_CC_RESET);
 
     int total = 0, res = 0;

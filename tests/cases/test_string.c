@@ -7,9 +7,9 @@
 #include "xvr_string.h"
 #include "xvr_value.h"
 
-int test_sizeof_string_64bit() {
+int test_sizeof_string_64bit(void) {
     {
-        if (sizeof(Xvr_String) != 40) {
+        if (sizeof(Xvr_String) != 32) {
             fprintf(stderr,
                     XVR_CC_ERROR
                     "Error: `Xvr_String` unexpected size in memory: "
@@ -21,7 +21,7 @@ int test_sizeof_string_64bit() {
     return 0;
 }
 
-int test_sizeof_string_32bit() {
+int test_sizeof_string_32bit(void) {
     {
         if (sizeof(Xvr_String) != 24) {
             fprintf(stderr,
@@ -35,7 +35,7 @@ int test_sizeof_string_32bit() {
     return 0;
 }
 
-int test_string_equal() {
+int test_string_equal(void) {
     {
         Xvr_Bucket* bucket = Xvr_allocateBucket(1024);
         Xvr_String* helloWorld = Xvr_createString(&bucket, "hello world");
@@ -64,15 +64,15 @@ int test_string_equal() {
     return 0;
 }
 
-int test_string_allocation() {
+int test_string_allocation(void) {
     {
         Xvr_Bucket* bucket = Xvr_allocateBucket(1024);
         const char* cstring = "hello world";
         Xvr_String* str = Xvr_createString(&bucket, cstring);
 
-        if (str->type != XVR_STRING_LEAF || str->length != 11 ||
-            str->refCount != 1 ||
-            strcmp(str->as.leaf.data, "hello world") != 0) {
+        if (str->info.type != XVR_STRING_LEAF || str->info.length != 11 ||
+            str->info.refCount != 1 ||
+            strcmp(str->leaf.data, "hello world") != 0) {
             fprintf(stderr, XVR_CC_ERROR
                     "Error: failed to allocate `Xvr_String` "
                     "with private bucket\n" XVR_CC_RESET);
@@ -112,9 +112,9 @@ int test_string_allocation() {
         Xvr_String* shallow = Xvr_copyString(str);
         Xvr_String* deep = Xvr_deepCopyString(&bucket, str);
 
-        if (str != shallow || str == deep || shallow->refCount != 2 ||
-            deep->refCount != 1 ||
-            strcmp(shallow->as.name.data, deep->as.name.data) != 0) {
+        if (str != shallow || str == deep || shallow->info.refCount != 2 ||
+            deep->info.refCount != 1 ||
+            strcmp(shallow->name.data, deep->name.data) != 0) {
             fprintf(stderr, XVR_CC_ERROR
                     "Error: failed copy name string \n" XVR_CC_RESET);
             Xvr_freeBucket(&bucket);
@@ -125,7 +125,7 @@ int test_string_allocation() {
     return 0;
 }
 
-int test_string_diffs() {
+int test_string_diffs(void) {
     {
         Xvr_Bucket* bucket = Xvr_allocateBucket(1024);
         Xvr_String* pangram = Xvr_concatStrings(
@@ -164,7 +164,7 @@ int test_string_diffs() {
     return 0;
 }
 
-int test_string_fragmenting() {
+int test_string_fragmenting(void) {
     {
         Xvr_Bucket* bucket = Xvr_allocateBucket(1024);
 
@@ -179,8 +179,8 @@ int test_string_fragmenting() {
 
         Xvr_String* str = Xvr_createString(&bucket, cstring);
 
-        if (str->type != XVR_STRING_LEAF || str->length != strlen(cstring) ||
-            str->refCount != 1) {
+        if (str->info.type != XVR_STRING_LEAF ||
+            str->info.length != strlen(cstring) || str->info.refCount != 1) {
             fprintf(
                 stderr, XVR_CC_ERROR
                 "Error: Failed to fragment within Xvr_String\n" XVR_CC_RESET);
@@ -196,7 +196,7 @@ int test_string_fragmenting() {
     return 0;
 }
 
-int main() {
+int main(void) {
     printf(XVR_CC_WARN "TESTING: XVR STRING\n" XVR_CC_RESET);
     int total = 0, res = 0;
 

@@ -8,7 +8,7 @@
 #include "xvr_string.h"
 #include "xvr_value.h"
 
-int test_value_creation() {
+int test_value_creation(void) {
     {
 #if XVR_BITNESS == 64
         if (sizeof(Xvr_Value) != 16) {
@@ -76,7 +76,7 @@ int test_value_creation() {
     return 0;
 }
 
-int test_comparison() {
+int test_comparison(void) {
     {
         Xvr_Value ans = XVR_VALUE_FROM_INTEGER(42);
         Xvr_Value quest = XVR_VALUE_FROM_INTEGER(42);
@@ -100,15 +100,15 @@ int test_comparison() {
     return 0;
 }
 
-int test_value_stringify() {
+int test_value_stringify(void) {
     {
         Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_SMALL);
         Xvr_Value value = XVR_VALUE_FROM_NULL();
 
         Xvr_String* string = Xvr_stringifyValue(&bucket, value);
 
-        if (string->type != XVR_STRING_LEAF ||
-            strcmp(string->as.leaf.data, "null") != 0) {
+        if (string->info.type != XVR_STRING_LEAF ||
+            strcmp(string->leaf.data, "null") != 0) {
             fprintf(stderr, XVR_CC_ERROR
                     "Error: stringify `null` failed\n" XVR_CC_RESET);
             Xvr_freeString(string);
@@ -128,8 +128,8 @@ int test_value_stringify() {
 
         Xvr_String* string = Xvr_stringifyValue(&bucket, value);
 
-        if (string->type != XVR_STRING_LEAF ||
-            strcmp(string->as.leaf.data, "true") != 0) {
+        if (string->info.type != XVR_STRING_LEAF ||
+            strcmp(string->leaf.data, "true") != 0) {
             fprintf(stderr, XVR_CC_ERROR
                     "Error: stringify boolean `true` failed\n" XVR_CC_ERROR);
             Xvr_freeString(string);
@@ -172,7 +172,7 @@ int test_value_stringify() {
     return 0;
 }
 
-int test_value_copying() {
+int test_value_copying(void) {
     {
         Xvr_Value original = XVR_VALUE_FROM_INTEGER(42);
         Xvr_Value result = Xvr_copyValue(original);
@@ -192,10 +192,9 @@ int test_value_copying() {
         Xvr_Value result = Xvr_copyValue(original);
 
         if (XVR_VALUE_IS_STRING(result) == false ||
-            XVR_VALUE_AS_STRING(result)->type != XVR_STRING_LEAF ||
-            strcmp(XVR_VALUE_AS_STRING(result)->as.leaf.data, "woilah cik") !=
-                0 ||
-            XVR_VALUE_AS_STRING(result)->refCount != 2) {
+            XVR_VALUE_AS_STRING(result)->info.type != XVR_STRING_LEAF ||
+            strcmp(XVR_VALUE_AS_STRING(result)->leaf.data, "woilah cik") != 0 ||
+            XVR_VALUE_AS_STRING(result)->info.refCount != 2) {
             fprintf(stderr, XVR_CC_ERROR
                     "Error: copy a strinb calue failed\n" XVR_CC_RESET);
             Xvr_freeValue(original);
@@ -212,7 +211,7 @@ int test_value_copying() {
     return 0;
 }
 
-int main() {
+int main(void) {
     printf(XVR_CC_WARN "TESTING: XVR VALUE\n" XVR_CC_RESET);
 
     int total = 0, res = 0;

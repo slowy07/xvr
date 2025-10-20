@@ -30,7 +30,7 @@ SOFTWARE.
 #include "xvr_print.h"
 
 struct Xvr_Bucket;
-struct Xvr_String;
+union Xvr_String_t;
 struct Xvr_Array;
 
 typedef enum Xvr_ValueType {
@@ -57,7 +57,7 @@ typedef struct Xvr_Value {  // 32 | 64 BITNESS
         bool boolean;                 // 1  | 1
         int integer;                  // 4  | 4
         float number;                 // 4  | 4
-        struct Xvr_String* string;    // 4 | 8
+        union Xvr_String_t* string;   // 4 | 8
         struct Xvr_Array* array;      // 4 | 8
     } as;                             // 4  | 4
 
@@ -117,8 +117,8 @@ XVR_API bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right);
 XVR_API bool Xvr_checkValuesAreComparable(Xvr_Value left, Xvr_Value right);
 XVR_API int Xvr_compareValues(Xvr_Value left, Xvr_Value right);
 
-XVR_API struct Xvr_String* Xvr_stringifyValue(struct Xvr_Bucket** bucketHandle,
-                                              Xvr_Value value);
+XVR_API union Xvr_String_t* Xvr_stringifyValue(struct Xvr_Bucket** bucketHandle,
+                                               Xvr_Value value);
 
 XVR_API const char* Xvr_private_getValueTypeAsCString(Xvr_ValueType type);
 

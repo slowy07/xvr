@@ -4,7 +4,7 @@
 #include "xvr_console_colors.h"
 #include "xvr_lexer.h"
 
-int main() {
+int main(void) {
     printf(XVR_CC_WARN "TESTING: XVR LEXER\n" XVR_CC_RESET);
     {
         char* source = "print null;";

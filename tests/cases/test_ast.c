@@ -7,7 +7,7 @@
 #include "xvr_string.h"
 #include "xvr_value.h"
 
-int test_sizeof_ast_64bit() {
+int test_sizeof_ast_64bit(void) {
 #define TEST_SIZEOF(type, size)                                     \
     if (sizeof(type) != size) {                                     \
         fprintf(stderr,                                             \
@@ -46,7 +46,7 @@ int test_sizeof_ast_64bit() {
     return -err;
 }
 
-int test_sizeof_ast_32bit() {
+int test_sizeof_ast_32bit(void) {
 #define TEST_SIZEOF(type, size)                                     \
     if (sizeof(type) != size) {                                     \
         fprintf(stderr,                                             \
@@ -172,8 +172,8 @@ int test_type_emission(Xvr_Bucket** bucketHandle) {
         if (ast == NULL || ast->type != XVR_AST_VAR_DECLARE ||
 
             ast->varDeclare.name == NULL ||
-            ast->varDeclare.name->type != XVR_STRING_NAME ||
-            strcmp(ast->varDeclare.name->as.name.data, "foobar") != 0 ||
+            ast->varDeclare.name->info.type != XVR_STRING_NAME ||
+            strcmp(ast->varDeclare.name->name.data, "foobar") != 0 ||
 
             ast->varDeclare.expr != NULL) {
             fprintf(stderr, XVR_CC_ERROR
@@ -217,8 +217,8 @@ int test_type_emission(Xvr_Bucket** bucketHandle) {
 
         if (ast == NULL || ast->type != XVR_AST_VAR_DECLARE ||
             ast->varDeclare.name == NULL ||
-            ast->varDeclare.name->type != XVR_STRING_NAME ||
-            strcmp(ast->varDeclare.name->as.name.data, "woilah cik") != 0 ||
+            ast->varDeclare.name->info.type != XVR_STRING_NAME ||
+            strcmp(ast->varDeclare.name->name.data, "woilah cik") != 0 ||
             ast->varDeclare.expr != NULL) {
             fprintf(stderr, XVR_CC_ERROR
                     "Error: failed to emit var declare as 'Xvr_Ast', state "
@@ -232,7 +232,7 @@ int test_type_emission(Xvr_Bucket** bucketHandle) {
     return 0;
 }
 
-int main() {
+int main(void) {
     printf(XVR_CC_WARN "TESTING: XVR AST\n" XVR_CC_RESET);
     int total = 0, res = 0;
 

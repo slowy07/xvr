@@ -37,29 +37,29 @@ SOFTWARE.
 
 // utils
 static void deepCopyUtil(char* dest, Xvr_String* str) {
-    if (str->type == XVR_STRING_NODE) {
-        deepCopyUtil(dest, str->as.node.left);
-        deepCopyUtil(dest + str->as.node.left->length, str->as.node.right);
+    if (str->info.type == XVR_STRING_NODE) {
+        deepCopyUtil(dest, str->node.left);
+        deepCopyUtil(dest + str->node.left->info.length, str->node.right);
     }
 
     else {
-        memcpy(dest, str->as.leaf.data, str->length);
+        memcpy(dest, str->leaf.data, str->info.length);
     }
 }
 
 static void incrementRefCount(Xvr_String* str) {
-    str->refCount++;
-    if (str->type == XVR_STRING_NODE) {
-        incrementRefCount(str->as.node.left);
-        incrementRefCount(str->as.node.right);
+    str->info.refCount++;
+    if (str->info.type == XVR_STRING_NODE) {
+        incrementRefCount(str->node.left);
+        incrementRefCount(str->node.right);
     }
 }
 
 static void decrementRefCount(Xvr_String* str) {
-    str->refCount--;
-    if (str->type == XVR_STRING_NODE) {
-        decrementRefCount(str->as.node.left);
-        decrementRefCount(str->as.node.right);
+    str->info.refCount--;
+    if (str->info.type == XVR_STRING_NODE) {
+        decrementRefCount(str->node.left);
+        decrementRefCount(str->node.right);
     }
 }
 
@@ -91,12 +91,12 @@ static Xvr_String* partitionStringLength(Xvr_Bucket** bucketHandle,
     Xvr_String* ret = (Xvr_String*)Xvr_partitionBucket(
         bucketHandle, sizeof(Xvr_String) + length + 1);
 
-    ret->type = XVR_STRING_LEAF;
-    ret->length = length;
-    ret->refCount = 1;
-    ret->cachedHash = 0;
-    memcpy(ret->as.leaf.data, cstring, length + 1);
-    ret->as.leaf.data[length] = '\0';
+    ret->info.type = XVR_STRING_LEAF;
+    ret->info.length = length;
+    ret->info.refCount = 1;
+    ret->info.cachedHash = 0;
+    memcpy(ret->leaf.data, cstring, length + 1);
+    ret->leaf.data[length] = '\0';
     return ret;
 }
 
@@ -155,20 +155,20 @@ Xvr_String* Xvr_createNameStringLength(Xvr_Bucket** bucketHandle,
     Xvr_String* ret = (Xvr_String*)Xvr_partitionBucket(
         bucketHandle, sizeof(Xvr_String) + length + 1);
 
-    ret->type = XVR_STRING_NAME;
-    ret->length = length;
-    ret->refCount = 1;
-    ret->cachedHash = 0;
-    memcpy(ret->as.name.data, cname, length + 1);
-    ret->as.name.data[length] = '\0';
-    ret->as.name.type = type;
-    ret->as.name.constant = constant;
+    ret->info.type = XVR_STRING_NAME;
+    ret->info.length = length;
+    ret->info.refCount = 1;
+    ret->info.cachedHash = 0;
+    memcpy(ret->name.data, cname, length + 1);
+    ret->name.data[length] = '\0';
+    ret->name.varType = type;
+    ret->name.varConstant = constant;
 
     return ret;
 }
 
 Xvr_String* Xvr_copyString(Xvr_String* str) {
-    if (str->refCount == 0) {
+    if (str->info.refCount == 0) {
         fprintf(
             stderr, XVR_CC_ERROR
             "ERROR: Can't copy a string with refcount of zero\n" XVR_CC_RESET);
@@ -179,38 +179,39 @@ Xvr_String* Xvr_copyString(Xvr_String* str) {
 }
 
 Xvr_String* Xvr_deepCopyString(Xvr_Bucket** bucketHandle, Xvr_String* str) {
-    if (str->refCount == 0) {
+    if (str->info.refCount == 0) {
         fprintf(stderr, XVR_CC_ERROR
                 "ERROR: Can't deep copy a string with refcount of "
                 "zero\n" XVR_CC_RESET);
         exit(-1);
     }
 
-    if (sizeof(Xvr_String) + str->length + 1 > (*bucketHandle)->capacity) {
+    if (sizeof(Xvr_String) + str->info.length + 1 > (*bucketHandle)->capacity) {
         char* buffer = Xvr_getStringRawBuffer(str);
         Xvr_String* result =
-            Xvr_createStringLength(bucketHandle, buffer, str->length);
+            Xvr_createStringLength(bucketHandle, buffer, str->info.length);
         free(buffer);
         return result;
     }
 
     Xvr_String* ret = (Xvr_String*)Xvr_partitionBucket(
-        bucketHandle, sizeof(Xvr_String) + str->length + 1);
+        bucketHandle, sizeof(Xvr_String) + str->info.length + 1);
 
-    if (str->type == XVR_STRING_NODE || str->type == XVR_STRING_LEAF) {
-        ret->type = XVR_STRING_LEAF;
-        ret->length = str->length;
-        ret->refCount = 1;
-        ret->cachedHash = str->cachedHash;
-        deepCopyUtil(ret->as.leaf.data, str);  // copy each leaf into the buffer
-        ret->as.leaf.data[ret->length] = '\0';
+    if (str->info.type == XVR_STRING_NODE ||
+        str->info.type == XVR_STRING_LEAF) {
+        ret->info.type = XVR_STRING_LEAF;
+        ret->info.length = str->info.length;
+        ret->info.refCount = 1;
+        ret->info.cachedHash = str->info.cachedHash;
+        deepCopyUtil(ret->leaf.data, str);
+        ret->leaf.data[ret->info.length] = '\0';
     } else {
-        ret->type = XVR_STRING_NAME;
-        ret->length = str->length;
-        ret->refCount = 1;
-        ret->cachedHash = str->cachedHash;
-        memcpy(ret->as.name.data, str->as.name.data, str->length + 1);
-        ret->as.name.data[ret->length] = '\0';
+        ret->info.type = XVR_STRING_NAME;
+        ret->info.length = str->info.length;
+        ret->info.refCount = 1;
+        ret->info.cachedHash = str->info.cachedHash;
+        memcpy(ret->name.data, str->name.data, str->info.length + 1);
+        ret->name.data[ret->info.length] = '\0';
     }
 
     return ret;
@@ -218,13 +219,14 @@ Xvr_String* Xvr_deepCopyString(Xvr_Bucket** bucketHandle, Xvr_String* str) {
 
 Xvr_String* Xvr_concatStrings(Xvr_Bucket** bucket, Xvr_String* left,
                               Xvr_String* right) {
-    if (left->type == XVR_STRING_NAME || right->type == XVR_STRING_NAME) {
+    if (left->info.type == XVR_STRING_NAME ||
+        right->info.type == XVR_STRING_NAME) {
         fprintf(stderr,
                 XVR_CC_ERROR "Error: can't concat name string\n" XVR_CC_RESET);
         exit(-1);
     }
 
-    if (left->refCount == 0 || right->refCount == 0) {
+    if (left->info.refCount == 0 || right->info.refCount == 0) {
         fprintf(stderr, XVR_CC_ERROR
                 "ERROR: Can't concatenate a string with "
                 "refcount of zero\n" XVR_CC_RESET);
@@ -234,12 +236,12 @@ Xvr_String* Xvr_concatStrings(Xvr_Bucket** bucket, Xvr_String* left,
     Xvr_String* ret =
         (Xvr_String*)Xvr_partitionBucket(bucket, sizeof(Xvr_String));
 
-    ret->type = XVR_STRING_NODE;
-    ret->length = left->length + right->length;
-    ret->refCount = 1;
-    ret->cachedHash = 0;
-    ret->as.node.left = left;
-    ret->as.node.right = right;
+    ret->info.type = XVR_STRING_NODE;
+    ret->info.length = left->info.length + right->info.length;
+    ret->info.refCount = 1;
+    ret->info.cachedHash = 0;
+    ret->node.left = left;
+    ret->node.right = right;
 
     incrementRefCount(left);
     incrementRefCount(right);
@@ -249,56 +251,57 @@ Xvr_String* Xvr_concatStrings(Xvr_Bucket** bucket, Xvr_String* left,
 
 void Xvr_freeString(Xvr_String* str) { decrementRefCount(str); }
 
-unsigned int Xvr_getStringLength(Xvr_String* str) { return str->length; }
+unsigned int Xvr_getStringLength(Xvr_String* str) { return str->info.length; }
 
-unsigned int Xvr_getStringRefCount(Xvr_String* str) { return str->refCount; }
+unsigned int Xvr_getStringRefCount(Xvr_String* str) {
+    return str->info.refCount;
+}
 
-Xvr_ValueType Xvr_getNameStringType(Xvr_String* str) {
-    if (str->type != XVR_STRING_NAME) {
+Xvr_ValueType Xvr_getNameStringVarType(Xvr_String* str) {
+    if (str->info.type != XVR_STRING_NAME) {
         fprintf(stderr, XVR_CC_ERROR
                 "Error: can't get the variable type of a "
                 "non-name string\n" XVR_CC_RESET);
         exit(-1);
     }
-
-    return str->as.name.type;
+    return str->name.varType;
 }
 
-Xvr_ValueType Xvr_getNameStringConstant(Xvr_String* str) {
-    if (str->type != XVR_STRING_NAME) {
+Xvr_ValueType Xvr_getNameStringVarConstant(Xvr_String* str) {
+    if (str->info.type != XVR_STRING_NAME) {
         fprintf(stderr, XVR_CC_ERROR
                 "Error: can't get the variable constness of "
                 "non-name string\n" XVR_CC_RESET);
         exit(-1);
     }
-    return str->as.name.constant;
+    return str->name.varConstant;
 }
 
 char* Xvr_getStringRawBuffer(Xvr_String* str) {
-    if (str->type == XVR_STRING_NAME) {
+    if (str->info.type == XVR_STRING_NAME) {
         fprintf(
             stderr, XVR_CC_ERROR
             "Error: can't get raw string buffer of name string\n" XVR_CC_RESET);
         exit(-1);
     }
 
-    if (str->refCount == 0) {
+    if (str->info.refCount == 0) {
         fprintf(stderr, XVR_CC_ERROR
                 "ERROR: Can't get raw string buffer of a "
                 "string with refcount of zero\n" XVR_CC_RESET);
         exit(-1);
     }
 
-    unsigned int len = (str->length + 3) & ~3;
+    unsigned int len = (str->info.length + 3) & ~3;
 
-    if (len == str->length) {
+    if (len == str->info.length) {
         len += 4;
     }
 
     char* buffer = malloc(len);
 
     deepCopyUtil(buffer, str);
-    buffer[str->length] = '\0';
+    buffer[str->info.length] = '\0';
 
     return buffer;
 }
@@ -311,40 +314,27 @@ static int deepCompareUtil(Xvr_String* left, Xvr_String* right,
         return result;
     }
 
-    if (left->type == XVR_STRING_LEAF && (*leftHead) != NULL &&
+    if (left->info.type == XVR_STRING_LEAF && (*leftHead) != NULL &&
         (**leftHead) != '\0' &&
-        ((*leftHead) < left->as.leaf.data ||
-         (*leftHead) > (left->as.leaf.data + left->length))) {
+        ((*leftHead) < left->leaf.data ||
+         (*leftHead) > (left->leaf.data + left->info.length))) {
         return result;
     }
 
-    if (right->type == XVR_STRING_LEAF && (*rightHead) != NULL &&
+    if (right->info.type == XVR_STRING_LEAF && (*rightHead) != NULL &&
         (**rightHead) != '\0' &&
-        ((*rightHead) < right->as.leaf.data ||
-         (*rightHead) > (right->as.leaf.data + right->length))) {
+        ((*rightHead) < right->leaf.data ||
+         (*rightHead) > (right->leaf.data + right->info.length))) {
         return result;
     }
 
-    if (left->type == XVR_STRING_NODE) {
-        if ((result = deepCompareUtil(left->as.node.left, right, leftHead,
+    if (left->info.type == XVR_STRING_NODE) {
+        if ((result = deepCompareUtil(left->node.left, right, leftHead,
                                       rightHead)) != 0) {
             return result;
         }
 
-        if ((result = deepCompareUtil(left->as.node.right, right, leftHead,
-                                      rightHead)) != 0) {
-            return result;
-        }
-
-        return result;
-    }
-
-    if (right->type == XVR_STRING_NODE) {
-        if ((result = deepCompareUtil(left, right->as.node.left, leftHead,
-                                      rightHead)) != 0) {
-            return result;
-        }
-        if ((result = deepCompareUtil(left, right->as.node.right, leftHead,
+        if ((result = deepCompareUtil(left->node.right, right, leftHead,
                                       rightHead)) != 0) {
             return result;
         }
@@ -352,13 +342,27 @@ static int deepCompareUtil(Xvr_String* left, Xvr_String* right,
         return result;
     }
 
-    if (left->type == XVR_STRING_LEAF && right->type == XVR_STRING_LEAF) {
+    if (right->info.type == XVR_STRING_NODE) {
+        if ((result = deepCompareUtil(left, right->node.left, leftHead,
+                                      rightHead)) != 0) {
+            return result;
+        }
+        if ((result = deepCompareUtil(left, right->node.right, leftHead,
+                                      rightHead)) != 0) {
+            return result;
+        }
+
+        return result;
+    }
+
+    if (left->info.type == XVR_STRING_LEAF &&
+        right->info.type == XVR_STRING_LEAF) {
         if ((*leftHead) == NULL || (**leftHead) == '\0') {
-            (*leftHead) = left->as.leaf.data;
+            (*leftHead) = left->leaf.data;
         }
 
         if ((*rightHead) == NULL || (**rightHead) == '\0') {
-            (*rightHead) = right->as.leaf.data;
+            (*rightHead) = right->leaf.data;
         }
 
         while (**leftHead && (**leftHead == **rightHead)) {
@@ -376,19 +380,20 @@ static int deepCompareUtil(Xvr_String* left, Xvr_String* right,
 }
 
 int Xvr_compareStrings(Xvr_String* left, Xvr_String* right) {
-    if (left->length == 0 || right->length == 0) {
-        return left->length - right->length;
+    if (left->info.length == 0 || right->info.length == 0) {
+        return left->info.length - right->info.length;
     }
 
-    if (left->type == XVR_STRING_NAME || right->type == XVR_STRING_NAME) {
-        if (left->type != right->type) {
+    if (left->info.type == XVR_STRING_NAME ||
+        right->info.type == XVR_STRING_NAME) {
+        if (left->info.type != right->info.type) {
             fprintf(stderr, XVR_CC_ERROR
                     "Error: can't compare name string to non-name "
                     "string\n" XVR_CC_RESET);
             exit(-1);
         }
 
-        return strncmp(left->as.name.data, right->as.name.data, left->length);
+        return strncmp(left->name.data, right->name.data, left->info.length);
     }
 
     const char* leftHead = NULL;
@@ -398,17 +403,17 @@ int Xvr_compareStrings(Xvr_String* left, Xvr_String* right) {
 }
 
 unsigned int Xvr_hashString(Xvr_String* str) {
-    if (str->cachedHash != 0) {
-        return str->cachedHash;
-    } else if (str->type == XVR_STRING_NODE) {
+    if (str->info.cachedHash != 0) {
+        return str->info.cachedHash;
+    } else if (str->info.type == XVR_STRING_NODE) {
         char* buffer = Xvr_getStringRawBuffer(str);
-        str->cachedHash = hashCString(str->as.leaf.data);
+        str->info.cachedHash = hashCString(str->leaf.data);
         free(buffer);
-    } else if (str->type == XVR_STRING_LEAF) {
-        str->cachedHash = hashCString(str->as.leaf.data);
-    } else if (str->type == XVR_STRING_NAME) {
-        str->cachedHash = hashCString(str->as.name.data);
+    } else if (str->info.type == XVR_STRING_LEAF) {
+        str->info.cachedHash = hashCString(str->leaf.data);
+    } else if (str->info.type == XVR_STRING_NAME) {
+        str->info.cachedHash = hashCString(str->name.data);
     }
 
-    return str->cachedHash;
+    return str->info.cachedHash;
 }

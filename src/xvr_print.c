@@ -48,8 +48,8 @@ void Xvr_setErrorCallback(Xvr_callbackType cb) { errorCallback = cb; }
 
 void Xvr_setAssertFailureCallback(Xvr_callbackType cb) { assertCallback = cb; }
 
-void Xvr_resetPrintCallback() { printCallback = outDefault; }
+void Xvr_resetPrintCallback(void) { printCallback = outDefault; }
 
-void Xvr_resetErrorCallback() { errorCallback = errDefault; }
+void Xvr_resetErrorCallback(void) { errorCallback = errDefault; }
 
-void Xvr_resetAssertFailureCallback() { assertCallback = assertDefault; }
+void Xvr_resetAssertFailureCallback(void) { assertCallback = assertDefault; }

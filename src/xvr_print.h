@@ -38,8 +38,8 @@ XVR_API void Xvr_setPrintCallback(Xvr_callbackType cb);
 XVR_API void Xvr_setErrorCallback(Xvr_callbackType cb);
 XVR_API void Xvr_setAssertFailureCallback(Xvr_callbackType cb);
 
-XVR_API void Xvr_resetPrintCallback();
-XVR_API void Xvr_resetErrorCallback();
-XVR_API void Xvr_resetAssertFailureCallback();
+XVR_API void Xvr_resetPrintCallback(void);
+XVR_API void Xvr_resetErrorCallback(void);
+XVR_API void Xvr_resetAssertFailureCallback(void);
 
 #endif // !XVR_PRINT_H

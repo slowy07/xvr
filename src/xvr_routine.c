@@ -103,7 +103,7 @@ static void emitToJumpTable(Xvr_Routine** rt, unsigned int startAddr) {
 
 static unsigned int emitString(Xvr_Routine** rt, Xvr_String* str) {
     // 4-byte alignment
-    unsigned int length = str->length + 1;
+    unsigned int length = str->info.length + 1;
     if (length % 4 != 0) {
         length += 4 - (length % 4);  // ceil
     }
@@ -115,16 +115,16 @@ static unsigned int emitString(Xvr_Routine** rt, Xvr_String* str) {
     expand((&((*rt)->data)), &((*rt)->dataCapacity), &((*rt)->dataCount),
            length);
 
-    if (str->type == XVR_STRING_NODE) {
+    if (str->info.type == XVR_STRING_NODE) {
         char* buffer = Xvr_getStringRawBuffer(str);
-        memcpy((*rt)->data + (*rt)->dataCount, buffer, str->length + 1);
+        memcpy((*rt)->data + (*rt)->dataCount, buffer, str->info.length + 1);
         free(buffer);
-    } else if (str->type == XVR_STRING_LEAF) {
-        memcpy((*rt)->data + (*rt)->dataCount, str->as.leaf.data,
-               str->length + 1);
-    } else if (str->type == XVR_STRING_NAME) {
-        memcpy((*rt)->data + (*rt)->dataCount, str->as.name.data,
-               str->length + 1);
+    } else if (str->info.type == XVR_STRING_LEAF) {
+        memcpy((*rt)->data + (*rt)->dataCount, str->leaf.data,
+               str->info.length + 1);
+    } else if (str->info.type == XVR_STRING_NAME) {
+        memcpy((*rt)->data + (*rt)->dataCount, str->name.data,
+               str->info.length + 1);
     }
 
     (*rt)->dataCount += length;
@@ -446,9 +446,9 @@ static unsigned int writeInstructionVarDeclare(Xvr_Routine** rt,
     writeRoutineCode(rt, ast.expr);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_DECLARE);
-    EMIT_BYTE(rt, code, Xvr_getNameStringType(ast.name));
-    EMIT_BYTE(rt, code, ast.name->length);
-    EMIT_BYTE(rt, code, Xvr_getNameStringConstant(ast.name) ? 1 : 0);
+    EMIT_BYTE(rt, code, Xvr_getNameStringVarType(ast.name));
+    EMIT_BYTE(rt, code, ast.name->info.length);
+    EMIT_BYTE(rt, code, Xvr_getNameStringVarConstant(ast.name) ? 1 : 0);
 
     emitString(rt, ast.name);
 
@@ -476,13 +476,14 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
 
     if (ast.target->type == XVR_AST_VALUE &&
         XVR_VALUE_IS_STRING(ast.target->value.value) &&
-        XVR_VALUE_AS_STRING(ast.target->value.value)->type == XVR_STRING_NAME) {
+        XVR_VALUE_AS_STRING(ast.target->value.value)->info.type ==
+            XVR_STRING_NAME) {
         Xvr_String* target = XVR_VALUE_AS_STRING(ast.target->value.value);
 
         EMIT_BYTE(rt, code, XVR_OPCODE_READ);
         EMIT_BYTE(rt, code, XVR_VALUE_STRING);
         EMIT_BYTE(rt, code, XVR_STRING_NAME);
-        EMIT_BYTE(rt, code, target->length);
+        EMIT_BYTE(rt, code, target->info.length);
 
         emitString(rt, target);
     } else if (ast.target->type == XVR_AST_AGGREGATE &&
@@ -586,7 +587,7 @@ static unsigned int writeInstructionAccess(Xvr_Routine** rt,
                                            Xvr_AstVarAccess ast) {
     if (!(ast.child->type == XVR_AST_VALUE &&
           XVR_VALUE_IS_STRING(ast.child->value.value) &&
-          XVR_VALUE_AS_STRING(ast.child->value.value)->type ==
+          XVR_VALUE_AS_STRING(ast.child->value.value)->info.type ==
               XVR_STRING_NAME)) {
         fprintf(stderr, XVR_CC_ERROR
                 "COMPILER ERROR: Found a non-name-string in a value node when "
@@ -599,7 +600,7 @@ static unsigned int writeInstructionAccess(Xvr_Routine** rt,
     EMIT_BYTE(rt, code, XVR_OPCODE_READ);
     EMIT_BYTE(rt, code, XVR_VALUE_STRING);
     EMIT_BYTE(rt, code, XVR_STRING_NAME);
-    EMIT_BYTE(rt, code, name->length);
+    EMIT_BYTE(rt, code, name->info.length);
 
     emitString(rt, name);
 

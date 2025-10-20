@@ -345,7 +345,7 @@ static void debugScopePrint(Xvr_Scope* scope, int depth) {
         printf("Scope %d Dump\n==========\ntype\tname\tvalue\n", depth);
         for (unsigned int i = 0; i < scope->table->capacity; i++) {
             if ((XVR_VALUE_IS_STRING(scope->table->data[i].key) &&
-                 XVR_VALUE_AS_STRING(scope->table->data[i].key)->type ==
+                 XVR_VALUE_AS_STRING(scope->table->data[i].key)->info.type ==
                      XVR_STRING_NAME) != true) {
                 continue;
             }
@@ -354,7 +354,7 @@ static void debugScopePrint(Xvr_Scope* scope, int depth) {
             Xvr_Value v = scope->table->data[i].value;
 
             printf("%s\t%s\t", Xvr_private_getValueTypeAsCString(v.type),
-                   XVR_VALUE_AS_STRING(k)->as.name.data);
+                   XVR_VALUE_AS_STRING(k)->name.data);
 
             Xvr_String* string =
                 Xvr_stringifyValue(&stringBucket, Xvr_unwrapValue(v));

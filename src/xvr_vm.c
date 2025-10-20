@@ -212,7 +212,7 @@ static void processAssign(Xvr_VM* vm) {
     Xvr_Value name = Xvr_popStack(&vm->stack);
 
     if (!XVR_VALUE_IS_STRING(name) ||
-        XVR_VALUE_AS_STRING(name)->type != XVR_STRING_NAME) {
+        XVR_VALUE_AS_STRING(name)->info.type != XVR_STRING_NAME) {
         Xvr_error("Invalid assignment target");
         Xvr_freeValue(name);
         Xvr_freeValue(value);
@@ -229,7 +229,7 @@ static void processAssignCompound(Xvr_VM* vm) {
     Xvr_Value target = Xvr_popStack(&vm->stack);
 
     if (XVR_VALUE_IS_STRING(target) &&
-        XVR_VALUE_AS_STRING(target)->type == XVR_STRING_NAME) {
+        XVR_VALUE_AS_STRING(target)->info.type == XVR_STRING_NAME) {
         Xvr_Value* valuePtr =
             Xvr_accessScopeAsPointer(vm->scope, XVR_VALUE_AS_STRING(target));
         Xvr_freeValue(target);
@@ -269,7 +269,7 @@ static void processAccess(Xvr_VM* vm) {
     Xvr_Value name = Xvr_popStack(&vm->stack);
 
     if (!XVR_VALUE_IS_STRING(name) &&
-        XVR_VALUE_AS_STRING(name)->type != XVR_STRING_NAME) {
+        XVR_VALUE_AS_STRING(name)->info.type != XVR_STRING_NAME) {
         Xvr_error("Invalid access target");
         return;
     }
@@ -683,8 +683,8 @@ static void processIndex(Xvr_VM* vm) {
         int l = XVR_VALUE_IS_INTEGER(length) ? XVR_VALUE_AS_INTEGER(length) : 1;
         Xvr_String* str = XVR_VALUE_AS_STRING(value);
 
-        if ((i < 0 || (unsigned int)i >= str->length) ||
-            (i + l <= 0 || (unsigned int)(i + l) > str->length)) {
+        if ((i < 0 || (unsigned int)i >= str->info.length) ||
+            (i + l <= 0 || (unsigned int)(i + l) > str->info.length)) {
             Xvr_error("String index is out of bounds");
             if (XVR_VALUE_IS_REFERENCE(value) != true) {
                 Xvr_freeValue(value);
@@ -700,10 +700,10 @@ static void processIndex(Xvr_VM* vm) {
 
         Xvr_String* result = NULL;
 
-        if (str->type == XVR_STRING_LEAF) {
-            const char* cstr = str->as.leaf.data;
+        if (str->info.type == XVR_STRING_LEAF) {
+            const char* cstr = str->leaf.data;
             result = Xvr_createStringLength(&vm->stringBucket, cstr + i, l);
-        } else if (str->type == XVR_STRING_NODE) {
+        } else if (str->info.type == XVR_STRING_NODE) {
             char* cstr = Xvr_getStringRawBuffer(str);
             result = Xvr_createStringLength(&vm->stringBucket, cstr + i, l);
             free(cstr);

@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS+=-std=c17 -g -Wall -Werror -Wextra -Wpointer-arith -Wformat=2
+CFLAGS+=-std=c17 -g -Wall -Werror -Wextra -Wpedantic -Wformat=2
 LIBS+=-lm -lXvr
 LDFLAGS+=-Wl,-rpath,'$$ORIGIN'
 

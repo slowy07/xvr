@@ -25,71 +25,82 @@ SOFTWARE.
 #ifndef XVR_STRING_H
 #define XVR_STRING_H
 
+#include <assert.h>
+
 #include "xvr_bucket.h"
 #include "xvr_common.h"
 #include "xvr_value.h"
-#include <assert.h>
 
-typedef struct Xvr_String { // 32 | 64 BITNESS
-  enum Xvr_StringType {
+union Xvr_String_t;
+
+typedef enum Xvr_StringType {
     XVR_STRING_NODE,
     XVR_STRING_LEAF,
     XVR_STRING_NAME,
-  } type; // 4  | 4
+} Xvr_StringType;
 
-  unsigned int length;     // 4  | 4
-  unsigned int refCount;   // 4  | 4
-  unsigned int cachedHash; // 4 | 4
+typedef struct Xvr_StringInfo {
+    Xvr_StringType type;
+    unsigned int length;
+    unsigned int refCount;
+    unsigned int cachedHash;
+} Xvr_StringInfo;
 
-  int _padding; // 4  | 4
+typedef struct Xvr_StringNode {
+    Xvr_StringInfo _padding;
+    union Xvr_String_t* left;
+    union Xvr_String_t* right;
+} Xvr_StringNode;
 
-  union {
-    struct {
-      struct Xvr_String *left;  // 4  | 8
-      struct Xvr_String *right; // 4  | 8
-    } node;                     // 8  | 16
+typedef struct Xvr_StringLeaf {
+    Xvr_StringInfo _padding;
+    char data[];
+} Xvr_StringLeaf;
 
-    struct {
-      int _dummy;  // 4  | 4
-      char data[]; //-  | -
-    } leaf;
+typedef struct Xvr_StringName {
+    Xvr_StringInfo _padding;
+    Xvr_ValueType varType;
+    bool varConstant;
+    char data[];
+} Xvr_StringName;
 
-    struct {
-      Xvr_ValueType type; // 4 | 4
-      bool constant;      // 1 | 1
-      char data[];        // - | -
-    } name;
-  } as;       // 8  | 16
-} Xvr_String; // 24 | 32
+typedef union Xvr_String_t {
+    Xvr_StringInfo info;
+    Xvr_StringNode node;
+    Xvr_StringLeaf leaf;
+    Xvr_StringName name;
+} Xvr_String;
 
-XVR_API Xvr_String *Xvr_createString(Xvr_Bucket **bucketHandle,
-                                     const char *cstring);
-XVR_API Xvr_String *Xvr_createStringLength(Xvr_Bucket **bucketHandle,
-                                           const char *cstring,
+XVR_API Xvr_String* Xvr_createString(Xvr_Bucket** bucketHandle,
+                                     const char* cstring);
+XVR_API Xvr_String* Xvr_createStringLength(Xvr_Bucket** bucketHandle,
+                                           const char* cstring,
                                            unsigned int length);
 
-XVR_API Xvr_String *Xvr_createNameStringLength(Xvr_Bucket **bucketHandle,
-                                               const char *cname,
+XVR_API Xvr_String* Xvr_createNameStringLength(Xvr_Bucket** bucketHandle,
+                                               const char* cname,
                                                unsigned int length,
-                                               Xvr_ValueType type,
+                                               Xvr_ValueType varType,
                                                bool constant);
-XVR_API Xvr_String *Xvr_copyString(Xvr_String *str);
-XVR_API Xvr_String *Xvr_deepCopyString(Xvr_Bucket **bucketHandle,
-                                       Xvr_String *str);
 
-XVR_API Xvr_String *Xvr_concatStrings(Xvr_Bucket **bucketHandle,
-                                      Xvr_String *left, Xvr_String *right);
+XVR_API Xvr_String* Xvr_copyString(Xvr_String* str);
+XVR_API Xvr_String* Xvr_deepCopyString(Xvr_Bucket** bucketHandle,
+                                       Xvr_String* str);
 
-XVR_API void Xvr_freeString(Xvr_String *str);
+XVR_API Xvr_String* Xvr_concatStrings(Xvr_Bucket** bucketHandle,
+                                      Xvr_String* left, Xvr_String* right);
 
-XVR_API unsigned int Xvr_getStringLength(Xvr_String *str);
-XVR_API unsigned int Xvr_getStringRefCount(Xvr_String *str);
-XVR_API Xvr_ValueType Xvr_getNameStringType(Xvr_String *str);
-XVR_API Xvr_ValueType Xvr_getNameStringConstant(Xvr_String *str);
-XVR_API char *Xvr_getStringRawBuffer(Xvr_String *str);
+XVR_API void Xvr_freeString(Xvr_String* str);
 
-XVR_API int Xvr_compareStrings(Xvr_String *left, Xvr_String *right);
+XVR_API unsigned int Xvr_getStringLength(Xvr_String* str);
+XVR_API unsigned int Xvr_getStringRefCount(Xvr_String* str);
+XVR_API Xvr_ValueType Xvr_getNameStringVarType(Xvr_String* str);
+XVR_API Xvr_ValueType Xvr_getNameStringVarConstant(Xvr_String* str);
 
-XVR_API unsigned int Xvr_hashString(Xvr_String *string);
+XVR_API char* Xvr_getStringRawBuffer(Xvr_String* str);
 
-#endif // !XVR_STRING_H
+XVR_API int Xvr_compareStrings(Xvr_String* left, Xvr_String* right);
+
+XVR_API unsigned int Xvr_hashString(Xvr_String* string);
+
+#endif  // !XVR_STRING_H

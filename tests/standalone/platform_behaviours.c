@@ -37,7 +37,7 @@ unsigned char* readFile(char* path, int* size) {
         return NULL;
     }
 
-    if (fread(buffer, sizeof(unsigned char), *size, file) < *size) {
+    if (fread(buffer, sizeof(unsigned char), *size, file) < (unsigned int)(*size)) {
         fclose(file);
         *size = -2;
         return NULL;
@@ -93,7 +93,7 @@ int getFileName(char* dest, const char* src) {
     return len;
 }
 
-int main() {
+int main(void) {
     printf("platform check: ");
 
 #if defined(__linux__)

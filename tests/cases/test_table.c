@@ -4,7 +4,7 @@
 #include "xvr_table.h"
 #include "xvr_value.h"
 
-int test_table_allocation() {
+int test_table_allocation(void) {
     {
         Xvr_Table* table = Xvr_allocateTable();
 
@@ -20,7 +20,7 @@ int test_table_allocation() {
     return 0;
 }
 
-int test_table_simple_insert_lookup_and_remove_data() {
+int test_table_simple_insert_lookup_and_remove_data(void) {
     {
         Xvr_Table* table = Xvr_allocateTable();
 
@@ -58,7 +58,7 @@ int test_table_simple_insert_lookup_and_remove_data() {
     return 0;
 }
 
-int test_table_expansion() {
+int test_table_expansion(void) {
     {
         Xvr_Table* table = Xvr_allocateTable();
         int top = 300;
@@ -107,7 +107,7 @@ int test_table_expansion() {
     return 0;
 }
 
-int main() {
+int main(void) {
     printf(XVR_CC_WARN "TESTING: XVR TABLE\n" XVR_CC_RESET);
     int total = 0, res = 0;
 
