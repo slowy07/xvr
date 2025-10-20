@@ -38,7 +38,7 @@ typedef struct Xvr_Routine {
   unsigned int codeCapacity;
   unsigned int codeCount;
 
-  unsigned int
+  unsigned char
       *jumps; // each 'jump' is the starting address of an element within 'data'
   unsigned int jumpsCapacity;
   unsigned int jumpsCount;

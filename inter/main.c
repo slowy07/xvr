@@ -52,7 +52,8 @@ unsigned char* readFile(char* path, int* size) {
         return NULL;
     }
 
-    if (fread(buffer, sizeof(unsigned char), *size, file) < *size) {
+    if (fread(buffer, sizeof(unsigned char), *size, file) <
+        (unsigned int)(*size)) {
         fclose(file);
         *size = -2;
         return NULL;
@@ -129,10 +130,14 @@ static void assertFailureAndContinueCallback(const char* msg) {
 }
 
 static void noOpCallback(const char* msg) {
+    (void)msg;
     // pass
 }
 
-static void silentExitCallback(const char* msg) { exit(-1); }
+static void silentExitCallback(const char* msg) {
+    (void)msg;
+    exit(-1);
+}
 
 typedef struct CmdLine {
     bool error;
@@ -147,6 +152,7 @@ typedef struct CmdLine {
 } CmdLine;
 
 void usageCmdLine(int argc, const char* argv[]) {
+    (void)argc;
     printf(
         "Usage: %s [ -h (--help) | -v (--version) | -f (--file) source.xvr "
         "]\n\n",
@@ -169,6 +175,8 @@ void helpCmdLine(int argc, const char* argv[]) {
 }
 
 void versionCmdLine(int argc, const char* argv[]) {
+    (void)argc;
+    (void)argv;
     printf("The Xvr Programming Language, Version %d.%d.%d %s\n\n",
            XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH,
            XVR_VERSION_BUILD);
@@ -311,70 +319,34 @@ int repl(const char* filepath) {
 
 static void debugStackPrint(Xvr_Stack* stack) {
     if (stack->count > 0) {
+        Xvr_Bucket* stringBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
         printf("Stack Dump\n==========\ntype\tvalue\n");
-        for (int i = 0; i < stack->count; i++) {
+        for (unsigned int i = 0; i < stack->count; i++) {
             Xvr_Value v = ((Xvr_Value*)(stack + 1))[i];
 
             printf("%s\t", Xvr_private_getValueTypeAsCString(v.type));
 
-            v = Xvr_unwrapValue(v);
-
-            switch (v.type) {
-            case XVR_VALUE_NULL:
-                printf("null");
-                break;
-
-            case XVR_VALUE_BOOLEAN:
-                printf("%s", XVR_VALUE_AS_BOOLEAN(v) ? "true" : "false");
-                break;
-
-            case XVR_VALUE_INTEGER:
-                printf("%d", XVR_VALUE_AS_INTEGER(v));
-                break;
-
-            case XVR_VALUE_FLOAT:
-                printf("%f", XVR_VALUE_AS_FLOAT(v));
-                break;
-
-            case XVR_VALUE_STRING: {
-                Xvr_String* str = XVR_VALUE_AS_STRING(v);
-
-                if (str->type == XVR_STRING_NODE) {
-                    char* buffer = Xvr_getStringRawBuffer(str);
-                    printf("%s", buffer);
-                    free(buffer);
-                } else if (str->type == XVR_STRING_LEAF) {
-                    printf("%s", str->as.leaf.data);
-                } else if (str->type == XVR_STRING_NAME) {
-                    printf("%s", str->as.name.data);
-                }
-                break;
-            }
-
-            case XVR_VALUE_ARRAY:
-            case XVR_VALUE_TABLE:
-            case XVR_VALUE_FUNCTION:
-            case XVR_VALUE_OPAQUE:
-            case XVR_VALUE_TYPE:
-            case XVR_VALUE_ANY:
-            case XVR_VALUE_REFERENCE:
-            case XVR_VALUE_UNKNOWN:
-                printf("???");
-                break;
-            }
+            Xvr_String* string =
+                Xvr_stringifyValue(&stringBucket, Xvr_unwrapValue(v));
+            char* buffer = Xvr_getStringRawBuffer(string);
+            printf("%s", buffer);
+            free(buffer);
+            Xvr_freeString(string);
 
             printf("\n");
         }
+        Xvr_freeBucket(&stringBucket);
     }
 }
 
 static void debugScopePrint(Xvr_Scope* scope, int depth) {
     if (scope->table->count > 0) {
+        Xvr_Bucket* stringBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
         printf("Scope %d Dump\n==========\ntype\tname\tvalue\n", depth);
-        for (int i = 0; i < scope->table->capacity; i++) {
+        for (unsigned int i = 0; i < scope->table->capacity; i++) {
             if ((XVR_VALUE_IS_STRING(scope->table->data[i].key) &&
                  XVR_VALUE_AS_STRING(scope->table->data[i].key)->type ==
-                     XVR_STRING_NAME) == false) {
+                     XVR_STRING_NAME) != true) {
                 continue;
             }
 
@@ -384,56 +356,16 @@ static void debugScopePrint(Xvr_Scope* scope, int depth) {
             printf("%s\t%s\t", Xvr_private_getValueTypeAsCString(v.type),
                    XVR_VALUE_AS_STRING(k)->as.name.data);
 
-            k = Xvr_unwrapValue(k);
-            v = Xvr_unwrapValue(v);
-
-            switch (v.type) {
-            case XVR_VALUE_NULL:
-                printf("null");
-                break;
-
-            case XVR_VALUE_BOOLEAN:
-                printf("%s", XVR_VALUE_AS_BOOLEAN(v) ? "true" : "false");
-                break;
-
-            case XVR_VALUE_INTEGER:
-                printf("%d", XVR_VALUE_AS_INTEGER(v));
-                break;
-
-            case XVR_VALUE_FLOAT:
-                printf("%f", XVR_VALUE_AS_FLOAT(v));
-                break;
-
-            case XVR_VALUE_STRING: {
-                Xvr_String* str = XVR_VALUE_AS_STRING(v);
-
-                if (str->type == XVR_STRING_NODE) {
-                    char* buffer = Xvr_getStringRawBuffer(str);
-                    printf("%s", buffer);
-                    free(buffer);
-                } else if (str->type == XVR_STRING_LEAF) {
-                    printf("%s", str->as.leaf.data);
-                } else if (str->type == XVR_STRING_NAME) {
-                    printf("%s\nWarning: The above value is a name string",
-                           str->as.name.data);
-                }
-                break;
-            }
-
-            case XVR_VALUE_ARRAY:
-            case XVR_VALUE_TABLE:
-            case XVR_VALUE_FUNCTION:
-            case XVR_VALUE_OPAQUE:
-            case XVR_VALUE_TYPE:
-            case XVR_VALUE_ANY:
-            case XVR_VALUE_REFERENCE:
-            case XVR_VALUE_UNKNOWN:
-                printf("Unknown, what is that?");
-                break;
-            }
-
+            Xvr_String* string =
+                Xvr_stringifyValue(&stringBucket, Xvr_unwrapValue(v));
+            char* buffer = Xvr_getStringRawBuffer(string);
+            printf("%s", buffer);
+            free(buffer);
+            Xvr_freeString(string);
             printf("\n");
         }
+
+        Xvr_freeBucket(&stringBucket);
     }
 
     if (scope->next != NULL) {

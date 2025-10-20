@@ -34,8 +34,8 @@ SOFTWARE.
 #include "xvr_string.h"
 #include "xvr_value.h"
 
-static void expand(void** handle, unsigned int* capacity, unsigned int* count,
-                   unsigned int amount) {
+static void expand(unsigned char** handle, unsigned int* capacity,
+                   unsigned int* count, unsigned int amount) {
     if ((*count) + amount > (*capacity)) {
         while ((*count) + amount > (*capacity)) {
             (*capacity) = (*capacity) < 8 ? 8 : (*capacity) * 2;
@@ -53,14 +53,14 @@ static void expand(void** handle, unsigned int* capacity, unsigned int* count,
     }
 }
 
-static void emitByte(void** handle, unsigned int* capacity, unsigned int* count,
-                     unsigned char byte) {
+static void emitByte(unsigned char** handle, unsigned int* capacity,
+                     unsigned int* count, unsigned char byte) {
     expand(handle, capacity, count, 1);
     ((unsigned char*)(*handle))[(*count)++] = byte;
 }
 
-static void emitInt(void** handle, unsigned int* capacity, unsigned int* count,
-                    unsigned int bytes) {
+static void emitInt(unsigned char** handle, unsigned int* capacity,
+                    unsigned int* count, unsigned int bytes) {
     char* ptr = (char*)&bytes;
     emitByte(handle, capacity, count, *(ptr++));
     emitByte(handle, capacity, count, *(ptr++));
@@ -68,7 +68,7 @@ static void emitInt(void** handle, unsigned int* capacity, unsigned int* count,
     emitByte(handle, capacity, count, *(ptr++));
 }
 
-static void emitFloat(void** handle, unsigned int* capacity,
+static void emitFloat(unsigned char** handle, unsigned int* capacity,
                       unsigned int* count, float bytes) {
     char* ptr = (char*)&bytes;
     emitByte(handle, capacity, count, *(ptr++));
@@ -78,21 +78,21 @@ static void emitFloat(void** handle, unsigned int* capacity,
 }
 
 // write instructions based on the AST types
-#define EMIT_BYTE(rt, part, byte)                                \
-    emitByte((void**)(&((*rt)->part)), &((*rt)->part##Capacity), \
+#define EMIT_BYTE(rt, part, byte)                        \
+    emitByte((&((*rt)->part)), &((*rt)->part##Capacity), \
              &((*rt)->part##Count), byte)
-#define EMIT_INT(rt, part, bytes)                               \
-    emitInt((void**)(&((*rt)->part)), &((*rt)->part##Capacity), \
-            &((*rt)->part##Count), bytes)
-#define EMIT_FLOAT(rt, part, bytes)                               \
-    emitFloat((void**)(&((*rt)->part)), &((*rt)->part##Capacity), \
+#define EMIT_INT(rt, part, bytes)                                              \
+    emitInt((&((*rt)->part)), &((*rt)->part##Capacity), &((*rt)->part##Count), \
+            bytes)
+#define EMIT_FLOAT(rt, part, bytes)                       \
+    emitFloat((&((*rt)->part)), &((*rt)->part##Capacity), \
               &((*rt)->part##Count), bytes)
 
 #define SKIP_BYTE(rt, part) (EMIT_BYTE(rt, part, 0), ((*rt)->part##Count - 1))
 #define SKIP_INT(rt, part) (EMIT_INT(rt, part, 0), ((*rt)->part##Count - 4))
 
 #define OVERWRITE_INT(rt, part, addr, bytes) \
-    emitInt((void**)(&((*rt)->part)), &((*rt)->part##Capacity), &(addr), bytes);
+    emitInt((&((*rt)->part)), &((*rt)->part##Capacity), &(addr), bytes);
 
 #define CURRENT_ADDRESS(rt, part) ((*rt)->part##Count)
 
@@ -112,8 +112,8 @@ static unsigned int emitString(Xvr_Routine** rt, Xvr_String* str) {
     unsigned int startAddr = (*rt)->dataCount;
 
     // move the string into the data section
-    expand((void**)(&((*rt)->data)), &((*rt)->dataCapacity),
-           &((*rt)->dataCount), length);
+    expand((&((*rt)->data)), &((*rt)->dataCapacity), &((*rt)->dataCount),
+           length);
 
     if (str->type == XVR_STRING_NODE) {
         char* buffer = Xvr_getStringRawBuffer(str);
@@ -745,7 +745,7 @@ static void* writeRoutine(Xvr_Routine* rt, Xvr_Ast* ast) {
         return NULL;
     }
 
-    void* buffer = NULL;
+    unsigned char* buffer = NULL;
     unsigned int capacity = 0, count = 0;
     int codeAddr = 0;
     int jumpsAddr = 0;
@@ -761,23 +761,23 @@ static void* writeRoutine(Xvr_Routine* rt, Xvr_Ast* ast) {
     // storing the start positions)
     if (rt->paramCount > 0) {
         // paramAddr = count;
-        emitInt((void**)&buffer, &capacity, &count, 0);  // params
+        emitInt(&buffer, &capacity, &count, 0);  // params
     }
     if (rt->codeCount > 0) {
         codeAddr = count;
-        emitInt((void**)&buffer, &capacity, &count, 0);  // code
+        emitInt(&buffer, &capacity, &count, 0);  // code
     }
     if (rt->jumpsCount > 0) {
         jumpsAddr = count;
-        emitInt((void**)&buffer, &capacity, &count, 0);  // jumps
+        emitInt(&buffer, &capacity, &count, 0);  // jumps
     }
     if (rt->dataCount > 0) {
         dataAddr = count;
-        emitInt((void**)&buffer, &capacity, &count, 0);  // data
+        emitInt(&buffer, &capacity, &count, 0);  // data
     }
     if (rt->subsCount > 0) {
         // subsAddr = count;
-        emitInt((void**)&buffer, &capacity, &count, 0);  // subs
+        emitInt(&buffer, &capacity, &count, 0);  // subs
     }
 
     // append various parts to the buffer
