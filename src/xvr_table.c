@@ -105,7 +105,7 @@ Xvr_Table* Xvr_private_adjustTableCapacity(Xvr_Table* oldTable,
         return newTable;
     }
 
-    for (int i = 0; i < oldTable->capacity; i++) {
+    for (unsigned int i = 0; i < oldTable->capacity; i++) {
         if (!XVR_VALUE_IS_NULL(oldTable->data[i].key)) {
             probeAndInsert(&newTable, oldTable->data[i].key,
                            oldTable->data[i].value);

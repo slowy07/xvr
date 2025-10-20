@@ -114,7 +114,7 @@ Xvr_Scope* Xvr_deepCopyScope(Xvr_Bucket** bucketHandle, Xvr_Scope* scope) {
 
     incrementRefCount(newScope);
 
-    for (int i = 0; i < scope->table->capacity; i++) {
+    for (unsigned int i = 0; i < scope->table->capacity; i++) {
         if (!XVR_VALUE_IS_NULL(scope->table->data[i].key)) {
             Xvr_insertTable(&newScope->table,
                             Xvr_copyValue(scope->table->data[i].key),

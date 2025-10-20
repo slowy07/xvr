@@ -406,6 +406,7 @@ static unsigned int writeInstructionWhileThen(Xvr_Routine** rt,
 }
 
 static unsigned int writeInstructionBreak(Xvr_Routine** rt, Xvr_AstBreak ast) {
+    (void)ast;
     fprintf(
         stderr, XVR_CC_ERROR
         "COMPILER ERROR: Keyword 'break' not yet implemented\n" XVR_CC_RESET);
@@ -416,6 +417,7 @@ static unsigned int writeInstructionBreak(Xvr_Routine** rt, Xvr_AstBreak ast) {
 
 static unsigned int writeInstructionContinue(Xvr_Routine** rt,
                                              Xvr_AstContinue ast) {
+    (void)ast;
     fprintf(stderr, XVR_CC_ERROR
             "COMPILER ERROR: Keyword 'continue' not yet "
             "implemented\n" XVR_CC_RESET);

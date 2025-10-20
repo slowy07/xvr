@@ -15,7 +15,6 @@ int test_routine_expression(Xvr_Bucket** bucketHandle) {
         Xvr_private_emitAstPass(bucketHandle, &ast);
 
         void* buffer = Xvr_compileRoutine(ast);
-        int len = ((int*)buffer)[0];
 
         int* ptr = (int*)buffer;
 
@@ -55,7 +54,6 @@ int test_routine_keywords(Xvr_Bucket** bucketHandle) {
         Xvr_Ast* ast = Xvr_scanParser(bucketHandle, &parser);
 
         void* buffer = Xvr_compileRoutine(ast);
-        int len = ((int*)buffer)[0];
 
         int* ptr = (int*)buffer;
         if ((ptr++)[0] != 76 || (ptr++)[0] != 0 || (ptr++)[0] != 4 ||

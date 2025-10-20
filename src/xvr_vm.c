@@ -248,7 +248,7 @@ static void processAssignCompound(Xvr_VM* vm) {
         Xvr_Array* array = XVR_VALUE_AS_ARRAY(target);
         int index = XVR_VALUE_AS_INTEGER(key);
 
-        if (index < 0 || index >= array->count) {
+        if (index < 0 || (unsigned int)index >= array->count) {
             Xvr_error("index of assignment target out of bounds");
             Xvr_freeValue(target);
             Xvr_freeValue(key);
@@ -683,8 +683,8 @@ static void processIndex(Xvr_VM* vm) {
         int l = XVR_VALUE_IS_INTEGER(length) ? XVR_VALUE_AS_INTEGER(length) : 1;
         Xvr_String* str = XVR_VALUE_AS_STRING(value);
 
-        if ((i < 0 || i >= str->length) ||
-            (i + l <= 0 || i + l > str->length)) {
+        if ((i < 0 || (unsigned int)i >= str->length) ||
+            (i + l <= 0 || (unsigned int)(i + l) > str->length)) {
             Xvr_error("String index is out of bounds");
             if (XVR_VALUE_IS_REFERENCE(value) != true) {
                 Xvr_freeValue(value);
@@ -750,8 +750,8 @@ static void processIndex(Xvr_VM* vm) {
         int l = XVR_VALUE_IS_INTEGER(length) ? XVR_VALUE_AS_INTEGER(length) : 1;
         Xvr_Array* array = XVR_VALUE_AS_ARRAY(value);
 
-        if ((i < 0 || i >= array->count) ||
-            (i + l <= 0 || i + l > array->count)) {
+        if ((i < 0 || (unsigned int)i >= array->count) ||
+            (i + l <= 0 || (unsigned int)(i + l) > array->count)) {
             Xvr_error("Array index is out of bounds");
             if (XVR_VALUE_IS_REFERENCE(value) != true) {
                 Xvr_freeValue(value);

@@ -5,7 +5,7 @@
 
 int counter = 0;
 
-void count(const char* msg) { counter++; }
+void count(const char*) { counter++; }
 
 int test_callback() {
     {

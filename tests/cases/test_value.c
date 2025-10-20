@@ -88,6 +88,13 @@ int test_comparison() {
                     "true\n" XVR_CC_RESET);
             return -1;
         }
+
+        if (Xvr_checkValuesAreComparable(ans, no) != false) {
+            fprintf(stderr, XVR_CC_ERROR
+                    "Error: value comparison check failed, expected "
+                    "false\n" XVR_CC_RESET);
+            return -1;
+        }
     }
 
     return 0;

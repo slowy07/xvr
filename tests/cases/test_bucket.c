@@ -18,10 +18,10 @@ int test_buckets() {
     {
         Xvr_Bucket* bucket = Xvr_allocateBucket(sizeof(int) * 32);
 
-        int* a = Xvr_partitionBucket(&bucket, sizeof(int));
-        int* b = Xvr_partitionBucket(&bucket, sizeof(int));
-        int* c = Xvr_partitionBucket(&bucket, sizeof(int));
-        int* d = Xvr_partitionBucket(&bucket, sizeof(int));
+        Xvr_partitionBucket(&bucket, sizeof(int));
+        Xvr_partitionBucket(&bucket, sizeof(int));
+        Xvr_partitionBucket(&bucket, sizeof(int));
+        Xvr_partitionBucket(&bucket, sizeof(int));
 
         if (bucket == NULL || bucket->count != 4 * sizeof(int)) {
             fprintf(stderr,

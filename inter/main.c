@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "xvr.h"
 #include "xvr_bucket.h"
 #include "xvr_bytecode.h"
 #include "xvr_common.h"
@@ -27,6 +26,10 @@
 #endif /* if defined (_WIN32) || defined (_WIN64) */
 
 unsigned char* readFile(char* path, int* size) {
+    if (path == NULL || size == NULL) {
+        return NULL;
+    }
+
     int pathLength = strlen(path);
     char realPath[pathLength + 1];
     strncpy(realPath, path, pathLength);
