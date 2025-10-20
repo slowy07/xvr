@@ -232,7 +232,7 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, group, NULL},           // XVR_TOKEN_OPERATOR_PAREN_LEFT,
     {PREC_NONE, NULL, NULL},            // XVR_TOKEN_OPERATOR_PAREN_RIGHT,
     {PREC_GROUP, compound, aggregate},  // XVR_TOKEN_OPERATOR_BRACKET_LEFT,
-    {PREC_NONE, NULL, NULL},            // XVR_TOKEN_OPERATOR_BRACKET_RIGHT,
+    {PREC_NONE, compound, aggregate},   // XVR_TOKEN_OPERATOR_BRACKET_RIGHT,
     {PREC_NONE, NULL, NULL},            // XVR_TOKEN_OPERATOR_BRACE_LEFT,
     {PREC_NONE, NULL, NULL},            // XVR_TOKEN_OPERATOR_BRACE_RIGHT,
 
@@ -613,7 +613,20 @@ static Xvr_AstFlag group(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
 static Xvr_AstFlag compound(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
                             Xvr_Ast** rootHandle) {
     if (parser->previous.type == XVR_TOKEN_OPERATOR_BRACKET_LEFT) {
+        if (match(parser, XVR_TOKEN_OPERATOR_BRACKET_RIGHT)) {
+            Xvr_private_emitAstPass(bucketHandle, rootHandle);
+            Xvr_private_emitAstCompound(bucketHandle, rootHandle,
+                                        XVR_AST_FLAG_COMPOUND_ARRAY);
+            return XVR_AST_FLAG_NONE;
+        }
         parsePrecedence(bucketHandle, parser, rootHandle, PREC_GROUP);
+
+        if (parser->previous.type == XVR_TOKEN_OPERATOR_BRACKET_RIGHT &&
+            parser->current.type != XVR_TOKEN_OPERATOR_BRACKET_RIGHT) {
+            Xvr_private_emitAstCompound(bucketHandle, rootHandle,
+                                        XVR_AST_FLAG_COMPOUND_ARRAY);
+            return XVR_AST_FLAG_NONE;
+        }
         consume(parser, XVR_TOKEN_OPERATOR_BRACKET_RIGHT,
                 "Expected ']' at the end of compound expression");
         Xvr_private_emitAstCompound(bucketHandle, rootHandle,
@@ -621,6 +634,9 @@ static Xvr_AstFlag compound(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
 
         return XVR_AST_FLAG_NONE;
 
+    } else if (parser->previous.type == XVR_TOKEN_OPERATOR_BRACKET_RIGHT) {
+        Xvr_private_emitAstPass(bucketHandle, rootHandle);
+        return XVR_AST_FLAG_NONE;
     } else {
         printError(parser, parser->previous,
                    "Unexpected token passed to compound precedence rule");
@@ -641,6 +657,9 @@ static Xvr_AstFlag aggregate(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
         consume(parser, XVR_TOKEN_OPERATOR_BRACKET_RIGHT,
                 "Expected ']' at the end of index expression");
         return XVR_AST_FLAG_INDEX;
+    } else if (parser->previous.type == XVR_TOKEN_OPERATOR_BRACKET_RIGHT) {
+        Xvr_private_emitAstPass(bucketHandle, rootHandle);
+        return XVR_AST_FLAG_NONE;
     } else {
         printError(parser, parser->previous,
                    "Unexpected token passed to aggregate precedence rule");
