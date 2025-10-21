@@ -162,12 +162,14 @@ void Xvr_freeValue(Xvr_Value value) {
         break;
     }
 
+    case XVR_VALUE_REFERENCE:
+        return;
+
     case XVR_VALUE_TABLE:
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
-    case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
         fprintf(
             stderr, XVR_CC_ERROR

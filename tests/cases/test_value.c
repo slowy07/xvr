@@ -110,7 +110,7 @@ int test_comparison(void) {
 
 int test_value_stringify(void) {
     {
-        Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_SMALL);
+        Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
         Xvr_Value value = XVR_VALUE_FROM_NULL();
 
         Xvr_String* string = Xvr_stringifyValue(&bucket, value);
@@ -131,7 +131,7 @@ int test_value_stringify(void) {
     }
 
     {
-        Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_SMALL);
+        Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
         Xvr_Value value = XVR_VALUE_FROM_BOOLEAN(true);
 
         Xvr_String* string = Xvr_stringifyValue(&bucket, value);
@@ -152,7 +152,7 @@ int test_value_stringify(void) {
     }
 
     {
-        Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_SMALL);
+        Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
 
         Xvr_Array* array = Xvr_resizeArray(NULL, XVR_ARRAY_INITIAL_CAPACITY);
         XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(42));
@@ -194,7 +194,7 @@ int test_value_copying(void) {
     }
 
     {
-        Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_SMALL);
+        Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
         Xvr_Value original =
             XVR_VALUE_FROM_STRING(Xvr_createString(&bucket, "woilah cik"));
         Xvr_Value result = Xvr_copyValue(original);
