@@ -32,6 +32,7 @@ SOFTWARE.
 #include "xvr_console_colors.h"
 #include "xvr_print.h"
 #include "xvr_string.h"
+#include "xvr_table.h"
 
 static unsigned int hashUInt(unsigned int x) {
     x = ((x >> 16) ^ x) * 0x45d9f3b;
@@ -78,7 +79,19 @@ unsigned int Xvr_hashValue(Xvr_Value value) {
         return hash;
     }
 
-    case XVR_VALUE_TABLE:
+    case XVR_VALUE_TABLE: {
+        Xvr_Table* ptr = value.as.table;
+        unsigned int hash = 0;
+
+        for (unsigned int i = 0; i < ptr->capacity; i++) {
+            if (XVR_VALUE_IS_NULL(ptr->data[i].key) != true) {
+                hash ^= Xvr_hashValue(ptr->data[i].key);
+                hash ^= Xvr_hashValue(ptr->data[i].value);
+            }
+        }
+        return hash;
+    }
+
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:
@@ -122,7 +135,23 @@ Xvr_Value Xvr_copyValue(Xvr_Value value) {
         return XVR_VALUE_FROM_ARRAY(result);
     }
 
-    case XVR_VALUE_TABLE:
+    case XVR_VALUE_TABLE: {
+        Xvr_Table* ptr = value.as.table;
+        Xvr_Table* result =
+            Xvr_private_adjustTableCapacity(NULL, ptr->capacity);
+
+        for (unsigned int i = 0; i < ptr->capacity; i++) {
+            if (XVR_VALUE_IS_NULL(ptr->data[i].key) != true) {
+                result->data[i].key = Xvr_copyValue(ptr->data[i].key);
+                result->data[i].key = Xvr_copyValue(ptr->data[i].value);
+            }
+        }
+
+        result->capacity = ptr->capacity;
+        result->count = ptr->count;
+        return XVR_VALUE_FROM_TABLE(result);
+    }
+
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:
@@ -151,21 +180,17 @@ void Xvr_freeValue(Xvr_Value value) {
         break;
     }
 
-    case XVR_VALUE_ARRAY: {
-        Xvr_Array* ptr = value.as.array;
-
-        for (unsigned int i = 0; i < ptr->count; i++) {
-            Xvr_freeValue(ptr->data[i]);
-        }
-
-        Xvr_resizeArray(ptr, 0);
+    case XVR_VALUE_ARRAY:
+        Xvr_resizeArray(value.as.array, 0);
         break;
-    }
+
+    case XVR_VALUE_TABLE:
+        Xvr_freeTable(value.as.table);
+        break;
 
     case XVR_VALUE_REFERENCE:
         return;
 
-    case XVR_VALUE_TABLE:
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:
@@ -204,7 +229,7 @@ bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right) {
         return right.type == XVR_VALUE_NULL;
 
     case XVR_VALUE_BOOLEAN:
-        return right.type == XVR_VALUE_NULL &&
+        return right.type == XVR_VALUE_BOOLEAN &&
                left.as.boolean == right.as.boolean;
 
     case XVR_VALUE_INTEGER:
@@ -254,7 +279,35 @@ bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right) {
         return true;
     }
 
-    case XVR_VALUE_TABLE:
+    case XVR_VALUE_TABLE: {
+        if (right.type == XVR_VALUE_TABLE) {
+            Xvr_Table* leftTable = left.as.table;
+            Xvr_Table* rightTable = right.as.table;
+
+            if (leftTable->count != rightTable->count) {
+                return false;
+            }
+
+            for (unsigned int i = 0; i < leftTable->capacity; i++) {
+                Xvr_TableEntry* entry = leftTable->data + i;
+
+                if (XVR_VALUE_IS_NULL(entry->key) != true) {
+                    Xvr_Value rightValue =
+                        Xvr_lookupTable(&rightTable, entry->key);
+                    if (XVR_VALUE_IS_NULL(rightValue) ||
+                        Xvr_checkValuesAreEqual(entry->value, rightValue) !=
+                            true) {
+                        return false;
+                    }
+                }
+            }
+        } else {
+            break;
+        }
+
+        return true;
+    }
+
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:
@@ -291,6 +344,8 @@ bool Xvr_checkValuesAreComparable(Xvr_Value left, Xvr_Value right) {
         return false;
 
     case XVR_VALUE_TABLE:
+        return false;
+
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:
@@ -341,6 +396,8 @@ int Xvr_compareValues(Xvr_Value left, Xvr_Value right) {
         break;
 
     case XVR_VALUE_TABLE:
+        break;
+
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:
@@ -394,35 +451,110 @@ Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
 
     case XVR_VALUE_ARRAY: {
         Xvr_Array* ptr = value.as.array;
-        Xvr_String* string = Xvr_createStringLength(bucketHandle, "[", 1);
+
+        if (ptr->count == 0) {
+            Xvr_String* empty = Xvr_createString(bucketHandle, "[]");
+            return empty;
+        }
+
+        Xvr_String* open = Xvr_createStringLength(bucketHandle, "[", 1);
+        Xvr_String* close = Xvr_createStringLength(bucketHandle, "]", 1);
         Xvr_String* comma = Xvr_createStringLength(bucketHandle, ",", 1);
+        bool needsComma = false;
+
+        Xvr_String* string = open;
 
         for (unsigned int i = 0; i < ptr->count; i++) {
-            Xvr_String* tmp = Xvr_concatStrings(
-                bucketHandle, string,
-                Xvr_stringifyValue(bucketHandle, ptr->data[i]));
-            Xvr_freeString(string);
-            string = tmp;
-
-            if (i + 1 < ptr->count) {
+            if (needsComma) {
                 Xvr_String* tmp =
                     Xvr_concatStrings(bucketHandle, string, comma);
                 Xvr_freeString(string);
                 string = tmp;
             }
+
+            Xvr_String* element =
+                Xvr_stringifyValue(bucketHandle, ptr->data[i]);
+            Xvr_String* final =
+                Xvr_concatStrings(bucketHandle, string, element);
+
+            Xvr_freeString(element);
+            Xvr_freeString(string);
+
+            string = final;
+
+            needsComma = true;
         }
 
-        Xvr_String* tmp = Xvr_concatStrings(
-            bucketHandle, string, Xvr_createStringLength(bucketHandle, "]", 1));
+        Xvr_String* tmp = Xvr_concatStrings(bucketHandle, string, close);
         Xvr_freeString(string);
         string = tmp;
 
+        Xvr_freeString(open);
+        Xvr_freeString(close);
         Xvr_freeString(comma);
 
         return string;
     }
 
-    case XVR_VALUE_TABLE:
+    case XVR_VALUE_TABLE: {
+        Xvr_Table* ptr = value.as.table;
+
+        if (ptr->count == 0) {
+            Xvr_String* empty = Xvr_createString(bucketHandle, "[:]");
+            return empty;
+        }
+
+        Xvr_String* open = Xvr_createStringLength(bucketHandle, "[", 1);
+        Xvr_String* close = Xvr_createStringLength(bucketHandle, "]", 1);
+        Xvr_String* colon = Xvr_createStringLength(bucketHandle, ":", 1);
+        Xvr_String* comma = Xvr_createStringLength(bucketHandle, ",", 1);
+        bool needsComma = false;
+
+        Xvr_String* string = open;
+
+        for (unsigned int i = 0; i < ptr->capacity; i++) {
+            if (XVR_VALUE_IS_NULL(ptr->data[i].key)) {
+                continue;
+            }
+
+            if (needsComma) {
+                Xvr_String* tmp =
+                    Xvr_concatStrings(bucketHandle, string, comma);
+                Xvr_freeString(string);
+                string = tmp;
+            }
+
+            Xvr_String* k = Xvr_stringifyValue(bucketHandle, ptr->data[i].key);
+            Xvr_String* v =
+                Xvr_stringifyValue(bucketHandle, ptr->data[i].value);
+            Xvr_String* c = Xvr_concatStrings(bucketHandle, k, colon);
+            Xvr_String* pair = Xvr_concatStrings(bucketHandle, c, v);
+
+            Xvr_String* final = Xvr_concatStrings(bucketHandle, string, pair);
+
+            Xvr_freeString(k);
+            Xvr_freeString(v);
+            Xvr_freeString(c);
+            Xvr_freeString(pair);
+            Xvr_freeString(string);
+
+            string = final;
+
+            needsComma = true;
+        }
+
+        Xvr_String* tmp = Xvr_concatStrings(bucketHandle, string, close);
+        Xvr_freeString(string);
+        string = tmp;
+
+        Xvr_freeString(open);
+        Xvr_freeString(close);
+        Xvr_freeString(colon);
+        Xvr_freeString(comma);
+
+        return string;
+    }
+
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_TYPE:

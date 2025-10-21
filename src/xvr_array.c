@@ -31,15 +31,15 @@ SOFTWARE.
 #include "xvr_value.h"
 
 Xvr_Array* Xvr_resizeArray(Xvr_Array* paramArray, unsigned int capacity) {
-    if (capacity == 0) {
-        free(paramArray);
-        return NULL;
-    }
-
     if (paramArray != NULL && paramArray->count > capacity) {
         for (unsigned int i = capacity; i < paramArray->count; i++) {
             Xvr_freeValue(paramArray->data[i]);
         }
+    }
+
+    if (capacity == 0) {
+        free(paramArray);
+        return NULL;
     }
 
     unsigned int originalCapacity =

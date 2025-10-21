@@ -293,6 +293,19 @@ static unsigned int writeInstructionCompound(Xvr_Routine** rt,
         EMIT_INT(rt, code, result);
 
         return 1;
+    }
+
+    if (ast.flag == XVR_AST_FLAG_COMPOUND_TABLE) {
+        EMIT_BYTE(rt, code, XVR_OPCODE_READ);
+        EMIT_BYTE(rt, code, XVR_VALUE_TABLE);
+
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+
+        EMIT_INT(rt, code, result);
+
+        return 1;
+
     } else {
         fprintf(stderr, XVR_CC_ERROR
                 "ERROR: Invalid AST compound flag found\n" XVR_CC_RESET);
@@ -309,6 +322,8 @@ static unsigned int writeInstructionAggregate(Xvr_Routine** rt,
     result += writeRoutineCode(rt, ast.right);
 
     if (ast.flag == XVR_AST_FLAG_COLLECTION) {
+        return result;
+    } else if (ast.flag == XVR_AST_FLAG_PAIR) {
         return result;
     } else if (ast.flag == XVR_AST_FLAG_INDEX) {
         EMIT_BYTE(rt, code, XVR_OPCODE_INDEX);

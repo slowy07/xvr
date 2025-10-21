@@ -32,6 +32,7 @@ SOFTWARE.
 struct Xvr_Bucket;
 union Xvr_String_t;
 struct Xvr_Array;
+struct Xvr_Table;
 
 typedef enum Xvr_ValueType {
     XVR_VALUE_NULL,
@@ -59,7 +60,8 @@ typedef struct Xvr_Value {  // 32 | 64 BITNESS
         float number;                 // 4  | 4
         union Xvr_String_t* string;   // 4 | 8
         struct Xvr_Array* array;      // 4 | 8
-    } as;                             // 4  | 4
+        struct Xvr_Table* table;      // 4 | 8
+    } as;
 
     Xvr_ValueType type;  // 4  | 4
 } Xvr_Value;             // 8  | 8
@@ -89,6 +91,7 @@ typedef struct Xvr_Value {  // 32 | 64 BITNESS
 #define XVR_VALUE_AS_FLOAT(value) (Xvr_unwrapValue(value).as.number)
 #define XVR_VALUE_AS_STRING(value) (Xvr_unwrapValue(value).as.string)
 #define XVR_VALUE_AS_ARRAY(value) (Xvr_unwrapValue(value).as.array)
+#define XVR_VALUE_AS_TABLE(value) (Xvr_unwrapValue(value).as.table)
 
 #define XVR_VALUE_FROM_NULL() ((Xvr_Value){{.integer = 0}, XVR_VALUE_NULL})
 #define XVR_VALUE_FROM_BOOLEAN(value) \
@@ -101,6 +104,8 @@ typedef struct Xvr_Value {  // 32 | 64 BITNESS
     ((Xvr_Value){{.string = value}, XVR_VALUE_STRING})
 #define XVR_VALUE_FROM_ARRAY(value) \
     ((Xvr_Value){{.array = value}, XVR_VALUE_ARRAY})
+#define XVR_VALUE_FROM_TABLE(value) \
+    ((Xvr_Value){{.table = value}, XVR_VALUE_TABLE})
 
 #define XVR_REFERENCE_FROM_POINTER(ptr) \
     ((Xvr_Value){{.reference = ptr}, XVR_VALUE_REFERENCE})

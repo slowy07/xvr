@@ -237,11 +237,11 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, NULL, NULL},            // XVR_TOKEN_OPERATOR_BRACE_RIGHT,
 
     // other operators
-    {PREC_AND, NULL, binary},  // XVR_TOKEN_OPERATOR_AND,
-    {PREC_OR, NULL, binary},   // XVR_TOKEN_OPERATOR_OR,
-    {PREC_NONE, unary, NULL},  // XVR_TOKEN_OPERATOR_NEGATE,
-    {PREC_NONE, NULL, NULL},   // XVR_TOKEN_OPERATOR_QUESTION,
-    {PREC_NONE, NULL, NULL},   // XVR_TOKEN_OPERATOR_COLON,
+    {PREC_AND, NULL, binary},           // XVR_TOKEN_OPERATOR_AND,
+    {PREC_OR, NULL, binary},            // XVR_TOKEN_OPERATOR_OR,
+    {PREC_NONE, unary, NULL},           // XVR_TOKEN_OPERATOR_NEGATE,
+    {PREC_NONE, NULL, NULL},            // XVR_TOKEN_OPERATOR_QUESTION,
+    {PREC_GROUP, compound, aggregate},  // XVR_TOKEN_OPERATOR_COLON,
 
     {PREC_NONE, NULL, NULL},        // XVR_TOKEN_OPERATOR_SEMICOLON, // ;
     {PREC_GROUP, NULL, aggregate},  // XVR_TOKEN_OPERATOR_COMMA, // ,
@@ -619,19 +619,43 @@ static Xvr_AstFlag compound(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
                                         XVR_AST_FLAG_COMPOUND_ARRAY);
             return XVR_AST_FLAG_NONE;
         }
+
+        if (match(parser, XVR_TOKEN_OPERATOR_COLON)) {
+            consume(parser, XVR_TOKEN_OPERATOR_BRACKET_RIGHT,
+                    "Expected ']' at the end of empty table");
+            Xvr_private_emitAstPass(bucketHandle, rootHandle);
+            Xvr_private_emitAstAggregate(bucketHandle, rootHandle,
+                                         XVR_AST_FLAG_PAIR, *rootHandle);
+            Xvr_private_emitAstCompound(bucketHandle, rootHandle,
+                                        XVR_AST_FLAG_COMPOUND_TABLE);
+            return XVR_AST_FLAG_NONE;
+        }
+
         parsePrecedence(bucketHandle, parser, rootHandle, PREC_GROUP);
+
+        Xvr_AstFlag flag = XVR_AST_FLAG_NONE;
+        if ((*rootHandle)->type == XVR_AST_AGGREGATE) {
+            flag = (*rootHandle)->aggregate.flag;
+            if (flag == XVR_AST_FLAG_COLLECTION &&
+                (*rootHandle)->aggregate.right->type == XVR_AST_AGGREGATE) {
+                flag = (*rootHandle)->aggregate.right->aggregate.flag;
+            }
+        }
 
         if (parser->previous.type == XVR_TOKEN_OPERATOR_BRACKET_RIGHT &&
             parser->current.type != XVR_TOKEN_OPERATOR_BRACKET_RIGHT) {
             Xvr_private_emitAstCompound(bucketHandle, rootHandle,
-                                        XVR_AST_FLAG_COMPOUND_ARRAY);
+                                        flag == XVR_AST_FLAG_PAIR
+                                            ? XVR_AST_FLAG_COMPOUND_TABLE
+                                            : XVR_AST_FLAG_COMPOUND_ARRAY);
             return XVR_AST_FLAG_NONE;
         }
         consume(parser, XVR_TOKEN_OPERATOR_BRACKET_RIGHT,
                 "Expected ']' at the end of compound expression");
         Xvr_private_emitAstCompound(bucketHandle, rootHandle,
-                                    XVR_AST_FLAG_COMPOUND_ARRAY);
-
+                                    flag == XVR_AST_FLAG_PAIR
+                                        ? XVR_AST_FLAG_COMPOUND_TABLE
+                                        : XVR_AST_FLAG_COMPOUND_ARRAY);
         return XVR_AST_FLAG_NONE;
 
     } else if (parser->previous.type == XVR_TOKEN_OPERATOR_BRACKET_RIGHT) {
@@ -652,6 +676,9 @@ static Xvr_AstFlag aggregate(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
     if (parser->previous.type == XVR_TOKEN_OPERATOR_COMMA) {
         parsePrecedence(bucketHandle, parser, rootHandle, PREC_GROUP);
         return XVR_AST_FLAG_COLLECTION;
+    } else if (parser->previous.type == XVR_TOKEN_OPERATOR_COLON) {
+        parsePrecedence(bucketHandle, parser, rootHandle, PREC_GROUP);
+        return XVR_AST_FLAG_PAIR;
     } else if (parser->previous.type == XVR_TOKEN_OPERATOR_BRACKET_LEFT) {
         parsePrecedence(bucketHandle, parser, rootHandle, PREC_GROUP);
         consume(parser, XVR_TOKEN_OPERATOR_BRACKET_RIGHT,

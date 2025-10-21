@@ -225,7 +225,7 @@ Xvr_Value* Xvr_accessScopeAsPointer(Xvr_Scope* scope, Xvr_String* key) {
         char buffer[key->info.length + 256];
         sprintf(buffer, "Undefined variable: %s\n", key->name.data);
         Xvr_error(buffer);
-        NULL;
+        return NULL;
     }
 
     return &(entryPtr->value);

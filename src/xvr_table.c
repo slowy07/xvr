@@ -145,27 +145,35 @@ void Xvr_insertTable(Xvr_Table** tableHandle, Xvr_Value key, Xvr_Value value) {
     probeAndInsert(tableHandle, key, value);
 }
 
-Xvr_Value Xvr_lookupTable(Xvr_Table** tableHandle, Xvr_Value key) {
+Xvr_TableEntry* Xvr_private_lookupTableEntryPtr(Xvr_Table** tableHandle,
+                                                Xvr_Value key) {
     if (XVR_VALUE_IS_NULL(key) || XVR_VALUE_IS_BOOLEAN(key)) {
-        Xvr_error(XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
+        Xvr_error(XVR_CC_ERROR "Error: bad table key\n" XVR_CC_RESET);
     }
 
-    // lookup
     unsigned int probe = Xvr_hashValue(key) % (*tableHandle)->capacity;
 
     while (true) {
-        // found the entry
         if (Xvr_checkValuesAreEqual((*tableHandle)->data[probe].key, key)) {
-            return (*tableHandle)->data[probe].value;
+            return (*tableHandle)->data + probe;
         }
 
-        // if its an empty slot
         if (XVR_VALUE_IS_NULL((*tableHandle)->data[probe].key)) {
-            return XVR_VALUE_FROM_NULL();
+            return NULL;
         }
 
-        // adjust and continue
-        probe = (probe + 1) % (*tableHandle)->capacity;
+        probe++;
+        probe &= (*tableHandle)->capacity - 1;
+    }
+}
+
+Xvr_Value Xvr_lookupTable(Xvr_Table** tableHandle, Xvr_Value key) {
+    Xvr_TableEntry* entry = Xvr_private_lookupTableEntryPtr(tableHandle, key);
+
+    if (entry == NULL) {
+        return XVR_VALUE_FROM_NULL();
+    } else {
+        return entry->value;
     }
 }
 
