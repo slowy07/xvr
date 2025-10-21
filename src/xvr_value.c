@@ -158,7 +158,7 @@ void Xvr_freeValue(Xvr_Value value) {
             Xvr_freeValue(ptr->data[i]);
         }
 
-        XVR_ARRAY_FREE(ptr);
+        Xvr_resizeArray(ptr, 0);
         break;
     }
 

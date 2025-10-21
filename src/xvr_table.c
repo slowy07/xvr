@@ -135,7 +135,7 @@ void Xvr_insertTable(Xvr_Table** tableHandle, Xvr_Value key, Xvr_Value value) {
         Xvr_error(XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
     }
 
-    if ((*tableHandle)->count >
+    if ((*tableHandle)->count >=
         (*tableHandle)->capacity * XVR_TABLE_EXPANSION_THRESHOLD) {
         (*tableHandle) = Xvr_private_adjustTableCapacity(
             (*tableHandle),

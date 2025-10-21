@@ -57,7 +57,7 @@ void Xvr_freeStack(Xvr_Stack* stack) {
 }
 
 void Xvr_pushStack(Xvr_Stack** stack, Xvr_Value value) {
-    if ((*stack)->count >= XVR_STACK_OVERFLOW) {
+    if ((*stack)->count >= XVR_STACK_OVERFLOW_THRESHOLD) {
         fprintf(stderr, XVR_CC_ERROR "ERROR: Stack overflow\n" XVR_CC_RESET);
         exit(-1);
     }
@@ -79,7 +79,7 @@ void Xvr_pushStack(Xvr_Stack** stack, Xvr_Value value) {
         if ((*stack) == NULL) {
             fprintf(stderr,
                     XVR_CC_ERROR
-                    "ERROR: Failed to reallocate a 'Xvr_Stack' of %d "
+                    "ERROR: Failed to reallocate a 'Xvr_Stack' of %d"
                     "capacity (%d space in memory)\n" XVR_CC_RESET,
                     (int)newCapacity,
                     (int)(newCapacity * sizeof(Xvr_Value) + sizeof(Xvr_Stack)));
@@ -107,10 +107,10 @@ Xvr_Value Xvr_popStack(Xvr_Stack** stack) {
     }
 
     // shrink if possible
-    if ((*stack)->count > XVR_STACK_INITIAL_CAPACITY &&
-        (*stack)->count <
-            (*stack)->capacity * XVR_STACK_CONTRACTION_THRESHOLD) {
-        (*stack)->capacity /= 2;
+    if ((*stack)->capacity > XVR_STACK_INITIAL_CAPACITY &&
+        (*stack)->count <=
+            (*stack)->capacity / XVR_STACK_CONTRACTION_THRESHOLD) {
+        (*stack)->capacity /= XVR_STACK_CONTRACTION_THRESHOLD;
         unsigned int newCapacity = (*stack)->capacity;
 
         (*stack) = realloc((*stack), (*stack)->capacity * sizeof(Xvr_Value) +

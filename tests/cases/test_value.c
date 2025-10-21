@@ -8,6 +8,14 @@
 #include "xvr_string.h"
 #include "xvr_value.h"
 
+#define XVR_ARRAY_EXPAND(array)                                              \
+    (array = (array != NULL && (array)->count + 1 > (array)->capacity        \
+                  ? Xvr_resizeArray(                                         \
+                        array, (array)->capacity * XVR_ARRAY_EXPANSION_RATE) \
+                  : array))
+#define XVR_ARRAY_PUSHBACK(array, value) \
+    (XVR_ARRAY_EXPAND(array), (array)->data[(array)->count++] = (value))
+
 int test_value_creation(void) {
     {
 #if XVR_BITNESS == 64
@@ -48,7 +56,7 @@ int test_value_creation(void) {
     }
 
     {
-        Xvr_Array* array = XVR_ARRAY_ALLOCATE();
+        Xvr_Array* array = Xvr_resizeArray(NULL, XVR_ARRAY_INITIAL_CAPACITY);
         XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(42));
         XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(69));
         XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(8891));
@@ -66,11 +74,11 @@ int test_value_creation(void) {
             XVR_VALUE_AS_INTEGER(XVR_VALUE_AS_ARRAY(v)->data[2]) != 8891) {
             fprintf(stderr,
                     XVR_CC_ERROR "Error: `array` value failed\n" XVR_CC_RESET);
-            XVR_ARRAY_FREE(array);
+            Xvr_resizeArray(array, 0);
             return -1;
         }
 
-        XVR_ARRAY_FREE(array);
+        Xvr_resizeArray(array, 0);
     }
 
     return 0;
@@ -146,7 +154,7 @@ int test_value_stringify(void) {
     {
         Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_SMALL);
 
-        Xvr_Array* array = XVR_ARRAY_ALLOCATE();
+        Xvr_Array* array = Xvr_resizeArray(NULL, XVR_ARRAY_INITIAL_CAPACITY);
         XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(42));
         XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(60));
         XVR_ARRAY_PUSHBACK(array, XVR_VALUE_FROM_INTEGER(8891));
@@ -160,12 +168,12 @@ int test_value_stringify(void) {
                 stderr, XVR_CC_ERROR
                 " ERROR: stringify array [42, 60, 8891] failed\n" XVR_CC_RESET);
             free(buffer);
-            XVR_ARRAY_FREE(array);
+            Xvr_resizeArray(array, 0);
             Xvr_freeBucket(&bucket);
             return -1;
         }
         free(buffer);
-        XVR_ARRAY_FREE(array);
+        Xvr_resizeArray(array, 0);
         Xvr_freeBucket(&bucket);
     }
 

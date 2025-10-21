@@ -59,7 +59,7 @@ XVR_API Xvr_Table* Xvr_private_adjustTableCapacity(Xvr_Table* oldTable, unsigned
 #endif // !XVR_TABLE_EXPANSION_RATE
 
 #ifndef XVR_TABLE_EXPANSION_THRESHOLD
-#define XVR_TABLE_EXPANSION_THRESHOLD 0.8
+#define XVR_TABLE_EXPANSION_THRESHOLD 0.8f
 #endif // !XVR_TABLE_EXPANSION_THRESHOLD
 
 #endif // !XVR_TABLE_H
