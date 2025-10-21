@@ -11,8 +11,8 @@ print ("woilah cik kelar loh ya");
 {
   var iterasi = 0;
   while (iterasi < 10) {
-    print (iteration);
-    iteration += 1;
+    print (iterasi);
+    iterasi += 1;
   }
 }
 

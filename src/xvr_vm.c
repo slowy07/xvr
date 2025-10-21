@@ -290,7 +290,8 @@ static void processAssignCompound(Xvr_VM* vm) {
     } else if (XVR_VALUE_IS_TABLE(target)) {
         Xvr_Table* table = XVR_VALUE_AS_TABLE(target);
 
-        Xvr_insertTable(&table, key, Xvr_copyValue(Xvr_unwrapValue(value)));
+        Xvr_insertTable(&table, Xvr_copyValue(Xvr_unwrapValue(key)),
+                        Xvr_copyValue(Xvr_unwrapValue(value)));
         Xvr_freeValue(value);
     } else {
         Xvr_error("invalid assignment target");
@@ -754,6 +755,14 @@ static void processIndex(Xvr_VM* vm) {
 
         Xvr_Table* table = XVR_VALUE_AS_TABLE(value);
         Xvr_TableEntry* entry = Xvr_private_lookupTableEntryPtr(&table, index);
+
+        if (entry == NULL) {
+            Xvr_error("table key not found");
+            Xvr_freeValue(value);
+            Xvr_freeValue(index);
+            Xvr_freeValue(length);
+            return;
+        }
 
         if (XVR_VALUE_IS_REFERENCE(entry->value) ||
             XVR_VALUE_IS_ARRAY(entry->value) ||
