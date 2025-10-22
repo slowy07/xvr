@@ -743,7 +743,12 @@ static void parsePrecedence(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
         } else if (flag >= 30 && flag <= 39) {
             Xvr_private_emitAstAggregate(bucketHandle, rootHandle, flag, ptr);
         } else {
-            Xvr_private_emitAstBinary(bucketHandle, rootHandle, flag, ptr);
+            if (flag == XVR_AST_FLAG_AND || flag == XVR_AST_FLAG_OR) {
+                Xvr_private_emitAstBinaryShortCircuit(bucketHandle, rootHandle,
+                                                      flag, ptr);
+            } else {
+                Xvr_private_emitAstBinary(bucketHandle, rootHandle, flag, ptr);
+            }
         }
     }
 

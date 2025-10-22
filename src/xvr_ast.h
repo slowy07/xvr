@@ -36,6 +36,7 @@ typedef enum Xvr_AstType {
     XVR_AST_VALUE,
     XVR_AST_UNARY,
     XVR_AST_BINARY,
+    XVR_AST_BINARY_SHORT_CIRCUIT,
     XVR_AST_COMPARE,
     XVR_AST_GROUP,
     XVR_AST_COMPOUND,
@@ -130,6 +131,13 @@ typedef struct Xvr_AstBinary {
     Xvr_Ast* right;
 } Xvr_AstBinary;
 
+typedef struct Xvr_AstBinaryShortCircuit {
+    Xvr_AstType type;
+    Xvr_AstFlag flag;
+    Xvr_Ast* left;
+    Xvr_Ast* right;
+} Xvr_AstBinaryShortCircuit;
+
 typedef struct Xvr_AstCompare {
     Xvr_AstType type;
     Xvr_AstFlag flag;
@@ -217,29 +225,30 @@ typedef struct Xvr_AstEnd {
     Xvr_AstType type;
 } Xvr_AstEnd;
 
-union Xvr_Ast {                     // 32 | 64 BITNESS
-    Xvr_AstType type;               // 4  | 4
-    Xvr_AstBlock block;             // 16 | 32
-    Xvr_AstValue value;             // 12 | 24
-    Xvr_AstUnary unary;             // 12 | 16
-    Xvr_AstBinary binary;           // 16 | 24
-    Xvr_AstCompare compare;         // 16 | 24
-    Xvr_AstGroup group;             // 8  | 16
-    Xvr_AstVarDeclare varDeclare;   // 16 | 24
-    Xvr_AstVarAssign varAssign;     // 16 | 24
-    Xvr_AstVarAccess varAccess;     // 8 | 16
-    Xvr_AstCompound compound;       // 16 | 24
-    Xvr_AstAggregate aggregate;     // 16 | 24
-    Xvr_AstAssert assert;           // 16 | 24
-    Xvr_AstIfThenElse ifThenElse;   // 16 | 32
-    Xvr_AstWhileThen whileThen;     // 16 | 24
-    Xvr_AstBreak breakPoint;        // 4 | 4
-    Xvr_AstContinue continuePoint;  // 4 | 4
-    Xvr_AstPrint print;             // 8 | 16
-    Xvr_AstPass pass;               // 4  | 4
-    Xvr_AstError error;             // 4  | 4
-    Xvr_AstEnd end;                 // 4  | 4
-};  // 16 | 32
+union Xvr_Ast {                                    // 32 | 64 BITNESS
+    Xvr_AstType type;                              // 4  | 4
+    Xvr_AstBlock block;                            // 16 | 32
+    Xvr_AstValue value;                            // 12 | 24
+    Xvr_AstUnary unary;                            // 12 | 16
+    Xvr_AstBinary binary;                          // 16 | 24
+    Xvr_AstBinaryShortCircuit binaryShortCircuit;  // 16 | 24
+    Xvr_AstCompare compare;                        // 16 | 24
+    Xvr_AstGroup group;                            // 8  | 16
+    Xvr_AstCompound compound;                      // 12 | 16
+    Xvr_AstAggregate aggregate;                    // 16 | 24
+    Xvr_AstAssert assert;                          // 16 | 24
+    Xvr_AstIfThenElse ifThenElse;                  // 16 | 32
+    Xvr_AstWhileThen whileThen;                    // 16 | 24
+    Xvr_AstBreak breakPoint;                       // 4  | 4
+    Xvr_AstContinue continuePoint;                 // 4  | 4
+    Xvr_AstPrint print;                            // 8  | 16
+    Xvr_AstVarDeclare varDeclare;                  // 16 | 24
+    Xvr_AstVarAssign varAssign;                    // 16 | 24
+    Xvr_AstVarAccess varAccess;                    // 8  | 16
+    Xvr_AstPass pass;                              // 4  | 4
+    Xvr_AstError error;                            // 4  | 4
+    Xvr_AstEnd end;                                // 4  | 4
+};
 
 void Xvr_private_initAstBlock(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle);
 void Xvr_private_appendAstBlock(Xvr_Bucket** bucketHandle, Xvr_Ast* block,
@@ -251,6 +260,9 @@ void Xvr_private_emitAstUnary(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
                               Xvr_AstFlag flag);
 void Xvr_private_emitAstBinary(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
                                Xvr_AstFlag flag, Xvr_Ast* right);
+void Xvr_private_emitAstBinaryShortCircuit(Xvr_Bucket** bucketHandle,
+                                           Xvr_Ast** astHandle,
+                                           Xvr_AstFlag flag, Xvr_Ast* right);
 
 void Xvr_private_emitAstCompare(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
                                 Xvr_AstFlag flag, Xvr_Ast* right);

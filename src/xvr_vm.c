@@ -247,6 +247,7 @@ static void processAssign(Xvr_VM* vm) {
     }
 
     Xvr_assignScope(vm->scope, XVR_VALUE_AS_STRING(name), value);
+    Xvr_pushStack(&vm->stack, Xvr_copyValue(value));
     Xvr_freeValue(name);
 }
 
@@ -287,12 +288,14 @@ static void processAssignCompound(Xvr_VM* vm) {
         }
 
         array->data[index] = Xvr_copyValue(Xvr_unwrapValue(value));
+        Xvr_pushStack(&vm->stack, Xvr_copyValue(value));
         Xvr_freeValue(value);
     } else if (XVR_VALUE_IS_TABLE(target)) {
         Xvr_Table* table = XVR_VALUE_AS_TABLE(target);
 
         Xvr_insertTable(&table, Xvr_copyValue(Xvr_unwrapValue(key)),
                         Xvr_copyValue(Xvr_unwrapValue(value)));
+        Xvr_pushStack(&vm->stack, Xvr_copyValue(value));
         Xvr_freeValue(value);
     } else {
         Xvr_error("invalid assignment target");
@@ -343,6 +346,11 @@ static void processDuplicate(Xvr_VM* vm) {
     if (squeezed == XVR_OPCODE_ACCESS) {
         processAccess(vm);
     }
+}
+
+static void processEliminate(Xvr_VM* vm) {
+    Xvr_Value value = Xvr_popStack(&vm->stack);
+    Xvr_freeValue(value);
 }
 
 static void processArithmetic(Xvr_VM* vm, Xvr_OpcodeType opcode) {
@@ -835,6 +843,10 @@ static void process(Xvr_VM* vm) {
             processDuplicate(vm);
             break;
 
+        case XVR_OPCODE_ELIMINATE:
+            processEliminate(vm);
+            break;
+
         case XVR_OPCODE_ADD:
         case XVR_OPCODE_SUBTRACT:
         case XVR_OPCODE_MULTIPLY:
@@ -1004,8 +1016,6 @@ void Xvr_freeVM(Xvr_VM* vm) {
     Xvr_popScope(vm->scope);
     Xvr_freeBucket(&vm->stringBucket);
     Xvr_freeBucket(&vm->scopeBucket);
-
-    Xvr_resetVM(vm);
 }
 
 void Xvr_resetVM(Xvr_VM* vm) {
@@ -1024,4 +1034,6 @@ void Xvr_resetVM(Xvr_VM* vm) {
     vm->subsAddr = 0;
 
     vm->programCounter = 0;
+
+    Xvr_resetStack(&vm->stack);
 }

@@ -35,6 +35,7 @@ typedef enum Xvr_OpcodeType {
     XVR_OPCODE_ACCESS,
 
     XVR_OPCODE_DUPLICATE,
+    XVR_OPCODE_ELIMINATE,
 
     // arithmetic instructions
     XVR_OPCODE_ADD,

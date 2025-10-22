@@ -94,6 +94,18 @@ void Xvr_private_emitAstBinary(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
     (*astHandle) = tmp;
 }
 
+void Xvr_private_emitAstBinaryShortCircuit(Xvr_Bucket** bucketHandle,
+                                           Xvr_Ast** astHandle,
+                                           Xvr_AstFlag flag, Xvr_Ast* right) {
+    Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));
+
+    tmp->type = XVR_AST_BINARY_SHORT_CIRCUIT;
+    tmp->binary.flag = flag;
+    tmp->binary.left = *astHandle;
+    tmp->binary.right = right;
+    (*astHandle) = tmp;
+}
+
 void Xvr_private_emitAstCompare(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle,
                                 Xvr_AstFlag flag, Xvr_Ast* right) {
     Xvr_Ast* tmp = (Xvr_Ast*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Ast));

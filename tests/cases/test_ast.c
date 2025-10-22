@@ -23,6 +23,7 @@ int test_sizeof_ast_64bit(void) {
     TEST_SIZEOF(Xvr_AstValue, 24);
     TEST_SIZEOF(Xvr_AstUnary, 16);
     TEST_SIZEOF(Xvr_AstBinary, 24);
+    TEST_SIZEOF(Xvr_AstBinaryShortCircuit, 24);
     TEST_SIZEOF(Xvr_AstCompare, 24);
     TEST_SIZEOF(Xvr_AstGroup, 16);
     TEST_SIZEOF(Xvr_AstCompound, 16);
@@ -62,6 +63,7 @@ int test_sizeof_ast_32bit(void) {
     TEST_SIZEOF(Xvr_AstValue, 12);
     TEST_SIZEOF(Xvr_AstUnary, 12);
     TEST_SIZEOF(Xvr_AstBinary, 16);
+    TEST_SIZEOF(Xvr_AstBinaryShortCircuit, 16);
     TEST_SIZEOF(Xvr_AstCompare, 16);
     TEST_SIZEOF(Xvr_AstGroup, 8);
     TEST_SIZEOF(Xvr_AstCompound, 12);

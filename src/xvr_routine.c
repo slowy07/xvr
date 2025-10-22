@@ -219,11 +219,7 @@ static unsigned int writeInstructionBinary(Xvr_Routine** rt,
         EMIT_BYTE(rt, code, XVR_OPCODE_MODULO);
     }
 
-    else if (ast.flag == XVR_AST_FLAG_AND) {
-        EMIT_BYTE(rt, code, XVR_OPCODE_AND);
-    } else if (ast.flag == XVR_AST_FLAG_OR) {
-        EMIT_BYTE(rt, code, XVR_OPCODE_OR);
-    } else if (ast.flag == XVR_AST_FLAG_CONCAT) {
+    else if (ast.flag == XVR_AST_FLAG_CONCAT) {
         EMIT_BYTE(rt, code, XVR_OPCODE_CONCAT);
     } else {
         fprintf(stderr, XVR_CC_ERROR
@@ -234,6 +230,47 @@ static unsigned int writeInstructionBinary(Xvr_Routine** rt,
     EMIT_BYTE(rt, code, XVR_OPCODE_PASS);
     EMIT_BYTE(rt, code, 0);
     EMIT_BYTE(rt, code, 0);
+
+    return 1;
+}
+
+static unsigned int writeInstructionBinaryShortCircuit(
+    Xvr_Routine** rt, Xvr_AstBinaryShortCircuit ast) {
+    writeRoutineCode(rt, ast.left);
+
+    EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+
+    if (ast.flag == XVR_AST_FLAG_AND) {
+        EMIT_BYTE(rt, code, XVR_OPCODE_JUMP);
+        EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_RELATIVE);
+        EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_IF_FALSE);
+        EMIT_BYTE(rt, code, 0);
+    }
+
+    else if (ast.flag == XVR_AST_FLAG_OR) {
+        EMIT_BYTE(rt, code, XVR_OPCODE_JUMP);
+        EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_RELATIVE);
+        EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_IF_TRUE);
+        EMIT_BYTE(rt, code, 0);
+    } else {
+        fprintf(stderr, XVR_CC_ERROR
+                "ERROR: invalid AST binary short circuit flag "
+                "found\n" XVR_CC_RESET);
+        exit(-1);
+    }
+
+    unsigned int endAddr = SKIP_INT(rt, code);
+
+    EMIT_BYTE(rt, code, XVR_OPCODE_ELIMINATE);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+
+    writeRoutineCode(rt, ast.right);
+    OVERWRITE_INT(rt, code, endAddr, CURRENT_ADDRESS(rt, code) - (endAddr + 4));
 
     return 1;
 }
@@ -675,6 +712,11 @@ static unsigned int writeRoutineCode(Xvr_Routine** rt, Xvr_Ast* ast) {
 
     case XVR_AST_BINARY:
         result += writeInstructionBinary(rt, ast->binary);
+        break;
+
+    case XVR_AST_BINARY_SHORT_CIRCUIT:
+        result +=
+            writeInstructionBinaryShortCircuit(rt, ast->binaryShortCircuit);
         break;
 
     case XVR_AST_COMPARE:

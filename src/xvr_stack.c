@@ -28,6 +28,7 @@ SOFTWARE.
 #include <stdlib.h>
 
 #include "xvr_console_colors.h"
+#include "xvr_value.h"
 
 Xvr_Stack* Xvr_allocateStack(void) {
     Xvr_Stack* stack = malloc(XVR_STACK_INITIAL_CAPACITY * sizeof(Xvr_Value) +
@@ -54,6 +55,25 @@ void Xvr_freeStack(Xvr_Stack* stack) {
     if (stack != NULL) {
         free(stack);
     }
+}
+
+void Xvr_resetStack(Xvr_Stack** stackHandle) {
+    if ((*stackHandle) == NULL) {
+        return;
+    }
+
+    for (unsigned int i = 0; i < (*stackHandle)->count; i++) {
+        Xvr_freeValue((*stackHandle)->data[i]);
+    }
+
+    if ((*stackHandle)->capacity > XVR_STACK_INITIAL_CAPACITY) {
+        (*stackHandle) = realloc(
+            (*stackHandle),
+            XVR_STACK_INITIAL_CAPACITY * sizeof(Xvr_Value) + sizeof(Xvr_Stack));
+        (*stackHandle)->capacity = XVR_STACK_INITIAL_CAPACITY;
+    }
+
+    (*stackHandle)->count = 0;
 }
 
 void Xvr_pushStack(Xvr_Stack** stack, Xvr_Value value) {
@@ -93,7 +113,8 @@ void Xvr_pushStack(Xvr_Stack** stack, Xvr_Value value) {
 
 Xvr_Value Xvr_peekStack(Xvr_Stack** stack) {
     if ((*stack)->count == 0) {
-        fprintf(stderr, XVR_CC_ERROR "ERROR: Stack underflow\n" XVR_CC_RESET);
+        fprintf(stderr, XVR_CC_ERROR
+                "ERROR: Stack underflow when peek stack\n" XVR_CC_RESET);
         exit(-1);
     }
 
@@ -102,7 +123,8 @@ Xvr_Value Xvr_peekStack(Xvr_Stack** stack) {
 
 Xvr_Value Xvr_popStack(Xvr_Stack** stack) {
     if ((*stack)->count == 0) {
-        fprintf(stderr, XVR_CC_ERROR "ERROR: Stack underflow\n" XVR_CC_RESET);
+        fprintf(stderr, XVR_CC_ERROR
+                "ERROR: Stack underflow when pop stack\n" XVR_CC_RESET);
         exit(-1);
     }
 
