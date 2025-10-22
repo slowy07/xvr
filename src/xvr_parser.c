@@ -118,6 +118,7 @@ typedef enum ParsingPrecedence {
     PREC_ASSIGNMENT,
     PREC_GROUP,
     PREC_TERNARY,
+    PREC_NEGATE,
     PREC_OR,
     PREC_AND,
     PREC_COMPARISON,
@@ -158,7 +159,7 @@ static Xvr_AstFlag aggregate(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
 static ParsingTuple parsingRulesetTable[] = {
     {PREC_PRIMARY, literal, NULL},  // XVR_TOKEN_NULL,
 
-    {PREC_NONE, nameString, NULL},  // XVR_TOKEN_NAME,
+    {PREC_PRIMARY, nameString, NULL},  // XVR_TOKEN_NAME,
 
     // types
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_TYPE_BOOLEAN,
@@ -229,7 +230,7 @@ static ParsingTuple parsingRulesetTable[] = {
      binary},  // XVR_TOKEN_OPERATOR_COMPARE_GREATER_EQUAL,
 
     // structural operators
-    {PREC_NONE, group, NULL},           // XVR_TOKEN_OPERATOR_PAREN_LEFT,
+    {PREC_GROUP, group, NULL},          // XVR_TOKEN_OPERATOR_PAREN_LEFT,
     {PREC_NONE, NULL, NULL},            // XVR_TOKEN_OPERATOR_PAREN_RIGHT,
     {PREC_GROUP, compound, aggregate},  // XVR_TOKEN_OPERATOR_BRACKET_LEFT,
     {PREC_NONE, compound, aggregate},   // XVR_TOKEN_OPERATOR_BRACKET_RIGHT,
@@ -239,7 +240,7 @@ static ParsingTuple parsingRulesetTable[] = {
     // other operators
     {PREC_AND, NULL, binary},           // XVR_TOKEN_OPERATOR_AND,
     {PREC_OR, NULL, binary},            // XVR_TOKEN_OPERATOR_OR,
-    {PREC_NONE, unary, NULL},           // XVR_TOKEN_OPERATOR_NEGATE,
+    {PREC_NEGATE, unary, NULL},         // XVR_TOKEN_OPERATOR_NEGATE,
     {PREC_NONE, NULL, NULL},            // XVR_TOKEN_OPERATOR_QUESTION,
     {PREC_GROUP, compound, aggregate},  // XVR_TOKEN_OPERATOR_COLON,
 
