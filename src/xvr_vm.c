@@ -110,7 +110,7 @@ static void processRead(Xvr_VM* vm) {
             value = XVR_VALUE_FROM_STRING(Xvr_createNameStringLength(
                 &vm->stringBucket, cstring, len, valueType, false));
         } else {
-            Xvr_error("Invalid string type found");
+            Xvr_error("Invalid string type found in opcode read");
         }
 
         break;
@@ -283,6 +283,7 @@ static void processAssignCompound(Xvr_VM* vm) {
             Xvr_freeValue(target);
             Xvr_freeValue(key);
             Xvr_freeValue(value);
+            return;
         }
 
         array->data[index] = Xvr_copyValue(Xvr_unwrapValue(value));
@@ -306,6 +307,7 @@ static void processAccess(Xvr_VM* vm) {
 
     if (!XVR_VALUE_IS_STRING(name) &&
         XVR_VALUE_AS_STRING(name)->info.type != XVR_STRING_NAME) {
+        Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
         Xvr_error("Invalid access target");
         return;
     }
@@ -315,6 +317,7 @@ static void processAccess(Xvr_VM* vm) {
 
     if (valuePtr == NULL) {
         Xvr_freeValue(name);
+        Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
         return;
     }
 
@@ -358,7 +361,7 @@ static void processArithmetic(Xvr_VM* vm, Xvr_OpcodeType opcode) {
 
         Xvr_freeValue(left);
         Xvr_freeValue(right);
-
+        Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
         return;
     }
 
@@ -368,6 +371,7 @@ static void processArithmetic(Xvr_VM* vm, Xvr_OpcodeType opcode) {
             Xvr_error("Can't divide or modulo by zero");
             Xvr_freeValue(left);
             Xvr_freeValue(right);
+            Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
             return;
         }
     }
@@ -376,6 +380,7 @@ static void processArithmetic(Xvr_VM* vm, Xvr_OpcodeType opcode) {
         Xvr_error("Can't modulo by a float");
         Xvr_freeValue(left);
         Xvr_freeValue(right);
+        Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
         return;
     }
 
@@ -461,7 +466,7 @@ static void processComparison(Xvr_VM* vm, Xvr_OpcodeType opcode) {
 
         Xvr_freeValue(left);
         Xvr_freeValue(right);
-
+        Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
         return;
     }
 
@@ -626,6 +631,7 @@ static void processConcat(Xvr_VM* vm) {
 
         Xvr_freeValue(left);
         Xvr_freeValue(right);
+        Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
         return;
     }
 
@@ -650,6 +656,7 @@ static void processIndex(Xvr_VM* vm) {
         value = Xvr_popStack(&vm->stack);
     } else {
         Xvr_error("Incorrect number of elements found in index");
+        Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
         return;
     }
 
@@ -659,6 +666,7 @@ static void processIndex(Xvr_VM* vm) {
             Xvr_freeValue(value);
             Xvr_freeValue(index);
             Xvr_freeValue(length);
+            Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
             return;
         }
 
@@ -667,6 +675,7 @@ static void processIndex(Xvr_VM* vm) {
             Xvr_freeValue(value);
             Xvr_freeValue(index);
             Xvr_freeValue(length);
+            Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
             return;
         }
 
@@ -680,6 +689,7 @@ static void processIndex(Xvr_VM* vm) {
             Xvr_freeValue(value);
             Xvr_freeValue(index);
             Xvr_freeValue(length);
+            Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
             return;
         }
 
@@ -708,6 +718,7 @@ static void processIndex(Xvr_VM* vm) {
             Xvr_freeValue(value);
             Xvr_freeValue(index);
             Xvr_freeValue(length);
+            Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
             return;
         }
 
@@ -716,6 +727,7 @@ static void processIndex(Xvr_VM* vm) {
             Xvr_freeValue(value);
             Xvr_freeValue(index);
             Xvr_freeValue(length);
+            Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
             return;
         }
 
@@ -729,6 +741,7 @@ static void processIndex(Xvr_VM* vm) {
             Xvr_freeValue(value);
             Xvr_freeValue(index);
             Xvr_freeValue(length);
+            Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
             return;
         }
 
@@ -749,7 +762,7 @@ static void processIndex(Xvr_VM* vm) {
             Xvr_freeValue(value);
             Xvr_freeValue(index);
             Xvr_freeValue(length);
-
+            Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
             return;
         }
 
@@ -761,6 +774,7 @@ static void processIndex(Xvr_VM* vm) {
             Xvr_freeValue(value);
             Xvr_freeValue(index);
             Xvr_freeValue(length);
+            Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
             return;
         }
 

@@ -24,6 +24,7 @@ SOFTWARE.
 
 #include "xvr_bucket.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 
@@ -31,12 +32,8 @@ SOFTWARE.
 
 // buckets of fun
 Xvr_Bucket* Xvr_allocateBucket(unsigned int capacity) {
-    if (capacity == 0) {
-        fprintf(stderr, XVR_CC_ERROR
-                "ERROR: Cannot allocate a 'Xvr_Bucket' with "
-                "zero capacity\n" XVR_CC_RESET);
-        exit(1);
-    }
+    assert(capacity != 0 &&
+           "cannot allocate a 'Xvr_Bucket' with zero capacity");
 
     Xvr_Bucket* bucket = malloc(sizeof(Xvr_Bucket) + capacity);
 
@@ -58,25 +55,12 @@ Xvr_Bucket* Xvr_allocateBucket(unsigned int capacity) {
 }
 
 void* Xvr_partitionBucket(Xvr_Bucket** bucketHandle, unsigned int amount) {
-    if ((*bucketHandle) == NULL) {
-        fprintf(stderr, XVR_CC_ERROR
-                "ERROR: Expected a 'Xvr_Bucket', received NULL\n" XVR_CC_RESET);
-        exit(1);
-    }
+    amount = (amount + 3) & ~3;
 
-    if (amount % 4 != 0) {
-        amount += 4 - (amount % 4);
-    }
-
-    // if you try to allocate too much space
-    if ((*bucketHandle)->capacity < amount) {
-        fprintf(stderr,
-                XVR_CC_ERROR
-                "ERROR: Failed to partition a 'Xvr_Bucket': requested "
-                "%d from a bucket of %d capacity\n" XVR_CC_RESET,
-                (int)amount, (int)((*bucketHandle)->capacity));
-        exit(1);
-    }
+    assert((*bucketHandle) != NULL && "Expected 'Xvr_Bucket', received NULL");
+    assert((*bucketHandle)->capacity >= amount &&
+           "ERROR: failed to partition a 'Xvr_Bucket', requested amount is to "
+           "highly");
 
     if ((*bucketHandle)->capacity < (*bucketHandle)->count + amount) {
         Xvr_Bucket* tmp = Xvr_allocateBucket((*bucketHandle)->capacity);

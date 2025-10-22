@@ -24,6 +24,7 @@ SOFTWARE.
 
 #include "xvr_table.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -90,8 +91,9 @@ Xvr_Table* Xvr_private_adjustTableCapacity(Xvr_Table* oldTable,
         malloc(newCapacity * sizeof(Xvr_TableEntry) + sizeof(Xvr_Table));
 
     if (newTable == NULL) {
-        Xvr_error(XVR_CC_ERROR
-                  "ERROR: Failed to allocate a 'Xvr_Table'\n" XVR_CC_RESET);
+        fprintf(stderr, XVR_CC_ERROR
+                "ERROR: failed to allocate a 'Xvr_Table'\n" XVR_CC_RESET);
+        exit(-1);
     }
 
     newTable->capacity = newCapacity;
@@ -132,7 +134,8 @@ void Xvr_freeTable(Xvr_Table* table) {
 
 void Xvr_insertTable(Xvr_Table** tableHandle, Xvr_Value key, Xvr_Value value) {
     if (XVR_VALUE_IS_NULL(key) || XVR_VALUE_IS_BOOLEAN(key)) {
-        Xvr_error(XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
+        fprintf(stderr, XVR_CC_ERROR "ERROR: bad table key\n" XVR_CC_RESET);
+        exit(1);
     }
 
     if ((*tableHandle)->count >=
@@ -148,7 +151,8 @@ void Xvr_insertTable(Xvr_Table** tableHandle, Xvr_Value key, Xvr_Value value) {
 Xvr_TableEntry* Xvr_private_lookupTableEntryPtr(Xvr_Table** tableHandle,
                                                 Xvr_Value key) {
     if (XVR_VALUE_IS_NULL(key) || XVR_VALUE_IS_BOOLEAN(key)) {
-        Xvr_error(XVR_CC_ERROR "Error: bad table key\n" XVR_CC_RESET);
+        fprintf(stderr, XVR_CC_ERROR "ERROR: bad table key\n" XVR_CC_RESET);
+        exit(1);
     }
 
     unsigned int probe = Xvr_hashValue(key) % (*tableHandle)->capacity;
@@ -179,7 +183,8 @@ Xvr_Value Xvr_lookupTable(Xvr_Table** tableHandle, Xvr_Value key) {
 
 void Xvr_removeTable(Xvr_Table** tableHandle, Xvr_Value key) {
     if (XVR_VALUE_IS_NULL(key) || XVR_VALUE_IS_BOOLEAN(key)) {
-        Xvr_error(XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
+        fprintf(stderr, XVR_CC_ERROR "ERROR: bad table key\n" XVR_CC_RESET);
+        exit(1);
     }
 
     unsigned int probe = Xvr_hashValue(key) % (*tableHandle)->capacity;

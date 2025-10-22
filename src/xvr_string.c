@@ -24,6 +24,7 @@ SOFTWARE.
 
 #include "xvr_string.h"
 
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -77,17 +78,6 @@ static unsigned int hashCString(const char* string) {
 static Xvr_String* partitionStringLength(Xvr_Bucket** bucketHandle,
                                          const char* cstring,
                                          unsigned int length) {
-    if (sizeof(Xvr_String) + length + 1 > (*bucketHandle)->capacity) {
-        fprintf(
-            stderr,
-            XVR_CC_ERROR
-            "Error: can't partition enough space for string, requested %d "
-            "length (%d total ) but bucket have capacity of %d\n" XVR_CC_RESET,
-            (int)length, (int)(sizeof(Xvr_String) + length - 1),
-            (int)((*bucketHandle)->capacity));
-        exit(-1);
-    }
-
     Xvr_String* ret = (Xvr_String*)Xvr_partitionBucket(
         bucketHandle, sizeof(Xvr_String) + length + 1);
 
@@ -132,26 +122,8 @@ Xvr_String* Xvr_createStringLength(Xvr_Bucket** bucketHandle,
 
 Xvr_String* Xvr_createNameStringLength(Xvr_Bucket** bucketHandle,
                                        const char* cname, unsigned int length,
-                                       Xvr_ValueType type, bool constant) {
-    if (sizeof(Xvr_String) + length + 1 > (*bucketHandle)->capacity) {
-        fprintf(stderr,
-                XVR_CC_ERROR
-                "ERROR: Can't partition enough space for a name string, "
-                "requested %d "
-                "length (%d total) but buckets have a capacity of "
-                "%d\n" XVR_CC_RESET,
-                (int)length, (int)(sizeof(Xvr_String) + length + 1),
-                (int)((*bucketHandle)->capacity));
-        exit(-1);
-    }
-
-    if (type == XVR_VALUE_NULL) {
-        fprintf(stderr, XVR_CC_ERROR
-                "Error: can't declare a name string with type "
-                "`null`\n" XVR_CC_RESET);
-        exit(-1);
-    }
-
+                                       Xvr_ValueType varType, bool constant) {
+    assert(varType != XVR_VALUE_NULL && "Can't with variable type 'null'");
     Xvr_String* ret = (Xvr_String*)Xvr_partitionBucket(
         bucketHandle, sizeof(Xvr_String) + length + 1);
 
@@ -161,30 +133,22 @@ Xvr_String* Xvr_createNameStringLength(Xvr_Bucket** bucketHandle,
     ret->info.cachedHash = 0;
     memcpy(ret->name.data, cname, length + 1);
     ret->name.data[length] = '\0';
-    ret->name.varType = type;
+    ret->name.varType = varType;
     ret->name.varConstant = constant;
 
     return ret;
 }
 
 Xvr_String* Xvr_copyString(Xvr_String* str) {
-    if (str->info.refCount == 0) {
-        fprintf(
-            stderr, XVR_CC_ERROR
-            "ERROR: Can't copy a string with refcount of zero\n" XVR_CC_RESET);
-        exit(-1);
-    }
+    assert(str->info.refCount != 0 &&
+           "Can't copy string with refcount of zero");
     incrementRefCount(str);
     return str;
 }
 
 Xvr_String* Xvr_deepCopyString(Xvr_Bucket** bucketHandle, Xvr_String* str) {
-    if (str->info.refCount == 0) {
-        fprintf(stderr, XVR_CC_ERROR
-                "ERROR: Can't deep copy a string with refcount of "
-                "zero\n" XVR_CC_RESET);
-        exit(-1);
-    }
+    assert(str->info.refCount != 0 &&
+           "Can't deep copy a string with refcount of zero");
 
     if (sizeof(Xvr_String) + str->info.length + 1 > (*bucketHandle)->capacity) {
         char* buffer = Xvr_getStringRawBuffer(str);
@@ -219,20 +183,11 @@ Xvr_String* Xvr_deepCopyString(Xvr_Bucket** bucketHandle, Xvr_String* str) {
 
 Xvr_String* Xvr_concatStrings(Xvr_Bucket** bucket, Xvr_String* left,
                               Xvr_String* right) {
-    if (left->info.type == XVR_STRING_NAME ||
-        right->info.type == XVR_STRING_NAME) {
-        fprintf(stderr,
-                XVR_CC_ERROR "Error: can't concat name string\n" XVR_CC_RESET);
-        exit(-1);
-    }
-
-    if (left->info.refCount == 0 || right->info.refCount == 0) {
-        fprintf(stderr, XVR_CC_ERROR
-                "ERROR: Can't concatenate a string with "
-                "refcount of zero\n" XVR_CC_RESET);
-        exit(-1);
-    }
-
+    assert(left->info.refCount != 0 && right->info.refCount != 0 &&
+           "Can't concatenate a string with refcount of zero");
+    assert(left->info.type != XVR_STRING_NAME &&
+           right->info.type != XVR_STRING_NAME &&
+           "Can't concatenate a name string");
     Xvr_String* ret =
         (Xvr_String*)Xvr_partitionBucket(bucket, sizeof(Xvr_String));
 
@@ -258,39 +213,22 @@ unsigned int Xvr_getStringRefCount(Xvr_String* str) {
 }
 
 Xvr_ValueType Xvr_getNameStringVarType(Xvr_String* str) {
-    if (str->info.type != XVR_STRING_NAME) {
-        fprintf(stderr, XVR_CC_ERROR
-                "Error: can't get the variable type of a "
-                "non-name string\n" XVR_CC_RESET);
-        exit(-1);
-    }
+    assert(str->info.type == XVR_STRING_NAME &&
+           "Can't get the variable type of a non-name string");
     return str->name.varType;
 }
 
-Xvr_ValueType Xvr_getNameStringVarConstant(Xvr_String* str) {
-    if (str->info.type != XVR_STRING_NAME) {
-        fprintf(stderr, XVR_CC_ERROR
-                "Error: can't get the variable constness of "
-                "non-name string\n" XVR_CC_RESET);
-        exit(-1);
-    }
+bool Xvr_getNameStringVarConstant(Xvr_String* str) {
+    assert(str->info.type == XVR_STRING_NAME &&
+           "Can't get the variable constness of a non-name string");
     return str->name.varConstant;
 }
 
 char* Xvr_getStringRawBuffer(Xvr_String* str) {
-    if (str->info.type == XVR_STRING_NAME) {
-        fprintf(
-            stderr, XVR_CC_ERROR
-            "Error: can't get raw string buffer of name string\n" XVR_CC_RESET);
-        exit(-1);
-    }
-
-    if (str->info.refCount == 0) {
-        fprintf(stderr, XVR_CC_ERROR
-                "ERROR: Can't get raw string buffer of a "
-                "string with refcount of zero\n" XVR_CC_RESET);
-        exit(-1);
-    }
+    assert(str->info.type != XVR_STRING_NAME &&
+           "Can't get raw string buffer of a name string");
+    assert(str->info.refCount != 0 &&
+           "Can't get raw string buffer of a string with refcount of zero");
 
     unsigned int len = (str->info.length + 3) & ~3;
 
@@ -386,12 +324,8 @@ int Xvr_compareStrings(Xvr_String* left, Xvr_String* right) {
 
     if (left->info.type == XVR_STRING_NAME ||
         right->info.type == XVR_STRING_NAME) {
-        if (left->info.type != right->info.type) {
-            fprintf(stderr, XVR_CC_ERROR
-                    "Error: can't compare name string to non-name "
-                    "string\n" XVR_CC_RESET);
-            exit(-1);
-        }
+        assert(left->info.type == right->info.type &&
+               "Can't compare name string to a non-name string");
 
         return strncmp(left->name.data, right->name.data, left->info.length);
     }

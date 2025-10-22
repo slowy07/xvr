@@ -95,7 +95,7 @@ XVR_API void Xvr_freeString(Xvr_String* str);
 XVR_API unsigned int Xvr_getStringLength(Xvr_String* str);
 XVR_API unsigned int Xvr_getStringRefCount(Xvr_String* str);
 XVR_API Xvr_ValueType Xvr_getNameStringVarType(Xvr_String* str);
-XVR_API Xvr_ValueType Xvr_getNameStringVarConstant(Xvr_String* str);
+XVR_API bool Xvr_getNameStringVarConstant(Xvr_String* str);
 
 XVR_API char* Xvr_getStringRawBuffer(Xvr_String* str);
 
