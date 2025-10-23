@@ -37,10 +37,9 @@ typedef struct Xvr_TableEntry {  // 32 | 64 BITNESS
 typedef struct Xvr_Table {  // 32 | 64 BITNESS
     unsigned int capacity;  // 4  | 4
     unsigned int count;     // 4  | 4
-    unsigned int minPsl;    // 4  | 4
     unsigned int maxPsl;    // 4  | 4
     Xvr_TableEntry data[];  //-  | -
-} Xvr_Table;                // 16 | 16
+} Xvr_Table;                // 12 | 12
 
 XVR_API Xvr_Table* Xvr_allocateTable(void);
 XVR_API void Xvr_freeTable(Xvr_Table* table);

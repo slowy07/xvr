@@ -34,6 +34,35 @@ SOFTWARE.
 #include "xvr_string.h"
 #include "xvr_value.h"
 
+void* Xvr_private_resizeEscapeArray(Xvr_private_EscapeArray* ptr,
+                                    unsigned int capacity) {
+    if (capacity == 0) {
+        free(ptr);
+        return NULL;
+    }
+
+    unsigned int originalCapacity = ptr == NULL ? 0 : ptr->capacity;
+    unsigned int orignalCount = ptr == NULL ? 0 : ptr->count;
+
+    ptr = (Xvr_private_EscapeArray*)realloc(
+        ptr, capacity * sizeof(Xvr_private_EscapeEntry_t) +
+                 sizeof(Xvr_private_EscapeArray));
+
+    if (ptr == NULL) {
+        fprintf(stderr,
+                XVR_CC_ERROR
+                "ERROR: Failed to resize an escape array within 'Xvr_Routine' "
+                "from %d to %d capacity\n" XVR_CC_RESET,
+                (int)originalCapacity, (int)capacity);
+        exit(-1);
+    }
+
+    ptr->capacity = capacity;
+    ptr->count = orignalCount;
+
+    return ptr;
+}
+
 static void expand(unsigned char** handle, unsigned int* capacity,
                    unsigned int* count, unsigned int amount) {
     if ((*count) + amount > (*capacity)) {
@@ -262,7 +291,7 @@ static unsigned int writeInstructionBinaryShortCircuit(
         exit(-1);
     }
 
-    unsigned int endAddr = SKIP_INT(rt, code);
+    unsigned int paramAddr = SKIP_INT(rt, code);
 
     EMIT_BYTE(rt, code, XVR_OPCODE_ELIMINATE);
     EMIT_BYTE(rt, code, 0);
@@ -270,7 +299,8 @@ static unsigned int writeInstructionBinaryShortCircuit(
     EMIT_BYTE(rt, code, 0);
 
     writeRoutineCode(rt, ast.right);
-    OVERWRITE_INT(rt, code, endAddr, CURRENT_ADDRESS(rt, code) - (endAddr + 4));
+    OVERWRITE_INT(rt, code, paramAddr,
+                  CURRENT_ADDRESS(rt, code) - (paramAddr + 4));
 
     return 1;
 }
@@ -401,7 +431,7 @@ static unsigned int writeInstructionIfThenElse(Xvr_Routine** rt,
     EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_IF_FALSE);
     EMIT_BYTE(rt, code, 0);
 
-    unsigned int thenEndAddr = SKIP_INT(rt, code);
+    unsigned int thenParamAddr = SKIP_INT(rt, code);
 
     writeRoutineCode(rt, ast.thenBranch);
 
@@ -411,20 +441,20 @@ static unsigned int writeInstructionIfThenElse(Xvr_Routine** rt,
         EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_ALWAYS);
         EMIT_BYTE(rt, code, 0);
 
-        unsigned int elseEndAddr = SKIP_INT(rt, code);
+        unsigned int elseParamAddr = SKIP_INT(rt, code);
 
-        OVERWRITE_INT(rt, code, thenEndAddr,
-                      CURRENT_ADDRESS(rt, code) - (thenEndAddr + 4));
+        OVERWRITE_INT(rt, code, thenParamAddr,
+                      CURRENT_ADDRESS(rt, code) - (thenParamAddr + 4));
 
         writeRoutineCode(rt, ast.elseBranch);
 
-        OVERWRITE_INT(rt, code, elseEndAddr,
-                      CURRENT_ADDRESS(rt, code) - (elseEndAddr + 4));
+        OVERWRITE_INT(rt, code, elseParamAddr,
+                      CURRENT_ADDRESS(rt, code) - (elseParamAddr + 4));
     }
 
     else {
-        OVERWRITE_INT(rt, code, thenEndAddr,
-                      CURRENT_ADDRESS(rt, code) - (thenEndAddr + 4));
+        OVERWRITE_INT(rt, code, thenParamAddr,
+                      CURRENT_ADDRESS(rt, code) - (thenParamAddr + 4));
     }
 
     return 0;
@@ -441,7 +471,7 @@ static unsigned int writeInstructionWhileThen(Xvr_Routine** rt,
     EMIT_BYTE(rt, code, XVR_OP_PARAM_JUMP_IF_FALSE);
     EMIT_BYTE(rt, code, 0);
 
-    unsigned int endAddr = SKIP_INT(rt, code);
+    unsigned int paramAddr = SKIP_INT(rt, code);
 
     writeRoutineCode(rt, ast.thenBranch);
 
@@ -452,17 +482,63 @@ static unsigned int writeInstructionWhileThen(Xvr_Routine** rt,
 
     EMIT_INT(rt, code, beginAddr - (CURRENT_ADDRESS(rt, code) + 4));
 
-    OVERWRITE_INT(rt, code, endAddr, CURRENT_ADDRESS(rt, code) - (endAddr + 4));
+    OVERWRITE_INT(rt, code, paramAddr,
+                  CURRENT_ADDRESS(rt, code) - (paramAddr + 4));
+
+    while ((*rt)->breakEscapes->count > 0) {
+        unsigned int addr =
+            (*rt)->breakEscapes->data[(*rt)->breakEscapes->count - 1].addr;
+        unsigned int depth =
+            (*rt)->breakEscapes->data[(*rt)->breakEscapes->count - 1].depth;
+
+        unsigned int diff = depth - (*rt)->currentScopeDepth;
+        OVERWRITE_INT(rt, code, addr, CURRENT_ADDRESS(rt, code) - (addr + 8));
+        OVERWRITE_INT(rt, code, addr, diff);
+
+        (*rt)->breakEscapes->count--;
+    }
+
+    while ((*rt)->continueEscapes->count > 0) {
+        unsigned int addr =
+            (*rt)
+                ->continueEscapes->data[(*rt)->continueEscapes->count - 1]
+                .addr;
+        unsigned int depth =
+            (*rt)
+                ->continueEscapes->data[(*rt)->continueEscapes->count - 1]
+                .depth;
+
+        unsigned int diff = depth - (*rt)->currentScopeDepth;
+
+        OVERWRITE_INT(rt, code, addr, addr - (CURRENT_ADDRESS(rt, code) + 8));
+        OVERWRITE_INT(rt, code, diff, diff);
+
+        (*rt)->continueEscapes->count--;
+    }
 
     return 0;
 }
 
 static unsigned int writeInstructionBreak(Xvr_Routine** rt, Xvr_AstBreak ast) {
     (void)ast;
-    fprintf(
-        stderr, XVR_CC_ERROR
-        "COMPILER ERROR: Keyword 'break' not yet implemented\n" XVR_CC_RESET);
-    (*rt)->panic = true;
+
+    EMIT_BYTE(rt, code, XVR_OPCODE_ESCAPE);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+
+    unsigned int addr = SKIP_INT(rt, code);
+    (void)SKIP_INT(rt, code);
+
+    if ((*rt)->breakEscapes->capacity <= (*rt)->breakEscapes->count) {
+        (*rt)->breakEscapes = Xvr_private_resizeEscapeArray(
+            (*rt)->breakEscapes,
+            (*rt)->breakEscapes->capacity * XVR_ESCAPE_EXPANSION_RATE);
+    }
+
+    (*rt)->breakEscapes->data[(*rt)->breakEscapes->count++] =
+        (Xvr_private_EscapeEntry_t){.addr = addr,
+                                    .depth = (*rt)->currentScopeDepth};
 
     return 0;
 }
@@ -470,11 +546,24 @@ static unsigned int writeInstructionBreak(Xvr_Routine** rt, Xvr_AstBreak ast) {
 static unsigned int writeInstructionContinue(Xvr_Routine** rt,
                                              Xvr_AstContinue ast) {
     (void)ast;
-    fprintf(stderr, XVR_CC_ERROR
-            "COMPILER ERROR: Keyword 'continue' not yet "
-            "implemented\n" XVR_CC_RESET);
-    (*rt)->panic = true;
 
+    EMIT_BYTE(rt, code, XVR_OPCODE_ESCAPE);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+    EMIT_BYTE(rt, code, 0);
+
+    unsigned int addr = SKIP_INT(rt, code);
+    (void)SKIP_INT(rt, code);
+
+    if ((*rt)->continueEscapes->capacity <= (*rt)->continueEscapes->count) {
+        (*rt)->continueEscapes = Xvr_private_resizeEscapeArray(
+            (*rt)->continueEscapes,
+            (*rt)->continueEscapes->capacity * XVR_ESCAPE_EXPANSION_RATE);
+    }
+
+    (*rt)->continueEscapes->data[(*rt)->continueEscapes->count++] =
+        (Xvr_private_EscapeEntry_t){.addr = addr,
+                                    .depth = (*rt)->currentScopeDepth};
     return 0;
 }
 
@@ -689,6 +778,8 @@ static unsigned int writeRoutineCode(Xvr_Routine** rt, Xvr_Ast* ast) {
             EMIT_BYTE(rt, code, 0);
             EMIT_BYTE(rt, code, 0);
             EMIT_BYTE(rt, code, 0);
+
+            (*rt)->currentScopeDepth++;
         }
 
         result += writeRoutineCode(rt, ast->block.child);
@@ -699,6 +790,8 @@ static unsigned int writeRoutineCode(Xvr_Routine** rt, Xvr_Ast* ast) {
             EMIT_BYTE(rt, code, 0);
             EMIT_BYTE(rt, code, 0);
             EMIT_BYTE(rt, code, 0);
+
+            (*rt)->currentScopeDepth--;
         }
         break;
 
@@ -898,10 +991,19 @@ void* Xvr_compileRoutine(Xvr_Ast* ast) {
     rt.subsCapacity = 0;
     rt.subsCount = 0;
 
+    rt.currentScopeDepth = 0;
+    rt.breakEscapes =
+        Xvr_private_resizeEscapeArray(NULL, XVR_ESCAPE_INITIAL_CAPACITY);
+    rt.continueEscapes =
+        Xvr_private_resizeEscapeArray(NULL, XVR_ESCAPE_INITIAL_CAPACITY);
+
     rt.panic = false;
 
     // build
     void* buffer = writeRoutine(&rt, ast);
+
+    Xvr_private_resizeEscapeArray(rt.breakEscapes, 0);
+    Xvr_private_resizeEscapeArray(rt.continueEscapes, 0);
 
     // cleanup the temp object
     free(rt.param);

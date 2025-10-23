@@ -536,7 +536,7 @@ static void processLogical(Xvr_VM* vm, Xvr_OpcodeType opcode) {
 }
 
 static void processJump(Xvr_VM* vm) {
-    Xvr_OpJumpType type = READ_BYTE(vm);
+    Xvr_OpParamJumpType type = READ_BYTE(vm);
     Xvr_OpParamJumpConditional cond = READ_BYTE(vm);
     fixAlignment(vm);
 
@@ -576,6 +576,19 @@ static void processJump(Xvr_VM* vm) {
     case XVR_OP_PARAM_JUMP_RELATIVE:
         vm->programCounter += param;
         return;
+    }
+}
+
+static void processEscape(Xvr_VM* vm) {
+    fixAlignment(vm);
+
+    int addr = READ_INT(vm);
+    int diff = READ_INT(vm);
+
+    vm->programCounter += addr;
+
+    while (diff > 0 && vm->scope != NULL) {
+        vm->scope = Xvr_popScope(vm->scope);
     }
 }
 
@@ -875,6 +888,10 @@ static void process(Xvr_VM* vm) {
 
         case XVR_OPCODE_JUMP:
             processJump(vm);
+            break;
+
+        case XVR_OPCODE_ESCAPE:
+            processEscape(vm);
             break;
 
         case XVR_OPCODE_SCOPE_PUSH:

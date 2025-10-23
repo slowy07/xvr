@@ -27,3 +27,9 @@ print ("woilah cik kelar loh ya");
     hitung += 1;
   }
 }
+
+while (true) {
+  print("hitung pertama");
+  break;
+  print("hitung kedua");
+}

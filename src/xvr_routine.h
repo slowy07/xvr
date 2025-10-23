@@ -28,32 +28,58 @@ SOFTWARE.
 #include "xvr_ast.h"
 #include "xvr_common.h"
 
+#ifndef XVR_ESCAPE_INITIAL_CAPACITY
+#    define XVR_ESCAPE_INITIAL_CAPACITY 32
+#endif  // !XVR_ESCAPE_INITIAL_CAPACITY
+
+#ifndef XVR_ESCAPE_EXPANSION_RATE
+#    define XVR_ESCAPE_EXPANSION_RATE 4
+#endif  // !XVR_ESCAPE_EXPANSION_RATE
+
+typedef struct Xvr_private_EscapeEntry_t {
+    unsigned int addr;
+    unsigned int depth;
+} Xvr_private_EscapeEntry_t;
+
+typedef struct Xvr_private_EscapeArray {
+    unsigned int capacity;
+    unsigned int count;
+    Xvr_private_EscapeEntry_t data[];
+} Xvr_private_EscapeArray;
+
+XVR_API void* Xvr_private_resizeArray(Xvr_private_EscapeArray* ptr,
+                                      unsigned int capacity);
+
 typedef struct Xvr_Routine {
-  unsigned char *param; // c-string params in sequence (could be moved below the
-                        // jump table?)
-  unsigned int paramCapacity;
-  unsigned int paramCount;
+    unsigned char* param;  // c-string params in sequence (could be moved below
+                           // the jump table?)
+    unsigned int paramCapacity;
+    unsigned int paramCount;
 
-  unsigned char *code; // the instruction set
-  unsigned int codeCapacity;
-  unsigned int codeCount;
+    unsigned char* code;  // the instruction set
+    unsigned int codeCapacity;
+    unsigned int codeCount;
 
-  unsigned char
-      *jumps; // each 'jump' is the starting address of an element within 'data'
-  unsigned int jumpsCapacity;
-  unsigned int jumpsCount;
+    unsigned char* jumps;  // each 'jump' is the starting address of an element
+                           // within 'data'
+    unsigned int jumpsCapacity;
+    unsigned int jumpsCount;
 
-  unsigned char *data; //{type,val} tuples of data
-  unsigned int dataCapacity;
-  unsigned int dataCount;
+    unsigned char* data;  //{type,val} tuples of data
+    unsigned int dataCapacity;
+    unsigned int dataCount;
 
-  unsigned char *subs; // subroutines, recursively
-  unsigned int subsCapacity;
-  unsigned int subsCount;
+    unsigned char* subs;  // subroutines, recursively
+    unsigned int subsCapacity;
+    unsigned int subsCount;
 
-  bool panic;
+    unsigned int currentScopeDepth;
+    Xvr_private_EscapeArray* breakEscapes;
+    Xvr_private_EscapeArray* continueEscapes;
+
+    bool panic;
 } Xvr_Routine;
 
-XVR_API void *Xvr_compileRoutine(Xvr_Ast *ast);
+XVR_API void* Xvr_compileRoutine(Xvr_Ast* ast);
 
-#endif // !XVR_ROUTINE_H
+#endif  // !XVR_ROUTINE_H

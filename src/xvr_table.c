@@ -42,10 +42,6 @@ static void probeAndInsert(Xvr_Table** tableHandle, Xvr_Value key,
     while (true) {
         if (Xvr_checkValuesAreEqual((*tableHandle)->data[probe].key, key)) {
             (*tableHandle)->data[probe] = entry;
-
-            (*tableHandle)->minPsl = entry.psl < (*tableHandle)->minPsl
-                                         ? entry.psl
-                                         : (*tableHandle)->minPsl;
             (*tableHandle)->maxPsl = entry.psl > (*tableHandle)->maxPsl
                                          ? entry.psl
                                          : (*tableHandle)->maxPsl;
@@ -59,10 +55,6 @@ static void probeAndInsert(Xvr_Table** tableHandle, Xvr_Value key,
 
             (*tableHandle)->count++;
 
-            // TODO: benchmark the psl optimisation
-            (*tableHandle)->minPsl = entry.psl < (*tableHandle)->minPsl
-                                         ? entry.psl
-                                         : (*tableHandle)->minPsl;
             (*tableHandle)->maxPsl = entry.psl > (*tableHandle)->maxPsl
                                          ? entry.psl
                                          : (*tableHandle)->maxPsl;
@@ -98,7 +90,6 @@ Xvr_Table* Xvr_private_adjustTableCapacity(Xvr_Table* oldTable,
 
     newTable->capacity = newCapacity;
     newTable->count = 0;
-    newTable->minPsl = 0;
     newTable->maxPsl = 0;
 
     memset(newTable + 1, 0, newTable->capacity * sizeof(Xvr_TableEntry));
@@ -202,8 +193,7 @@ void Xvr_removeTable(Xvr_Table** tableHandle, Xvr_Value key) {
         probe = (probe + 1) % (*tableHandle)->capacity;
     }
 
-    for (unsigned int i = (*tableHandle)->minPsl; i < (*tableHandle)->maxPsl;
-         i++) {
+    for (unsigned int i = 0; i < (*tableHandle)->maxPsl; i++) {
         unsigned int p = (probe + i + 0) % (*tableHandle)->capacity;  // prev
         unsigned int u = (probe + i + 1) % (*tableHandle)->capacity;  // current
 
