@@ -71,6 +71,7 @@ const Xvr_KeywordTypeTuple keywordTuples[] = {
     {XVR_TOKEN_KEYWORD_IMPORT, "import"},
     {XVR_TOKEN_KEYWORD_IN, "in"},
     {XVR_TOKEN_KEYWORD_OF, "of"},
+    {XVR_TOKEN_KEYWORD_PASS, "pass"},
     {XVR_TOKEN_KEYWORD_PRINT, "print"},
     {XVR_TOKEN_KEYWORD_RETURN, "return"},
     {XVR_TOKEN_KEYWORD_TYPEAS, "typeas"},
@@ -479,13 +480,6 @@ void Xvr_private_printToken(Xvr_Token* token) {
     // print errors
     if (token->type == XVR_TOKEN_ERROR) {
         printf(XVR_CC_ERROR "ERROR: \t%d\t%.*s\n" XVR_CC_RESET,
-               (int)token->line, (int)token->length, token->lexeme);
-        return;
-    }
-
-    // read pass token, even though it isn't generated
-    if (token->type == XVR_TOKEN_PASS) {
-        printf(XVR_CC_NOTICE "PASS: \t%d\t%.*s\n" XVR_CC_RESET,
                (int)token->line, (int)token->length, token->lexeme);
         return;
     }

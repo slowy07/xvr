@@ -190,6 +190,7 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_IMPORT,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_IN,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_OF,
+    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_PASS,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_PRINT,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_RETURN,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_TYPEAS,
@@ -256,7 +257,6 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_OPERATOR_PIPE, // |
 
     // meta tokens
-    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_PASS,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_ERROR,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_EOF,
 };
@@ -766,7 +766,7 @@ static void makeExpr(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
 static void makeBlockStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
                           Xvr_Ast** rootHandle);
 static void makeDeclarationStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
-                                Xvr_Ast** rootHandle);
+                                Xvr_Ast** rootHandle, bool errorOnEmpty);
 
 static void makeAssertStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
                            Xvr_Ast** rootHandle) {
@@ -801,10 +801,10 @@ static void makeIfThenElseStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
     consume(parser, XVR_TOKEN_OPERATOR_PAREN_RIGHT,
             "Expected ')' after 'if' condition");
 
-    makeDeclarationStmt(bucketHandle, parser, &thenBranch);
+    makeDeclarationStmt(bucketHandle, parser, &thenBranch, true);
 
     if (match(parser, XVR_TOKEN_KEYWORD_ELSE)) {
-        makeDeclarationStmt(bucketHandle, parser, &elseBranch);
+        makeDeclarationStmt(bucketHandle, parser, &elseBranch, true);
     }
 
     Xvr_private_emitAstIfThenElse(bucketHandle, rootHandle, condBranch,
@@ -822,7 +822,7 @@ static void makeWhileStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
     consume(parser, XVR_TOKEN_OPERATOR_PAREN_RIGHT,
             "Expected ')' after 'while' condition");
 
-    makeDeclarationStmt(bucketHandle, parser, &thenBranch);
+    makeDeclarationStmt(bucketHandle, parser, &thenBranch, true);
 
     Xvr_private_emitAstWhileThen(bucketHandle, rootHandle, condBranch,
                                  thenBranch);
@@ -936,7 +936,8 @@ static void makeStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
         return;
     }
 
-    else if (match(parser, XVR_TOKEN_OPERATOR_SEMICOLON)) {
+    else if (match(parser, XVR_TOKEN_OPERATOR_SEMICOLON) ||
+             match(parser, XVR_TOKEN_KEYWORD_PASS)) {
         Xvr_private_emitAstPass(bucketHandle, rootHandle);
         return;
     }
@@ -948,8 +949,16 @@ static void makeStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
 }
 
 static void makeDeclarationStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
-                                Xvr_Ast** rootHandle) {
-    if (match(parser, XVR_TOKEN_KEYWORD_VAR)) {
+                                Xvr_Ast** rootHandle, bool errorOnEmpty) {
+    if (errorOnEmpty && match(parser, XVR_TOKEN_OPERATOR_SEMICOLON)) {
+        printError(
+            parser, parser->previous,
+            "Empty control flow bodies are dissalowed, use the 'pass' keyword");
+        Xvr_private_emitAstError(bucketHandle, rootHandle);
+        return;
+    }
+
+    else if (match(parser, XVR_TOKEN_KEYWORD_VAR)) {
         makeVariableDeclarationStmt(bucketHandle, parser, rootHandle);
     } else {
         makeStmt(bucketHandle, parser, rootHandle);
@@ -966,7 +975,7 @@ static void makeBlockStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
            !match(parser, XVR_TOKEN_EOF)) {
         // process the grammar rules
         Xvr_Ast* stmt = NULL;
-        makeDeclarationStmt(bucketHandle, parser, &stmt);
+        makeDeclarationStmt(bucketHandle, parser, &stmt, false);
 
         // if something went wrong
         if (parser->panic) {
