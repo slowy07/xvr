@@ -303,7 +303,7 @@ static void processAssignCompound(Xvr_VM* vm) {
 static void processAccess(Xvr_VM* vm) {
     Xvr_Value name = Xvr_popStack(&vm->stack);
 
-    if (!XVR_VALUE_IS_STRING(name) &&
+    if (!XVR_VALUE_IS_STRING(name) ||
         XVR_VALUE_AS_STRING(name)->info.type != XVR_STRING_NAME) {
         Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
         Xvr_error("Invalid access target");

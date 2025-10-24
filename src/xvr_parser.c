@@ -24,6 +24,7 @@ SOFTWARE.
 
 #include "xvr_parser.h"
 
+#include <stddef.h>
 #include <stdio.h>
 
 #include "xvr_ast.h"
@@ -214,8 +215,8 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_ASSIGNMENT, NULL, binary},  // XVR_TOKEN_OPERATOR_MULTIPLY_ASSIGN,
     {PREC_ASSIGNMENT, NULL, binary},  // XVR_TOKEN_OPERATOR_DIVIDE_ASSIGN,
     {PREC_ASSIGNMENT, NULL, binary},  // XVR_TOKEN_OPERATOR_MODULO_ASSIGN,
-    {PREC_NONE, NULL, NULL},          // XVR_TOKEN_OPERATOR_INCREMENT,
-    {PREC_NONE, NULL, NULL},          // XVR_TOKEN_OPERATOR_DECREMENT,
+    {PREC_CALL, unary, NULL},         // XVR_TOKEN_OPERATOR_INCREMENT,
+    {PREC_CALL, unary, NULL},         // XVR_TOKEN_OPERATOR_DECREMENT,
     {PREC_ASSIGNMENT, NULL, binary},  // XVR_TOKEN_OPERATOR_ASSIGN,
 
     // comparator operators
@@ -460,6 +461,31 @@ static Xvr_AstFlag unary(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
     else if (parser->previous.type == XVR_TOKEN_OPERATOR_NEGATE) {
         parsePrecedence(bucketHandle, parser, rootHandle, PREC_UNARY);
         Xvr_private_emitAstUnary(bucketHandle, rootHandle, XVR_AST_FLAG_NEGATE);
+    }
+
+    else if (parser->previous.type == XVR_TOKEN_OPERATOR_INCREMENT ||
+             parser->previous.type == XVR_TOKEN_OPERATOR_DECREMENT) {
+        Xvr_AstFlag flag = parser->previous.type == XVR_TOKEN_OPERATOR_INCREMENT
+                               ? XVR_AST_FLAG_PREFIX_INCREMENT
+                               : XVR_AST_FLAG_PREFIX_DECREMENT;
+        Xvr_Ast* primary = NULL;
+
+        parsePrecedence(bucketHandle, parser, &primary, PREC_PRIMARY);
+
+        if (primary->type != XVR_AST_VAR_ACCESS ||
+            primary->varAccess.child->type != XVR_AST_VALUE ||
+            XVR_VALUE_IS_STRING(primary->varAccess.child->value.value) !=
+                true ||
+            XVR_VALUE_AS_STRING(primary->varAccess.child->value.value)
+                    ->info.type != XVR_STRING_NAME) {
+            printError(parser, parser->previous,
+                       "Unexpected non-name-string token in unary operator "
+                       "increment precedence rule");
+            Xvr_private_emitAstError(bucketHandle, rootHandle);
+        } else {
+            *rootHandle = primary->varAccess.child;
+            Xvr_private_emitAstUnary(bucketHandle, rootHandle, flag);
+        }
     }
 
     else {

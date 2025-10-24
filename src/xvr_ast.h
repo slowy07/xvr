@@ -95,8 +95,8 @@ typedef enum Xvr_AstFlag {
 
     // unary flags
     XVR_AST_FLAG_NEGATE = 43,
-    XVR_AST_FLAG_INCREMENT = 44,
-    XVR_AST_FLAG_DECREMENT = 45,
+    XVR_AST_FLAG_PREFIX_INCREMENT = 44,
+    XVR_AST_FLAG_PREFIX_DECREMENT = 45,
 
     // XVR_AST_FLAG_TERNARY,
 } Xvr_AstFlag;

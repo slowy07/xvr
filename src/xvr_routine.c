@@ -212,15 +212,48 @@ static unsigned int writeInstructionValue(Xvr_Routine** rt, Xvr_AstValue ast) {
 
 static unsigned int writeInstructionUnary(Xvr_Routine** rt, Xvr_AstUnary ast) {
     // working with a stack means the child gets placed first
-    unsigned int result = writeRoutineCode(rt, ast.child);
+    unsigned int result = 0;
 
     if (ast.flag == XVR_AST_FLAG_NEGATE) {
+        result = writeRoutineCode(rt, ast.child);
         EMIT_BYTE(rt, code, XVR_OPCODE_NEGATE);
 
         // 4-byte alignment
         EMIT_BYTE(rt, code, 0);
         EMIT_BYTE(rt, code, 0);
         EMIT_BYTE(rt, code, 0);
+    } else if (ast.flag == XVR_AST_FLAG_PREFIX_INCREMENT ||
+               ast.flag == XVR_AST_FLAG_PREFIX_DECREMENT) {
+        Xvr_String* name = XVR_VALUE_AS_STRING(ast.child->value.value);
+
+        EMIT_BYTE(rt, code, XVR_OPCODE_READ);
+        EMIT_BYTE(rt, code, XVR_VALUE_STRING);
+        EMIT_BYTE(rt, code, XVR_STRING_NAME);
+        EMIT_BYTE(rt, code, name->info.length);
+
+        emitString(rt, name);
+
+        EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
+        EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+
+        EMIT_BYTE(rt, code, XVR_OPCODE_READ);
+        EMIT_BYTE(rt, code, XVR_VALUE_INTEGER);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+
+        EMIT_INT(rt, code, 1);
+
+        EMIT_BYTE(rt, code,
+                  ast.flag == XVR_AST_FLAG_PREFIX_INCREMENT
+                      ? XVR_OPCODE_ADD
+                      : XVR_OPCODE_SUBTRACT);
+        EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+
+        result = 1;
     } else {
         fprintf(stderr, XVR_CC_ERROR
                 "ERROR: Invalid AST unary flag found\n" XVR_CC_RESET);

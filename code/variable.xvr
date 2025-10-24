@@ -7,14 +7,14 @@ angka += 1;
 angka -= 1;
 angka *= 3;
 angka /= 2;
-answer %= 10;
+angka %= 10;
 
 // declare with typehint
 
 // empty var
 var angka_hint: int;
 // with value
-var angka_hint_value: int = 90;
+var angka_hint_val: int = 90;
 
 // with constant
 var angka_hint_const: int const = 20;
@@ -57,4 +57,12 @@ print penyanyi[1, 3];
 
   print(c);
   assert c == 2, "short circuit";
+}
+
+{
+  var angka: int = 42;
+  assert angka == 42;
+  assert ++angka == 43;
+  assert --angka == 42;
+  print("assert dengan prefix ++ jalan loh ya");
 }
