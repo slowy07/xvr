@@ -27,6 +27,7 @@ SOFTWARE.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/types.h>
 
 #include "xvr_array.h"
 #include "xvr_console_colors.h"
@@ -94,7 +95,6 @@ unsigned int Xvr_hashValue(Xvr_Value value) {
 
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
-    case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
@@ -154,7 +154,6 @@ Xvr_Value Xvr_copyValue(Xvr_Value value) {
 
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
-    case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
@@ -193,7 +192,6 @@ void Xvr_freeValue(Xvr_Value value) {
 
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
-    case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
     case XVR_VALUE_UNKNOWN:
         fprintf(
@@ -310,7 +308,6 @@ bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right) {
 
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
-    case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
@@ -348,7 +345,6 @@ bool Xvr_checkValuesAreComparable(Xvr_Value left, Xvr_Value right) {
 
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
-    case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
@@ -400,7 +396,6 @@ int Xvr_compareValues(Xvr_Value left, Xvr_Value right) {
 
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
-    case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
@@ -460,6 +455,7 @@ Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
         Xvr_String* open = Xvr_createStringLength(bucketHandle, "[", 1);
         Xvr_String* close = Xvr_createStringLength(bucketHandle, "]", 1);
         Xvr_String* comma = Xvr_createStringLength(bucketHandle, ",", 1);
+        Xvr_String* quote = Xvr_createStringLength(bucketHandle, "\"", 1);
         bool needsComma = false;
 
         Xvr_String* string = open;
@@ -474,6 +470,16 @@ Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
 
             Xvr_String* element =
                 Xvr_stringifyValue(bucketHandle, ptr->data[i]);
+
+            if (XVR_VALUE_IS_STRING(ptr->data[i])) {
+                Xvr_String* tmpA =
+                    Xvr_concatStrings(bucketHandle, quote, element);
+                Xvr_String* tmpB = Xvr_concatStrings(bucketHandle, tmpA, quote);
+
+                Xvr_freeString(element);
+                Xvr_freeString(tmpA);
+                element = tmpB;
+            }
             Xvr_String* final =
                 Xvr_concatStrings(bucketHandle, string, element);
 
@@ -492,6 +498,7 @@ Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
         Xvr_freeString(open);
         Xvr_freeString(close);
         Xvr_freeString(comma);
+        Xvr_freeString(quote);
 
         return string;
     }
@@ -508,6 +515,7 @@ Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
         Xvr_String* close = Xvr_createStringLength(bucketHandle, "]", 1);
         Xvr_String* colon = Xvr_createStringLength(bucketHandle, ":", 1);
         Xvr_String* comma = Xvr_createStringLength(bucketHandle, ",", 1);
+        Xvr_String* quote = Xvr_createStringLength(bucketHandle, "\"", 1);
         bool needsComma = false;
 
         Xvr_String* string = open;
@@ -527,6 +535,24 @@ Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
             Xvr_String* k = Xvr_stringifyValue(bucketHandle, ptr->data[i].key);
             Xvr_String* v =
                 Xvr_stringifyValue(bucketHandle, ptr->data[i].value);
+
+            if (XVR_VALUE_IS_STRING(ptr->data[i].key)) {
+                Xvr_String* tmpA = Xvr_concatStrings(bucketHandle, quote, k);
+                Xvr_String* tmpB = Xvr_concatStrings(bucketHandle, tmpA, quote);
+
+                Xvr_freeString(k);
+                Xvr_freeString(tmpA);
+                k = tmpB;
+            }
+
+            if (XVR_VALUE_IS_STRING(ptr->data[i].value)) {
+                Xvr_String* tmpA = Xvr_concatStrings(bucketHandle, quote, v);
+                Xvr_String* tmpB = Xvr_concatStrings(bucketHandle, tmpA, quote);
+
+                Xvr_freeString(v);
+                Xvr_freeString(tmpA);
+                v = tmpB;
+            }
             Xvr_String* c = Xvr_concatStrings(bucketHandle, k, colon);
             Xvr_String* pair = Xvr_concatStrings(bucketHandle, c, v);
 
@@ -551,13 +577,13 @@ Xvr_String* Xvr_stringifyValue(Xvr_Bucket** bucketHandle, Xvr_Value value) {
         Xvr_freeString(close);
         Xvr_freeString(colon);
         Xvr_freeString(comma);
+        Xvr_freeString(quote);
 
         return string;
     }
 
     case XVR_VALUE_FUNCTION:
     case XVR_VALUE_OPAQUE:
-    case XVR_VALUE_TYPE:
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
@@ -589,8 +615,6 @@ const char* Xvr_private_getValueTypeAsCString(Xvr_ValueType type) {
         return "function";
     case XVR_VALUE_OPAQUE:
         return "opaque";
-    case XVR_VALUE_TYPE:
-        return "type";
     case XVR_VALUE_ANY:
         return "any";
     case XVR_VALUE_REFERENCE:

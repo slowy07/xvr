@@ -41,7 +41,6 @@ const Xvr_KeywordTypeTuple keywordTuples[] = {
     {XVR_TOKEN_NULL, "null"},
 
     // types
-    {XVR_TOKEN_TYPE_TYPE, "type"},
     {XVR_TOKEN_TYPE_BOOLEAN, "bool"},
     {XVR_TOKEN_TYPE_INTEGER, "int"},
     {XVR_TOKEN_TYPE_FLOAT, "float"},
@@ -74,8 +73,6 @@ const Xvr_KeywordTypeTuple keywordTuples[] = {
     {XVR_TOKEN_KEYWORD_PASS, "pass"},
     {XVR_TOKEN_KEYWORD_PRINT, "print"},
     {XVR_TOKEN_KEYWORD_RETURN, "return"},
-    {XVR_TOKEN_KEYWORD_TYPEAS, "typeas"},
-    {XVR_TOKEN_KEYWORD_TYPEOF, "typeof"},
     {XVR_TOKEN_KEYWORD_VAR, "var"},
     {XVR_TOKEN_KEYWORD_WHILE, "while"},
     {XVR_TOKEN_KEYWORD_YIELD, "yield"},

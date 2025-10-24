@@ -45,7 +45,6 @@ typedef enum Xvr_ValueType {
     XVR_VALUE_FUNCTION,
     XVR_VALUE_OPAQUE,
 
-    XVR_VALUE_TYPE,
     XVR_VALUE_ANY,
     XVR_VALUE_REFERENCE,
     XVR_VALUE_UNKNOWN,

@@ -1,0 +1,48 @@
+while (true) {
+  break;
+  assert false, "break failed";
+}
+
+var flagPertama: bool = true;
+while (flagPertama) {
+  flagPertama = false;
+  continue;
+  assert false, "continue failed";
+}
+
+print("break and continue done");
+
+while (true) {
+  break;
+  assert false, "break failed";
+}
+
+var flagKedua: bool = true;
+while (flagKedua) {
+  flagKedua = false;
+  continue;
+  assert false, "continue failed";
+}
+
+print("break and continue done");
+
+{
+  var iterasi: int = 0;
+  while (iterasi < 10) {
+    print(iterasi);
+    iterasi += 1;
+  }
+}
+
+{
+  var hitung: int = 1;
+  while (hitung <= 10) {
+    if (hitung % 2 == 0) {
+      print("genap");
+    } else {
+      print("ganjil");
+    }
+
+    hitung += 1;
+  }
+}

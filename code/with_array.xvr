@@ -34,3 +34,24 @@ print array_kosong;
 print angka;
 print nilai;
 print nilai_kedua;
+
+{
+  var iterasi: int = 0;
+  while (iterasi < 10) {
+    print(iterasi);
+    iterasi += 1;
+  }
+}
+
+{
+  var hitung: int = 1;
+  while (hitung <= 10) {
+    if (hitung % 2 == 0) {
+      print("genap");
+    } else {
+      print("ganjil");
+    }
+    
+    hitung += 1;
+  }
+}

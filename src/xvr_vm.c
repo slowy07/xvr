@@ -185,11 +185,6 @@ static void processRead(Xvr_VM* vm) {
         // break;
     }
 
-    case XVR_VALUE_TYPE: {
-        //
-        // break;
-    }
-
     case XVR_VALUE_ANY: {
         //
         // break;

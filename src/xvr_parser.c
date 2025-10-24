@@ -170,7 +170,6 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_TYPE_TABLE,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_TYPE_FUNCTION,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_TYPE_OPAQUE,
-    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_TYPE_TYPE,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_TYPE_ANY,
 
     // keywords and reserved words
@@ -193,8 +192,6 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_PASS,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_PRINT,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_RETURN,
-    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_TYPEAS,
-    {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_TYPEOF,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_VAR,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_WHILE,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_KEYWORD_YIELD,
@@ -288,9 +285,6 @@ static Xvr_ValueType readType(Xvr_Parser* parser) {
 
     case XVR_TOKEN_TYPE_OPAQUE:
         return XVR_VALUE_OPAQUE;
-
-    case XVR_TOKEN_TYPE_TYPE:
-        return XVR_VALUE_TYPE;
 
     case XVR_TOKEN_TYPE_ANY:
         return XVR_VALUE_ANY;
