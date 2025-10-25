@@ -254,6 +254,58 @@ static unsigned int writeInstructionUnary(Xvr_Routine** rt, Xvr_AstUnary ast) {
         EMIT_BYTE(rt, code, 0);
 
         result = 1;
+    } else if (ast.flag == XVR_AST_FLAG_POSTFIX_INCREMENT ||
+               ast.flag == XVR_AST_FLAG_POSTFIX_DECREMENT) {
+        Xvr_String* name = XVR_VALUE_AS_STRING(ast.child->value.value);
+
+        EMIT_BYTE(rt, code, XVR_OPCODE_READ);
+        EMIT_BYTE(rt, code, XVR_VALUE_STRING);
+        EMIT_BYTE(rt, code, XVR_STRING_NAME);
+        EMIT_BYTE(rt, code, name->info.length);
+
+        emitString(rt, name);
+
+        // postfix++ and postfix--
+        EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+
+        name = XVR_VALUE_AS_STRING(ast.child->value.value);
+
+        EMIT_BYTE(rt, code, XVR_OPCODE_READ);
+        EMIT_BYTE(rt, code, XVR_VALUE_STRING);
+        EMIT_BYTE(rt, code, XVR_STRING_NAME);
+        EMIT_BYTE(rt, code, name->info.length);
+
+        emitString(rt, name);
+
+        EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
+        EMIT_BYTE(rt, code, XVR_OPCODE_ACCESS);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+
+        EMIT_BYTE(rt, code, XVR_OPCODE_READ);
+        EMIT_BYTE(rt, code, XVR_VALUE_INTEGER);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+
+        EMIT_INT(rt, code, 1);
+
+        EMIT_BYTE(rt, code,
+                  ast.flag == XVR_AST_FLAG_POSTFIX_INCREMENT
+                      ? XVR_OPCODE_ADD
+                      : XVR_OPCODE_SUBTRACT);
+        EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+
+        EMIT_BYTE(rt, code, XVR_OPCODE_ELIMINATE);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 0);
+
+        result = 1;
     } else {
         fprintf(stderr, XVR_CC_ERROR
                 "ERROR: Invalid AST unary flag found\n" XVR_CC_RESET);

@@ -156,6 +156,8 @@ static Xvr_AstFlag compound(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
                             Xvr_Ast** rootHandle);
 static Xvr_AstFlag aggregate(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
                              Xvr_Ast** rootHandle);
+static Xvr_AstFlag unaryPostfix(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
+                                Xvr_Ast** rootHandle);
 
 static ParsingTuple parsingRulesetTable[] = {
     {PREC_PRIMARY, literal, NULL},  // XVR_TOKEN_NULL,
@@ -205,19 +207,19 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_PRIMARY, literal, NULL},  // XVR_TOKEN_LITERAL_STRING,
 
     // math operators
-    {PREC_TERM, NULL, binary},        // XVR_TOKEN_OPERATOR_ADD,
-    {PREC_TERM, unary, binary},       // XVR_TOKEN_OPERATOR_SUBTRACT,
-    {PREC_FACTOR, NULL, binary},      // XVR_TOKEN_OPERATOR_MULTIPLY,
-    {PREC_FACTOR, NULL, binary},      // XVR_TOKEN_OPERATOR_DIVIDE,
-    {PREC_FACTOR, NULL, binary},      // XVR_TOKEN_OPERATOR_MODULO,
-    {PREC_ASSIGNMENT, NULL, binary},  // XVR_TOKEN_OPERATOR_ADD_ASSIGN,
-    {PREC_ASSIGNMENT, NULL, binary},  // XVR_TOKEN_OPERATOR_SUBTRACT_ASSIGN,
-    {PREC_ASSIGNMENT, NULL, binary},  // XVR_TOKEN_OPERATOR_MULTIPLY_ASSIGN,
-    {PREC_ASSIGNMENT, NULL, binary},  // XVR_TOKEN_OPERATOR_DIVIDE_ASSIGN,
-    {PREC_ASSIGNMENT, NULL, binary},  // XVR_TOKEN_OPERATOR_MODULO_ASSIGN,
-    {PREC_CALL, unary, NULL},         // XVR_TOKEN_OPERATOR_INCREMENT,
-    {PREC_CALL, unary, NULL},         // XVR_TOKEN_OPERATOR_DECREMENT,
-    {PREC_ASSIGNMENT, NULL, binary},  // XVR_TOKEN_OPERATOR_ASSIGN,
+    {PREC_TERM, NULL, binary},         // XVR_TOKEN_OPERATOR_ADD,
+    {PREC_TERM, unary, binary},        // XVR_TOKEN_OPERATOR_SUBTRACT,
+    {PREC_FACTOR, NULL, binary},       // XVR_TOKEN_OPERATOR_MULTIPLY,
+    {PREC_FACTOR, NULL, binary},       // XVR_TOKEN_OPERATOR_DIVIDE,
+    {PREC_FACTOR, NULL, binary},       // XVR_TOKEN_OPERATOR_MODULO,
+    {PREC_ASSIGNMENT, NULL, binary},   // XVR_TOKEN_OPERATOR_ADD_ASSIGN,
+    {PREC_ASSIGNMENT, NULL, binary},   // XVR_TOKEN_OPERATOR_SUBTRACT_ASSIGN,
+    {PREC_ASSIGNMENT, NULL, binary},   // XVR_TOKEN_OPERATOR_MULTIPLY_ASSIGN,
+    {PREC_ASSIGNMENT, NULL, binary},   // XVR_TOKEN_OPERATOR_DIVIDE_ASSIGN,
+    {PREC_ASSIGNMENT, NULL, binary},   // XVR_TOKEN_OPERATOR_MODULO_ASSIGN,
+    {PREC_CALL, unary, unaryPostfix},  // XVR_TOKEN_OPERATOR_INCREMENT,
+    {PREC_CALL, unary, unaryPostfix},  // XVR_TOKEN_OPERATOR_DECREMENT,
+    {PREC_ASSIGNMENT, NULL, binary},   // XVR_TOKEN_OPERATOR_ASSIGN,
 
     // comparator operators
     {PREC_COMPARISON, NULL, binary},  // XVR_TOKEN_OPERATOR_COMPARE_EQUAL,
@@ -258,6 +260,10 @@ static ParsingTuple parsingRulesetTable[] = {
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_ERROR,
     {PREC_NONE, NULL, NULL},  // XVR_TOKEN_EOF,
 };
+
+static ParsingTuple* getParsingRule(Xvr_TokenType type) {
+    return &parsingRulesetTable[type];
+}
 
 static Xvr_ValueType readType(Xvr_Parser* parser) {
     advance(parser);
@@ -478,9 +484,10 @@ static Xvr_AstFlag unary(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
                 true ||
             XVR_VALUE_AS_STRING(primary->varAccess.child->value.value)
                     ->info.type != XVR_STRING_NAME) {
-            printError(parser, parser->previous,
-                       "Unexpected non-name-string token in unary operator "
-                       "increment precedence rule");
+            printError(
+                parser, parser->previous,
+                "Unexpected non-name-string token in unary-prefixs operator "
+                "increment precedence rule");
             Xvr_private_emitAstError(bucketHandle, rootHandle);
         } else {
             *rootHandle = primary->varAccess.child;
@@ -716,8 +723,48 @@ static Xvr_AstFlag aggregate(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
     }
 }
 
-static ParsingTuple* getParsingRule(Xvr_TokenType type) {
-    return &parsingRulesetTable[type];
+static Xvr_AstFlag unaryPostfix(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
+                                Xvr_Ast** rootHandle) {
+    if (parser->previous.type != XVR_TOKEN_NAME) {
+        printError(
+            parser, parser->previous,
+            "Unexpected parameter passing to unary-postfix precedence rule");
+        Xvr_private_emitAstError(bucketHandle, rootHandle);
+        return XVR_AST_FLAG_NONE;
+    }
+
+    Xvr_Ast* primary = NULL;
+    ParsingRule nameRule = getParsingRule(parser->previous.type)->prefix;
+    nameRule(bucketHandle, parser, &primary);
+
+    if (primary->type != XVR_AST_VAR_ACCESS ||
+        primary->varAccess.child->type != XVR_AST_VALUE ||
+        XVR_VALUE_IS_STRING(primary->varAccess.child->value.value) != true ||
+        XVR_VALUE_AS_STRING(primary->varAccess.child->value.value)->info.type !=
+            XVR_STRING_NAME) {
+        printError(parser, parser->previous,
+                   "Unexpected non-name-string token in unary-postfix operator "
+                   "precedence rule");
+        Xvr_private_emitAstError(bucketHandle, rootHandle);
+        return XVR_AST_FLAG_NONE;
+    }
+
+    (*rootHandle) = primary->varAccess.child;
+
+    if (match(parser, XVR_TOKEN_OPERATOR_INCREMENT)) {
+        Xvr_private_emitAstUnary(bucketHandle, rootHandle,
+                                 XVR_AST_FLAG_POSTFIX_INCREMENT);
+        return XVR_AST_FLAG_POSTFIX_INCREMENT;
+    } else if (match(parser, XVR_TOKEN_OPERATOR_DECREMENT)) {
+        Xvr_private_emitAstUnary(bucketHandle, rootHandle,
+                                 XVR_AST_FLAG_POSTFIX_DECREMENT);
+        return XVR_AST_FLAG_POSTFIX_DECREMENT;
+    } else {
+        printError(parser, parser->previous,
+                   "Unexpected token passing to unary-postfix precedence rule");
+        Xvr_private_emitAstError(bucketHandle, rootHandle);
+        return XVR_AST_FLAG_NONE;
+    }
 }
 
 static void parsePrecedence(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
@@ -762,6 +809,9 @@ static void parsePrecedence(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
             Xvr_private_emitAstCompare(bucketHandle, rootHandle, flag, ptr);
         } else if (flag >= 30 && flag <= 39) {
             Xvr_private_emitAstAggregate(bucketHandle, rootHandle, flag, ptr);
+        } else if (flag >= 40 && flag <= 49) {
+            (*rootHandle) = ptr;
+            continue;
         } else {
             if (flag == XVR_AST_FLAG_AND || flag == XVR_AST_FLAG_OR) {
                 Xvr_private_emitAstBinaryShortCircuit(bucketHandle, rootHandle,
