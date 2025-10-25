@@ -3,3 +3,4 @@
 -Wall
 -Wextra
 -Wpedantic
+-Wno-newline-eof

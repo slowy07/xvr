@@ -1,4 +1,4 @@
-# CFLAGS+=-std=c17 -Wpedantic -Werror
+# CFLAGS+=-std=c17 -Wpedantic -Werror -Wno-newline-eof
 # LIBS=-lm
 
 export XVR_SOURCEDIR=src

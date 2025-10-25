@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS+=-std=c17 -g -Wall -Werror -Wextra -Wformat=2
+CFLAGS+=-std=c17 -g -Wall -Werror -Wextra -Wformat=2 -Wno-newline-eof
 LIBS+=-lm
 LDFLAGS+=
 
@@ -26,16 +26,16 @@ TEST_REPLNAME=repl.exe
 
 all: source repl run
 
-run: $(TEST_SCRIPTFILES:.toy=.toy-run)
+run: $(TEST_SCRIPTFILES:.xvr=.xvr-run)
 
-%.toy-run: %.toy
+%.xvr-run: %.xvr
 	$(TEST_OUTDIR)/$(TEST_REPLNAME) -f ../$<
 
 gdb: source repl run-gdb
 
-run-gdb: $(TEST_SCRIPTFILES:.toy=.toy-gdb)
+run-gdb: $(TEST_SCRIPTFILES:.xvr=.xvr-gdb)
 
-%.toy-gdb: %.toy
+%.xvr-gdb: %.xvr
 	gdb $(TEST_OUTDIR)/$(TEST_REPLNAME) -ix gdb_init -ex=run --batch --return-child-result --args "$(TEST_OUTDIR)/$(TEST_REPLNAME)" "-f" "../$<"
 
 source: $(TEST_OBJDIR) $(TEST_OUTDIR)

@@ -269,7 +269,6 @@ static Xvr_Token makeString(Xvr_Lexer* lexer, char terminator) {
     while (!isAtEnd(lexer)) {
         // stop if you've hit the terminator
         if (peek(lexer) == terminator) {
-            advance(lexer);  // eat the terminator
             break;
         }
 
@@ -288,6 +287,7 @@ static Xvr_Token makeString(Xvr_Lexer* lexer, char terminator) {
         return makeErrorToken(lexer, "Unterminated string");
     }
 
+    advance(lexer);
     // make the token
     Xvr_Token token;
 

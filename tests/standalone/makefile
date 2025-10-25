@@ -1,5 +1,5 @@
 CC=gcc
-CFLAGS+=-std=c17 -g -Wall -Werror -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable -Wformat=2
+CFLAGS+=-std=c17 -g -Wall -Werror -Wno-unused-parameter -Wpendantic -Wformat=2 -Wno-newline-eof
 LIBS+=-lm
 LDFLAGS+=
 

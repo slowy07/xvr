@@ -15,3 +15,10 @@ On Platform Unix, Linux, BSD, macOS, Cygwin
 make tests-cases
 make inter
 ```
+
+## Say wello with Xvr
+```
+var nama: string = "arfy slowy";
+
+print("wello " .. nama);
+```
