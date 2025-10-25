@@ -106,6 +106,24 @@ static void emitFloat(unsigned char** handle, unsigned int* capacity,
     emitByte(handle, capacity, count, *(ptr++));
 }
 
+static bool checkForChaining(Xvr_Ast* ptr) {
+    if (ptr == NULL) {
+        return false;
+    }
+
+    if (ptr->type == XVR_AST_VAR_ASSIGN) {
+        return true;
+    }
+
+    if (ptr->type == XVR_AST_UNARY) {
+        if (ptr->unary.flag >= XVR_AST_FLAG_PREFIX_INCREMENT &&
+            ptr->unary.flag <= XVR_AST_FLAG_POSTFIX_DECREMENT) {
+            return true;
+        }
+    }
+    return false;
+}
+
 // write instructions based on the AST types
 #define EMIT_BYTE(rt, part, byte)                        \
     emitByte((&((*rt)->part)), &((*rt)->part##Capacity), \
@@ -165,6 +183,9 @@ static unsigned int emitString(Xvr_Routine** rt, Xvr_String* str) {
 }
 
 static unsigned int writeRoutineCode(Xvr_Routine** rt, Xvr_Ast* ast);
+static unsigned int writeInstructionAssign(Xvr_Routine** rt,
+                                           Xvr_AstVarAssign ast,
+                                           bool chainedAssignment);
 
 static unsigned int writeInstructionValue(Xvr_Routine** rt, Xvr_AstValue ast) {
     EMIT_BYTE(rt, code, XVR_OPCODE_READ);
@@ -250,7 +271,7 @@ static unsigned int writeInstructionUnary(Xvr_Routine** rt, Xvr_AstUnary ast) {
                       ? XVR_OPCODE_ADD
                       : XVR_OPCODE_SUBTRACT);
         EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
-        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, 1);
         EMIT_BYTE(rt, code, 0);
 
         result = 1;
@@ -297,11 +318,6 @@ static unsigned int writeInstructionUnary(Xvr_Routine** rt, Xvr_AstUnary ast) {
                       ? XVR_OPCODE_ADD
                       : XVR_OPCODE_SUBTRACT);
         EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
-        EMIT_BYTE(rt, code, 0);
-        EMIT_BYTE(rt, code, 0);
-
-        EMIT_BYTE(rt, code, XVR_OPCODE_ELIMINATE);
-        EMIT_BYTE(rt, code, 0);
         EMIT_BYTE(rt, code, 0);
         EMIT_BYTE(rt, code, 0);
 
@@ -669,7 +685,12 @@ static unsigned int writeInstructionPrint(Xvr_Routine** rt, Xvr_AstPrint ast) {
 
 static unsigned int writeInstructionVarDeclare(Xvr_Routine** rt,
                                                Xvr_AstVarDeclare ast) {
-    writeRoutineCode(rt, ast.expr);
+    if (checkForChaining(ast.expr)) {
+        writeInstructionAssign(rt, ast.expr->varAssign, true);
+    } else {
+        // default value
+        writeRoutineCode(rt, ast.expr);
+    }
 
     EMIT_BYTE(rt, code, XVR_OPCODE_DECLARE);
     EMIT_BYTE(rt, code, Xvr_getNameStringVarType(ast.name));
@@ -682,23 +703,9 @@ static unsigned int writeInstructionVarDeclare(Xvr_Routine** rt,
 }
 
 static unsigned int writeInstructionAssign(Xvr_Routine** rt,
-                                           Xvr_AstVarAssign ast) {
+                                           Xvr_AstVarAssign ast,
+                                           bool chainedAssignment) {
     unsigned int result = 0;
-    switch (ast.expr->type) {
-    case XVR_AST_BLOCK:
-    case XVR_AST_AGGREGATE:
-    case XVR_AST_ASSERT:
-    case XVR_AST_PRINT:
-    case XVR_AST_VAR_DECLARE:
-        fprintf(stderr, XVR_CC_ERROR
-                "COMPILER ERROR: Invalid AST type found: Malformed "
-                "assignment\n" XVR_CC_RESET);
-        (*rt)->panic = true;
-        return 0;
-
-    default:
-        break;
-    }
 
     if (ast.target->type == XVR_AST_VALUE &&
         XVR_VALUE_IS_STRING(ast.target->value.value) &&
@@ -716,13 +723,18 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
                ast.target->aggregate.flag == XVR_AST_FLAG_INDEX) {
         writeRoutineCode(rt, ast.target->aggregate.left);
         writeRoutineCode(rt, ast.target->aggregate.right);
-        writeRoutineCode(rt, ast.expr);
+
+        if (checkForChaining(ast.expr)) {
+            result += writeInstructionAssign(rt, ast.expr->varAssign, true);
+        } else {
+            result += writeRoutineCode(rt, ast.expr);
+        }
 
         EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN_COMPOUND);
+        EMIT_BYTE(rt, code, chainedAssignment);
         EMIT_BYTE(rt, code, 0);
         EMIT_BYTE(rt, code, 0);
-        EMIT_BYTE(rt, code, 0);
-        return 0;
+        return result + (chainedAssignment ? 1 : 0);
     } else {
         fprintf(stderr,
                 XVR_CC_ERROR "COMPILER ERROR: TODO at %s %d\n" XVR_CC_RESET,
@@ -732,10 +744,14 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
     }
 
     if (ast.flag == XVR_AST_FLAG_ASSIGN) {
-        result += writeRoutineCode(rt, ast.expr);
+        if (checkForChaining(ast.expr)) {
+            result += writeInstructionAssign(rt, ast.expr->varAssign, true);
+        } else {
+            result += writeRoutineCode(rt, ast.expr);
+        }
 
         EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
-        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, chainedAssignment);
         EMIT_BYTE(rt, code, 0);
         EMIT_BYTE(rt, code, 0);
     } else if (ast.flag == XVR_AST_FLAG_ADD_ASSIGN) {
@@ -744,11 +760,15 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
         EMIT_BYTE(rt, code, 0);
         EMIT_BYTE(rt, code, 0);
 
-        result += writeRoutineCode(rt, ast.expr);
+        if (checkForChaining(ast.expr)) {
+            result += writeInstructionAssign(rt, ast.expr->varAssign, true);
+        } else {
+            result += writeRoutineCode(rt, ast.expr);
+        }
 
         EMIT_BYTE(rt, code, XVR_OPCODE_ADD);
         EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
-        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, chainedAssignment);
         EMIT_BYTE(rt, code, 0);
     } else if (ast.flag == XVR_AST_FLAG_SUBTRACT_ASSIGN) {
         EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
@@ -756,11 +776,15 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
         EMIT_BYTE(rt, code, 0);
         EMIT_BYTE(rt, code, 0);
 
-        result += writeRoutineCode(rt, ast.expr);
+        if (checkForChaining(ast.expr)) {
+            result += writeInstructionAssign(rt, ast.expr->varAssign, true);
+        } else {
+            result += writeRoutineCode(rt, ast.expr);
+        }
 
         EMIT_BYTE(rt, code, XVR_OPCODE_SUBTRACT);
         EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
-        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, chainedAssignment);
         EMIT_BYTE(rt, code, 0);
     } else if (ast.flag == XVR_AST_FLAG_MULTIPLY_ASSIGN) {
         EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
@@ -768,11 +792,15 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
         EMIT_BYTE(rt, code, 0);
         EMIT_BYTE(rt, code, 0);
 
-        result += writeRoutineCode(rt, ast.expr);
+        if (checkForChaining(ast.expr)) {
+            result += writeInstructionAssign(rt, ast.expr->varAssign, true);
+        } else {
+            result += writeRoutineCode(rt, ast.expr);
+        }
 
         EMIT_BYTE(rt, code, XVR_OPCODE_MULTIPLY);
         EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
-        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, chainedAssignment);
         EMIT_BYTE(rt, code, 0);
     } else if (ast.flag == XVR_AST_FLAG_DIVIDE_ASSIGN) {
         EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
@@ -780,11 +808,15 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
         EMIT_BYTE(rt, code, 0);
         EMIT_BYTE(rt, code, 0);
 
-        result += writeRoutineCode(rt, ast.expr);
+        if (checkForChaining(ast.expr)) {
+            result += writeInstructionAssign(rt, ast.expr->varAssign, true);
+        } else {
+            result += writeRoutineCode(rt, ast.expr);
+        }
 
         EMIT_BYTE(rt, code, XVR_OPCODE_DIVIDE);
         EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
-        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, chainedAssignment);
         EMIT_BYTE(rt, code, 0);
     } else if (ast.flag == XVR_AST_FLAG_MODULO_ASSIGN) {
         EMIT_BYTE(rt, code, XVR_OPCODE_DUPLICATE);
@@ -792,11 +824,15 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
         EMIT_BYTE(rt, code, 0);
         EMIT_BYTE(rt, code, 0);
 
-        result += writeRoutineCode(rt, ast.expr);
+        if (checkForChaining(ast.expr)) {
+            result += writeInstructionAssign(rt, ast.expr->varAssign, true);
+        } else {
+            result += writeRoutineCode(rt, ast.expr);
+        }
 
         EMIT_BYTE(rt, code, XVR_OPCODE_MODULO);
         EMIT_BYTE(rt, code, XVR_OPCODE_ASSIGN);
-        EMIT_BYTE(rt, code, 0);
+        EMIT_BYTE(rt, code, chainedAssignment);
         EMIT_BYTE(rt, code, 0);
     }
 
@@ -806,7 +842,7 @@ static unsigned int writeInstructionAssign(Xvr_Routine** rt,
         exit(-1);
     }
 
-    return result;
+    return result + (chainedAssignment ? 1 : 0);
 }
 
 static unsigned int writeInstructionAccess(Xvr_Routine** rt,
@@ -942,7 +978,7 @@ static unsigned int writeRoutineCode(Xvr_Routine** rt, Xvr_Ast* ast) {
         break;
 
     case XVR_AST_VAR_ASSIGN:
-        result += writeInstructionAssign(rt, ast->varAssign);
+        result += writeInstructionAssign(rt, ast->varAssign, false);
         break;
 
     case XVR_AST_VAR_ACCESS:

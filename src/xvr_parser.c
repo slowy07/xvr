@@ -966,6 +966,8 @@ static void makeVariableDeclarationStmt(Xvr_Bucket** bucketHandle,
 
     Xvr_private_emitAstVariableDeclaration(bucketHandle, rootHandle, nameStr,
                                            expr);
+    consume(parser, XVR_TOKEN_OPERATOR_SEMICOLON,
+            "Expected ';' at the end of var statement");
 }
 
 static void makeStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,

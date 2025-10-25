@@ -1,0 +1,14 @@
+var hitung: int = 0;
+
+var angka_pertama: int = 1;
+var angka_kedua: int = 0;
+
+while (hitung < 100_000) {
+  var angka_ketiga: int = angka_pertama + angka_kedua;
+  angka_pertama = angka_kedua;
+  angka_kedua = angka_ketiga;
+
+  print(angka_ketiga);
+
+  ++hitung;
+}

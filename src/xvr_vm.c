@@ -242,7 +242,10 @@ static void processAssign(Xvr_VM* vm) {
     }
 
     Xvr_assignScope(vm->scope, XVR_VALUE_AS_STRING(name), value);
-    Xvr_pushStack(&vm->stack, Xvr_copyValue(value));
+    bool chainedAssignment = READ_BYTE(vm);
+    if (chainedAssignment) {
+        Xvr_pushStack(&vm->stack, Xvr_copyValue(value));
+    }
     Xvr_freeValue(name);
 }
 
@@ -283,14 +286,22 @@ static void processAssignCompound(Xvr_VM* vm) {
         }
 
         array->data[index] = Xvr_copyValue(Xvr_unwrapValue(value));
-        Xvr_pushStack(&vm->stack, Xvr_copyValue(value));
+
+        bool chainedAssignment = READ_BYTE(vm);
+        if (chainedAssignment) {
+            Xvr_pushStack(&vm->stack, Xvr_copyValue(value));
+        }
         Xvr_freeValue(value);
     } else if (XVR_VALUE_IS_TABLE(target)) {
         Xvr_Table* table = XVR_VALUE_AS_TABLE(target);
 
         Xvr_insertTable(&table, Xvr_copyValue(Xvr_unwrapValue(key)),
                         Xvr_copyValue(Xvr_unwrapValue(value)));
-        Xvr_pushStack(&vm->stack, Xvr_copyValue(value));
+
+        bool chainedAssignment = READ_BYTE(vm);
+        if (chainedAssignment) {
+            Xvr_pushStack(&vm->stack, Xvr_copyValue(value));
+        }
         Xvr_freeValue(value);
     } else {
         Xvr_error("invalid assignment target");
