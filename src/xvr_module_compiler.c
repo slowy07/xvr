@@ -1,4 +1,4 @@
-#include "xvr_module_builder.h"
+#include "xvr_module_compiler.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -52,7 +52,7 @@ void* Xvr_private_resizeEscapeArray(Xvr_private_EscapeArray* ptr,
         fprintf(stderr,
                 XVR_CC_ERROR
                 "ERROR: Failed to resize an escape array within "
-                "'Xvr_ModuleBuilder' from %d to %d capacity\n" XVR_CC_RESET,
+                "'Xvr_ModuleCompiler' from %d to %d capacity\n" XVR_CC_RESET,
                 (int)originalCapacity, (int)capacity);
         exit(-1);
     }
@@ -76,7 +76,7 @@ static void expand(unsigned char** handle, unsigned int* capacity,
             fprintf(stderr,
                     XVR_CC_ERROR
                     "ERROR: Failed to allocate %d space for a part of "
-                    "'Xvr_ModuleBuilder'\n" XVR_CC_RESET,
+                    "'Xvr_ModuleCompiler'\n" XVR_CC_RESET,
                     (int)(*capacity));
             exit(1);
         }
@@ -129,12 +129,12 @@ static void emitFloat(unsigned char** handle, unsigned int* capacity,
 // simply get the address (always an integer)
 #define CURRENT_ADDRESS(mb, part) ((*mb)->part##Count)
 
-static void emitToJumpTable(Xvr_ModuleBuilder** mb, unsigned int startAddr) {
+static void emitToJumpTable(Xvr_ModuleCompiler** mb, unsigned int startAddr) {
     EMIT_INT(mb, code, (*mb)->jumpsCount);  // mark the jump index in the code
     EMIT_INT(mb, jumps, startAddr);         // save address at the jump index
 }
 
-static unsigned int emitString(Xvr_ModuleBuilder** mb, Xvr_String* str) {
+static unsigned int emitString(Xvr_ModuleCompiler** mb, Xvr_String* str) {
     // 4-byte alignment
     unsigned int length = str->info.length + 1;
     if (length % 4 != 0) {
@@ -168,14 +168,14 @@ static unsigned int emitString(Xvr_ModuleBuilder** mb, Xvr_String* str) {
     return 1;
 }
 
-static unsigned int writeModuleBuilderCode(
-    Xvr_ModuleBuilder** mb, Xvr_Ast* ast);  // forward declare for recursion
+static unsigned int writeModuleCompilerCode(
+    Xvr_ModuleCompiler** mb, Xvr_Ast* ast);  // forward declare for recursion
 static unsigned int writeInstructionAssign(
-    Xvr_ModuleBuilder** mb, Xvr_AstVarAssign ast,
+    Xvr_ModuleCompiler** mb, Xvr_AstVarAssign ast,
     bool
         chainedAssignment);  // forward declare for chaining of var declarations
 
-static unsigned int writeInstructionValue(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionValue(Xvr_ModuleCompiler** mb,
                                           Xvr_AstValue ast) {
     EMIT_BYTE(mb, code, XVR_OPCODE_READ);
     EMIT_BYTE(mb, code, ast.value.type);
@@ -220,12 +220,12 @@ static unsigned int writeInstructionValue(Xvr_ModuleBuilder** mb,
     return 1;
 }
 
-static unsigned int writeInstructionUnary(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionUnary(Xvr_ModuleCompiler** mb,
                                           Xvr_AstUnary ast) {
     unsigned int result = 0;
 
     if (ast.flag == XVR_AST_FLAG_NEGATE) {
-        result = writeModuleBuilderCode(mb, ast.child);
+        result = writeModuleCompilerCode(mb, ast.child);
 
         EMIT_BYTE(mb, code, XVR_OPCODE_NEGATE);
 
@@ -337,11 +337,11 @@ static unsigned int writeInstructionUnary(Xvr_ModuleBuilder** mb,
     return result;
 }
 
-static unsigned int writeInstructionBinary(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionBinary(Xvr_ModuleCompiler** mb,
                                            Xvr_AstBinary ast) {
     // left, then right, then the binary's operation
-    writeModuleBuilderCode(mb, ast.left);
-    writeModuleBuilderCode(mb, ast.right);
+    writeModuleCompilerCode(mb, ast.left);
+    writeModuleCompilerCode(mb, ast.right);
 
     if (ast.flag == XVR_AST_FLAG_ADD) {
         EMIT_BYTE(mb, code, XVR_OPCODE_ADD);
@@ -372,9 +372,9 @@ static unsigned int writeInstructionBinary(Xvr_ModuleBuilder** mb,
 }
 
 static unsigned int writeInstructionBinaryShortCircuit(
-    Xvr_ModuleBuilder** mb, Xvr_AstBinaryShortCircuit ast) {
+    Xvr_ModuleCompiler** mb, Xvr_AstBinaryShortCircuit ast) {
     // lhs
-    writeModuleBuilderCode(mb, ast.left);
+    writeModuleCompilerCode(mb, ast.left);
 
     // duplicate the top (so the lhs can be 'returned' by this expression, if
     // needed)
@@ -417,7 +417,7 @@ static unsigned int writeInstructionBinaryShortCircuit(
     EMIT_BYTE(mb, code, 0);
 
     // rhs
-    writeModuleBuilderCode(mb, ast.right);
+    writeModuleCompilerCode(mb, ast.right);
 
     // set the parameter
     OVERWRITE_INT(mb, code, paramAddr,
@@ -426,11 +426,11 @@ static unsigned int writeInstructionBinaryShortCircuit(
     return 1;  // leaves only 1 value on the stack
 }
 
-static unsigned int writeInstructionCompare(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionCompare(Xvr_ModuleCompiler** mb,
                                             Xvr_AstCompare ast) {
     // left, then right, then the compare's operation
-    writeModuleBuilderCode(mb, ast.left);
-    writeModuleBuilderCode(mb, ast.right);
+    writeModuleCompilerCode(mb, ast.left);
+    writeModuleCompilerCode(mb, ast.right);
 
     if (ast.flag == XVR_AST_FLAG_COMPARE_EQUAL) {
         EMIT_BYTE(mb, code, XVR_OPCODE_COMPARE_EQUAL);
@@ -465,15 +465,15 @@ static unsigned int writeInstructionCompare(Xvr_ModuleBuilder** mb,
     return 1;  // leaves only 1 value on the stack
 }
 
-static unsigned int writeInstructionGroup(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionGroup(Xvr_ModuleCompiler** mb,
                                           Xvr_AstGroup ast) {
     // not certain what this leaves
-    return writeModuleBuilderCode(mb, ast.child);
+    return writeModuleCompilerCode(mb, ast.child);
 }
 
-static unsigned int writeInstructionCompound(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionCompound(Xvr_ModuleCompiler** mb,
                                              Xvr_AstCompound ast) {
-    unsigned int result = writeModuleBuilderCode(mb, ast.child);
+    unsigned int result = writeModuleCompilerCode(mb, ast.child);
 
     if (ast.flag == XVR_AST_FLAG_COMPOUND_ARRAY) {
         // signal how many values to read in as array elements
@@ -510,13 +510,13 @@ static unsigned int writeInstructionCompound(Xvr_ModuleBuilder** mb,
     }
 }
 
-static unsigned int writeInstructionAggregate(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionAggregate(Xvr_ModuleCompiler** mb,
                                               Xvr_AstAggregate ast) {
     unsigned int result = 0;
 
     // left, then right
-    result += writeModuleBuilderCode(mb, ast.left);
-    result += writeModuleBuilderCode(mb, ast.right);
+    result += writeModuleCompilerCode(mb, ast.left);
+    result += writeModuleCompilerCode(mb, ast.right);
 
     if (ast.flag == XVR_AST_FLAG_COLLECTION) {
         // collections are handled above
@@ -542,11 +542,11 @@ static unsigned int writeInstructionAggregate(Xvr_ModuleBuilder** mb,
     }
 }
 
-static unsigned int writeInstructionAssert(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionAssert(Xvr_ModuleCompiler** mb,
                                            Xvr_AstAssert ast) {
     // the thing to print
-    writeModuleBuilderCode(mb, ast.child);
-    writeModuleBuilderCode(mb, ast.message);
+    writeModuleCompilerCode(mb, ast.child);
+    writeModuleCompilerCode(mb, ast.message);
 
     // output the print opcode
     EMIT_BYTE(mb, code, XVR_OPCODE_ASSERT);
@@ -559,10 +559,10 @@ static unsigned int writeInstructionAssert(Xvr_ModuleBuilder** mb,
     return 0;
 }
 
-static unsigned int writeInstructionIfThenElse(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionIfThenElse(Xvr_ModuleCompiler** mb,
                                                Xvr_AstIfThenElse ast) {
     // cond-branch
-    writeModuleBuilderCode(mb, ast.condBranch);
+    writeModuleCompilerCode(mb, ast.condBranch);
 
     // emit the jump word (opcode, type, condition, padding)
     EMIT_BYTE(mb, code, XVR_OPCODE_JUMP);
@@ -574,7 +574,7 @@ static unsigned int writeInstructionIfThenElse(Xvr_ModuleBuilder** mb,
         SKIP_INT(mb, code);  // parameter to be written later
 
     // emit then-branch
-    writeModuleBuilderCode(mb, ast.thenBranch);
+    writeModuleCompilerCode(mb, ast.thenBranch);
 
     if (ast.elseBranch != NULL) {
         // emit the jump-to-end (opcode, type, condition, padding)
@@ -591,7 +591,7 @@ static unsigned int writeInstructionIfThenElse(Xvr_ModuleBuilder** mb,
                       CURRENT_ADDRESS(mb, code) - (thenParamAddr + 4));
 
         // emit the else branch
-        writeModuleBuilderCode(mb, ast.elseBranch);
+        writeModuleCompilerCode(mb, ast.elseBranch);
 
         // specify the ending position for the else branch
         OVERWRITE_INT(mb, code, elseParamAddr,
@@ -607,13 +607,13 @@ static unsigned int writeInstructionIfThenElse(Xvr_ModuleBuilder** mb,
     return 0;
 }
 
-static unsigned int writeInstructionWhileThen(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionWhileThen(Xvr_ModuleCompiler** mb,
                                               Xvr_AstWhileThen ast) {
     // begin
     unsigned int beginAddr = CURRENT_ADDRESS(mb, code);
 
     // cond-branch
-    writeModuleBuilderCode(mb, ast.condBranch);
+    writeModuleCompilerCode(mb, ast.condBranch);
 
     // emit the jump word (opcode, type, condition, padding)
     EMIT_BYTE(mb, code, XVR_OPCODE_JUMP);
@@ -625,7 +625,7 @@ static unsigned int writeInstructionWhileThen(Xvr_ModuleBuilder** mb,
         SKIP_INT(mb, code);  // parameter to be written later
 
     // emit then-branch
-    writeModuleBuilderCode(mb, ast.thenBranch);
+    writeModuleCompilerCode(mb, ast.thenBranch);
 
     // jump to begin to repeat the conditional test
     EMIT_BYTE(mb, code, XVR_OPCODE_JUMP);
@@ -688,7 +688,7 @@ static unsigned int writeInstructionWhileThen(Xvr_ModuleBuilder** mb,
     return 0;
 }
 
-static unsigned int writeInstructionBreak(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionBreak(Xvr_ModuleCompiler** mb,
                                           Xvr_AstBreak ast) {
     // unused
     (void)ast;
@@ -717,7 +717,7 @@ static unsigned int writeInstructionBreak(Xvr_ModuleBuilder** mb,
     return 0;
 }
 
-static unsigned int writeInstructionContinue(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionContinue(Xvr_ModuleCompiler** mb,
                                              Xvr_AstContinue ast) {
     // unused
     (void)ast;
@@ -746,10 +746,10 @@ static unsigned int writeInstructionContinue(Xvr_ModuleBuilder** mb,
     return 0;
 }
 
-static unsigned int writeInstructionPrint(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionPrint(Xvr_ModuleCompiler** mb,
                                           Xvr_AstPrint ast) {
     // the thing to print
-    writeModuleBuilderCode(mb, ast.child);
+    writeModuleCompilerCode(mb, ast.child);
 
     // output the print opcode
     EMIT_BYTE(mb, code, XVR_OPCODE_PRINT);
@@ -762,14 +762,14 @@ static unsigned int writeInstructionPrint(Xvr_ModuleBuilder** mb,
     return 0;
 }
 
-static unsigned int writeInstructionVarDeclare(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionVarDeclare(Xvr_ModuleCompiler** mb,
                                                Xvr_AstVarDeclare ast) {
     // if we're dealing with chained assignments, hijack the next assignment
     // with 'chainedAssignment' set to true
     if (checkForChaining(ast.expr)) {
         writeInstructionAssign(mb, ast.expr->varAssign, true);
     } else {
-        writeModuleBuilderCode(mb, ast.expr);  // default value
+        writeModuleCompilerCode(mb, ast.expr);  // default value
     }
 
     // delcare with the given name string
@@ -787,7 +787,7 @@ static unsigned int writeInstructionVarDeclare(Xvr_ModuleBuilder** mb,
     return 0;
 }
 
-static unsigned int writeInstructionAssign(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionAssign(Xvr_ModuleCompiler** mb,
                                            Xvr_AstVarAssign ast,
                                            bool chainedAssignment) {
     unsigned int result = 0;
@@ -812,17 +812,17 @@ static unsigned int writeInstructionAssign(Xvr_ModuleBuilder** mb,
     // target is an indexing of some compound value
     else if (ast.target->type == XVR_AST_AGGREGATE &&
              ast.target->aggregate.flag == XVR_AST_FLAG_INDEX) {
-        writeModuleBuilderCode(
+        writeModuleCompilerCode(
             mb, ast.target->aggregate.left);  // any deeper indexing will just
                                               // work, using reference values
-        writeModuleBuilderCode(mb, ast.target->aggregate.right);  // key
+        writeModuleCompilerCode(mb, ast.target->aggregate.right);  // key
 
         // if we're dealing with chained assignments, hijack the next assignment
         // with 'chainedAssignment' set to true
         if (checkForChaining(ast.expr)) {
             result += writeInstructionAssign(mb, ast.expr->varAssign, true);
         } else {
-            result += writeModuleBuilderCode(mb, ast.expr);  // default value
+            result += writeModuleCompilerCode(mb, ast.expr);  // default value
         }
 
         EMIT_BYTE(mb, code, XVR_OPCODE_ASSIGN_COMPOUND);  // uses the top three
@@ -850,7 +850,7 @@ static unsigned int writeInstructionAssign(Xvr_ModuleBuilder** mb,
         if (checkForChaining(ast.expr)) {
             result += writeInstructionAssign(mb, ast.expr->varAssign, true);
         } else {
-            result += writeModuleBuilderCode(mb, ast.expr);  // default value
+            result += writeModuleCompilerCode(mb, ast.expr);  // default value
         }
 
         EMIT_BYTE(mb, code, XVR_OPCODE_ASSIGN);
@@ -868,7 +868,7 @@ static unsigned int writeInstructionAssign(Xvr_ModuleBuilder** mb,
         if (checkForChaining(ast.expr)) {
             result += writeInstructionAssign(mb, ast.expr->varAssign, true);
         } else {
-            result += writeModuleBuilderCode(mb, ast.expr);  // default value
+            result += writeModuleCompilerCode(mb, ast.expr);  // default value
         }
 
         EMIT_BYTE(mb, code, XVR_OPCODE_ADD);
@@ -886,7 +886,7 @@ static unsigned int writeInstructionAssign(Xvr_ModuleBuilder** mb,
         if (checkForChaining(ast.expr)) {
             result += writeInstructionAssign(mb, ast.expr->varAssign, true);
         } else {
-            result += writeModuleBuilderCode(mb, ast.expr);  // default value
+            result += writeModuleCompilerCode(mb, ast.expr);  // default value
         }
 
         EMIT_BYTE(mb, code, XVR_OPCODE_SUBTRACT);
@@ -904,7 +904,7 @@ static unsigned int writeInstructionAssign(Xvr_ModuleBuilder** mb,
         if (checkForChaining(ast.expr)) {
             result += writeInstructionAssign(mb, ast.expr->varAssign, true);
         } else {
-            result += writeModuleBuilderCode(mb, ast.expr);  // default value
+            result += writeModuleCompilerCode(mb, ast.expr);  // default value
         }
 
         EMIT_BYTE(mb, code, XVR_OPCODE_MULTIPLY);
@@ -922,7 +922,7 @@ static unsigned int writeInstructionAssign(Xvr_ModuleBuilder** mb,
         if (checkForChaining(ast.expr)) {
             result += writeInstructionAssign(mb, ast.expr->varAssign, true);
         } else {
-            result += writeModuleBuilderCode(mb, ast.expr);  // default value
+            result += writeModuleCompilerCode(mb, ast.expr);  // default value
         }
 
         EMIT_BYTE(mb, code, XVR_OPCODE_DIVIDE);
@@ -940,7 +940,7 @@ static unsigned int writeInstructionAssign(Xvr_ModuleBuilder** mb,
         if (checkForChaining(ast.expr)) {
             result += writeInstructionAssign(mb, ast.expr->varAssign, true);
         } else {
-            result += writeModuleBuilderCode(mb, ast.expr);  // default value
+            result += writeModuleCompilerCode(mb, ast.expr);  // default value
         }
 
         EMIT_BYTE(mb, code, XVR_OPCODE_MODULO);
@@ -958,7 +958,7 @@ static unsigned int writeInstructionAssign(Xvr_ModuleBuilder** mb,
     return result + (chainedAssignment ? 1 : 0);
 }
 
-static unsigned int writeInstructionAccess(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionAccess(Xvr_ModuleCompiler** mb,
                                            Xvr_AstVarAccess ast) {
     if (!(ast.child->type == XVR_AST_VALUE &&
           XVR_VALUE_IS_STRING(ast.child->value.value) &&
@@ -989,15 +989,15 @@ static unsigned int writeInstructionAccess(Xvr_ModuleBuilder** mb,
     return 1;
 }
 
-static unsigned int writeInstructionFnDeclare(Xvr_ModuleBuilder** mb,
+static unsigned int writeInstructionFnDeclare(Xvr_ModuleCompiler** mb,
                                               Xvr_AstFnDeclare ast) {
     (void)mb;
     (void)ast;
     return 0;
 }
 
-static unsigned int writeModuleBuilderCode(Xvr_ModuleBuilder** mb,
-                                           Xvr_Ast* ast) {
+static unsigned int writeModuleCompilerCode(Xvr_ModuleCompiler** mb,
+                                            Xvr_Ast* ast) {
     if (ast == NULL) {
         return 0;
     }
@@ -1022,8 +1022,8 @@ static unsigned int writeModuleBuilderCode(Xvr_ModuleBuilder** mb,
             (*mb)->currentScopeDepth++;
         }
 
-        result += writeModuleBuilderCode(mb, ast->block.child);
-        result += writeModuleBuilderCode(mb, ast->block.next);
+        result += writeModuleCompilerCode(mb, ast->block.child);
+        result += writeModuleCompilerCode(mb, ast->block.next);
 
         if (ast->block.innerScope) {
             EMIT_BYTE(mb, code, XVR_OPCODE_SCOPE_POP);
@@ -1130,8 +1130,8 @@ static unsigned int writeModuleBuilderCode(Xvr_ModuleBuilder** mb,
     return result;
 }
 
-static void* writeModuleBuilder(Xvr_ModuleBuilder* mb, Xvr_Ast* ast) {
-    writeModuleBuilderCode(&mb, ast);
+static void* writeModuleCompiler(Xvr_ModuleCompiler* mb, Xvr_Ast* ast) {
+    writeModuleCompilerCode(&mb, ast);
 
     EMIT_BYTE(&mb, code, XVR_OPCODE_RETURN);  // end terminator
     EMIT_BYTE(&mb, code, 0);                  // 4-byte alignment
@@ -1203,47 +1203,47 @@ static void* writeModuleBuilder(Xvr_ModuleBuilder* mb, Xvr_Ast* ast) {
     return buffer;
 }
 
-void* Xvr_compileModuleBuilder(Xvr_Ast* ast) {
-    Xvr_ModuleBuilder builder;
+void* Xvr_compileModule(Xvr_Ast* ast) {
+    Xvr_ModuleCompiler compiler;
 
-    builder.code = NULL;
-    builder.codeCapacity = 0;
-    builder.codeCount = 0;
+    compiler.code = NULL;
+    compiler.codeCapacity = 0;
+    compiler.codeCount = 0;
 
-    builder.jumps = NULL;
-    builder.jumpsCapacity = 0;
-    builder.jumpsCount = 0;
+    compiler.jumps = NULL;
+    compiler.jumpsCapacity = 0;
+    compiler.jumpsCount = 0;
 
-    builder.param = NULL;
-    builder.paramCapacity = 0;
-    builder.paramCount = 0;
+    compiler.param = NULL;
+    compiler.paramCapacity = 0;
+    compiler.paramCount = 0;
 
-    builder.data = NULL;
-    builder.dataCapacity = 0;
-    builder.dataCount = 0;
+    compiler.data = NULL;
+    compiler.dataCapacity = 0;
+    compiler.dataCount = 0;
 
-    builder.subs = NULL;
-    builder.subsCapacity = 0;
-    builder.subsCount = 0;
+    compiler.subs = NULL;
+    compiler.subsCapacity = 0;
+    compiler.subsCount = 0;
 
-    builder.currentScopeDepth = 0;
-    builder.breakEscapes =
+    compiler.currentScopeDepth = 0;
+    compiler.breakEscapes =
         Xvr_private_resizeEscapeArray(NULL, XVR_ESCAPE_INITIAL_CAPACITY);
-    builder.continueEscapes =
+    compiler.continueEscapes =
         Xvr_private_resizeEscapeArray(NULL, XVR_ESCAPE_INITIAL_CAPACITY);
 
-    builder.panic = false;
+    compiler.panic = false;
 
-    void* buffer = writeModuleBuilder(&builder, ast);
+    void* buffer = writeModuleCompiler(&compiler, ast);
 
-    Xvr_private_resizeEscapeArray(builder.breakEscapes, 0);
-    Xvr_private_resizeEscapeArray(builder.continueEscapes, 0);
+    Xvr_private_resizeEscapeArray(compiler.breakEscapes, 0);
+    Xvr_private_resizeEscapeArray(compiler.continueEscapes, 0);
 
-    free(builder.param);
-    free(builder.code);
-    free(builder.jumps);
-    free(builder.data);
-    free(builder.subs);
+    free(compiler.param);
+    free(compiler.code);
+    free(compiler.jumps);
+    free(compiler.data);
+    free(compiler.subs);
 
     return buffer;
 }

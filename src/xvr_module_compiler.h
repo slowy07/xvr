@@ -51,7 +51,7 @@ XVR_API void* Xvr_private_resizeEscapeArray(Xvr_private_EscapeArray* ptr,
                                             unsigned int capacity);
 
 // structure for holding the module as it is built
-typedef struct Xvr_ModuleBuilder {
+typedef struct Xvr_ModuleCompiler {
     unsigned char* code;  // the instruction set
     unsigned int codeCapacity;
     unsigned int codeCount;
@@ -81,7 +81,7 @@ typedef struct Xvr_ModuleBuilder {
 
     // compilation errors
     bool panic;
-} Xvr_ModuleBuilder;
+} Xvr_ModuleCompiler;
 
-XVR_API void* Xvr_compileModuleBuilder(Xvr_Ast* ast);
+XVR_API void* Xvr_compileModule(Xvr_Ast* ast);
 #endif  // !XVR_ROUTINE_H

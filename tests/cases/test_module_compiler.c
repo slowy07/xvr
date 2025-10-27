@@ -6,7 +6,7 @@
 #include "xvr_bucket.h"
 #include "xvr_console_colors.h"
 #include "xvr_lexer.h"
-#include "xvr_module_builder.h"
+#include "xvr_module_compiler.h"
 #include "xvr_opcodes.h"
 #include "xvr_parser.h"
 
@@ -14,7 +14,7 @@ int test_builder_expression(Xvr_Bucket** bucketHandle) {
     {
         Xvr_Ast* ast = NULL;
         Xvr_private_emitAstPass(bucketHandle, &ast);
-        unsigned char* buffer = Xvr_compileModuleBuilder(ast);
+        unsigned char* buffer = Xvr_compileModule(ast);
 
         int* ptr = (int*)buffer;
 
@@ -63,7 +63,7 @@ int test_builder_keywords(Xvr_Bucket** bucketHandle) {
         Xvr_bindParser(&parser, &lexer);
         Xvr_Ast* ast = Xvr_scanParser(bucketHandle, &parser);
 
-        unsigned char* buffer = Xvr_compileModuleBuilder(ast);
+        unsigned char* buffer = Xvr_compileModule(ast);
         int* ptr = (int*)buffer;
 
         if ((ptr++)[0] != 36 ||  // total size

@@ -5,7 +5,7 @@
 #include <string.h>
 
 #include "xvr_console_colors.h"
-#include "xvr_module_builder.h"
+#include "xvr_module_compiler.h"
 
 // utils
 static void expand(Xvr_ModuleBundle* bundle, unsigned int amount) {
@@ -93,7 +93,7 @@ void Xvr_appendModuleBundle(Xvr_ModuleBundle* bundle, Xvr_Ast* ast) {
         exit(-1);
     }
 
-    void* module = Xvr_compileModuleBuilder(ast);
+    void* module = Xvr_compileModule(ast);
 
     // don't try writing an empty module
     if (module == NULL) {

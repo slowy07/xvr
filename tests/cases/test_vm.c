@@ -7,7 +7,7 @@
 #include "xvr_console_colors.h"
 #include "xvr_lexer.h"
 #include "xvr_module.h"
-#include "xvr_module_builder.h"
+#include "xvr_module_compiler.h"
 #include "xvr_parser.h"
 #include "xvr_stack.h"
 #include "xvr_value.h"
@@ -22,7 +22,7 @@ unsigned char* makeCodeFromSource(Xvr_Bucket** bucketHandle,
     Xvr_bindParser(&parser, &lexer);
 
     Xvr_Ast* ast = Xvr_scanParser(bucketHandle, &parser);
-    return Xvr_compileModuleBuilder(ast);
+    return Xvr_compileModule(ast);
 }
 
 int test_setup_and_teardown(Xvr_Bucket** bucketHandle) {
@@ -36,7 +36,7 @@ int test_setup_and_teardown(Xvr_Bucket** bucketHandle) {
         Xvr_bindParser(&parser, &lexer);
 
         Xvr_Ast* ast = Xvr_scanParser(bucketHandle, &parser);
-        unsigned char* buffer = Xvr_compileModuleBuilder(ast);
+        unsigned char* buffer = Xvr_compileModule(ast);
         Xvr_Module module = Xvr_parseModule(buffer);
 
         Xvr_VM vm;
@@ -72,7 +72,7 @@ int test_simple_execution(Xvr_Bucket** bucketHandle) {
         Xvr_bindParser(&parser, &lexer);
 
         Xvr_Ast* ast = Xvr_scanParser(bucketHandle, &parser);
-        unsigned char* buffer = Xvr_compileModuleBuilder(ast);
+        unsigned char* buffer = Xvr_compileModule(ast);
         Xvr_Module module = Xvr_parseModule(buffer);
 
         Xvr_VM vm;
