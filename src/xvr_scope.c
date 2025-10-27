@@ -84,7 +84,8 @@ static Xvr_TableEntry* lookupScope(Xvr_Scope* scope, Xvr_String* key,
 
 // exposed functions
 Xvr_Scope* Xvr_pushScope(Xvr_Bucket** bucketHandle, Xvr_Scope* scope) {
-    Xvr_Scope* newScope = Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Scope));
+    Xvr_Scope* newScope =
+        (Xvr_Scope*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Scope));
 
     newScope->next = scope;
     newScope->table = Xvr_allocateTable();
@@ -105,7 +106,8 @@ Xvr_Scope* Xvr_popScope(Xvr_Scope* scope) {
 }
 
 Xvr_Scope* Xvr_deepCopyScope(Xvr_Bucket** bucketHandle, Xvr_Scope* scope) {
-    Xvr_Scope* newScope = Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Scope));
+    Xvr_Scope* newScope =
+        (Xvr_Scope*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Scope));
 
     newScope->next = scope->next;
     newScope->table =

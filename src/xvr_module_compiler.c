@@ -33,8 +33,8 @@ static bool checkForChaining(Xvr_Ast* ptr) {
 }
 
 // escapes
-void* Xvr_private_resizeEscapeArray(Xvr_private_EscapeArray* ptr,
-                                    unsigned int capacity) {
+Xvr_private_EscapeArray* Xvr_private_resizeEscapeArray(
+    Xvr_private_EscapeArray* ptr, unsigned int capacity) {
     // if you're freeing everything, just return
     if (capacity == 0) {
         free(ptr);
@@ -1130,7 +1130,8 @@ static unsigned int writeModuleCompilerCode(Xvr_ModuleCompiler** mb,
     return result;
 }
 
-static void* writeModuleCompiler(Xvr_ModuleCompiler* mb, Xvr_Ast* ast) {
+static unsigned char* writeModuleCompiler(Xvr_ModuleCompiler* mb,
+                                          Xvr_Ast* ast) {
     writeModuleCompilerCode(&mb, ast);
 
     EMIT_BYTE(&mb, code, XVR_OPCODE_RETURN);  // end terminator
@@ -1203,7 +1204,7 @@ static void* writeModuleCompiler(Xvr_ModuleCompiler* mb, Xvr_Ast* ast) {
     return buffer;
 }
 
-void* Xvr_compileModule(Xvr_Ast* ast) {
+unsigned char* Xvr_compileModule(Xvr_Ast* ast) {
     Xvr_ModuleCompiler compiler;
 
     compiler.code = NULL;
@@ -1234,7 +1235,7 @@ void* Xvr_compileModule(Xvr_Ast* ast) {
 
     compiler.panic = false;
 
-    void* buffer = writeModuleCompiler(&compiler, ast);
+    unsigned char* buffer = writeModuleCompiler(&compiler, ast);
 
     Xvr_private_resizeEscapeArray(compiler.breakEscapes, 0);
     Xvr_private_resizeEscapeArray(compiler.continueEscapes, 0);

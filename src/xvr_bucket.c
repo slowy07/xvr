@@ -54,7 +54,8 @@ Xvr_Bucket* Xvr_allocateBucket(unsigned int capacity) {
     return bucket;
 }
 
-void* Xvr_partitionBucket(Xvr_Bucket** bucketHandle, unsigned int amount) {
+unsigned char* Xvr_partitionBucket(Xvr_Bucket** bucketHandle,
+                                   unsigned int amount) {
     amount = (amount + 3) & ~3;
 
     assert((*bucketHandle) != NULL && "Expected a 'Xvr_Bucket', received NULL");

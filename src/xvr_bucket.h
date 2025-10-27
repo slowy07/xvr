@@ -31,11 +31,11 @@ typedef struct Xvr_Bucket {   // 32 | 64 BITNESS
     struct Xvr_Bucket* next;  // 4  | 8
     unsigned int capacity;    // 4  | 4
     unsigned int count;       // 4  | 4
-    char data[];              //-  | -
+    unsigned char data[];     //-  | -
 } Xvr_Bucket;                 // 12 | 16
 
 XVR_API Xvr_Bucket* Xvr_allocateBucket(unsigned int capacity);
-XVR_API void* Xvr_partitionBucket(Xvr_Bucket** bucketHandle,
+XVR_API unsigned char* Xvr_partitionBucket(Xvr_Bucket** bucketHandle,
                                   unsigned int amount);
 XVR_API void Xvr_freeBucket(Xvr_Bucket** bucketHandle);
 

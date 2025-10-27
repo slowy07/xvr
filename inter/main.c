@@ -6,8 +6,8 @@
 #include "xvr_console_colors.h"
 #include "xvr_lexer.h"
 #include "xvr_module.h"
-#include "xvr_module_compiler.h"
 #include "xvr_module_bundle.h"
+#include "xvr_module_compiler.h"
 #include "xvr_parser.h"
 #include "xvr_print.h"
 #include "xvr_stack.h"
@@ -303,7 +303,7 @@ int repl(const char* filepath) {
             continue;
         }
 
-        void* buffer = Xvr_compileModule(ast);
+        unsigned char* buffer = Xvr_compileModule(ast);
         Xvr_Module module = Xvr_parseModule(buffer);
         Xvr_bindVM(&vm, &module, runCount++ > 0);
 
@@ -444,7 +444,7 @@ int main(int argc, const char* argv[]) {
 
         Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
         Xvr_Ast* ast = Xvr_scanParser(&bucket, &parser);
-        void* buffer = Xvr_compileModule(ast);
+        unsigned char* buffer = Xvr_compileModule(ast);
         Xvr_freeBucket(&bucket);
         free(source);
 

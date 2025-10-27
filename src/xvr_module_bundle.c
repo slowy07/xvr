@@ -93,7 +93,7 @@ void Xvr_appendModuleBundle(Xvr_ModuleBundle* bundle, Xvr_Ast* ast) {
         exit(-1);
     }
 
-    void* module = Xvr_compileModule(ast);
+    unsigned char* module = Xvr_compileModule(ast);
 
     // don't try writing an empty module
     if (module == NULL) {

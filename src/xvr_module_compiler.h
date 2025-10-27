@@ -47,8 +47,8 @@ typedef struct Xvr_private_EscapeArray {
     Xvr_private_EscapeEntry_t data[];
 } Xvr_private_EscapeArray;
 
-XVR_API void* Xvr_private_resizeEscapeArray(Xvr_private_EscapeArray* ptr,
-                                            unsigned int capacity);
+XVR_API Xvr_private_EscapeArray* Xvr_private_resizeEscapeArray(
+    Xvr_private_EscapeArray* ptr, unsigned int capacity);
 
 // structure for holding the module as it is built
 typedef struct Xvr_ModuleCompiler {
@@ -83,5 +83,5 @@ typedef struct Xvr_ModuleCompiler {
     bool panic;
 } Xvr_ModuleCompiler;
 
-XVR_API void* Xvr_compileModule(Xvr_Ast* ast);
+XVR_API unsigned char* Xvr_compileModule(Xvr_Ast* ast);
 #endif  // !XVR_ROUTINE_H
