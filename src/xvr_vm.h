@@ -26,44 +26,48 @@ SOFTWARE.
 #define XVR_WM_H
 
 #include "xvr_bucket.h"
-#include "xvr_bytecode.h"
 #include "xvr_common.h"
+#include "xvr_module.h"
 #include "xvr_scope.h"
 #include "xvr_stack.h"
 
 typedef struct Xvr_VM {
-  unsigned char *module;
-  unsigned int moduleSize;
+    unsigned char* code;
 
-  unsigned int paramSize;
-  unsigned int jumpsSize;
-  unsigned int dataSize;
-  unsigned int subsSize;
+    // metadata
+    unsigned int jumpsCount;
+    unsigned int paramCount;
+    unsigned int dataCount;
+    unsigned int subsCount;
 
-  unsigned int paramAddr;
-  unsigned int codeAddr;
-  unsigned int jumpsAddr;
-  unsigned int dataAddr;
-  unsigned int subsAddr;
+    unsigned int codeAddr;
+    unsigned int jumpsAddr;
+    unsigned int paramAddr;
+    unsigned int dataAddr;
+    unsigned int subsAddr;
 
-  unsigned int programCounter;
-  Xvr_Stack *stack;
+    // execution utils
+    unsigned int programCounter;
 
-  Xvr_Scope *scope;
-  Xvr_Bucket *stringBucket;
-  Xvr_Bucket *scopeBucket;
+    // scope - block-level key/value pairs
+    Xvr_Scope* scope;
+
+    // stack - immediate-level values only
+    Xvr_Stack* stack;
+
+    // easy access to memory
+    Xvr_Bucket* stringBucket;
+    Xvr_Bucket* scopeBucket;
 } Xvr_VM;
 
-XVR_API void Xvr_initVM(Xvr_VM *vm);
-XVR_API void Xvr_bindVM(Xvr_VM *vm,
-                        struct Xvr_Bytecode *bc); // process the version data
+XVR_API void Xvr_resetVM(Xvr_VM* vm);
 
-XVR_API void
-Xvr_bindVMToModule(Xvr_VM *vm,
-                   unsigned char *module); // process the routine only
+XVR_API void Xvr_initVM(Xvr_VM* vm);
+XVR_API void Xvr_inheritVM(Xvr_VM* vm, Xvr_VM* parent);
 
-XVR_API void Xvr_runVM(Xvr_VM *vm);
-XVR_API void Xvr_freeVM(Xvr_VM *vm);
-XVR_API void Xvr_resetVM(Xvr_VM *vm);
+XVR_API void Xvr_bindVM(Xvr_VM* vm, Xvr_Module* module);
+XVR_API void Xvr_runVM(Xvr_VM* vm);
 
-#endif // !XVR_WM_H
+XVR_API void Xvr_freeVM(Xvr_VM* vm);
+
+#endif  // !XVR_WM_H

@@ -22,29 +22,26 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef XVR_H
-#define XVR_H
+#ifndef XVR_MODULE_BUNDLE_H
+#define XVR_MODULE_BUNDLE_H
 
-// general utilities
-#include "xvr_common.h"
-#include "xvr_console_colors.h"
-
-// basic structures
-#include "xvr_array.h"
-#include "xvr_bucket.h"
-#include "xvr_stack.h"
-#include "xvr_string.h"
-#include "xvr_table.h"
-#include "xvr_value.h"
-
-// IR structures and other components
 #include "xvr_ast.h"
-#include "xvr_routine.h"
+#include "xvr_common.h"
+#include "xvr_module.h"
 
-// pipeline
-#include "xvr_bytecode.h"
-#include "xvr_lexer.h"
-#include "xvr_parser.h"
-#include "xvr_vm.h"
+typedef struct Xvr_ModuleBundle {
+    unsigned char* ptr;
+    unsigned int capacity;
+    unsigned int count;
+} Xvr_ModuleBundle;
 
-#endif // !XVR_H
+XVR_API void Xvr_initModuleBundle(Xvr_ModuleBundle* bundle);
+XVR_API void Xvr_appendModuleBundle(Xvr_ModuleBundle* bundle, Xvr_Ast* ast);
+XVR_API void Xvr_freeModuleBundle(Xvr_ModuleBundle* bundle);
+
+XVR_API void Xvr_bindModuleBundle(Xvr_ModuleBundle* bundle, unsigned char* ptr,
+                                  unsigned int size);
+XVR_API Xvr_Module Xvr_extractModuleFromBundle(Xvr_ModuleBundle* bundle,
+                                               unsigned char index);
+
+#endif  // !XVR_MODULE_BUNDLE_H

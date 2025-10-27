@@ -2,11 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "xvr_bucket.h"
-#include "xvr_bytecode.h"
 #include "xvr_common.h"
 #include "xvr_console_colors.h"
 #include "xvr_lexer.h"
+#include "xvr_module.h"
+#include "xvr_module_builder.h"
+#include "xvr_module_bundle.h"
 #include "xvr_parser.h"
 #include "xvr_print.h"
 #include "xvr_stack.h"
@@ -300,13 +301,13 @@ int repl(const char* filepath) {
             continue;
         }
 
-        Xvr_Bytecode bc = Xvr_compileBytecode(ast);
-        Xvr_bindVM(&vm, &bc);
+        void* buffer = Xvr_compileModuleBuilder(ast);
+        Xvr_Module module = Xvr_parseModule(buffer);
+        Xvr_bindVM(&vm, &module);
 
         Xvr_runVM(&vm);
-
         Xvr_resetVM(&vm);
-        Xvr_freeBytecode(bc);
+        free(buffer);
 
         printf("%s >> ", prompt);
     }
@@ -441,13 +442,15 @@ int main(int argc, const char* argv[]) {
 
         Xvr_Bucket* bucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
         Xvr_Ast* ast = Xvr_scanParser(&bucket, &parser);
+        void* buffer = Xvr_compileModuleBuilder(ast);
+        Xvr_freeBucket(&bucket);
+        free(source);
 
-        Xvr_Bytecode bc = Xvr_compileBytecode(ast);
-
-        // run the setup
         Xvr_VM vm;
         Xvr_initVM(&vm);
-        Xvr_bindVM(&vm, &bc);
+
+        Xvr_Module module = Xvr_parseModule(buffer);
+        Xvr_bindVM(&vm, &module);
 
         Xvr_runVM(&vm);
 
@@ -457,9 +460,7 @@ int main(int argc, const char* argv[]) {
         }
 
         Xvr_freeVM(&vm);
-        Xvr_freeBytecode(bc);
-        Xvr_freeBucket(&bucket);
-        free(source);
+        free(buffer);
     } else {
         repl(argv[0]);
     }

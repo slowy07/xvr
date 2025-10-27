@@ -37,8 +37,8 @@ SOFTWARE.
 #endif  // !XVR_ESCAPE_EXPANSION_RATE
 
 typedef struct Xvr_private_EscapeEntry_t {
-    unsigned int addr;
-    unsigned int depth;
+    unsigned int addr;   // the address to write *to*
+    unsigned int depth;  // the current depth
 } Xvr_private_EscapeEntry_t;
 
 typedef struct Xvr_private_EscapeArray {
@@ -47,15 +47,11 @@ typedef struct Xvr_private_EscapeArray {
     Xvr_private_EscapeEntry_t data[];
 } Xvr_private_EscapeArray;
 
-XVR_API void* Xvr_private_resizeArray(Xvr_private_EscapeArray* ptr,
-                                      unsigned int capacity);
+XVR_API void* Xvr_private_resizeEscapeArray(Xvr_private_EscapeArray* ptr,
+                                            unsigned int capacity);
 
-typedef struct Xvr_Routine {
-    unsigned char* param;  // c-string params in sequence (could be moved below
-                           // the jump table?)
-    unsigned int paramCapacity;
-    unsigned int paramCount;
-
+// structure for holding the module as it is built
+typedef struct Xvr_ModuleBuilder {
     unsigned char* code;  // the instruction set
     unsigned int codeCapacity;
     unsigned int codeCount;
@@ -65,21 +61,27 @@ typedef struct Xvr_Routine {
     unsigned int jumpsCapacity;
     unsigned int jumpsCount;
 
-    unsigned char* data;  //{type,val} tuples of data
+    unsigned char* param;  // each 'param' is the starting address of a name
+                           // string within 'data'
+    unsigned int paramCapacity;
+    unsigned int paramCount;
+
+    unsigned char* data;  // a block of read-only data
     unsigned int dataCapacity;
     unsigned int dataCount;
 
-    unsigned char* subs;  // subroutines, recursively
+    unsigned char* subs;  // submodules, built recursively
     unsigned int subsCapacity;
     unsigned int subsCount;
 
+    // tools for handling the build process
     unsigned int currentScopeDepth;
     Xvr_private_EscapeArray* breakEscapes;
     Xvr_private_EscapeArray* continueEscapes;
 
+    // compilation errors
     bool panic;
-} Xvr_Routine;
+} Xvr_ModuleBuilder;
 
-XVR_API void* Xvr_compileRoutine(Xvr_Ast* ast);
-
+XVR_API void* Xvr_compileModuleBuilder(Xvr_Ast* ast);
 #endif  // !XVR_ROUTINE_H

@@ -22,21 +22,29 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef XVR_BYTECODE_H
-#define XVR_BYTECODE_H
+#ifndef XVR_MODULE_H
+#define XVR_MODULE_H
 
-#include "xvr_ast.h"
 #include "xvr_common.h"
+#include "xvr_scope.h"
 
-typedef struct Xvr_Bytecode {
-  unsigned char *ptr;
-  unsigned int capacity;
-  unsigned int count;
+typedef struct Xvr_Module {
+    Xvr_Scope* scopePtr;
 
-  unsigned int moduleCount;
-} Xvr_Bytecode;
+    unsigned char* code;
 
-XVR_API Xvr_Bytecode Xvr_compileBytecode(Xvr_Ast *ast);
-XVR_API void Xvr_freeBytecode(Xvr_Bytecode bc);
+    unsigned int jumpsCount;
+    unsigned int paramCount;
+    unsigned int dataCount;
+    unsigned int subsCount;
 
-#endif // !XVR_BYTECODE_H
+    unsigned int codeAddr;
+    unsigned int jumpsAddr;
+    unsigned int paramAddr;
+    unsigned int dataAddr;
+    unsigned int subsAddr;
+} Xvr_Module;
+
+XVR_API Xvr_Module Xvr_parseModule(unsigned char* ptr);
+
+#endif  // !XVR_MODULE_H

@@ -31,7 +31,6 @@ SOFTWARE.
 #include "xvr_array.h"
 #include "xvr_ast.h"
 #include "xvr_bucket.h"
-#include "xvr_bytecode.h"
 #include "xvr_console_colors.h"
 #include "xvr_opcodes.h"
 #include "xvr_print.h"
@@ -42,16 +41,16 @@ SOFTWARE.
 #include "xvr_value.h"
 
 // utilities
-#define READ_BYTE(vm) vm->module[vm->programCounter++]
+#define READ_BYTE(vm) vm->code[vm->programCounter++]
 
 #define READ_UNSIGNED_INT(vm) \
-    *((unsigned int*)(vm->module + readPostfixUtil(&(vm->programCounter), 4)))
+    *((unsigned int*)(vm->code + readPostfixUtil(&(vm->programCounter), 4)))
 
 #define READ_INT(vm) \
-    *((int*)(vm->module + readPostfixUtil(&(vm->programCounter), 4)))
+    *((int*)(vm->code + readPostfixUtil(&(vm->programCounter), 4)))
 
 #define READ_FLOAT(vm) \
-    *((float*)(vm->module + readPostfixUtil(&(vm->programCounter), 4)))
+    *((float*)(vm->code + readPostfixUtil(&(vm->programCounter), 4)))
 
 static inline int readPostfixUtil(unsigned int* ptr, int amount) {
     int ret = *ptr;
@@ -96,10 +95,9 @@ static void processRead(Xvr_VM* vm) {
         enum Xvr_StringType stringType = READ_BYTE(vm);
         int len = (int)READ_BYTE(vm);
 
-        unsigned int jump =
-            *((int*)(vm->module + vm->jumpsAddr + READ_INT(vm)));
+        unsigned int jump = *((int*)(vm->code + vm->jumpsAddr + READ_INT(vm)));
 
-        char* cstring = (char*)(vm->module + vm->dataAddr + jump);
+        char* cstring = (char*)(vm->code + vm->dataAddr + jump);
 
         if (stringType == XVR_STRING_LEAF) {
             value = XVR_VALUE_FROM_STRING(
@@ -215,9 +213,9 @@ static void processDeclare(Xvr_VM* vm) {
     bool constant = READ_BYTE(vm);
 
     unsigned int jump =
-        *(unsigned int*)(vm->module + vm->jumpsAddr + READ_INT(vm));
+        *(unsigned int*)(vm->code + vm->jumpsAddr + READ_INT(vm));
 
-    char* cstring = (char*)(vm->module + vm->dataAddr + jump);
+    char* cstring = (char*)(vm->code + vm->dataAddr + jump);
 
     Xvr_String* name = Xvr_createNameStringLength(&vm->stringBucket, cstring,
                                                   len, type, constant);
@@ -937,126 +935,73 @@ static void process(Xvr_VM* vm) {
     }
 }
 
-void Xvr_initVM(Xvr_VM* vm) {
-    vm->stringBucket = NULL;
-    vm->scopeBucket = NULL;
-    vm->stack = NULL;
-    vm->scope = NULL;
-
-    Xvr_resetVM(vm);
-}
-
-void Xvr_bindVM(Xvr_VM* vm, struct Xvr_Bytecode* bc) {
-    if (bc->ptr[0] != XVR_VERSION_MAJOR || bc->ptr[1] > XVR_VERSION_MINOR) {
-        fprintf(stderr,
-                XVR_CC_ERROR
-                "ERROR: Wrong bytecode version found: expected %d.%d.%d found "
-                "%d.%d.%d, exiting\n" XVR_CC_RESET,
-                XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH,
-                bc->ptr[0], bc->ptr[1], bc->ptr[2]);
-        exit(-1);
-    }
-
-    if (bc->ptr[2] != XVR_VERSION_PATCH) {
-        fprintf(stderr,
-                XVR_CC_WARN
-                "WARNING: Wrong bytecode version found: expected %d.%d.%d "
-                "found %d.%d.%d, continuing\n" XVR_CC_RESET,
-                XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH,
-                bc->ptr[0], bc->ptr[1], bc->ptr[2]);
-    }
-
-    if (strcmp((char*)(bc->ptr + 3), XVR_VERSION_BUILD) != 0) {
-        fprintf(stderr,
-                XVR_CC_WARN
-                "WARNING: Wrong bytecode build info found: expected '%s' found "
-                "'%s', continuing\n" XVR_CC_RESET,
-                XVR_VERSION_BUILD, (char*)(bc->ptr + 3));
-    }
-
-    int offset = 3 + strlen(XVR_VERSION_BUILD) + 1;
-    if (offset % 4 != 0) {
-        offset += 4 - (offset % 4);
-    }
-
-    if (bc->moduleCount != 0) {
-        Xvr_bindVMToModule(vm, bc->ptr + offset);
-    }
-}
-
-void Xvr_bindVMToModule(Xvr_VM* vm, unsigned char* module) {
-    vm->module = module;
-
-    vm->moduleSize = READ_UNSIGNED_INT(vm);
-    vm->paramSize = READ_UNSIGNED_INT(vm);
-    vm->jumpsSize = READ_UNSIGNED_INT(vm);
-    vm->dataSize = READ_UNSIGNED_INT(vm);
-    vm->subsSize = READ_UNSIGNED_INT(vm);
-
-    if (vm->paramSize > 0) {
-        vm->paramAddr = READ_UNSIGNED_INT(vm);
-    }
-
-    vm->codeAddr = READ_UNSIGNED_INT(vm);
-
-    if (vm->jumpsSize > 0) {
-        vm->jumpsAddr = READ_UNSIGNED_INT(vm);
-    }
-
-    if (vm->dataSize > 0) {
-        vm->dataAddr = READ_UNSIGNED_INT(vm);
-    }
-
-    if (vm->subsSize > 0) {
-        vm->subsAddr = READ_UNSIGNED_INT(vm);
-    }
-
-    if (vm->stringBucket == NULL) {
-        vm->stringBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
-    }
-    if (vm->scopeBucket == NULL) {
-        vm->scopeBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
-    }
-    if (vm->stack == NULL) {
-        vm->stack = Xvr_allocateStack();
-    }
-    if (vm->scope == NULL) {
-        vm->scope = Xvr_pushScope(&vm->scopeBucket, NULL);
-    }
-}
-
-void Xvr_runVM(Xvr_VM* vm) {
-    if (vm->module == NULL) {
-        return;
-    }
-    vm->programCounter = vm->codeAddr;
-
-    process(vm);
-}
-
-void Xvr_freeVM(Xvr_VM* vm) {
-    Xvr_freeStack(vm->stack);
-    Xvr_popScope(vm->scope);
-    Xvr_freeBucket(&vm->stringBucket);
-    Xvr_freeBucket(&vm->scopeBucket);
-}
-
 void Xvr_resetVM(Xvr_VM* vm) {
-    vm->module = NULL;
-    vm->moduleSize = 0;
+    vm->code = NULL;
 
-    vm->paramSize = 0;
-    vm->jumpsSize = 0;
-    vm->dataSize = 0;
-    vm->subsSize = 0;
+    vm->jumpsCount = 0;
+    vm->paramCount = 0;
+    vm->dataCount = 0;
+    vm->subsCount = 0;
 
-    vm->paramAddr = 0;
     vm->codeAddr = 0;
     vm->jumpsAddr = 0;
+    vm->paramAddr = 0;
     vm->dataAddr = 0;
     vm->subsAddr = 0;
 
     vm->programCounter = 0;
-
     Xvr_resetStack(&vm->stack);
+}
+
+void Xvr_initVM(Xvr_VM* vm) {
+    vm->scope = NULL;
+    vm->stack = Xvr_allocateStack();
+    vm->stringBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
+    vm->scopeBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
+
+    Xvr_resetVM(vm);
+}
+
+void Xvr_inheritVM(Xvr_VM* vm, Xvr_VM* parent) {
+    vm->scope = NULL;
+    vm->stack = Xvr_allocateStack();
+    vm->stringBucket = parent->stringBucket;
+    vm->scopeBucket = parent->scopeBucket;
+
+    Xvr_resetVM(vm);
+}
+
+void Xvr_bindVM(Xvr_VM* vm, Xvr_Module* module) {
+    vm->code = module->code;
+
+    vm->jumpsCount = module->jumpsCount;
+    vm->paramCount = module->paramCount;
+    vm->dataCount = module->dataCount;
+    vm->subsCount = module->subsCount;
+
+    vm->codeAddr = module->codeAddr;
+    vm->jumpsAddr = module->jumpsAddr;
+    vm->paramAddr = module->paramAddr;
+    vm->dataAddr = module->dataAddr;
+    vm->subsAddr = module->subsAddr;
+
+    vm->scope = Xvr_pushScope(&vm->scopeBucket, module->scopePtr);
+}
+
+void Xvr_runVM(Xvr_VM* vm) {
+    if (vm->codeAddr == 0) {
+        return;
+    }
+    vm->programCounter = vm->codeAddr;
+    process(vm);
+}
+
+void Xvr_freeVM(Xvr_VM* vm) {
+    Xvr_resetVM(vm);
+
+    Xvr_popScope(vm->scope);
+
+    Xvr_freeStack(vm->stack);
+    Xvr_freeBucket(&vm->stringBucket);
+    Xvr_freeBucket(&vm->scopeBucket);
 }
