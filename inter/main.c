@@ -272,6 +272,8 @@ int repl(const char* filepath) {
 
     printf("%s >> ", prompt);
 
+    unsigned int runCount = 0;
+
     while (fgets(inputBuffer, INPUT_BUFFER_SIZE, stdin)) {
         unsigned int length = strlen(inputBuffer);
         if (inputBuffer[length - 1] == '\n') {
@@ -303,10 +305,10 @@ int repl(const char* filepath) {
 
         void* buffer = Xvr_compileModuleBuilder(ast);
         Xvr_Module module = Xvr_parseModule(buffer);
-        Xvr_bindVM(&vm, &module);
+        Xvr_bindVM(&vm, &module, runCount++ > 0);
 
         Xvr_runVM(&vm);
-        Xvr_resetVM(&vm);
+        Xvr_resetVM(&vm, true);
         free(buffer);
 
         printf("%s >> ", prompt);
@@ -450,7 +452,7 @@ int main(int argc, const char* argv[]) {
         Xvr_initVM(&vm);
 
         Xvr_Module module = Xvr_parseModule(buffer);
-        Xvr_bindVM(&vm, &module);
+        Xvr_bindVM(&vm, &module, false);
 
         Xvr_runVM(&vm);
 

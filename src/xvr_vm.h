@@ -60,12 +60,12 @@ typedef struct Xvr_VM {
     Xvr_Bucket* scopeBucket;
 } Xvr_VM;
 
-XVR_API void Xvr_resetVM(Xvr_VM* vm);
+XVR_API void Xvr_resetVM(Xvr_VM* vm, bool preserveScope);
 
 XVR_API void Xvr_initVM(Xvr_VM* vm);
 XVR_API void Xvr_inheritVM(Xvr_VM* vm, Xvr_VM* parent);
 
-XVR_API void Xvr_bindVM(Xvr_VM* vm, Xvr_Module* module);
+XVR_API void Xvr_bindVM(Xvr_VM* vm, Xvr_Module* module, bool preserveScope);
 XVR_API void Xvr_runVM(Xvr_VM* vm);
 
 XVR_API void Xvr_freeVM(Xvr_VM* vm);

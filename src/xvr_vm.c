@@ -935,7 +935,7 @@ static void process(Xvr_VM* vm) {
     }
 }
 
-void Xvr_resetVM(Xvr_VM* vm) {
+void Xvr_resetVM(Xvr_VM* vm, bool preserveScope) {
     vm->code = NULL;
 
     vm->jumpsCount = 0;
@@ -951,6 +951,10 @@ void Xvr_resetVM(Xvr_VM* vm) {
 
     vm->programCounter = 0;
     Xvr_resetStack(&vm->stack);
+
+    if (preserveScope == false) {
+        vm->scope = Xvr_popScope(vm->scope);
+    }
 }
 
 void Xvr_initVM(Xvr_VM* vm) {
@@ -959,7 +963,7 @@ void Xvr_initVM(Xvr_VM* vm) {
     vm->stringBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
     vm->scopeBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
 
-    Xvr_resetVM(vm);
+    Xvr_resetVM(vm, true);
 }
 
 void Xvr_inheritVM(Xvr_VM* vm, Xvr_VM* parent) {
@@ -968,10 +972,10 @@ void Xvr_inheritVM(Xvr_VM* vm, Xvr_VM* parent) {
     vm->stringBucket = parent->stringBucket;
     vm->scopeBucket = parent->scopeBucket;
 
-    Xvr_resetVM(vm);
+    Xvr_resetVM(vm, true);
 }
 
-void Xvr_bindVM(Xvr_VM* vm, Xvr_Module* module) {
+void Xvr_bindVM(Xvr_VM* vm, Xvr_Module* module, bool preserveScope) {
     vm->code = module->code;
 
     vm->jumpsCount = module->jumpsCount;
@@ -985,7 +989,9 @@ void Xvr_bindVM(Xvr_VM* vm, Xvr_Module* module) {
     vm->dataAddr = module->dataAddr;
     vm->subsAddr = module->subsAddr;
 
-    vm->scope = Xvr_pushScope(&vm->scopeBucket, module->scopePtr);
+    if (preserveScope == false) {
+        vm->scope = Xvr_pushScope(&vm->scopeBucket, module->scopePtr);
+    }
 }
 
 void Xvr_runVM(Xvr_VM* vm) {
@@ -997,9 +1003,7 @@ void Xvr_runVM(Xvr_VM* vm) {
 }
 
 void Xvr_freeVM(Xvr_VM* vm) {
-    Xvr_resetVM(vm);
-
-    Xvr_popScope(vm->scope);
+    Xvr_resetVM(vm, false);
 
     Xvr_freeStack(vm->stack);
     Xvr_freeBucket(&vm->stringBucket);
