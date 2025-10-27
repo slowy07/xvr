@@ -121,6 +121,7 @@ static void processRead(Xvr_VM* vm) {
         unsigned int capacity = count > XVR_ARRAY_INITIAL_CAPACITY
                                     ? count
                                     : XVR_ARRAY_INITIAL_CAPACITY;
+
         capacity--;
         capacity |= capacity >> 1;
         capacity |= capacity >> 2;
@@ -162,6 +163,7 @@ static void processRead(Xvr_VM* vm) {
 
         Xvr_Table* table = Xvr_private_adjustTableCapacity(NULL, capacity);
 
+        // read in backwards from the stack
         for (unsigned int i = 0; i < count / 2; i++) {
             Xvr_Value v = Xvr_popStack(&vm->stack);
             Xvr_Value k = Xvr_popStack(&vm->stack);
@@ -222,6 +224,10 @@ static void processDeclare(Xvr_VM* vm) {
 
     Xvr_Value value = Xvr_popStack(&vm->stack);
 
+    if (type == XVR_VALUE_FLOAT && value.type == XVR_VALUE_INTEGER) {
+        value = XVR_VALUE_FROM_FLOAT((float)XVR_VALUE_AS_INTEGER(value));
+    }
+
     Xvr_declareScope(vm->scope, name, value);
 
     Xvr_freeString(name);
@@ -239,11 +245,18 @@ static void processAssign(Xvr_VM* vm) {
         return;
     }
 
+    if (XVR_VALUE_AS_STRING(name)->name.varType == XVR_VALUE_FLOAT &&
+        value.type == XVR_VALUE_INTEGER) {
+        value = XVR_VALUE_FROM_FLOAT((float)XVR_VALUE_AS_INTEGER(value));
+    }
+
     Xvr_assignScope(vm->scope, XVR_VALUE_AS_STRING(name), value);
+
     bool chainedAssignment = READ_BYTE(vm);
     if (chainedAssignment) {
         Xvr_pushStack(&vm->stack, Xvr_copyValue(value));
     }
+
     Xvr_freeValue(name);
 }
 
@@ -265,7 +278,7 @@ static void processAssignCompound(Xvr_VM* vm) {
 
     if (XVR_VALUE_IS_ARRAY(target)) {
         if (XVR_VALUE_IS_INTEGER(key) != true) {
-            Xvr_error("bad key type of assignment target");
+            Xvr_error("Bad key type for assignment target");
             Xvr_freeValue(target);
             Xvr_freeValue(key);
             Xvr_freeValue(value);
@@ -276,7 +289,7 @@ static void processAssignCompound(Xvr_VM* vm) {
         int index = XVR_VALUE_AS_INTEGER(key);
 
         if (index < 0 || (unsigned int)index >= array->count) {
-            Xvr_error("index of assignment target out of bounds");
+            Xvr_error("Index of assignment target out of bounds");
             Xvr_freeValue(target);
             Xvr_freeValue(key);
             Xvr_freeValue(value);
@@ -289,8 +302,11 @@ static void processAssignCompound(Xvr_VM* vm) {
         if (chainedAssignment) {
             Xvr_pushStack(&vm->stack, Xvr_copyValue(value));
         }
+
         Xvr_freeValue(value);
-    } else if (XVR_VALUE_IS_TABLE(target)) {
+    }
+
+    else if (XVR_VALUE_IS_TABLE(target)) {
         Xvr_Table* table = XVR_VALUE_AS_TABLE(target);
 
         Xvr_insertTable(&table, Xvr_copyValue(Xvr_unwrapValue(key)),
@@ -300,9 +316,13 @@ static void processAssignCompound(Xvr_VM* vm) {
         if (chainedAssignment) {
             Xvr_pushStack(&vm->stack, Xvr_copyValue(value));
         }
+
         Xvr_freeValue(value);
-    } else {
-        Xvr_error("invalid assignment target");
+    }
+
+    else {
+        Xvr_error("Invalid assignment target");
+        Xvr_freeValue(target);
         Xvr_freeValue(key);
         Xvr_freeValue(value);
         return;
@@ -331,7 +351,6 @@ static void processAccess(Xvr_VM* vm) {
     if (XVR_VALUE_IS_REFERENCE(*valuePtr) || XVR_VALUE_IS_ARRAY(*valuePtr) ||
         XVR_VALUE_IS_TABLE(*valuePtr)) {
         Xvr_Value ref = XVR_REFERENCE_FROM_POINTER(valuePtr);
-
         Xvr_pushStack(&vm->stack, ref);
     }
 
@@ -567,6 +586,7 @@ static void processJump(Xvr_VM* vm) {
             Xvr_freeValue(value);
             break;
         }
+
         Xvr_freeValue(value);
         return;
     }
@@ -593,6 +613,7 @@ static void processEscape(Xvr_VM* vm) {
 
     while (diff > 0 && vm->scope != NULL) {
         vm->scope = Xvr_popScope(vm->scope);
+        diff--;
     }
 }
 
@@ -643,7 +664,6 @@ static void processPrint(Xvr_VM* vm) {
 
     free(buffer);
     Xvr_freeString(string);
-
     Xvr_freeValue(value);
 }
 
@@ -653,7 +673,6 @@ static void processConcat(Xvr_VM* vm) {
 
     if (!XVR_VALUE_IS_STRING(left) || !XVR_VALUE_IS_STRING(right)) {
         Xvr_error("Failed to concatenate a value that is not a string");
-
         Xvr_freeValue(left);
         Xvr_freeValue(right);
         Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_NULL());
@@ -668,6 +687,7 @@ static void processConcat(Xvr_VM* vm) {
 
 static void processIndex(Xvr_VM* vm) {
     unsigned char count = READ_BYTE(vm);
+
     Xvr_Value value = XVR_VALUE_FROM_NULL();
     Xvr_Value index = XVR_VALUE_FROM_NULL();
     Xvr_Value length = XVR_VALUE_FROM_NULL();
@@ -739,7 +759,7 @@ static void processIndex(Xvr_VM* vm) {
 
     else if (XVR_VALUE_IS_ARRAY(value)) {
         if (!XVR_VALUE_IS_INTEGER(index)) {
-            Xvr_error("Failed to index a string");
+            Xvr_error("Failed to index an array");
             Xvr_freeValue(value);
             Xvr_freeValue(index);
             Xvr_freeValue(length);
@@ -748,7 +768,7 @@ static void processIndex(Xvr_VM* vm) {
         }
 
         if (!(XVR_VALUE_IS_NULL(length) || XVR_VALUE_IS_INTEGER(length))) {
-            Xvr_error("Failed to index-length a string");
+            Xvr_error("Failed to index-length an array");
             Xvr_freeValue(value);
             Xvr_freeValue(index);
             Xvr_freeValue(length);
@@ -774,16 +794,17 @@ static void processIndex(Xvr_VM* vm) {
             XVR_VALUE_IS_ARRAY(array->data[i]) ||
             XVR_VALUE_IS_TABLE(array->data[i])) {
             Xvr_Value ref = XVR_REFERENCE_FROM_POINTER(&(array->data[i]));
-
             Xvr_pushStack(&vm->stack, ref);
         }
 
         else {
             Xvr_pushStack(&vm->stack, Xvr_copyValue(array->data[i]));
         }
-    } else if (XVR_VALUE_IS_TABLE(value)) {
+    }
+
+    else if (XVR_VALUE_IS_TABLE(value)) {
         if (XVR_VALUE_IS_NULL(length) != true) {
-            Xvr_error("can't index-length a table");
+            Xvr_error("Can't index-length a table");
             Xvr_freeValue(value);
             Xvr_freeValue(index);
             Xvr_freeValue(length);
@@ -795,7 +816,7 @@ static void processIndex(Xvr_VM* vm) {
         Xvr_TableEntry* entry = Xvr_private_lookupTableEntryPtr(&table, index);
 
         if (entry == NULL) {
-            Xvr_error("table key not found");
+            Xvr_error("Table key not found");
             Xvr_freeValue(value);
             Xvr_freeValue(index);
             Xvr_freeValue(length);
@@ -950,6 +971,7 @@ void Xvr_resetVM(Xvr_VM* vm, bool preserveScope) {
     vm->subsAddr = 0;
 
     vm->programCounter = 0;
+
     Xvr_resetStack(&vm->stack);
 
     if (preserveScope == false) {
@@ -999,6 +1021,7 @@ void Xvr_runVM(Xvr_VM* vm) {
         return;
     }
     vm->programCounter = vm->codeAddr;
+
     process(vm);
 }
 

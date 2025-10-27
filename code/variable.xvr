@@ -72,3 +72,15 @@ print penyanyi[1, 3];
   assert angka++ == 20, "gagal increment postfix++";
   assert angka-- == 21, "gagal increment postfix--";
 }
+
+{
+  var angka: float = 3.14159;
+  assert angka == 3.14159, "gagal declare angka float";
+  print(angka);
+}
+
+{
+  var angka: float = 0;
+  assert angka == 0.0, "gagal declare angka float kosong";
+  print(angka);
+}

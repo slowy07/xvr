@@ -214,6 +214,14 @@ bool Xvr_checkValueIsTruthy(Xvr_Value value) {
         return value.as.boolean;
     }
 
+    if (value.type == XVR_VALUE_INTEGER) {
+        return value.as.integer != 0;
+    }
+
+    if (value.type == XVR_VALUE_FLOAT) {
+        return value.as.number != 0.0f;
+    }
+
     // anything else is truthy
     return true;
 }

@@ -37,8 +37,8 @@ Xvr_Stack* Xvr_allocateStack(void) {
     if (stack == NULL) {
         fprintf(stderr,
                 XVR_CC_ERROR
-                "ERROR: Failed to allocate a 'Xvr_Stack' of %d "
-                "capacity (%d space in memory)\n" XVR_CC_RESET,
+                "ERROR: Failed to allocate a 'Xvr_Stack' of %d capacity (%d "
+                "space in memory)\n" XVR_CC_RESET,
                 XVR_STACK_INITIAL_CAPACITY,
                 (int)(XVR_STACK_INITIAL_CAPACITY * sizeof(Xvr_Value) +
                       sizeof(Xvr_Stack)));
@@ -53,6 +53,10 @@ Xvr_Stack* Xvr_allocateStack(void) {
 
 void Xvr_freeStack(Xvr_Stack* stack) {
     if (stack != NULL) {
+        for (unsigned int i = 0; i < stack->count; i++) {
+            Xvr_freeValue(stack->data[i]);
+        }
+
         free(stack);
     }
 }
@@ -62,92 +66,94 @@ void Xvr_resetStack(Xvr_Stack** stackHandle) {
         return;
     }
 
+    // if some values will be removed, free them first
     for (unsigned int i = 0; i < (*stackHandle)->count; i++) {
         Xvr_freeValue((*stackHandle)->data[i]);
     }
 
+    // reset to the stack's default state
     if ((*stackHandle)->capacity > XVR_STACK_INITIAL_CAPACITY) {
         (*stackHandle) = realloc(
             (*stackHandle),
             XVR_STACK_INITIAL_CAPACITY * sizeof(Xvr_Value) + sizeof(Xvr_Stack));
+
         (*stackHandle)->capacity = XVR_STACK_INITIAL_CAPACITY;
     }
 
     (*stackHandle)->count = 0;
 }
 
-void Xvr_pushStack(Xvr_Stack** stack, Xvr_Value value) {
-    if ((*stack)->count >= XVR_STACK_OVERFLOW_THRESHOLD) {
+void Xvr_pushStack(Xvr_Stack** stackHandle, Xvr_Value value) {
+    if ((*stackHandle)->count >= XVR_STACK_OVERFLOW_THRESHOLD) {
         fprintf(stderr, XVR_CC_ERROR "ERROR: Stack overflow\n" XVR_CC_RESET);
         exit(-1);
     }
 
-    // expand the capacity if needed
-    if ((*stack)->count + 1 > (*stack)->capacity) {
-        while ((*stack)->count + 1 > (*stack)->capacity) {
-            (*stack)->capacity =
-                (*stack)->capacity < XVR_STACK_INITIAL_CAPACITY
+    if ((*stackHandle)->count + 1 > (*stackHandle)->capacity) {
+        while ((*stackHandle)->count + 1 > (*stackHandle)->capacity) {
+            (*stackHandle)->capacity =
+                (*stackHandle)->capacity < XVR_STACK_INITIAL_CAPACITY
                     ? XVR_STACK_INITIAL_CAPACITY
-                    : (*stack)->capacity * XVR_STACK_EXPANSION_RATE;
+                    : (*stackHandle)->capacity * XVR_STACK_EXPANSION_RATE;
         }
 
-        unsigned int newCapacity = (*stack)->capacity;
+        unsigned int newCapacity = (*stackHandle)->capacity;
 
-        (*stack) = realloc((*stack),
-                           newCapacity * sizeof(Xvr_Value) + sizeof(Xvr_Stack));
+        (*stackHandle) =
+            realloc((*stackHandle),
+                    newCapacity * sizeof(Xvr_Value) + sizeof(Xvr_Stack));
 
-        if ((*stack) == NULL) {
+        if ((*stackHandle) == NULL) {
             fprintf(stderr,
                     XVR_CC_ERROR
-                    "ERROR: Failed to reallocate a 'Xvr_Stack' of %d"
-                    "capacity (%d space in memory)\n" XVR_CC_RESET,
+                    "ERROR: Failed to reallocate a 'Xvr_Stack' of %d capacity "
+                    "(%d space in memory)\n" XVR_CC_RESET,
                     (int)newCapacity,
                     (int)(newCapacity * sizeof(Xvr_Value) + sizeof(Xvr_Stack)));
             exit(1);
         }
     }
 
-    // Note: "pointer arithmetic in C/C++ is type-relative"
-    ((Xvr_Value*)((*stack) + 1))[(*stack)->count++] = value;
+    ((Xvr_Value*)((*stackHandle) + 1))[(*stackHandle)->count++] = value;
 }
 
-Xvr_Value Xvr_peekStack(Xvr_Stack** stack) {
-    if ((*stack)->count == 0) {
+Xvr_Value Xvr_peekStack(Xvr_Stack** stackHandle) {
+    if ((*stackHandle)->count == 0) {
         fprintf(stderr, XVR_CC_ERROR
-                "ERROR: Stack underflow when peek stack\n" XVR_CC_RESET);
+                "ERROR: Stack underflow when peeking\n" XVR_CC_RESET);
         exit(-1);
     }
 
-    return ((Xvr_Value*)((*stack) + 1))[(*stack)->count - 1];
+    return ((Xvr_Value*)((*stackHandle) + 1))[(*stackHandle)->count - 1];
 }
 
-Xvr_Value Xvr_popStack(Xvr_Stack** stack) {
-    if ((*stack)->count == 0) {
+Xvr_Value Xvr_popStack(Xvr_Stack** stackHandle) {
+    if ((*stackHandle)->count == 0) {
         fprintf(stderr, XVR_CC_ERROR
-                "ERROR: Stack underflow when pop stack\n" XVR_CC_RESET);
+                "ERROR: Stack underflow when popping\n" XVR_CC_RESET);
         exit(-1);
     }
 
-    // shrink if possible
-    if ((*stack)->capacity > XVR_STACK_INITIAL_CAPACITY &&
-        (*stack)->count <=
-            (*stack)->capacity / XVR_STACK_CONTRACTION_THRESHOLD) {
-        (*stack)->capacity /= XVR_STACK_CONTRACTION_THRESHOLD;
-        unsigned int newCapacity = (*stack)->capacity;
+    if ((*stackHandle)->capacity > XVR_STACK_INITIAL_CAPACITY &&
+        (*stackHandle)->count <=
+            (*stackHandle)->capacity / XVR_STACK_CONTRACTION_THRESHOLD) {
+        (*stackHandle)->capacity /= XVR_STACK_CONTRACTION_THRESHOLD;
+        unsigned int newCapacity = (*stackHandle)->capacity;
 
-        (*stack) = realloc((*stack), (*stack)->capacity * sizeof(Xvr_Value) +
-                                         sizeof(Xvr_Stack));
+        (*stackHandle) = realloc(
+            (*stackHandle),
+            (*stackHandle)->capacity * sizeof(Xvr_Value) + sizeof(Xvr_Stack));
 
-        if ((*stack) == NULL) {
+        if ((*stackHandle) == NULL) {
             fprintf(stderr,
                     XVR_CC_ERROR
-                    "ERROR: Failed to reallocate a 'Xvr_Stack' of %d "
-                    "capacity (%d space in memory)\n" XVR_CC_RESET,
+                    "ERROR: Failed to reallocate a 'Xvr_Stack' of %d capacity "
+                    "(%d space in memory)\n" XVR_CC_RESET,
                     (int)newCapacity,
                     (int)(newCapacity * sizeof(Xvr_Value) + sizeof(Xvr_Stack)));
             exit(1);
         }
     }
 
-    return ((Xvr_Value*)((*stack) + 1))[--(*stack)->count];
+    return ((Xvr_Value*)((*stackHandle) + 1))[--(*stackHandle)->count];
 }

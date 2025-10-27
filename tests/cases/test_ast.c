@@ -7,82 +7,56 @@
 #include "xvr_string.h"
 #include "xvr_value.h"
 
-int test_sizeof_ast_64bit(void) {
-#define TEST_SIZEOF(type, size)                                     \
-    if (sizeof(type) != size) {                                     \
-        fprintf(stderr,                                             \
-                XVR_CC_ERROR "ERROR: sizeof(" #type                 \
-                             ") is %d, expected %d\n" XVR_CC_RESET, \
-                (int)sizeof(type), size);                           \
-        ++err;                                                      \
-    }
+#if XVR_BITNESS == 32
+#    define TEST_SIZEOF(type, bit32, bit64)                              \
+        if (sizeof(type) != bit32) {                                     \
+            fprintf(stderr,                                              \
+                    XVR_CC_ERROR                                         \
+                    "ERROR: sizeof(" #type                               \
+                    " ) is %d, expected %d (bitness %d)\n" XVR_CC_RESET, \
+                    (int)sizeof(type), bit32, XVR_BITNESS);              \
+        }
+#elif XVR_BITNESS == 64
+#    define TEST_SIZEOF(type, bit32, bit64)                             \
+        if (sizeof(type) != bit64) {                                    \
+            fprintf(stderr,                                             \
+                    XVR_CC_ERROR                                        \
+                    "ERROR: sizeof(" #type                              \
+                    ") is %d, expected %d (bitness %d)\n" XVR_CC_RESET, \
+                    (int)sizeof(type), bit32, XVR_BITNESS);             \
+        }
+#else
+#    pragma message( \
+        "unable to test sizeo fo Xvr_Ast members, as XVR_BITNESS is not recognized")
+#    define TEST_SIZEOF(type, bit32, bit64)
+#endif /* if XVR_BITNESS == 32 */
 
+int test_sizeof_ast(void) {
     int err = 0;
-    TEST_SIZEOF(Xvr_AstType, 4);
-    TEST_SIZEOF(Xvr_AstBlock, 32);
-    TEST_SIZEOF(Xvr_AstValue, 24);
-    TEST_SIZEOF(Xvr_AstUnary, 16);
-    TEST_SIZEOF(Xvr_AstBinary, 24);
-    TEST_SIZEOF(Xvr_AstBinaryShortCircuit, 24);
-    TEST_SIZEOF(Xvr_AstCompare, 24);
-    TEST_SIZEOF(Xvr_AstGroup, 16);
-    TEST_SIZEOF(Xvr_AstCompound, 16);
-    TEST_SIZEOF(Xvr_AstAggregate, 24);
-    TEST_SIZEOF(Xvr_AstAssert, 24);
-    TEST_SIZEOF(Xvr_AstIfThenElse, 32);
-    TEST_SIZEOF(Xvr_AstWhileThen, 24);
-    TEST_SIZEOF(Xvr_AstBreak, 4);
-    TEST_SIZEOF(Xvr_AstContinue, 4);
-    TEST_SIZEOF(Xvr_AstPrint, 16);
-    TEST_SIZEOF(Xvr_AstVarDeclare, 24);
-    TEST_SIZEOF(Xvr_AstVarAssign, 24);
-    TEST_SIZEOF(Xvr_AstVarAccess, 16);
-    TEST_SIZEOF(Xvr_AstPass, 4);
-    TEST_SIZEOF(Xvr_AstError, 4);
-    TEST_SIZEOF(Xvr_AstEnd, 4);
-    TEST_SIZEOF(Xvr_Ast, 32);
 
-#undef TEST_SIZEOF
-
-    return -err;
-}
-
-int test_sizeof_ast_32bit(void) {
-#define TEST_SIZEOF(type, size)                                     \
-    if (sizeof(type) != size) {                                     \
-        fprintf(stderr,                                             \
-                XVR_CC_ERROR "ERROR: sizeof(" #type                 \
-                             ") is %d, expected %d\n" XVR_CC_RESET, \
-                (int)sizeof(type), size);                           \
-        ++err;                                                      \
-    }
-
-    int err = 0;
-    TEST_SIZEOF(Xvr_AstType, 4);
-    TEST_SIZEOF(Xvr_AstBlock, 20);
-    TEST_SIZEOF(Xvr_AstValue, 12);
-    TEST_SIZEOF(Xvr_AstUnary, 12);
-    TEST_SIZEOF(Xvr_AstBinary, 16);
-    TEST_SIZEOF(Xvr_AstBinaryShortCircuit, 16);
-    TEST_SIZEOF(Xvr_AstCompare, 16);
-    TEST_SIZEOF(Xvr_AstGroup, 8);
-    TEST_SIZEOF(Xvr_AstCompound, 12);
-    TEST_SIZEOF(Xvr_AstAggregate, 16);
-    TEST_SIZEOF(Xvr_AstAssert, 12);
-    TEST_SIZEOF(Xvr_AstIfThenElse, 16);
-    TEST_SIZEOF(Xvr_AstWhileThen, 12);
-    TEST_SIZEOF(Xvr_AstBreak, 4);
-    TEST_SIZEOF(Xvr_AstContinue, 4);
-    TEST_SIZEOF(Xvr_AstPrint, 8);
-    TEST_SIZEOF(Xvr_AstVarDeclare, 12);
-    TEST_SIZEOF(Xvr_AstVarAssign, 16);
-    TEST_SIZEOF(Xvr_AstVarAccess, 8);
-    TEST_SIZEOF(Xvr_AstPass, 4);
-    TEST_SIZEOF(Xvr_AstError, 4);
-    TEST_SIZEOF(Xvr_AstEnd, 4);
-    TEST_SIZEOF(Xvr_Ast, 20);
-#undef TEST_SIZEOF
-
+    TEST_SIZEOF(Xvr_AstType, 4, 4);
+    TEST_SIZEOF(Xvr_AstBlock, 20, 32);
+    TEST_SIZEOF(Xvr_AstValue, 12, 24);
+    TEST_SIZEOF(Xvr_AstUnary, 12, 16);
+    TEST_SIZEOF(Xvr_AstBinary, 16, 24);
+    TEST_SIZEOF(Xvr_AstBinaryShortCircuit, 16, 24);
+    TEST_SIZEOF(Xvr_AstCompare, 16, 24);
+    TEST_SIZEOF(Xvr_AstGroup, 8, 16);
+    TEST_SIZEOF(Xvr_AstCompound, 12, 16);
+    TEST_SIZEOF(Xvr_AstAggregate, 16, 24);
+    TEST_SIZEOF(Xvr_AstAssert, 12, 24);
+    TEST_SIZEOF(Xvr_AstIfThenElse, 16, 32);
+    TEST_SIZEOF(Xvr_AstWhileThen, 12, 24);
+    TEST_SIZEOF(Xvr_AstBreak, 4, 4);
+    TEST_SIZEOF(Xvr_AstContinue, 4, 4);
+    TEST_SIZEOF(Xvr_AstPrint, 8, 16);
+    TEST_SIZEOF(Xvr_AstVarDeclare, 12, 24);
+    TEST_SIZEOF(Xvr_AstVarAssign, 16, 24);
+    TEST_SIZEOF(Xvr_AstVarAccess, 8, 16);
+    TEST_SIZEOF(Xvr_AstPass, 4, 4);
+    TEST_SIZEOF(Xvr_AstError, 4, 4);
+    TEST_SIZEOF(Xvr_AstEnd, 4, 4);
+    TEST_SIZEOF(Xvr_Ast, 20, 32)
     return -err;
 }
 
@@ -238,30 +212,15 @@ int main(void) {
     printf(XVR_CC_WARN "TESTING: XVR AST\n" XVR_CC_RESET);
     int total = 0, res = 0;
 
-#if XVR_BITNESS == 64
-    res = test_sizeof_ast_64bit();
-    total += res;
-    if (res == 0) {
-        printf(XVR_CC_NOTICE
-               "SIZEOF WITH 64 BIT: PASSED aman loh ya cik\n" XVR_CC_RESET);
+    {
+        res = test_sizeof_ast();
+        if (res == 0) {
+            printf(
+                XVR_CC_NOTICE
+                "SIZEOF AST: woilah cik aman loh test sizeof\n" XVR_CC_RESET);
+        }
+        total += res;
     }
-#elif XVR_BITNESS == 32
-    res = test_sizeof_ast_32bit();
-    total += res;
-
-    if (res == 0) {
-        printf(XVR_CC_NOTICE
-               "SIZEOF WITH 64 BIT: PASSED aman loh ya cik\n" XVR_CC_RESET);
-    }
-
-#else
-    fprintf(stderr,
-            XVR_CC_WARN
-            "WARNING: Skipping test_sizeof_ast_*bit(); Can't determine the "
-            "'bitness' of this platform (seems to be %d)\n" XVR_CC_RESET,
-            XVR_BITNESS);
-
-#endif /* if XVR_BITNESS == 64 */
 
     {
         Xvr_Bucket* bucketHandle = Xvr_allocateBucket(XVR_BUCKET_IDEAL);

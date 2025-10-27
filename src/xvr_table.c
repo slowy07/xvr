@@ -45,20 +45,16 @@ static void probeAndInsert(Xvr_Table** tableHandle, Xvr_Value key,
             (*tableHandle)->maxPsl = entry.psl > (*tableHandle)->maxPsl
                                          ? entry.psl
                                          : (*tableHandle)->maxPsl;
-
             return;
         }
 
         // if this spot is free, insert and return
         if (XVR_VALUE_IS_NULL((*tableHandle)->data[probe].key)) {
             (*tableHandle)->data[probe] = entry;
-
             (*tableHandle)->count++;
-
             (*tableHandle)->maxPsl = entry.psl > (*tableHandle)->maxPsl
                                          ? entry.psl
                                          : (*tableHandle)->maxPsl;
-
             return;
         }
 
@@ -69,8 +65,8 @@ static void probeAndInsert(Xvr_Table** tableHandle, Xvr_Value key,
             entry = tmp;
         }
 
-        // adjust and continue
-        probe = (probe + 1) % (*tableHandle)->capacity;
+        probe++;
+        probe &= (*tableHandle)->capacity - 1;
         entry.psl++;
     }
 }
@@ -84,8 +80,8 @@ Xvr_Table* Xvr_private_adjustTableCapacity(Xvr_Table* oldTable,
 
     if (newTable == NULL) {
         fprintf(stderr, XVR_CC_ERROR
-                "ERROR: failed to allocate a 'Xvr_Table'\n" XVR_CC_RESET);
-        exit(-1);
+                "ERROR: Failed to allocate a 'Xvr_Table'\n" XVR_CC_RESET);
+        exit(1);
     }
 
     newTable->capacity = newCapacity;
@@ -119,16 +115,18 @@ void Xvr_freeTable(Xvr_Table* table) {
             Xvr_freeValue(table->data[i].key);
             Xvr_freeValue(table->data[i].value);
         }
+
         free(table);
     }
 }
 
 void Xvr_insertTable(Xvr_Table** tableHandle, Xvr_Value key, Xvr_Value value) {
     if (XVR_VALUE_IS_NULL(key) || XVR_VALUE_IS_BOOLEAN(key)) {
-        fprintf(stderr, XVR_CC_ERROR "ERROR: bad table key\n" XVR_CC_RESET);
+        fprintf(stderr, XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
         exit(1);
     }
 
+    // expand the capacity
     if ((*tableHandle)->count >=
         (*tableHandle)->capacity * XVR_TABLE_EXPANSION_THRESHOLD) {
         (*tableHandle) = Xvr_private_adjustTableCapacity(
@@ -142,7 +140,7 @@ void Xvr_insertTable(Xvr_Table** tableHandle, Xvr_Value key, Xvr_Value value) {
 Xvr_TableEntry* Xvr_private_lookupTableEntryPtr(Xvr_Table** tableHandle,
                                                 Xvr_Value key) {
     if (XVR_VALUE_IS_NULL(key) || XVR_VALUE_IS_BOOLEAN(key)) {
-        fprintf(stderr, XVR_CC_ERROR "ERROR: bad table key\n" XVR_CC_RESET);
+        fprintf(stderr, XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
         exit(1);
     }
 
@@ -174,7 +172,7 @@ Xvr_Value Xvr_lookupTable(Xvr_Table** tableHandle, Xvr_Value key) {
 
 void Xvr_removeTable(Xvr_Table** tableHandle, Xvr_Value key) {
     if (XVR_VALUE_IS_NULL(key) || XVR_VALUE_IS_BOOLEAN(key)) {
-        fprintf(stderr, XVR_CC_ERROR "ERROR: bad table key\n" XVR_CC_RESET);
+        fprintf(stderr, XVR_CC_ERROR "ERROR: Bad table key\n" XVR_CC_RESET);
         exit(1);
     }
 
@@ -190,12 +188,13 @@ void Xvr_removeTable(Xvr_Table** tableHandle, Xvr_Value key) {
             return;
         }
 
-        probe = (probe + 1) % (*tableHandle)->capacity;
+        probe++;
+        probe &= (*tableHandle)->capacity - 1;
     }
 
     for (unsigned int i = 0; i < (*tableHandle)->maxPsl; i++) {
-        unsigned int p = (probe + i + 0) % (*tableHandle)->capacity;  // prev
-        unsigned int u = (probe + i + 1) % (*tableHandle)->capacity;  // current
+        unsigned int p = (probe + i + 0) & ((*tableHandle)->capacity - 1);
+        unsigned int u = (probe + i + 1) & ((*tableHandle)->capacity - 1);
 
         (*tableHandle)->data[p] = (*tableHandle)->data[u];
         (*tableHandle)->data[p].psl--;

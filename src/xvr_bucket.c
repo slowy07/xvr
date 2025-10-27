@@ -33,7 +33,7 @@ SOFTWARE.
 // buckets of fun
 Xvr_Bucket* Xvr_allocateBucket(unsigned int capacity) {
     assert(capacity != 0 &&
-           "cannot allocate a 'Xvr_Bucket' with zero capacity");
+           "Cannot allocate a 'Xvr_Bucket' with zero capacity");
 
     Xvr_Bucket* bucket = malloc(sizeof(Xvr_Bucket) + capacity);
 
@@ -57,10 +57,10 @@ Xvr_Bucket* Xvr_allocateBucket(unsigned int capacity) {
 void* Xvr_partitionBucket(Xvr_Bucket** bucketHandle, unsigned int amount) {
     amount = (amount + 3) & ~3;
 
-    assert((*bucketHandle) != NULL && "Expected 'Xvr_Bucket', received NULL");
+    assert((*bucketHandle) != NULL && "Expected a 'Xvr_Bucket', received NULL");
     assert((*bucketHandle)->capacity >= amount &&
-           "ERROR: failed to partition a 'Xvr_Bucket', requested amount is to "
-           "highly");
+           "ERROR: Failed to partition a 'Xvr_Bucket', requested amount is too "
+           "high");
 
     if ((*bucketHandle)->capacity < (*bucketHandle)->count + amount) {
         Xvr_Bucket* tmp = Xvr_allocateBucket((*bucketHandle)->capacity);
@@ -76,10 +76,14 @@ void Xvr_freeBucket(Xvr_Bucket** bucketHandle) {
     Xvr_Bucket* iter = (*bucketHandle);
 
     while (iter != NULL) {
+        // run down the chain
         Xvr_Bucket* last = iter;
         iter = iter->next;
 
+        // clear the previous bucket from memory
         free(last);
     }
+
+    // for safety
     (*bucketHandle) = NULL;
 }
