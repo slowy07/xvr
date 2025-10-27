@@ -989,10 +989,12 @@ static unsigned int writeInstructionAccess(Xvr_ModuleBuilder** mb,
     return 1;
 }
 
-// routine structure
-//  static void writeModuleBuilderParam(Xvr_ModuleBuilder* mb) {
-//  	//
-//  }
+static unsigned int writeInstructionFnDeclare(Xvr_ModuleBuilder** mb,
+                                              Xvr_AstFnDeclare ast) {
+    (void)mb;
+    (void)ast;
+    return 0;
+}
 
 static unsigned int writeModuleBuilderCode(Xvr_ModuleBuilder** mb,
                                            Xvr_Ast* ast) {
@@ -1100,6 +1102,10 @@ static unsigned int writeModuleBuilderCode(Xvr_ModuleBuilder** mb,
 
     case XVR_AST_VAR_ACCESS:
         result += writeInstructionAccess(mb, ast->varAccess);
+        break;
+
+    case XVR_AST_FN_DECLARE:
+        result += writeInstructionFnDeclare(mb, ast->fnDeclare);
         break;
 
     case XVR_AST_PASS:

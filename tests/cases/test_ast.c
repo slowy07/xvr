@@ -53,6 +53,7 @@ int test_sizeof_ast(void) {
     TEST_SIZEOF(Xvr_AstVarDeclare, 12, 24);
     TEST_SIZEOF(Xvr_AstVarAssign, 16, 24);
     TEST_SIZEOF(Xvr_AstVarAccess, 8, 16);
+    TEST_SIZEOF(Xvr_AstFnDeclare, 16, 32);
     TEST_SIZEOF(Xvr_AstPass, 4, 4);
     TEST_SIZEOF(Xvr_AstError, 4, 4);
     TEST_SIZEOF(Xvr_AstEnd, 4, 4);

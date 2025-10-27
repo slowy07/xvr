@@ -53,6 +53,8 @@ typedef enum Xvr_AstType {
     XVR_AST_VAR_ASSIGN,
     XVR_AST_VAR_ACCESS,
 
+    XVR_AST_FN_DECLARE,
+
     XVR_AST_PASS,
     XVR_AST_ERROR,
     XVR_AST_END,
@@ -214,6 +216,13 @@ typedef struct Xvr_AstVarAccess {
     Xvr_Ast* child;
 } Xvr_AstVarAccess;
 
+typedef struct Xvr_AstFnDeclare {
+    Xvr_AstType type;
+    Xvr_String* name;
+    Xvr_Ast* params;
+    Xvr_Ast* body;
+} Xvr_AstFnDeclare;
+
 typedef struct Xvr_AstPass {
     Xvr_AstType type;
 } Xvr_AstPass;
@@ -226,29 +235,30 @@ typedef struct Xvr_AstEnd {
     Xvr_AstType type;
 } Xvr_AstEnd;
 
-union Xvr_Ast {                                    // 32 | 64 BITNESS
-    Xvr_AstType type;                              // 4  | 4
-    Xvr_AstBlock block;                            // 16 | 32
-    Xvr_AstValue value;                            // 12 | 24
-    Xvr_AstUnary unary;                            // 12 | 16
-    Xvr_AstBinary binary;                          // 16 | 24
-    Xvr_AstBinaryShortCircuit binaryShortCircuit;  // 16 | 24
-    Xvr_AstCompare compare;                        // 16 | 24
-    Xvr_AstGroup group;                            // 8  | 16
-    Xvr_AstCompound compound;                      // 12 | 16
-    Xvr_AstAggregate aggregate;                    // 16 | 24
-    Xvr_AstAssert assert;                          // 16 | 24
-    Xvr_AstIfThenElse ifThenElse;                  // 16 | 32
-    Xvr_AstWhileThen whileThen;                    // 16 | 24
-    Xvr_AstBreak breakPoint;                       // 4  | 4
-    Xvr_AstContinue continuePoint;                 // 4  | 4
-    Xvr_AstPrint print;                            // 8  | 16
-    Xvr_AstVarDeclare varDeclare;                  // 16 | 24
-    Xvr_AstVarAssign varAssign;                    // 16 | 24
-    Xvr_AstVarAccess varAccess;                    // 8  | 16
-    Xvr_AstPass pass;                              // 4  | 4
-    Xvr_AstError error;                            // 4  | 4
-    Xvr_AstEnd end;                                // 4  | 4
+union Xvr_Ast {
+    Xvr_AstType type;
+    Xvr_AstBlock block;
+    Xvr_AstValue value;
+    Xvr_AstUnary unary;
+    Xvr_AstBinary binary;
+    Xvr_AstBinaryShortCircuit binaryShortCircuit;
+    Xvr_AstCompare compare;
+    Xvr_AstGroup group;
+    Xvr_AstCompound compound;
+    Xvr_AstAggregate aggregate;
+    Xvr_AstAssert assert;
+    Xvr_AstIfThenElse ifThenElse;
+    Xvr_AstWhileThen whileThen;
+    Xvr_AstBreak breakPoint;
+    Xvr_AstContinue continuePoint;
+    Xvr_AstPrint print;
+    Xvr_AstVarDeclare varDeclare;
+    Xvr_AstVarAssign varAssign;
+    Xvr_AstFnDeclare fnDeclare;
+    Xvr_AstVarAccess varAccess;
+    Xvr_AstPass pass;
+    Xvr_AstError error;
+    Xvr_AstEnd end;
 };
 
 void Xvr_private_initAstBlock(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle);
@@ -297,6 +307,10 @@ void Xvr_private_emitAstVariableAssignment(Xvr_Bucket** bucketHandle,
                                            Xvr_AstFlag flag, Xvr_Ast* expr);
 void Xvr_private_emitAstVariableAccess(Xvr_Bucket** bucketHandle,
                                        Xvr_Ast** astHandle);
+void Xvr_private_emitAstFunctionDeclaration(Xvr_Bucket** bucketHandle,
+                                            Xvr_Ast** astHandle,
+                                            Xvr_String* name, Xvr_Ast* params,
+                                            Xvr_Ast* body);
 
 void Xvr_private_emitAstPass(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle);
 void Xvr_private_emitAstError(Xvr_Bucket** bucketHandle, Xvr_Ast** astHandle);

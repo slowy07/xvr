@@ -65,7 +65,7 @@ const Xvr_KeywordTypeTuple keywordTuples[] = {
     {XVR_TOKEN_KEYWORD_EXPORT, "export"},
     {XVR_TOKEN_KEYWORD_FOR, "for"},
     {XVR_TOKEN_KEYWORD_FOREACH, "foreach"},
-    {XVR_TOKEN_KEYWORD_FUNCTION, "fn"},
+    {XVR_TOKEN_KEYWORD_FUNCTION, "proc"},
     {XVR_TOKEN_KEYWORD_IF, "if"},
     {XVR_TOKEN_KEYWORD_IMPORT, "import"},
     {XVR_TOKEN_KEYWORD_IN, "in"},

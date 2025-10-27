@@ -970,6 +970,32 @@ static void makeVariableDeclarationStmt(Xvr_Bucket** bucketHandle,
             "Expected ';' at the end of var statement");
 }
 
+static void makeFunctionDeclarationStmt(Xvr_Bucket** bucketHandle,
+                                        Xvr_Parser* parser,
+                                        Xvr_Ast** rootHandle) {
+    consume(parser, XVR_TOKEN_NAME,
+            "Expected function name after 'proc' keyword");
+
+    if (parser->previous.length > 255) {
+        printError(parser, parser->previous,
+                   "Can't have a function name longer than 255 characters");
+        Xvr_private_emitAstError(bucketHandle, rootHandle);
+        return;
+    }
+
+    Xvr_Token nameToken = parser->previous;
+    Xvr_String* nameStr =
+        Xvr_createNameStringLength(bucketHandle, nameToken.lexeme,
+                                   nameToken.length, XVR_VALUE_FUNCTION, true);
+
+    Xvr_Ast* params = NULL;
+    parsePrecedence(bucketHandle, parser, &params, PREC_GROUP);
+
+    Xvr_Ast* body = NULL;
+    Xvr_private_emitAstFunctionDeclaration(bucketHandle, rootHandle, nameStr,
+                                           params, body);
+}
+
 static void makeStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
                      Xvr_Ast** rootHandle) {
     if (match(parser, XVR_TOKEN_OPERATOR_BRACE_LEFT)) {
@@ -1012,6 +1038,10 @@ static void makeStmt(Xvr_Bucket** bucketHandle, Xvr_Parser* parser,
              match(parser, XVR_TOKEN_KEYWORD_PASS)) {
         Xvr_private_emitAstPass(bucketHandle, rootHandle);
         return;
+    }
+
+    else if (match(parser, XVR_TOKEN_KEYWORD_FUNCTION)) {
+        makeFunctionDeclarationStmt(bucketHandle, parser, rootHandle);
     }
 
     else {
