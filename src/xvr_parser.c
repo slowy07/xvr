@@ -989,9 +989,56 @@ static void makeFunctionDeclarationStmt(Xvr_Bucket** bucketHandle,
                                    nameToken.length, XVR_VALUE_FUNCTION, true);
 
     Xvr_Ast* params = NULL;
-    parsePrecedence(bucketHandle, parser, &params, PREC_GROUP);
+
+    if (!match(parser, XVR_TOKEN_OPERATOR_PAREN_LEFT)) {
+        printError(parser, parser->previous,
+                   "Expected '(' at the beginning of parameter list");
+        Xvr_private_emitAstError(bucketHandle, rootHandle);
+        return;
+    }
+
+    unsigned int paramIterations = 0;
+
+    while (
+        parser->current.type != XVR_TOKEN_OPERATOR_PAREN_RIGHT &&
+        (paramIterations++ == 0 || match(parser, XVR_TOKEN_OPERATOR_COMMA))) {
+        advance(parser);
+        Xvr_Token nameToken = parser->previous;
+
+        Xvr_ValueType varType = XVR_VALUE_ANY;
+        bool constant = false;
+
+        if (match(parser, XVR_TOKEN_OPERATOR_COLON)) {
+            varType = readType(parser);
+
+            if (match(parser, XVR_TOKEN_KEYWORD_CONST)) {
+                constant = true;
+            }
+        }
+
+        Xvr_String* name =
+            Xvr_createNameStringLength(bucketHandle, nameToken.lexeme,
+                                       nameToken.length, varType, constant);
+        Xvr_Value value = XVR_VALUE_FROM_STRING(name);
+        Xvr_Ast* ast = NULL;
+        Xvr_private_emitAstValue(bucketHandle, &ast, value);
+
+        Xvr_private_emitAstAggregate(bucketHandle, &params,
+                                     XVR_AST_FLAG_COLLECTION, ast);
+    }
+
+    consume(parser, XVR_TOKEN_OPERATOR_PAREN_RIGHT,
+            "Expected ')' at the end of parameter list");
+
+    consume(parser, XVR_TOKEN_OPERATOR_BRACE_LEFT,
+            "Expected '{' at the beginning of function body");
 
     Xvr_Ast* body = NULL;
+    makeBlockStmt(bucketHandle, parser, &body);
+
+    consume(parser, XVR_TOKEN_OPERATOR_BRACE_RIGHT,
+            "Expected '}' at the end of function body");
+
     Xvr_private_emitAstFunctionDeclaration(bucketHandle, rootHandle, nameStr,
                                            params, body);
 }

@@ -129,41 +129,67 @@ static void emitFloat(unsigned char** handle, unsigned int* capacity,
 // simply get the address (always an integer)
 #define CURRENT_ADDRESS(mb, part) ((*mb)->part##Count)
 
-static void emitToJumpTable(Xvr_ModuleCompiler** mb, unsigned int startAddr) {
-    EMIT_INT(mb, code, (*mb)->jumpsCount);  // mark the jump index in the code
-    EMIT_INT(mb, jumps, startAddr);         // save address at the jump index
+static unsigned int emitCStringToData(unsigned char** dataHandle,
+                                      unsigned int* capacity,
+                                      unsigned int* count, const char* cstr) {
+    const unsigned int slen = (unsigned int)strlen(cstr) + 1;  // +1 for null
+    unsigned int pos = 0;
+    while (pos < *count) {
+        const char* entry = ((char*)(*dataHandle)) + pos;
+        unsigned int elen = strlen(entry) + 1;  // +1 for null
+
+        // compare
+        if (slen == elen && strncmp(cstr, entry, slen) == 0) {
+            return pos;
+        }
+
+        // next
+        pos += (elen + 3) & ~3;
+    }
+
+    // default, append the new entry
+    unsigned int addr = *count;  // save the target address
+    expand(dataHandle, capacity, count, (slen + 3) & ~3);  // 4-byte aligned
+    memcpy((*dataHandle) + addr, cstr, slen);
+    *count += (slen + 3) & ~3;
+
+    return addr;  // return the address of the string in the data section
 }
 
 static unsigned int emitString(Xvr_ModuleCompiler** mb, Xvr_String* str) {
     // 4-byte alignment
     unsigned int length = str->info.length + 1;
-    if (length % 4 != 0) {
-        length += 4 - (length % 4);  // ceil
-    }
+    length = (length + 3) & ~3;
 
-    // grab the current start address
-    unsigned int startAddr = (*mb)->dataCount;
+    // the address within the data section
+    unsigned int dataAddr = 0;
 
     // move the string into the data section
-    expand((&((*mb)->data)), &((*mb)->dataCapacity), &((*mb)->dataCount),
-           length);
-
     if (str->info.type == XVR_STRING_NODE) {
         char* buffer = Xvr_getStringRawBuffer(str);
-        memcpy((*mb)->data + (*mb)->dataCount, buffer, str->info.length + 1);
+
+        dataAddr = emitCStringToData(&(*mb)->data, &(*mb)->dataCapacity,
+                                     &(*mb)->dataCount, buffer);
+
         free(buffer);
     } else if (str->info.type == XVR_STRING_LEAF) {
-        memcpy((*mb)->data + (*mb)->dataCount, str->leaf.data,
-               str->info.length + 1);
+        dataAddr = emitCStringToData(&(*mb)->data, &(*mb)->dataCapacity,
+                                     &(*mb)->dataCount, str->leaf.data);
     } else if (str->info.type == XVR_STRING_NAME) {
-        memcpy((*mb)->data + (*mb)->dataCount, str->name.data,
-               str->info.length + 1);
+        dataAddr = emitCStringToData(&(*mb)->data, &(*mb)->dataCapacity,
+                                     &(*mb)->dataCount, str->name.data);
     }
 
-    (*mb)->dataCount += length;
+    for (unsigned int i = 0; i < (*mb)->jumpsCount; i++) {
+        if ((*mb)->jumps[i] == dataAddr) {
+            EMIT_INT(mb, code, i);
+            return 1;
+        }
+    }
 
-    // mark the jump position
-    emitToJumpTable(mb, startAddr);
+    EMIT_INT(mb, code,
+             (*mb)->jumpsCount);    // mark the new jump index in the code
+    EMIT_INT(mb, jumps, dataAddr);  // append to the jump table
 
     return 1;
 }
@@ -1147,7 +1173,9 @@ static unsigned char* writeModuleCompiler(Xvr_ModuleCompiler* mb,
     unsigned int capacity = 0, count = 0;
     int codeAddr = 0;
     int jumpsAddr = 0;
+    int paramAddr = 0;
     int dataAddr = 0;
+    int subsAddr = 0;
 
     emitInt(&buffer, &capacity, &count, 0);  // total size (overwritten later)
     emitInt(&buffer, &capacity, &count, mb->jumpsCount);  // jumps size
@@ -1164,6 +1192,7 @@ static unsigned char* writeModuleCompiler(Xvr_ModuleCompiler* mb,
         emitInt(&buffer, &capacity, &count, 0);  // jumps
     }
     if (mb->paramCount > 0) {
+        paramAddr = count;
         emitInt(&buffer, &capacity, &count, 0);  // params
     }
     if (mb->dataCount > 0) {
@@ -1171,6 +1200,7 @@ static unsigned char* writeModuleCompiler(Xvr_ModuleCompiler* mb,
         emitInt(&buffer, &capacity, &count, 0);  // data
     }
     if (mb->subsCount > 0) {
+        subsAddr = count;
         emitInt(&buffer, &capacity, &count, 0);  // subs
     }
 
@@ -1191,12 +1221,28 @@ static unsigned char* writeModuleCompiler(Xvr_ModuleCompiler* mb,
         count += mb->jumpsCount;
     }
 
+    if (mb->paramCount > 0) {
+        expand(&buffer, &capacity, &count, mb->paramCount);
+        memcpy((buffer + count), mb->param, mb->paramCount);
+
+        *((int*)(buffer + paramAddr)) = count;
+        count += mb->paramCount;
+    }
+
     if (mb->dataCount > 0) {
         expand(&buffer, &capacity, &count, mb->dataCount);
         memcpy((buffer + count), mb->data, mb->dataCount);
 
         *((int*)(buffer + dataAddr)) = count;
         count += mb->dataCount;
+    }
+
+    if (mb->subsCount > 0) {
+        expand(&buffer, &capacity, &count, mb->subsCount);
+        memcpy((buffer + count), mb->subs, mb->subsCount);
+
+        *((int*)(buffer + subsAddr)) = count;
+        count += mb->subsCount;
     }
 
     ((int*)buffer)[0] = count;
