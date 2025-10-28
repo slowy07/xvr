@@ -59,6 +59,12 @@ static Xvr_TableEntry* lookupScope(Xvr_Scope* scope, Xvr_String* key,
         return NULL;
     }
 
+    // continue after dummy
+    if (scope->table == NULL) {
+        return recursive ? lookupScope(scope->next, key, hash, recursive)
+                         : NULL;
+    }
+
     // copy and modify the code from Xvr_lookupTable, so it can behave slightly
     // differently
     unsigned int probe = hash % scope->table->capacity;
@@ -96,6 +102,20 @@ Xvr_Scope* Xvr_pushScope(Xvr_Bucket** bucketHandle, Xvr_Scope* scope) {
     return newScope;
 }
 
+Xvr_Scope* Xvr_private_pushDummyScope(Xvr_Bucket** bucketHandle,
+                                      Xvr_Scope* scope) {
+    Xvr_Scope* newScope =
+        (Xvr_Scope*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Scope));
+
+    newScope->next = scope;
+    newScope->table = NULL;
+    newScope->refCount = 0;
+
+    incrementRefCount(newScope);
+
+    return newScope;
+}
+
 Xvr_Scope* Xvr_popScope(Xvr_Scope* scope) {
     if (scope == NULL) {
         return NULL;
@@ -110,17 +130,20 @@ Xvr_Scope* Xvr_deepCopyScope(Xvr_Bucket** bucketHandle, Xvr_Scope* scope) {
         (Xvr_Scope*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Scope));
 
     newScope->next = scope->next;
-    newScope->table =
-        Xvr_private_adjustTableCapacity(NULL, scope->table->capacity);
+    newScope->table = scope->table != NULL ? Xvr_private_adjustTableCapacity(
+                                                 NULL, scope->table->capacity)
+                                           : NULL;
     newScope->refCount = 0;
 
     incrementRefCount(newScope);
 
-    for (unsigned int i = 0; i < scope->table->capacity; i++) {
-        if (!XVR_VALUE_IS_NULL(scope->table->data[i].key)) {
-            Xvr_insertTable(&newScope->table,
-                            Xvr_copyValue(scope->table->data[i].key),
-                            Xvr_copyValue(scope->table->data[i].value));
+    if (newScope->table != NULL) {
+        for (unsigned int i = 0; i < scope->table->capacity; i++) {
+            if (!XVR_VALUE_IS_NULL(scope->table->data[i].key)) {
+                Xvr_insertTable(&newScope->table,
+                                Xvr_copyValue(scope->table->data[i].key),
+                                Xvr_copyValue(scope->table->data[i].value));
+            }
         }
     }
 
@@ -132,6 +155,12 @@ void Xvr_declareScope(Xvr_Scope* scope, Xvr_String* key, Xvr_Value value) {
         fprintf(
             stderr, XVR_CC_ERROR
             "ERROR: Xvr_Scope only allows name strings as keys\n" XVR_CC_RESET);
+        exit(-1);
+    }
+
+    if (scope->table == NULL) {
+        fprintf(stderr, XVR_CC_ERROR
+                "ERROR: Can't declare in a dummy scope\n" XVR_CC_RESET);
         exit(-1);
     }
 

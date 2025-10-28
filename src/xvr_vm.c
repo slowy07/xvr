@@ -32,6 +32,8 @@ SOFTWARE.
 #include "xvr_ast.h"
 #include "xvr_bucket.h"
 #include "xvr_console_colors.h"
+#include "xvr_function.h"
+#include "xvr_module.h"
 #include "xvr_opcodes.h"
 #include "xvr_print.h"
 #include "xvr_scope.h"
@@ -101,12 +103,12 @@ static void processRead(Xvr_VM* vm) {
 
         if (stringType == XVR_STRING_LEAF) {
             value = XVR_VALUE_FROM_STRING(
-                Xvr_createString(&vm->stringBucket, cstring));
+                Xvr_createString(&vm->literalBucket, cstring));
         } else if (stringType == XVR_STRING_NAME) {
             Xvr_ValueType valueType = XVR_VALUE_UNKNOWN;
 
             value = XVR_VALUE_FROM_STRING(Xvr_createNameStringLength(
-                &vm->stringBucket, cstring, len, valueType, false));
+                &vm->literalBucket, cstring, len, valueType, false));
         } else {
             Xvr_error("Invalid string type found in opcode read");
         }
@@ -176,8 +178,19 @@ static void processRead(Xvr_VM* vm) {
     }
 
     case XVR_VALUE_FUNCTION: {
-        //
-        // break;
+        fixAlignment(vm);
+
+        unsigned int addr = (unsigned int)READ_INT(vm);
+
+        Xvr_Module module = Xvr_parseModule(vm->code + vm->subsAddr + addr);
+        module.parentScope =
+            Xvr_private_pushDummyScope(&vm->scopeBucket, vm->scope);
+
+        Xvr_Function* function =
+            Xvr_createModuleFunction(&vm->literalBucket, module);
+        value = XVR_VALUE_FROM_FUNCTION(function);
+
+        break;
     }
 
     case XVR_VALUE_OPAQUE: {
@@ -219,7 +232,7 @@ static void processDeclare(Xvr_VM* vm) {
 
     char* cstring = (char*)(vm->code + vm->dataAddr + jump);
 
-    Xvr_String* name = Xvr_createNameStringLength(&vm->stringBucket, cstring,
+    Xvr_String* name = Xvr_createNameStringLength(&vm->literalBucket, cstring,
                                                   len, type, constant);
 
     Xvr_Value value = Xvr_popStack(&vm->stack);
@@ -625,7 +638,7 @@ static void processAssert(Xvr_VM* vm) {
 
     if (count == 1) {
         message = XVR_VALUE_FROM_STRING(
-            Xvr_createString(&vm->stringBucket, "assertion failed"));
+            Xvr_createString(&vm->literalBucket, "assertion failed"));
         value = Xvr_popStack(&vm->stack);
     } else if (count == 2) {
         message = Xvr_popStack(&vm->stack);
@@ -641,7 +654,7 @@ static void processAssert(Xvr_VM* vm) {
 
     // do the check
     if (XVR_VALUE_IS_NULL(value) || Xvr_checkValueIsTruthy(value) != true) {
-        Xvr_String* string = Xvr_stringifyValue(&vm->stringBucket, message);
+        Xvr_String* string = Xvr_stringifyValue(&vm->literalBucket, message);
         char* buffer = Xvr_getStringRawBuffer(string);
 
         Xvr_assertFailure(buffer);
@@ -657,7 +670,7 @@ static void processAssert(Xvr_VM* vm) {
 
 static void processPrint(Xvr_VM* vm) {
     Xvr_Value value = Xvr_popStack(&vm->stack);
-    Xvr_String* string = Xvr_stringifyValue(&vm->stringBucket, value);
+    Xvr_String* string = Xvr_stringifyValue(&vm->literalBucket, value);
     char* buffer = Xvr_getStringRawBuffer(string);
 
     Xvr_print(buffer);
@@ -680,7 +693,7 @@ static void processConcat(Xvr_VM* vm) {
     }
 
     Xvr_String* result =
-        Xvr_concatStrings(&vm->stringBucket, XVR_VALUE_AS_STRING(left),
+        Xvr_concatStrings(&vm->literalBucket, XVR_VALUE_AS_STRING(left),
                           XVR_VALUE_AS_STRING(right));
     Xvr_pushStack(&vm->stack, XVR_VALUE_FROM_STRING(result));
 }
@@ -742,10 +755,10 @@ static void processIndex(Xvr_VM* vm) {
 
         if (str->info.type == XVR_STRING_LEAF) {
             const char* cstr = str->leaf.data;
-            result = Xvr_createStringLength(&vm->stringBucket, cstr + i, l);
+            result = Xvr_createStringLength(&vm->literalBucket, cstr + i, l);
         } else if (str->info.type == XVR_STRING_NODE) {
             char* cstr = Xvr_getStringRawBuffer(str);
-            result = Xvr_createStringLength(&vm->stringBucket, cstr + i, l);
+            result = Xvr_createStringLength(&vm->literalBucket, cstr + i, l);
             free(cstr);
         } else {
             fprintf(stderr, XVR_CC_ERROR
@@ -982,7 +995,7 @@ void Xvr_resetVM(Xvr_VM* vm, bool preserveScope) {
 void Xvr_initVM(Xvr_VM* vm) {
     vm->scope = NULL;
     vm->stack = Xvr_allocateStack();
-    vm->stringBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
+    vm->literalBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
     vm->scopeBucket = Xvr_allocateBucket(XVR_BUCKET_IDEAL);
 
     Xvr_resetVM(vm, true);
@@ -991,7 +1004,7 @@ void Xvr_initVM(Xvr_VM* vm) {
 void Xvr_inheritVM(Xvr_VM* vm, Xvr_VM* parent) {
     vm->scope = NULL;
     vm->stack = Xvr_allocateStack();
-    vm->stringBucket = parent->stringBucket;
+    vm->literalBucket = parent->literalBucket;
     vm->scopeBucket = parent->scopeBucket;
 
     Xvr_resetVM(vm, true);
@@ -1012,7 +1025,7 @@ void Xvr_bindVM(Xvr_VM* vm, Xvr_Module* module, bool preserveScope) {
     vm->subsAddr = module->subsAddr;
 
     if (preserveScope == false) {
-        vm->scope = Xvr_pushScope(&vm->scopeBucket, module->scopePtr);
+        vm->scope = Xvr_pushScope(&vm->scopeBucket, module->parentScope);
     }
 }
 
@@ -1029,6 +1042,6 @@ void Xvr_freeVM(Xvr_VM* vm) {
     Xvr_resetVM(vm, false);
 
     Xvr_freeStack(vm->stack);
-    Xvr_freeBucket(&vm->stringBucket);
+    Xvr_freeBucket(&vm->literalBucket);
     Xvr_freeBucket(&vm->scopeBucket);
 }

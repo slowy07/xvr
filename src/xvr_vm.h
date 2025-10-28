@@ -56,7 +56,7 @@ typedef struct Xvr_VM {
     Xvr_Stack* stack;
 
     // easy access to memory
-    Xvr_Bucket* stringBucket;
+    Xvr_Bucket* literalBucket;
     Xvr_Bucket* scopeBucket;
 } Xvr_VM;
 

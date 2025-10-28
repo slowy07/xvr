@@ -39,6 +39,8 @@ typedef struct Xvr_Scope {
 
 XVR_API Xvr_Scope* Xvr_pushScope(Xvr_Bucket** bucketHandle, Xvr_Scope* scope);
 XVR_API Xvr_Scope* Xvr_popScope(Xvr_Scope* scope);
+XVR_API Xvr_Scope* Xvr_private_pushDummyScope(Xvr_Bucket** bucketHandle,
+                                              Xvr_Scope* scope);
 
 XVR_API Xvr_Scope* Xvr_deepCopyScope(Xvr_Bucket** bucketHandle,
                                      Xvr_Scope* scope);

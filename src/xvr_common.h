@@ -53,6 +53,12 @@ SOFTWARE.
 #    else
 #        define XVR_BITNESS 32
 #    endif
+#elif defined(__NetBSD__)
+#    if defined(__LP64__)
+#        define XVR_XVR_BITNESS 64
+#    else
+#        define XVR_XVR_BITNESS 32
+#    endif  //     if defined(__LP64__)
 #elif defined(_WIN32) || defined(_WIN64)
 #    if defined(_WIN64)
 #        define XVR_BITNESS 64

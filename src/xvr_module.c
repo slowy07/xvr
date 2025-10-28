@@ -11,7 +11,7 @@ static inline unsigned int readUnsignedInt(unsigned char** handle) {
 Xvr_Module Xvr_parseModule(unsigned char* ptr) {
     Xvr_Module module;
 
-    module.scopePtr = NULL;
+    module.parentScope = NULL;
     module.code = ptr;
 
     readUnsignedInt(&ptr);

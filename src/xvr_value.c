@@ -98,9 +98,11 @@ unsigned int Xvr_hashValue(Xvr_Value value) {
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:
     case XVR_VALUE_UNKNOWN:
-        fprintf(
-            stderr, XVR_CC_ERROR
-            "ERROR: Can't hash an unknown value type, exiting\n" XVR_CC_RESET);
+        fprintf(stderr,
+                XVR_CC_ERROR
+                "ERROR: Can't hash an unknown value type (%d), "
+                "exiting\n" XVR_CC_RESET,
+                (int)value.type);
         exit(-1);
     }
 
@@ -153,6 +155,8 @@ Xvr_Value Xvr_copyValue(Xvr_Value value) {
     }
 
     case XVR_VALUE_FUNCTION:
+        return value;
+
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:
@@ -191,6 +195,8 @@ void Xvr_freeValue(Xvr_Value value) {
         return;
 
     case XVR_VALUE_FUNCTION:
+        return;
+
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_ANY:
     case XVR_VALUE_UNKNOWN:
@@ -315,6 +321,8 @@ bool Xvr_checkValuesAreEqual(Xvr_Value left, Xvr_Value right) {
     }
 
     case XVR_VALUE_FUNCTION:
+        return false;
+
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:
@@ -352,6 +360,8 @@ bool Xvr_checkValuesAreComparable(Xvr_Value left, Xvr_Value right) {
         return false;
 
     case XVR_VALUE_FUNCTION:
+        return false;
+
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:
@@ -403,6 +413,8 @@ int Xvr_compareValues(Xvr_Value left, Xvr_Value right) {
         break;
 
     case XVR_VALUE_FUNCTION:
+        break;
+
     case XVR_VALUE_OPAQUE:
     case XVR_VALUE_ANY:
     case XVR_VALUE_REFERENCE:

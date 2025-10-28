@@ -22,29 +22,34 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef XVR_MODULE_H
-#define XVR_MODULE_H
+#ifndef XVR_FUNCTION_H
+#define XVR_FUNCTION_H
 
 #include "xvr_common.h"
-#include "xvr_scope.h"
+#include "xvr_module.h"
 
-typedef struct Xvr_Module {
-    Xvr_Scope* parentScope;
+typedef enum Xvr_FunctionType {
+    XVR_FUNCTION_MODULE,
+    XVF_FUNCTION_NATIVE,
+} Xvr_FunctionType;
 
-    unsigned char* code;
+typedef union Xvr_FunctionModule {
+    Xvr_FunctionType type;
+    Xvr_Module module;
+} Xvr_FunctionModule;
 
-    unsigned int jumpsCount;
-    unsigned int paramCount;
-    unsigned int dataCount;
-    unsigned int subsCount;
+typedef union Xvr_FunctionNative {
+    Xvr_FunctionType type;
+    void* native;
+} Xvr_FunctionNative;
 
-    unsigned int codeAddr;
-    unsigned int jumpsAddr;
-    unsigned int paramAddr;
-    unsigned int dataAddr;
-    unsigned int subsAddr;
-} Xvr_Module;
+typedef union Xvr_Function_t {
+    Xvr_FunctionType type;
+    Xvr_FunctionModule module;
+    Xvr_FunctionNative native;
+} Xvr_Function;
 
-XVR_API Xvr_Module Xvr_parseModule(unsigned char* ptr);
+XVR_API Xvr_Function* Xvr_createModuleFunction(Xvr_Bucket** bucketHandle,
+                                               Xvr_Module module);
 
-#endif  // !XVR_MODULE_H
+#endif  // !XVR_FUNCTION_H

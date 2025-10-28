@@ -107,6 +107,14 @@ static void emitFloat(unsigned char** handle, unsigned int* capacity,
     emitByte(handle, capacity, count, *(ptr++));
 }
 
+static void emitBuffer(unsigned char** handle, unsigned int* capacity,
+                       unsigned int* count, unsigned char* buffer,
+                       unsigned int bufferSize) {
+    expand(handle, capacity, count, bufferSize);  // 4-byte aligned
+    memcpy((*handle) + *count, buffer, bufferSize);
+    *count += bufferSize;
+}
+
 // curry writing utils
 #define EMIT_BYTE(mb, part, byte)                        \
     emitByte((&((*mb)->part)), &((*mb)->part##Capacity), \
@@ -129,14 +137,18 @@ static void emitFloat(unsigned char** handle, unsigned int* capacity,
 // simply get the address (always an integer)
 #define CURRENT_ADDRESS(mb, part) ((*mb)->part##Count)
 
+// Cached write to data, enabling string reuse, see #168
 static unsigned int emitCStringToData(unsigned char** dataHandle,
                                       unsigned int* capacity,
                                       unsigned int* count, const char* cstr) {
-    const unsigned int slen = (unsigned int)strlen(cstr) + 1;  // +1 for null
+    const unsigned int slen = (unsigned int)strlen(cstr) + 1;  //+1 for null
+
+    // See if the string already exists in the data NOTE: assumes data only ever
+    // holds c-strings
     unsigned int pos = 0;
     while (pos < *count) {
         const char* entry = ((char*)(*dataHandle)) + pos;
-        unsigned int elen = strlen(entry) + 1;  // +1 for null
+        unsigned int elen = strlen(entry) + 1;  //+1 for null
 
         // compare
         if (slen == elen && strncmp(cstr, entry, slen) == 0) {
@@ -157,10 +169,6 @@ static unsigned int emitCStringToData(unsigned char** dataHandle,
 }
 
 static unsigned int emitString(Xvr_ModuleCompiler** mb, Xvr_String* str) {
-    // 4-byte alignment
-    unsigned int length = str->info.length + 1;
-    length = (length + 3) & ~3;
-
     // the address within the data section
     unsigned int dataAddr = 0;
 
@@ -182,6 +190,7 @@ static unsigned int emitString(Xvr_ModuleCompiler** mb, Xvr_String* str) {
 
     for (unsigned int i = 0; i < (*mb)->jumpsCount; i++) {
         if ((*mb)->jumps[i] == dataAddr) {
+            // reuse, and finish
             EMIT_INT(mb, code, i);
             return 1;
         }
@@ -194,8 +203,61 @@ static unsigned int emitString(Xvr_ModuleCompiler** mb, Xvr_String* str) {
     return 1;
 }
 
+static unsigned int emitParameters(Xvr_ModuleCompiler* mb, Xvr_Ast* ast) {
+    // recursive checks
+    if (ast == NULL) {
+        return 0;
+    } else if (ast->type == XVR_AST_AGGREGATE) {
+        unsigned int total = 0;
+        total += emitParameters(mb, ast->aggregate.left);
+        total += emitParameters(mb, ast->aggregate.right);
+        return total;
+    } else if (ast->type != XVR_AST_VALUE) {
+        fprintf(stderr, XVR_CC_ERROR
+                "ERROR: Unknown AST type passed to "
+                "'emitParameters()'\n" XVR_CC_RESET);
+        exit(-1);
+        return 0;
+    }
+
+    // check the string type
+    if (XVR_VALUE_IS_STRING(ast->value.value) == false ||
+        XVR_VALUE_AS_STRING(ast->value.value)->info.type != XVR_STRING_NAME) {
+        fprintf(stderr, XVR_CC_ERROR
+                "COMPILER ERROR: Function parameters must be name "
+                "strings\n" XVR_CC_RESET);
+        mb->panic = true;
+        return 0;
+    }
+
+    // the address within the data section
+    unsigned int dataAddr =
+        emitCStringToData(&(mb->data), &(mb->dataCapacity), &(mb->dataCount),
+                          XVR_VALUE_AS_STRING(ast->value.value)->name.data);
+
+    // check the param index for that entry i.e. don't reuse parameter names
+    for (unsigned int i = 0; i < mb->paramCount; i++) {
+        if (mb->param[i] == dataAddr) {
+            // not allowed
+            fprintf(stderr, XVR_CC_ERROR
+                    "COMPILER ERROR: Function parameters must have unique "
+                    "names\n" XVR_CC_RESET);
+            mb->panic = true;
+            return 0;
+        }
+    }
+
+    // emit to the param index
+    EMIT_INT(&mb, param, dataAddr);
+
+    // this returns the number of written parameters
+    return 1;
+}
+
 static unsigned int writeModuleCompilerCode(
     Xvr_ModuleCompiler** mb, Xvr_Ast* ast);  // forward declare for recursion
+static void writeModuleCompilerBody(Xvr_ModuleCompiler* mb, Xvr_Ast* ast);
+static unsigned char* writeModuleCompilerResult(Xvr_ModuleCompiler* mb);
 static unsigned int writeInstructionAssign(
     Xvr_ModuleCompiler** mb, Xvr_AstVarAssign ast,
     bool
@@ -263,7 +325,6 @@ static unsigned int writeInstructionUnary(Xvr_ModuleCompiler** mb,
 
     else if (ast.flag == XVR_AST_FLAG_PREFIX_INCREMENT ||
              ast.flag == XVR_AST_FLAG_PREFIX_DECREMENT) {
-        // read the var name onto the stack
         Xvr_String* name = XVR_VALUE_AS_STRING(ast.child->value.value);
 
         EMIT_BYTE(mb, code, XVR_OPCODE_READ);
@@ -286,6 +347,9 @@ static unsigned int writeInstructionUnary(Xvr_ModuleCompiler** mb,
         EMIT_BYTE(mb, code, 0);
 
         EMIT_INT(mb, code, 1);
+
+        // add (or subtract) the two values, then assign (pops the second
+        // duplicate, and leaves value on the stack)
         EMIT_BYTE(mb, code,
                   ast.flag == XVR_AST_FLAG_PREFIX_INCREMENT
                       ? XVR_OPCODE_ADD
@@ -993,7 +1057,8 @@ static unsigned int writeInstructionAccess(Xvr_ModuleCompiler** mb,
         fprintf(stderr, XVR_CC_ERROR
                 "COMPILER ERROR: Found a non-name-string in a value node when "
                 "trying to write access\n" XVR_CC_RESET);
-        exit(-1);
+        (*mb)->panic = true;
+        return 0;
     }
 
     Xvr_String* name = XVR_VALUE_AS_STRING(ast.child->value.value);
@@ -1017,8 +1082,53 @@ static unsigned int writeInstructionAccess(Xvr_ModuleCompiler** mb,
 
 static unsigned int writeInstructionFnDeclare(Xvr_ModuleCompiler** mb,
                                               Xvr_AstFnDeclare ast) {
-    (void)mb;
-    (void)ast;
+    Xvr_ModuleCompiler compiler = {0};
+
+    compiler.breakEscapes =
+        Xvr_private_resizeEscapeArray(NULL, XVR_ESCAPE_INITIAL_CAPACITY);
+    compiler.continueEscapes =
+        Xvr_private_resizeEscapeArray(NULL, XVR_ESCAPE_INITIAL_CAPACITY);
+
+    // compile the ast to memory
+    unsigned int paramCount = emitParameters(&compiler, ast.params);
+    writeModuleCompilerBody(&compiler, ast.body);
+    unsigned char* submodule = writeModuleCompilerResult(&compiler);
+
+    // cleanup the compiler
+    Xvr_private_resizeEscapeArray(compiler.breakEscapes, 0);
+    Xvr_private_resizeEscapeArray(compiler.continueEscapes, 0);
+
+    free(compiler.param);
+    free(compiler.code);
+    free(compiler.jumps);
+    free(compiler.data);
+    free(compiler.subs);
+
+    // write the submodule to the subs section
+    unsigned int subsAddr = (*mb)->subsCount;
+    emitBuffer(&((*mb)->subs), &((*mb)->subsCapacity), &((*mb)->subsCount),
+               submodule, *((unsigned int*)submodule));
+    free(submodule);
+
+    // read the function as a value, with the address as a parameter
+    EMIT_BYTE(mb, code, XVR_OPCODE_READ);
+    EMIT_BYTE(mb, code, XVR_VALUE_FUNCTION);
+    EMIT_BYTE(mb, code, (unsigned char)paramCount);
+    EMIT_BYTE(mb, code, 0);
+
+    EMIT_INT(mb, code, subsAddr);
+
+    // delcare the function
+    EMIT_BYTE(mb, code, XVR_OPCODE_DECLARE);
+    EMIT_BYTE(mb, code, XVR_VALUE_FUNCTION);
+    EMIT_BYTE(
+        mb, code,
+        ast.name->info.length);  // quick optimisation to skip a 'strlen()' call
+    EMIT_BYTE(mb, code, true);   // functions are const for now
+
+    // time to write to the actual function name
+    emitString(mb, ast.name);
+
     return 0;
 }
 
@@ -1138,6 +1248,7 @@ static unsigned int writeModuleCompilerCode(Xvr_ModuleCompiler** mb,
         // NO-OP
         break;
 
+    // meta instructions are disallowed
     case XVR_AST_ERROR:
         fprintf(stderr, XVR_CC_ERROR
                 "COMPILER ERROR: Invalid AST type found: Unknown "
@@ -1156,19 +1267,25 @@ static unsigned int writeModuleCompilerCode(Xvr_ModuleCompiler** mb,
     return result;
 }
 
-static unsigned char* writeModuleCompiler(Xvr_ModuleCompiler* mb,
-                                          Xvr_Ast* ast) {
+static void writeModuleCompilerBody(Xvr_ModuleCompiler* mb, Xvr_Ast* ast) {
+    // this is separated from 'writeModuleCompilerResult', to separate the
+    // concerns for modules & functions
+
     writeModuleCompilerCode(&mb, ast);
 
     EMIT_BYTE(&mb, code, XVR_OPCODE_RETURN);  // end terminator
     EMIT_BYTE(&mb, code, 0);                  // 4-byte alignment
     EMIT_BYTE(&mb, code, 0);
     EMIT_BYTE(&mb, code, 0);
+}
 
+static unsigned char* writeModuleCompilerResult(Xvr_ModuleCompiler* mb) {
+    // if an error occurred, just exit
     if (mb->panic) {
         return NULL;
     }
 
+    // write the header and combine the parts
     unsigned char* buffer = NULL;
     unsigned int capacity = 0, count = 0;
     int codeAddr = 0;
@@ -1183,6 +1300,8 @@ static unsigned char* writeModuleCompiler(Xvr_ModuleCompiler* mb,
     emitInt(&buffer, &capacity, &count, mb->dataCount);   // data size
     emitInt(&buffer, &capacity, &count, mb->subsCount);   // routine size
 
+    // generate blank spaces, cache their positions in the *Addr variables for
+    // later writes
     if (mb->codeCount > 0) {
         codeAddr = count;
         emitInt(&buffer, &capacity, &count, 0);  // code
@@ -1245,44 +1364,27 @@ static unsigned char* writeModuleCompiler(Xvr_ModuleCompiler* mb,
         count += mb->subsCount;
     }
 
+    // finally, record the total size within the header, and return the result
     ((int*)buffer)[0] = count;
 
     return buffer;
 }
 
+// exposed functions
 unsigned char* Xvr_compileModule(Xvr_Ast* ast) {
-    Xvr_ModuleCompiler compiler;
+    // setup
+    Xvr_ModuleCompiler compiler = {0};
 
-    compiler.code = NULL;
-    compiler.codeCapacity = 0;
-    compiler.codeCount = 0;
-
-    compiler.jumps = NULL;
-    compiler.jumpsCapacity = 0;
-    compiler.jumpsCount = 0;
-
-    compiler.param = NULL;
-    compiler.paramCapacity = 0;
-    compiler.paramCount = 0;
-
-    compiler.data = NULL;
-    compiler.dataCapacity = 0;
-    compiler.dataCount = 0;
-
-    compiler.subs = NULL;
-    compiler.subsCapacity = 0;
-    compiler.subsCount = 0;
-
-    compiler.currentScopeDepth = 0;
     compiler.breakEscapes =
         Xvr_private_resizeEscapeArray(NULL, XVR_ESCAPE_INITIAL_CAPACITY);
     compiler.continueEscapes =
         Xvr_private_resizeEscapeArray(NULL, XVR_ESCAPE_INITIAL_CAPACITY);
 
-    compiler.panic = false;
+    // compile the ast to memory
+    writeModuleCompilerBody(&compiler, ast);
+    unsigned char* buffer = writeModuleCompilerResult(&compiler);
 
-    unsigned char* buffer = writeModuleCompiler(&compiler, ast);
-
+    // cleanup
     Xvr_private_resizeEscapeArray(compiler.breakEscapes, 0);
     Xvr_private_resizeEscapeArray(compiler.continueEscapes, 0);
 

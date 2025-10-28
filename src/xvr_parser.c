@@ -1006,7 +1006,7 @@ static void makeFunctionDeclarationStmt(Xvr_Bucket** bucketHandle,
         Xvr_Token nameToken = parser->previous;
 
         Xvr_ValueType varType = XVR_VALUE_ANY;
-        bool constant = false;
+        bool constant = true;  // parameter are immutable
 
         if (match(parser, XVR_TOKEN_OPERATOR_COLON)) {
             varType = readType(parser);
