@@ -22,24 +22,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef XVR_PARSER_H
-#define XVR_PARSER_H
+#ifndef XVR_REFSTRING_H
+#define XVR_REFSTRING_H
 
-#include "xvr_ast_node.h"
-#include "xvr_common.h"
-#include "xvr_lexer.h"
+#include <stdbool.h>
+#include <stddef.h>
 
-typedef struct {
-    Xvr_Lexer* lexer;
-    bool error;
-    bool panic;
+typedef void* (*Xvr_RefStringAllocatorFn)(void* pointer, size_t oldSize,
+                                          size_t newSize);
+void Xvr_setRefStringAllocatorFn(Xvr_RefStringAllocatorFn);
 
-    Xvr_Token current;
-    Xvr_Token previous;
-} Xvr_Parser;
+typedef struct Xvr_RefString {
+    int refCount;
+    int length;
+    char data[1];
+} Xvr_RefString;
 
-XVR_API void Xvr_initParser(Xvr_Parser* parser, Xvr_Lexer* lexer);
-XVR_API void Xvr_freeParser(Xvr_Parser* parser);
-XVR_API Xvr_ASTNode* Xvr_scanParser(Xvr_Parser* parser);
+Xvr_RefString* Xvr_createRefString(char* cstring);
+Xvr_RefString* Xvr_createRefStringLength(char* cstring, int length);
+void Xvr_deleteRefString(Xvr_RefString* refString);
+int Xvr_countRefString(Xvr_RefString* refString);
+int Xvr_lengthRefString(Xvr_RefString* refString);
+Xvr_RefString* Xvr_copyRefString(Xvr_RefString* refString);
+Xvr_RefString* Xvr_deepCopyRefString(Xvr_RefString* refString);
+char* Xvr_toCString(Xvr_RefString* refString);
+bool Xvr_equalsRefString(Xvr_RefString* lhs, Xvr_RefString* rhs);
+bool Xvr_equalsRefStringCString(Xvr_RefString* lhs, char* cstring);
 
-#endif  // !XVR_PARSER_H
+#endif  // !XVR_REFSTRING_H

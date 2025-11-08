@@ -22,24 +22,21 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef XVR_PARSER_H
-#define XVR_PARSER_H
+#ifndef LIB_RUNNER_H
+#define LIB_RUNNER_H
 
-#include "xvr_ast_node.h"
-#include "xvr_common.h"
-#include "xvr_lexer.h"
+#include "xvr_interpreter.h"
 
-typedef struct {
-    Xvr_Lexer* lexer;
-    bool error;
-    bool panic;
+int Xvr_hookRunner(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
+                   Xvr_Literal alias);
 
-    Xvr_Token current;
-    Xvr_Token previous;
-} Xvr_Parser;
+void Xvr_initDriveDictionary(void);
+void Xvr_freeDriveDictionary(void);
+Xvr_LiteralDictionary* Xvr_getDriveDictionary(void);
 
-XVR_API void Xvr_initParser(Xvr_Parser* parser, Xvr_Lexer* lexer);
-XVR_API void Xvr_freeParser(Xvr_Parser* parser);
-XVR_API Xvr_ASTNode* Xvr_scanParser(Xvr_Parser* parser);
+#define XVR_OPAQUE_TAG_RUNNER 100
 
-#endif  // !XVR_PARSER_H
+Xvr_Literal Xvr_getFilePathLiteral(Xvr_Interpreter* interpreter,
+                                   Xvr_Literal* driverPathLiteral);
+
+#endif  // !LIB_RUNNER_H

@@ -20,7 +20,7 @@ make inter
 ```
 var nama: string = "arfy slowy";
 
-print("wello " .. nama);
+print("wello " + nama);
 ```
 
 ```
@@ -32,4 +32,12 @@ while (hitung < 10) {
 }
 
 print ("woilah cik kelar loh ya");
+```
+
+```
+proc wello(name: string) {
+    return "wello " + name;
+}
+
+print(wello("xvr"));
 ```

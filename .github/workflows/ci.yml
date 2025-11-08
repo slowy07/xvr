@@ -26,4 +26,4 @@ jobs:
         shell: bash
 
       - name: testing
-        run: make tests-cases
+        run: make test

@@ -22,24 +22,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef XVR_PARSER_H
-#define XVR_PARSER_H
+#ifndef XVR_KEYWORD_TYPES_H
+#define XVR_KEYWORD_TYPES_H
 
-#include "xvr_ast_node.h"
-#include "xvr_common.h"
-#include "xvr_lexer.h"
-
+#include "xvr_token_types.h"
 typedef struct {
-    Xvr_Lexer* lexer;
-    bool error;
-    bool panic;
+    Xvr_TokenType type;
+    char* keyword;
+} Xvr_KeywordType;
 
-    Xvr_Token current;
-    Xvr_Token previous;
-} Xvr_Parser;
+extern Xvr_KeywordType Xvr_keywordTypes[];
 
-XVR_API void Xvr_initParser(Xvr_Parser* parser, Xvr_Lexer* lexer);
-XVR_API void Xvr_freeParser(Xvr_Parser* parser);
-XVR_API Xvr_ASTNode* Xvr_scanParser(Xvr_Parser* parser);
+char* Xvr_findKeywordByType(Xvr_TokenType type);
+Xvr_TokenType Xvr_findTypeByKeyword(const char* keyword);
 
-#endif  // !XVR_PARSER_H
+#endif  // !XVR_KEYWORD_TYPES_H

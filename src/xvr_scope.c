@@ -24,254 +24,369 @@ SOFTWARE.
 
 #include "xvr_scope.h"
 
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stdatomic.h>
 
-#include "xvr_bucket.h"
-#include "xvr_common.h"
-#include "xvr_console_colors.h"
-#include "xvr_print.h"
-#include "xvr_string.h"
-#include "xvr_table.h"
-#include "xvr_value.h"
+#include "xvr_literal.h"
+#include "xvr_literal_dictionary.h"
+#include "xvr_memory.h"
 
-static void incrementRefCount(Xvr_Scope* scope) {
-    for (Xvr_Scope* iter = scope; iter; iter = iter->next) {
-        iter->refCount++;
+static void freeAncestorChain(Xvr_Scope* scope) {
+    scope->references--;
+
+    if (scope->ancestor != NULL) {
+        freeAncestorChain(scope->ancestor);
     }
+
+    if (scope->references > 0) {
+        return;
+    }
+
+    Xvr_freeLiteralDictionary(&scope->variables);
+    Xvr_freeLiteralDictionary(&scope->types);
+
+    XVR_FREE(Xvr_Scope, scope);
 }
 
-static void decrementRefCount(Xvr_Scope* scope) {
-    for (Xvr_Scope* iter = scope; iter; iter = iter->next) {
-        iter->refCount--;
-        if (iter->refCount == 0 && iter->table != NULL) {
-            Xvr_freeTable(iter->table);
-            iter->table = NULL;
+// return false if invalid type
+static bool checkType(Xvr_Literal typeLiteral, Xvr_Literal original,
+                      Xvr_Literal value, bool constCheck) {
+    // for constants, fail if original != value
+    if (constCheck && XVR_AS_TYPE(typeLiteral).constant &&
+        !Xvr_literalsAreEqual(original, value)) {
+        return false;
+    }
+
+    // for any types
+    if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_ANY) {
+        return true;
+    }
+
+    // don't allow null types
+    if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_NULL) {
+        return false;
+    }
+
+    // always allow null values
+    if (XVR_IS_NULL(value)) {
+        return true;
+    }
+
+    // for each type, if a mismatch is found, return false
+    if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_BOOLEAN &&
+        !XVR_IS_BOOLEAN(value)) {
+        return false;
+    }
+
+    if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_INTEGER &&
+        !XVR_IS_INTEGER(value)) {
+        return false;
+    }
+
+    if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_FLOAT &&
+        !XVR_IS_FLOAT(value)) {
+        return false;
+    }
+
+    if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_STRING &&
+        !XVR_IS_STRING(value)) {
+        return false;
+    }
+
+    if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_ARRAY &&
+        !XVR_IS_ARRAY(value)) {
+        return false;
+    }
+
+    if (XVR_IS_ARRAY(value)) {
+        // check value's type
+        if (XVR_AS_TYPE(typeLiteral).typeOf != XVR_LITERAL_ARRAY) {
+            return false;
         }
-    }
-}
 
-static Xvr_TableEntry* lookupScope(Xvr_Scope* scope, Xvr_String* key,
-                                   unsigned int hash, bool recursive) {
-    // terminate
-    if (scope == NULL) {
-        return NULL;
-    }
+        // if null, assume it's a new array variable that needs checking
+        if (XVR_IS_NULL(original)) {
+            for (int i = 0; i < XVR_AS_ARRAY(value)->count; i++) {
+                if (!checkType(
+                        ((Xvr_Literal*)(XVR_AS_TYPE(typeLiteral).subtypes))[0],
+                        XVR_TO_NULL_LITERAL, XVR_AS_ARRAY(value)->literals[i],
+                        constCheck)) {
+                    return false;
+                }
+            }
 
-    // continue after dummy
-    if (scope->table == NULL) {
-        return recursive ? lookupScope(scope->next, key, hash, recursive)
-                         : NULL;
-    }
-
-    // copy and modify the code from Xvr_lookupTable, so it can behave slightly
-    // differently
-    unsigned int probe = hash % scope->table->capacity;
-
-    while (true) {
-        // found the entry
-        if (XVR_VALUE_IS_STRING(scope->table->data[probe].key) &&
-            Xvr_compareStrings(
-                XVR_VALUE_AS_STRING(scope->table->data[probe].key), key) == 0) {
-            return &(scope->table->data[probe]);
+            return true;
         }
 
-        // if its an empty slot (didn't find it here)
-        if (XVR_VALUE_IS_NULL(scope->table->data[probe].key)) {
-            return recursive ? lookupScope(scope->next, key, hash, recursive)
-                             : NULL;
-        }
+        // check children
+        for (int i = 0; i < XVR_AS_ARRAY(value)->count; i++) {
+            if (XVR_AS_ARRAY(original)->count <= i) {
+                return true;  // assume new entry pushed
+            }
 
-        // adjust and continue
-        probe = (probe + 1) % scope->table->capacity;
-    }
-}
-
-// exposed functions
-Xvr_Scope* Xvr_pushScope(Xvr_Bucket** bucketHandle, Xvr_Scope* scope) {
-    Xvr_Scope* newScope =
-        (Xvr_Scope*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Scope));
-
-    newScope->next = scope;
-    newScope->table = Xvr_allocateTable();
-    newScope->refCount = 0;
-
-    incrementRefCount(newScope);
-
-    return newScope;
-}
-
-Xvr_Scope* Xvr_private_pushDummyScope(Xvr_Bucket** bucketHandle,
-                                      Xvr_Scope* scope) {
-    Xvr_Scope* newScope =
-        (Xvr_Scope*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Scope));
-
-    newScope->next = scope;
-    newScope->table = NULL;
-    newScope->refCount = 0;
-
-    incrementRefCount(newScope);
-
-    return newScope;
-}
-
-Xvr_Scope* Xvr_popScope(Xvr_Scope* scope) {
-    if (scope == NULL) {
-        return NULL;
-    }
-
-    decrementRefCount(scope);
-    return scope->next;
-}
-
-Xvr_Scope* Xvr_deepCopyScope(Xvr_Bucket** bucketHandle, Xvr_Scope* scope) {
-    Xvr_Scope* newScope =
-        (Xvr_Scope*)Xvr_partitionBucket(bucketHandle, sizeof(Xvr_Scope));
-
-    newScope->next = scope->next;
-    newScope->table = scope->table != NULL ? Xvr_private_adjustTableCapacity(
-                                                 NULL, scope->table->capacity)
-                                           : NULL;
-    newScope->refCount = 0;
-
-    incrementRefCount(newScope);
-
-    if (newScope->table != NULL) {
-        for (unsigned int i = 0; i < scope->table->capacity; i++) {
-            if (!XVR_VALUE_IS_NULL(scope->table->data[i].key)) {
-                Xvr_insertTable(&newScope->table,
-                                Xvr_copyValue(scope->table->data[i].key),
-                                Xvr_copyValue(scope->table->data[i].value));
+            if (!checkType(
+                    ((Xvr_Literal*)(XVR_AS_TYPE(typeLiteral).subtypes))[0],
+                    XVR_AS_ARRAY(original)->literals[i],
+                    XVR_AS_ARRAY(value)->literals[i], constCheck)) {
+                return false;
             }
         }
     }
 
-    return newScope;
+    if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_DICTIONARY &&
+        !XVR_IS_DICTIONARY(value)) {
+        return false;
+    }
+
+    if (XVR_IS_DICTIONARY(value)) {
+        // check value's type
+        if (XVR_AS_TYPE(typeLiteral).typeOf != XVR_LITERAL_DICTIONARY) {
+            return false;
+        }
+
+        // if null, assume it's a new dictionary variable that needs checking
+        if (XVR_IS_NULL(original)) {
+            for (int i = 0; i < XVR_AS_DICTIONARY(value)->capacity; i++) {
+                // check the type of key and value
+                if (!checkType(
+                        ((Xvr_Literal*)(XVR_AS_TYPE(typeLiteral).subtypes))[0],
+                        XVR_TO_NULL_LITERAL,
+                        XVR_AS_DICTIONARY(value)->entries[i].key, constCheck)) {
+                    return false;
+                }
+
+                if (!checkType(
+                        ((Xvr_Literal*)(XVR_AS_TYPE(typeLiteral).subtypes))[1],
+                        XVR_TO_NULL_LITERAL,
+                        XVR_AS_DICTIONARY(value)->entries[i].value,
+                        constCheck)) {
+                    return false;
+                }
+            }
+
+            return true;
+        }
+
+        // check each child of value against the child of original
+        for (int i = 0; i < XVR_AS_DICTIONARY(value)->capacity; i++) {
+            if (XVR_IS_NULL(XVR_AS_DICTIONARY(value)
+                                ->entries[i]
+                                .key)) {  // only non-tombstones
+                continue;
+            }
+
+            // find the internal child of original that matches this child of
+            // value
+            Xvr_private_entry* ptr = NULL;
+
+            for (int j = 0; j < XVR_AS_DICTIONARY(original)->capacity; j++) {
+                if (Xvr_literalsAreEqual(
+                        XVR_AS_DICTIONARY(original)->entries[j].key,
+                        XVR_AS_DICTIONARY(value)->entries[i].key)) {
+                    ptr = &XVR_AS_DICTIONARY(original)->entries[j];
+                    break;
+                }
+            }
+
+            // if not found, assume it's a new entry
+            if (!ptr) {
+                continue;
+            }
+
+            // check the type of key and value
+            if (!checkType(
+                    ((Xvr_Literal*)(XVR_AS_TYPE(typeLiteral).subtypes))[0],
+                    ptr->key, XVR_AS_DICTIONARY(value)->entries[i].key,
+                    constCheck)) {
+                return false;
+            }
+
+            if (!checkType(
+                    ((Xvr_Literal*)(XVR_AS_TYPE(typeLiteral).subtypes))[1],
+                    ptr->value, XVR_AS_DICTIONARY(value)->entries[i].value,
+                    constCheck)) {
+                return false;
+            }
+        }
+    }
+
+    if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_FUNCTION &&
+        !XVR_IS_FUNCTION(value)) {
+        return false;
+    }
+
+    if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_TYPE &&
+        !XVR_IS_TYPE(value)) {
+        return false;
+    }
+
+    return true;
 }
 
-void Xvr_declareScope(Xvr_Scope* scope, Xvr_String* key, Xvr_Value value) {
-    if (key->info.type != XVR_STRING_NAME) {
-        fprintf(
-            stderr, XVR_CC_ERROR
-            "ERROR: Xvr_Scope only allows name strings as keys\n" XVR_CC_RESET);
-        exit(-1);
+// exposed functions
+Xvr_Scope* Xvr_pushScope(Xvr_Scope* ancestor) {
+    Xvr_Scope* scope = XVR_ALLOCATE(Xvr_Scope, 1);
+    scope->ancestor = ancestor;
+    Xvr_initLiteralDictionary(&scope->variables);
+    Xvr_initLiteralDictionary(&scope->types);
+
+    // tick up all scope reference counts
+    scope->references = 0;
+    for (Xvr_Scope* ptr = scope; ptr != NULL; ptr = ptr->ancestor) {
+        ptr->references++;
     }
 
-    if (scope->table == NULL) {
-        fprintf(stderr, XVR_CC_ERROR
-                "ERROR: Can't declare in a dummy scope\n" XVR_CC_RESET);
-        exit(-1);
-    }
-
-    Xvr_TableEntry* entryPtr =
-        lookupScope(scope, key, Xvr_hashString(key), false);
-
-    if (entryPtr != NULL) {
-        char buffer[key->info.length + 256];
-        sprintf(buffer, "Can't redefine a variable: %s", key->name.data);
-        Xvr_error(buffer);
-        return;
-    }
-
-    Xvr_ValueType kt = Xvr_getNameStringVarType(key);
-    if (kt != XVR_VALUE_ANY && value.type != XVR_VALUE_NULL &&
-        kt != value.type && value.type != XVR_VALUE_REFERENCE) {
-        char buffer[key->info.length + 256];
-        sprintf(buffer,
-                "Incorrect value type assigned to in variable declaration '%s' "
-                "(expected %s, got %s)",
-                key->name.data, Xvr_private_getValueTypeAsCString(kt),
-                Xvr_private_getValueTypeAsCString(value.type));
-        Xvr_error(buffer);
-        return;
-    }
-
-    // constness check
-    if (Xvr_getNameStringVarConstant(key) && value.type == XVR_VALUE_NULL) {
-        char buffer[key->info.length + 256];
-        sprintf(buffer, "Can't declare %s as const with value 'null'",
-                key->name.data);
-        Xvr_error(buffer);
-        return;
-    }
-
-    Xvr_insertTable(&scope->table, XVR_VALUE_FROM_STRING(Xvr_copyString(key)),
-                    value);
+    return scope;
 }
 
-void Xvr_assignScope(Xvr_Scope* scope, Xvr_String* key, Xvr_Value value) {
-    if (key->info.type != XVR_STRING_NAME) {
-        fprintf(
-            stderr, XVR_CC_ERROR
-            "ERROR: Xvr_Scope only allows name strings as keys\n" XVR_CC_RESET);
-        exit(-1);
-    }
-
-    Xvr_TableEntry* entryPtr =
-        lookupScope(scope, key, Xvr_hashString(key), true);
-
-    if (entryPtr == NULL) {
-        char buffer[key->info.length + 256];
-        sprintf(buffer, "Undefined variable: %s", key->name.data);
-        Xvr_error(buffer);
-        return;
-    }
-
-    Xvr_ValueType kt =
-        Xvr_getNameStringVarType(XVR_VALUE_AS_STRING(entryPtr->key));
-    if (kt != XVR_VALUE_ANY && value.type != XVR_VALUE_NULL &&
-        kt != value.type) {
-        char buffer[key->info.length + 256];
-        sprintf(buffer,
-                "Incorrect value type assigned to in variable assignment '%s' "
-                "(expected %d, got %d)",
-                key->name.data, (int)kt, (int)value.type);
-        Xvr_error(buffer);
-        return;
-    }
-
-    if (Xvr_getNameStringVarConstant(XVR_VALUE_AS_STRING(entryPtr->key))) {
-        char buffer[key->info.length + 256];
-        sprintf(buffer, "Can't assign to const %s", key->name.data);
-        Xvr_error(buffer);
-        return;
-    }
-
-    entryPtr->value = value;
-}
-
-Xvr_Value* Xvr_accessScopeAsPointer(Xvr_Scope* scope, Xvr_String* key) {
-    if (key->info.type != XVR_STRING_NAME) {
-        fprintf(
-            stderr, XVR_CC_ERROR
-            "ERROR: Xvr_Scope only allows name strings as keys\n" XVR_CC_RESET);
-        exit(-1);
-    }
-
-    Xvr_TableEntry* entryPtr =
-        lookupScope(scope, key, Xvr_hashString(key), true);
-
-    if (entryPtr == NULL) {
-        char buffer[key->info.length + 256];
-        sprintf(buffer, "Undefined variable: %s\n", key->name.data);
-        Xvr_error(buffer);
+Xvr_Scope* Xvr_popScope(Xvr_Scope* scope) {
+    if (scope == NULL) {  // CAN pop a null
         return NULL;
     }
 
-    return &(entryPtr->value);
-}
+    Xvr_Scope* ret = scope->ancestor;
 
-bool Xvr_isDeclaredScope(Xvr_Scope* scope, Xvr_String* key) {
-    if (key->info.type != XVR_STRING_NAME) {
-        fprintf(
-            stderr, XVR_CC_ERROR
-            "ERROR: Xvr_Scope only allows name strings as keys\n" XVR_CC_RESET);
-        exit(-1);
+    // BUGFIX: when freeing a scope, free the function's scopes manually
+    for (int i = 0; i < scope->variables.capacity; i++) {
+        // handle keys, just in case
+        if (XVR_IS_FUNCTION(scope->variables.entries[i].key)) {
+            Xvr_popScope(
+                XVR_AS_FUNCTION(scope->variables.entries[i].key).scope);
+            XVR_AS_FUNCTION(scope->variables.entries[i].key).scope = NULL;
+        }
+
+        if (XVR_IS_FUNCTION(scope->variables.entries[i].value)) {
+            Xvr_popScope(
+                XVR_AS_FUNCTION(scope->variables.entries[i].value).scope);
+            XVR_AS_FUNCTION(scope->variables.entries[i].value).scope = NULL;
+        }
     }
 
-    Xvr_TableEntry* entryPtr =
-        lookupScope(scope, key, Xvr_hashString(key), true);
+    freeAncestorChain(scope);
 
-    return entryPtr != NULL;
+    return ret;
+}
+
+Xvr_Scope* Xvr_copyScope(Xvr_Scope* original) {
+    Xvr_Scope* scope = XVR_ALLOCATE(Xvr_Scope, 1);
+    scope->ancestor = original->ancestor;
+    Xvr_initLiteralDictionary(&scope->variables);
+    Xvr_initLiteralDictionary(&scope->types);
+
+    // tick up all scope reference counts
+    scope->references = 0;
+    for (Xvr_Scope* ptr = scope; ptr != NULL; ptr = ptr->ancestor) {
+        ptr->references++;
+    }
+
+    // copy the contents of the dictionaries
+    for (int i = 0; i < original->variables.capacity; i++) {
+        if (!XVR_IS_NULL(original->variables.entries[i].key)) {
+            Xvr_setLiteralDictionary(&scope->variables,
+                                     original->variables.entries[i].key,
+                                     original->variables.entries[i].value);
+        }
+    }
+
+    for (int i = 0; i < original->types.capacity; i++) {
+        if (!XVR_IS_NULL(original->types.entries[i].key)) {
+            Xvr_setLiteralDictionary(&scope->types,
+                                     original->types.entries[i].key,
+                                     original->types.entries[i].value);
+        }
+    }
+
+    return scope;
+}
+
+// returns false if error
+bool Xvr_declareScopeVariable(Xvr_Scope* scope, Xvr_Literal key,
+                              Xvr_Literal type) {
+    // don't redefine a variable within this scope
+    if (Xvr_existsLiteralDictionary(&scope->variables, key)) {
+        return false;
+    }
+
+    if (!XVR_IS_TYPE(type)) {
+        return false;
+    }
+
+    // store the type, for later checking on assignment
+    Xvr_setLiteralDictionary(&scope->types, key, type);
+
+    Xvr_setLiteralDictionary(&scope->variables, key, XVR_TO_NULL_LITERAL);
+    return true;
+}
+
+bool Xvr_isDeclaredScopeVariable(Xvr_Scope* scope, Xvr_Literal key) {
+    if (scope == NULL) {
+        return false;
+    }
+
+    // if it's not in this scope, keep searching up the chain
+    if (!Xvr_existsLiteralDictionary(&scope->variables, key)) {
+        return Xvr_isDeclaredScopeVariable(scope->ancestor, key);
+    }
+
+    return true;
+}
+
+// return false if undefined, or can't be assigned
+bool Xvr_setScopeVariable(Xvr_Scope* scope, Xvr_Literal key, Xvr_Literal value,
+                          bool constCheck) {
+    // dead end
+    if (scope == NULL) {
+        return false;
+    }
+
+    // if it's not in this scope, keep searching up the chain
+    if (!Xvr_existsLiteralDictionary(&scope->variables, key)) {
+        return Xvr_setScopeVariable(scope->ancestor, key, value, constCheck);
+    }
+
+    // type checking
+    Xvr_Literal typeLiteral = Xvr_getLiteralDictionary(&scope->types, key);
+    Xvr_Literal original = Xvr_getLiteralDictionary(&scope->variables, key);
+
+    if (!checkType(typeLiteral, original, value, constCheck)) {
+        Xvr_freeLiteral(typeLiteral);
+        Xvr_freeLiteral(original);
+        return false;
+    }
+
+    // actually assign
+    Xvr_setLiteralDictionary(&scope->variables, key, value);
+
+    Xvr_freeLiteral(typeLiteral);
+    Xvr_freeLiteral(original);
+
+    return true;
+}
+
+bool Xvr_getScopeVariable(Xvr_Scope* scope, Xvr_Literal key,
+                          Xvr_Literal* valueHandle) {
+    // dead end
+    if (scope == NULL) {
+        return false;
+    }
+
+    if (!Xvr_existsLiteralDictionary(&scope->variables, key)) {
+        return Xvr_getScopeVariable(scope->ancestor, key, valueHandle);
+    }
+
+    *valueHandle = Xvr_getLiteralDictionary(&scope->variables, key);
+    return true;
+}
+
+Xvr_Literal Xvr_getScopeType(Xvr_Scope* scope, Xvr_Literal key) {
+    // dead end
+    if (scope == NULL) {
+        return XVR_TO_NULL_LITERAL;
+    }
+
+    // if it's not in this scope, keep searching up the chain
+    if (!Xvr_existsLiteralDictionary(&scope->types, key)) {
+        return Xvr_getScopeType(scope->ancestor, key);
+    }
+
+    return Xvr_getLiteralDictionary(&scope->types, key);
 }

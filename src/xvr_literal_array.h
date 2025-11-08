@@ -22,24 +22,27 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef XVR_PARSER_H
-#define XVR_PARSER_H
+#ifndef XVR_LITERAL_ARRAY_H
+#define XVR_LITERAL_ARRAY_H
 
-#include "xvr_ast_node.h"
 #include "xvr_common.h"
-#include "xvr_lexer.h"
+#include "xvr_literal.h"
 
-typedef struct {
-    Xvr_Lexer* lexer;
-    bool error;
-    bool panic;
+typedef struct Xvr_LiteralArray {
+    Xvr_Literal* literals;
+    int capacity;
+    int count;
+} Xvr_LiteralArray;
 
-    Xvr_Token current;
-    Xvr_Token previous;
-} Xvr_Parser;
+XVR_API void Xvr_initLiteralArray(Xvr_LiteralArray* array);
+XVR_API void Xvr_freeLiteralArray(Xvr_LiteralArray* array);
+XVR_API int Xvr_pushLiteralArray(Xvr_LiteralArray* array, Xvr_Literal literal);
+XVR_API Xvr_Literal Xvr_popLiteralArray(Xvr_LiteralArray* array);
+XVR_API bool Xvr_setLiteralArray(Xvr_LiteralArray* array, Xvr_Literal index,
+                                 Xvr_Literal value);
+XVR_API Xvr_Literal Xvr_getLiteralArray(Xvr_LiteralArray* array,
+                                        Xvr_Literal index);
 
-XVR_API void Xvr_initParser(Xvr_Parser* parser, Xvr_Lexer* lexer);
-XVR_API void Xvr_freeParser(Xvr_Parser* parser);
-XVR_API Xvr_ASTNode* Xvr_scanParser(Xvr_Parser* parser);
+int Xvr_findLiteralIndex(Xvr_LiteralArray* array, Xvr_Literal literal);
 
-#endif  // !XVR_PARSER_H
+#endif  // !XVR_LITERAL_ARRAY_H

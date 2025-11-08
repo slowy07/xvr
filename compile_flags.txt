@@ -1,6 +1,0 @@
--std=c17
--xc
--Wall
--Wextra
--Wpedantic
--Wno-newline-eof

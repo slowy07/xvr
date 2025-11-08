@@ -1,12 +1,7 @@
 // print string and concat
 
 print "arfy slowy";
-print "xaviera " .. "putri";
+print "xaviera " + "putri";
 
 // escape string
 print "\tDerune\nCitizen";
-
-// print from leaf character
-print "wello wello wello"[2, 6];
-// and can use bracket
-print("xaviera putri loh ya :*")[3, 6];
