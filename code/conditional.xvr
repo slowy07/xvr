@@ -19,7 +19,7 @@ if (true)
 else
   print "woilah cik kok bisa loh ya error";
 
-if ("arfy" == "ar" .. "fy")
+if ("arfy" == "ar" + "fy")
   print "jalan bisa";
 else
   print "tidak bisa";

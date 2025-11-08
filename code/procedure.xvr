@@ -1,0 +1,16 @@
+proc wello() {
+  print("wello");
+}
+
+proc withReturn() {
+  return 20 + 33;
+}
+
+proc withParameter(name: string) {
+  return "wello " + name;
+}
+
+
+wello();
+print(withReturn());
+print(withParameter("arfy"));

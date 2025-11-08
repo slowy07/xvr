@@ -4,7 +4,7 @@ print datatable;
 var trail = [
   "ab": 1,
   "abab": 2,
-  "ababc": 3,
+  "ababc": 3
 ];
 
 print trail;
