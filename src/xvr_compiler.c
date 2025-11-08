@@ -19,30 +19,42 @@ void Xvr_initCompiler(Xvr_Compiler* compiler) {
     compiler->count = 0;
 }
 
+// separated out, so it can be recursive
 static int writeLiteralTypeToCache(Xvr_LiteralArray* literalCache,
                                    Xvr_Literal literal) {
     bool shouldFree = false;
 
+    // if it's a compound type, recurse and store the results
     if (XVR_AS_TYPE(literal).typeOf == XVR_LITERAL_ARRAY ||
         XVR_AS_TYPE(literal).typeOf == XVR_LITERAL_DICTIONARY) {
+        // I don't like storing types in an array, but it's the easiest and most
+        // straight forward method
         Xvr_LiteralArray* store = XVR_ALLOCATE(Xvr_LiteralArray, 1);
         Xvr_initLiteralArray(store);
 
+        // store the base literal in the store
         Xvr_pushLiteralArray(store, literal);
+
         for (int i = 0; i < XVR_AS_TYPE(literal).count; i++) {
+            // write the values to the cache, and the indexes to the store
             int subIndex = writeLiteralTypeToCache(
                 literalCache,
                 ((Xvr_Literal*)(XVR_AS_TYPE(literal).subtypes))[i]);
+
             Xvr_Literal lit = XVR_TO_INTEGER_LITERAL(subIndex);
             Xvr_pushLiteralArray(store, lit);
             Xvr_freeLiteral(lit);
         }
 
+        // push the store to the cache, tweaking the type
         shouldFree = true;
         literal = XVR_TO_ARRAY_LITERAL(store);
-        literal.type = XVR_LITERAL_TYPE_INTERMEDIATE;
+        literal.type =
+            XVR_LITERAL_TYPE_INTERMEDIATE;  // NOTE: tweaking the type usually
+                                            // isn't a good idea
     }
 
+    // optimisation: check if exactly this literal array exists
     int index = Xvr_findLiteralIndex(literalCache, literal);
     if (index < 0) {
         index = Xvr_pushLiteralArray(literalCache, literal);
@@ -51,20 +63,24 @@ static int writeLiteralTypeToCache(Xvr_LiteralArray* literalCache,
     if (shouldFree) {
         Xvr_freeLiteral(literal);
     }
-
     return index;
 }
 
 static int writeNodeCompoundToCache(Xvr_Compiler* compiler, Xvr_ASTNode* node) {
     int index = -1;
 
+    // for both, stored as an array
     Xvr_LiteralArray* store = XVR_ALLOCATE(Xvr_LiteralArray, 1);
     Xvr_initLiteralArray(store);
 
+    // emit an array or a dictionary definition
     if (node->compound.literalType == XVR_LITERAL_DICTIONARY) {
+        // ensure each literal key and value are in the cache, individually
         for (int i = 0; i < node->compound.count; i++) {
+            // keys
             switch (node->compound.nodes[i].pair.left->type) {
             case XVR_AST_NODE_LITERAL: {
+                // keys are literals
                 int key = Xvr_findLiteralIndex(
                     &compiler->literalCache,
                     node->compound.nodes[i].pair.left->atomic.literal);
@@ -73,6 +89,7 @@ static int writeNodeCompoundToCache(Xvr_Compiler* compiler, Xvr_ASTNode* node) {
                         &compiler->literalCache,
                         node->compound.nodes[i].pair.left->atomic.literal);
                 }
+
                 Xvr_Literal literal = XVR_TO_INTEGER_LITERAL(key);
                 Xvr_pushLiteralArray(store, literal);
                 Xvr_freeLiteral(literal);
@@ -81,6 +98,7 @@ static int writeNodeCompoundToCache(Xvr_Compiler* compiler, Xvr_ASTNode* node) {
             case XVR_AST_NODE_COMPOUND: {
                 int key = writeNodeCompoundToCache(
                     compiler, node->compound.nodes[i].pair.left);
+
                 Xvr_Literal literal = XVR_TO_INTEGER_LITERAL(key);
                 Xvr_pushLiteralArray(store, literal);
                 Xvr_freeLiteral(literal);
@@ -93,8 +111,10 @@ static int writeNodeCompoundToCache(Xvr_Compiler* compiler, Xvr_ASTNode* node) {
                 return -1;
             }
 
+            // values
             switch (node->compound.nodes[i].pair.right->type) {
             case XVR_AST_NODE_LITERAL: {
+                // values are literals
                 int val = Xvr_findLiteralIndex(
                     &compiler->literalCache,
                     node->compound.nodes[i].pair.right->atomic.literal);
@@ -126,14 +146,19 @@ static int writeNodeCompoundToCache(Xvr_Compiler* compiler, Xvr_ASTNode* node) {
             }
         }
 
+        // push the store to the cache, with instructions about how pack it
         Xvr_Literal literal = XVR_TO_DICTIONARY_LITERAL(store);
-        literal.type = XVR_LITERAL_DICTIONARY_INTERMEDIATE;
+        literal.type =
+            XVR_LITERAL_DICTIONARY_INTERMEDIATE;  // god damn it - nested in a
+                                                  // dictionary
         index = Xvr_pushLiteralArray(&compiler->literalCache, literal);
         Xvr_freeLiteral(literal);
     } else if (node->compound.literalType == XVR_LITERAL_ARRAY) {
+        // ensure each literal value is in the cache, individually
         for (int i = 0; i < node->compound.count; i++) {
             switch (node->compound.nodes[i].type) {
             case XVR_AST_NODE_LITERAL: {
+                // values
                 int val = Xvr_findLiteralIndex(
                     &compiler->literalCache,
                     node->compound.nodes[i].atomic.literal);
@@ -160,13 +185,15 @@ static int writeNodeCompoundToCache(Xvr_Compiler* compiler, Xvr_ASTNode* node) {
             default:
                 fprintf(stderr, XVR_CC_ERROR
                         "[internal] Unrecognized node type in "
-                        "writeNodeCompoundToCache()\n" XVR_CC_RESET);
+                        "writeNodeCompoundToCache()" XVR_CC_RESET);
                 return -1;
             }
         }
 
+        // push the store to the cache, with instructions about how pack it
         Xvr_Literal literal = XVR_TO_ARRAY_LITERAL(store);
-        literal.type = XVR_LITERAL_ARRAY_INTERMEDIATE;
+        literal.type =
+            XVR_LITERAL_ARRAY_INTERMEDIATE;  // god damn it - nested in an array
         index = Xvr_pushLiteralArray(&compiler->literalCache, literal);
         Xvr_freeLiteral(literal);
     } else {
@@ -183,12 +210,16 @@ static int writeNodeCollectionToCache(Xvr_Compiler* compiler,
     Xvr_LiteralArray* store = XVR_ALLOCATE(Xvr_LiteralArray, 1);
     Xvr_initLiteralArray(store);
 
+    // ensure each literal value is in the cache, individually
     for (int i = 0; i < node->fnCollection.count; i++) {
         switch (node->fnCollection.nodes[i].type) {
         case XVR_AST_NODE_VAR_DECL: {
+            // write each piece of the declaration to the cache
             int identifierIndex = Xvr_pushLiteralArray(
                 &compiler->literalCache,
-                node->fnCollection.nodes[i].varDecl.identifier);
+                node->fnCollection.nodes[i]
+                    .varDecl
+                    .identifier);  // store without duplication optimisation
             int typeIndex = writeLiteralTypeToCache(
                 &compiler->literalCache,
                 node->fnCollection.nodes[i].varDecl.typeLiteral);
@@ -204,9 +235,11 @@ static int writeNodeCollectionToCache(Xvr_Compiler* compiler,
         } break;
 
         case XVR_AST_NODE_LITERAL: {
+            // write each piece of the declaration to the cache
             int typeIndex = writeLiteralTypeToCache(
                 &compiler->literalCache,
                 node->fnCollection.nodes[i].atomic.literal);
+
             Xvr_Literal typeLiteral = XVR_TO_INTEGER_LITERAL(typeIndex);
             Xvr_pushLiteralArray(store, typeLiteral);
             Xvr_freeLiteral(typeLiteral);
@@ -220,6 +253,7 @@ static int writeNodeCollectionToCache(Xvr_Compiler* compiler,
         }
     }
 
+    // store the store
     Xvr_Literal literal = XVR_TO_ARRAY_LITERAL(store);
     int storeIndex = Xvr_pushLiteralArray(&compiler->literalCache, literal);
     Xvr_freeLiteral(literal);
@@ -228,46 +262,57 @@ static int writeNodeCollectionToCache(Xvr_Compiler* compiler,
 }
 
 static int writeLiteralToCompiler(Xvr_Compiler* compiler, Xvr_Literal literal) {
+    // get the index
     int index = Xvr_findLiteralIndex(&compiler->literalCache, literal);
 
     if (index < 0) {
         if (XVR_IS_TYPE(literal)) {
+            // check for the type literal as value
             index = writeLiteralTypeToCache(&compiler->literalCache, literal);
         } else {
             index = Xvr_pushLiteralArray(&compiler->literalCache, literal);
         }
     }
 
+    // push the literal to the bytecode
     if (index >= 256) {
-        compiler->bytecode[compiler->count++] = XVR_OP_LITERAL_LONG;
+        // push a "long" index
+        compiler->bytecode[compiler->count++] = XVR_OP_LITERAL_LONG;  // 1 byte
         memcpy(compiler->bytecode + compiler->count, &index,
-               sizeof(unsigned short));
+               sizeof(unsigned short));  // 2 bytes
 
         compiler->count += sizeof(unsigned short);
     } else {
-        compiler->bytecode[compiler->count++] = XVR_OP_LITERAL;
-        compiler->bytecode[compiler->count++] = (unsigned char)index;
+        // push the index
+        compiler->bytecode[compiler->count++] = XVR_OP_LITERAL;        // 1 byte
+        compiler->bytecode[compiler->count++] = (unsigned char)index;  // 1 byte
     }
 
     return index;
 }
 
+// NOTE: jumpOfsets are included, because function arg and return indexes are
+// embedded in the code body i.e. need to include their sizes in the jump NOTE:
+// rootNode should NOT include groupings and blocks
 static Xvr_Opcode Xvr_writeCompilerWithJumps(
     Xvr_Compiler* compiler, Xvr_ASTNode* node, void* breakAddressesPtr,
     void* continueAddressesPtr, int jumpOffsets, Xvr_ASTNode* rootNode) {
+    // grow if the bytecode space is too small
     if (compiler->count + 32 > compiler->capacity) {
         int oldCapacity = compiler->capacity;
+
         compiler->capacity = XVR_GROW_CAPACITY_FAST(oldCapacity);
         compiler->bytecode = XVR_GROW_ARRAY(unsigned char, compiler->bytecode,
                                             oldCapacity, compiler->capacity);
     }
 
+    // determine node type
     switch (node->type) {
     case XVR_AST_NODE_ERROR: {
         fprintf(stderr, XVR_CC_ERROR
-                "[internal] XVR_AST_NODE ERROR encountered int "
+                "[internal] XVR_AST_NODEERROR encountered in "
                 "Xvr_writeCompilerWithJumps()\n" XVR_CC_RESET);
-        compiler->bytecode[compiler->count++] = XVR_OP_EOF;
+        compiler->bytecode[compiler->count++] = XVR_OP_EOF;  // 1 byte
     } break;
 
     case XVR_AST_NODE_LITERAL: {
@@ -275,38 +320,50 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
     } break;
 
     case XVR_AST_NODE_UNARY: {
+        // pass to the child node, then embed the unary command (print, negate,
+        // etc.)
         Xvr_Opcode override = Xvr_writeCompilerWithJumps(
             compiler, node->unary.child, breakAddressesPtr,
             continueAddressesPtr, jumpOffsets, rootNode);
 
-        if (override != XVR_OP_EOF) {
-            compiler->bytecode[compiler->count++] = (unsigned char) override;
+        if (override != XVR_OP_EOF) {  // compensate for indexing & dot notation
+                                       // being screwy
+            compiler->bytecode[compiler->count++] =
+                (unsigned char) override;  // 1 byte
         }
+
         compiler->bytecode[compiler->count++] =
-            (unsigned char)node->unary.opcode;
+            (unsigned char)node->unary.opcode;  // 1 byte
     } break;
 
+    // all infixes come here
     case XVR_AST_NODE_BINARY: {
+        // pass to the child nodes, then embed the binary command (math, etc.)
         Xvr_Opcode override = Xvr_writeCompilerWithJumps(
             compiler, node->binary.left, breakAddressesPtr,
             continueAddressesPtr, jumpOffsets, rootNode);
+
+        // special case for when indexing and assigning
         if (override != XVR_OP_EOF &&
             node->binary.opcode >= XVR_OP_VAR_ASSIGN &&
             node->binary.opcode <= XVR_OP_VAR_MODULO_ASSIGN) {
             Xvr_writeCompilerWithJumps(compiler, node->binary.right,
                                        breakAddressesPtr, continueAddressesPtr,
                                        jumpOffsets, rootNode);
+            compiler->bytecode[compiler->count++] = (unsigned char)
+                XVR_OP_INDEX_ASSIGN;  // 1 byte WARNING: enum trickery
             compiler->bytecode[compiler->count++] =
-                (unsigned char)XVR_OP_INDEX_ASSIGN;
-            compiler->bytecode[compiler->count++] =
-                (unsigned char)node->binary.opcode;
+                (unsigned char)node->binary.opcode;  // 1 byte
             return XVR_OP_EOF;
         }
 
+        // compensate for... yikes
         if (override != XVR_OP_EOF) {
-            compiler->bytecode[compiler->count++] = (unsigned char) override;
+            compiler->bytecode[compiler->count++] =
+                (unsigned char) override;  // 1 byte
         }
 
+        // return this if...
         Xvr_Opcode ret = Xvr_writeCompilerWithJumps(
             compiler, node->binary.right, breakAddressesPtr,
             continueAddressesPtr, jumpOffsets, rootNode);
@@ -314,10 +371,13 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
         if (node->binary.opcode == XVR_OP_INDEX &&
             rootNode->type == XVR_AST_NODE_BINARY &&
             (rootNode->binary.opcode >= XVR_OP_VAR_ASSIGN &&
-             rootNode->binary.opcode <= XVR_OP_VAR_MODULO_ASSIGN)) {
+             rootNode->binary.opcode <=
+                 XVR_OP_VAR_MODULO_ASSIGN)) {  // range-based check for
+                                               // assignment type
             return XVR_OP_INDEX_ASSIGN_INTERMEDIATE;
         }
 
+        // loopy logic - if opcode == index or dot
         if (node->binary.opcode == XVR_OP_INDEX ||
             node->binary.opcode == XVR_OP_DOT) {
             return node->binary.opcode;
@@ -329,117 +389,146 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
              node->binary.opcode == XVR_OP_OR ||
              (node->binary.opcode >= XVR_OP_COMPARE_EQUAL &&
               node->binary.opcode <= XVR_OP_INVERT))) {
-            compiler->bytecode[compiler->count++] = (unsigned char)ret;
-            ret = XVR_OP_EOF;
+            compiler->bytecode[compiler->count++] =
+                (unsigned char)ret;  // 1 byte
+            ret = XVR_OP_EOF;        // untangle in this case
         }
 
         compiler->bytecode[compiler->count++] =
-            (unsigned char)node->binary.opcode;
+            (unsigned char)node->binary.opcode;  // 1 byte
 
         return ret;
     } break;
 
     case XVR_AST_NODE_TERNARY: {
+        // TODO
+
+        // process the condition
         Xvr_Opcode override = Xvr_writeCompilerWithJumps(
             compiler, node->ternary.condition, breakAddressesPtr,
             continueAddressesPtr, jumpOffsets, rootNode);
-        if (override != XVR_OP_EOF) {
-            compiler->bytecode[compiler->count++] = (unsigned char) override;
+        if (override != XVR_OP_EOF) {  // compensate for indexing & dot notation
+                                       // being screwy
+            compiler->bytecode[compiler->count++] =
+                (unsigned char) override;  // 1 byte
         }
 
-        compiler->bytecode[compiler->count++] = XVR_OP_IF_FALSE_JUMP;
+        // cache the point to insert the jump distance at
+        compiler->bytecode[compiler->count++] = XVR_OP_IF_FALSE_JUMP;  // 1 byte
         int jumpToElse = compiler->count;
-        compiler->count += sizeof(unsigned short);
+        compiler->count += sizeof(unsigned short);  // 2 bytes
 
         // write the then path
         override = Xvr_writeCompilerWithJumps(
             compiler, node->pathIf.thenPath, breakAddressesPtr,
             continueAddressesPtr, jumpOffsets, rootNode);
-        if (override != XVR_OP_EOF) {
-            compiler->bytecode[compiler->count++] = (unsigned char) override;
+        if (override != XVR_OP_EOF) {  // compensate for indexing & dot notation
+                                       // being screwy
+            compiler->bytecode[compiler->count++] =
+                (unsigned char) override;  // 1 byte
         }
 
         int jumpToEnd = 0;
 
-        compiler->bytecode[compiler->count++] = XVR_OP_JUMP;
+        // insert jump to end
+        compiler->bytecode[compiler->count++] = XVR_OP_JUMP;  // 1 byte
         jumpToEnd = compiler->count;
-        compiler->count += sizeof(unsigned short);
+        compiler->count += sizeof(unsigned short);  // 2 bytes
 
+        // update the jumpToElse to point here
         unsigned short tmpVal = compiler->count + jumpOffsets;
-        memcpy(compiler->bytecode + jumpToElse, &tmpVal, sizeof(tmpVal));
+        memcpy(compiler->bytecode + jumpToElse, &tmpVal,
+               sizeof(tmpVal));  // 2 bytes
 
         // write the else path
         Xvr_Opcode override2 = Xvr_writeCompilerWithJumps(
             compiler, node->pathIf.elsePath, breakAddressesPtr,
             continueAddressesPtr, jumpOffsets, rootNode);
-        if (override2 != XVR_OP_EOF) {
-            compiler->bytecode[compiler->count++] = (unsigned char)override2;
+        if (override2 != XVR_OP_EOF) {  // compensate for indexing & dot
+                                        // notation being screwy
+            compiler->bytecode[compiler->count++] =
+                (unsigned char)override2;  // 1 byte
         }
 
+        // update the jumpToEnd to point here
         tmpVal = compiler->count + jumpOffsets;
-        memcpy(compiler->bytecode + jumpToEnd, &tmpVal, sizeof(tmpVal));
+        memcpy(compiler->bytecode + jumpToEnd, &tmpVal,
+               sizeof(tmpVal));  // 2 bytes
     } break;
 
     case XVR_AST_NODE_GROUPING: {
         compiler->bytecode[compiler->count++] =
-            (unsigned char)XVR_OP_GROUPING_BEGIN;
+            (unsigned char)XVR_OP_GROUPING_BEGIN;  // 1 byte
         Xvr_Opcode override = Xvr_writeCompilerWithJumps(
             compiler, node->grouping.child, breakAddressesPtr,
             continueAddressesPtr, jumpOffsets, node->grouping.child);
-        if (override != XVR_OP_EOF) {
-            compiler->bytecode[compiler->count++] = (unsigned char) override;
+        if (override != XVR_OP_EOF) {  // compensate for indexing & dot notation
+                                       // being screwy
+            compiler->bytecode[compiler->count++] =
+                (unsigned char) override;  // 1 byte
         }
         compiler->bytecode[compiler->count++] =
-            (unsigned char)XVR_OP_GROUPING_END;
+            (unsigned char)XVR_OP_GROUPING_END;  // 1 byte
     } break;
 
     case XVR_AST_NODE_BLOCK: {
         compiler->bytecode[compiler->count++] =
-            (unsigned char)XVR_OP_SCOPE_BEGIN;
+            (unsigned char)XVR_OP_SCOPE_BEGIN;  // 1 byte
 
         for (int i = 0; i < node->block.count; i++) {
             Xvr_Opcode override = Xvr_writeCompilerWithJumps(
                 compiler, &(node->block.nodes[i]), breakAddressesPtr,
                 continueAddressesPtr, jumpOffsets, &(node->block.nodes[i]));
-            if (override != XVR_OP_EOF) {
+            if (override != XVR_OP_EOF) {  // compensate for indexing & dot
+                                           // notation being screwy
                 compiler->bytecode[compiler->count++] =
-                    (unsigned char) override;
+                    (unsigned char) override;  // 1 byte
             }
         }
 
-        compiler->bytecode[compiler->count++] = (unsigned char)XVR_OP_SCOPE_END;
+        compiler->bytecode[compiler->count++] =
+            (unsigned char)XVR_OP_SCOPE_END;  // 1 byte
     } break;
 
     case XVR_AST_NODE_COMPOUND: {
         int index = writeNodeCompoundToCache(compiler, node);
 
+        // push the node opcode to the bytecode
         if (index >= 256) {
-            compiler->bytecode[compiler->count++] = XVR_OP_LITERAL_LONG;
+            // push a "long" index
+            compiler->bytecode[compiler->count++] =
+                XVR_OP_LITERAL_LONG;  // 1 byte
             memcpy(compiler->bytecode + compiler->count, &index,
                    sizeof(unsigned short));
 
             compiler->count += sizeof(unsigned short);
         } else {
-            compiler->bytecode[compiler->count++] = XVR_OP_LITERAL;
-            compiler->bytecode[compiler->count++] = (unsigned char)index;
+            // push the index
+            compiler->bytecode[compiler->count++] = XVR_OP_LITERAL;  // 1 byte
+            compiler->bytecode[compiler->count++] =
+                (unsigned char)index;  // 1 byte
         }
     } break;
 
     case XVR_AST_NODE_PAIR:
         fprintf(stderr, XVR_CC_ERROR
-                "[internal] XVR_AST_NODE_PAIR encountered in "
+                "[internal] XVR_AST_NODEPAIR encountered in "
                 "Xvr_writeCompilerWithJumps()\n" XVR_CC_RESET);
-        compiler->bytecode[compiler->count++] = XVR_OP_EOF;
+        compiler->bytecode[compiler->count++] = XVR_OP_EOF;  // 1 byte
         break;
 
     case XVR_AST_NODE_VAR_DECL: {
+        // first, embed the expression (leaves it on the stack)
         Xvr_Opcode override = Xvr_writeCompilerWithJumps(
             compiler, node->varDecl.expression, breakAddressesPtr,
             continueAddressesPtr, jumpOffsets, rootNode);
-        if (override != XVR_OP_EOF) {
-            compiler->bytecode[compiler->count++] = (unsigned char) override;
+        if (override != XVR_OP_EOF) {  // compensate for indexing & dot notation
+                                       // being screwy
+            compiler->bytecode[compiler->count++] =
+                (unsigned char) override;  // 1 byte
         }
 
+        // write each piece of the declaration to the bytecode
         int identifierIndex = Xvr_findLiteralIndex(&compiler->literalCache,
                                                    node->varDecl.identifier);
         if (identifierIndex < 0) {
@@ -450,39 +539,53 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
         int typeIndex = writeLiteralTypeToCache(&compiler->literalCache,
                                                 node->varDecl.typeLiteral);
 
+        // embed the info into the bytecode
         if (identifierIndex >= 256 || typeIndex >= 256) {
-            compiler->bytecode[compiler->count++] = XVR_OP_VAR_DECL_LONG;
+            // push a "long" declaration
+            compiler->bytecode[compiler->count++] =
+                XVR_OP_VAR_DECL_LONG;  // 1 byte
 
             *((unsigned short*)(compiler->bytecode + compiler->count)) =
-                (unsigned short)identifierIndex;
+                (unsigned short)identifierIndex;  // 2 bytes
+            compiler->count += sizeof(unsigned short);
 
             *((unsigned short*)(compiler->bytecode + compiler->count)) =
-                (unsigned short)typeIndex;
+                (unsigned short)typeIndex;  // 2 bytes
             compiler->count += sizeof(unsigned short);
         } else {
             // push a declaration
-            compiler->bytecode[compiler->count++] = XVR_OP_VAR_DECL;
+            compiler->bytecode[compiler->count++] = XVR_OP_VAR_DECL;  // 1 byte
             compiler->bytecode[compiler->count++] =
-                (unsigned char)identifierIndex;
-            compiler->bytecode[compiler->count++] = (unsigned char)typeIndex;
+                (unsigned char)identifierIndex;  // 1 byte
+            compiler->bytecode[compiler->count++] =
+                (unsigned char)typeIndex;  // 1 byte
         }
     } break;
 
     case XVR_AST_NODE_FN_DECL: {
+        // run a compiler over the function
         Xvr_Compiler* fnCompiler = XVR_ALLOCATE(Xvr_Compiler, 1);
         Xvr_initCompiler(fnCompiler);
-        Xvr_writeCompiler(fnCompiler, node->fnDecl.arguments);
-        Xvr_writeCompiler(fnCompiler, node->fnDecl.returns);
+        Xvr_writeCompiler(
+            fnCompiler, node->fnDecl.arguments);  // can be empty, but not NULL
+        Xvr_writeCompiler(fnCompiler,
+                          node->fnDecl.returns);  // can be empty, but not NULL
         Xvr_Opcode override = Xvr_writeCompilerWithJumps(
-            fnCompiler, node->fnDecl.block, NULL, NULL, -4, rootNode);
-
-        if (override != XVR_OP_EOF) {
-            compiler->bytecode[compiler->count++] = (unsigned char) override;
+            fnCompiler, node->fnDecl.block, NULL, NULL, -4,
+            rootNode);                 // can be empty, but not NULL
+        if (override != XVR_OP_EOF) {  // compensate for indexing & dot notation
+                                       // being screwy
+            compiler->bytecode[compiler->count++] =
+                (unsigned char) override;  // 1 byte
         }
 
+        // create the function in the literal cache (by storing the compiler
+        // object)
         Xvr_Literal fnLiteral = XVR_TO_FUNCTION_LITERAL(fnCompiler, 0);
-        fnLiteral.type = XVR_LITERAL_FUNCTION_INTERMEDIATE;
+        fnLiteral.type =
+            XVR_LITERAL_FUNCTION_INTERMEDIATE;  // NOTE: changing type
 
+        // push the name
         int identifierIndex = Xvr_findLiteralIndex(&compiler->literalCache,
                                                    node->fnDecl.identifier);
         if (identifierIndex < 0) {
@@ -490,29 +593,37 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
                                                    node->fnDecl.identifier);
         }
 
+        // push to function (functions are never equal)
         int fnIndex = Xvr_pushLiteralArray(&compiler->literalCache, fnLiteral);
 
+        // embed the info into the bytecode
         if (identifierIndex >= 256 || fnIndex >= 256) {
-            compiler->bytecode[compiler->count++] = XVR_OP_FN_DECL_LONG;
+            // push a "long" declaration
+            compiler->bytecode[compiler->count++] =
+                XVR_OP_FN_DECL_LONG;  // 1 byte
 
             *((unsigned short*)(compiler->bytecode + compiler->count)) =
-                (unsigned short)identifierIndex;
+                (unsigned short)identifierIndex;  // 2 bytes
             compiler->count += sizeof(unsigned short);
 
             *((unsigned short*)(compiler->bytecode + compiler->count)) =
-                (unsigned short)fnIndex;
+                (unsigned short)fnIndex;  // 2 bytes
             compiler->count += sizeof(unsigned short);
         } else {
-            compiler->bytecode[compiler->count++] = XVR_OP_FN_DECL;
+            // push a declaration
+            compiler->bytecode[compiler->count++] = XVR_OP_FN_DECL;  // 1 byte
             compiler->bytecode[compiler->count++] =
-                (unsigned char)identifierIndex;
-            compiler->bytecode[compiler->count++] = (unsigned char)fnIndex;
+                (unsigned char)identifierIndex;  // 1 byte
+            compiler->bytecode[compiler->count++] =
+                (unsigned char)fnIndex;  // 1 byte
         }
     } break;
 
     case XVR_AST_NODE_FN_COLLECTION: {
+        // embed these in the bytecode...
         unsigned short index =
             (unsigned short)writeNodeCollectionToCache(compiler, node);
+
         memcpy(compiler->bytecode + compiler->count, &index, sizeof(index));
         compiler->count += sizeof(unsigned short);
     } break;
@@ -525,13 +636,15 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
                     compiler, &node->fnCall.arguments->fnCollection.nodes[i],
                     breakAddressesPtr, continueAddressesPtr, jumpOffsets,
                     rootNode);
-                if (override != XVR_OP_EOF) {
+                if (override != XVR_OP_EOF) {  // compensate for indexing & dot
+                                               // notation being screwy
                     compiler->bytecode[compiler->count++] =
-                        (unsigned char) override;
+                        (unsigned char) override;  // 1 byte
                 }
                 continue;
             }
 
+            // write each argument to the bytecode
             int argumentsIndex = Xvr_findLiteralIndex(
                 &compiler->literalCache,
                 node->fnCall.arguments->fnCollection.nodes[i].atomic.literal);
@@ -542,21 +655,28 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
                         .atomic.literal);
             }
 
+            // push the node opcode to the bytecode
             if (argumentsIndex >= 256) {
-                compiler->bytecode[compiler->count++] = XVR_OP_LITERAL_LONG;
+                // push a "long" index
+                compiler->bytecode[compiler->count++] =
+                    XVR_OP_LITERAL_LONG;  // 1 byte
 
                 *((unsigned short*)(compiler->bytecode + compiler->count)) =
-                    (unsigned short)argumentsIndex;
+                    (unsigned short)argumentsIndex;  // 2 bytes
                 compiler->count += sizeof(unsigned short);
             } else {
-                compiler->bytecode[compiler->count++] = XVR_OP_LITERAL;
+                // push the index
                 compiler->bytecode[compiler->count++] =
-                    (unsigned char)argumentsIndex;
+                    XVR_OP_LITERAL;  // 1 byte
+                compiler->bytecode[compiler->count++] =
+                    (unsigned char)argumentsIndex;  // 1 byte
             }
         }
 
-        Xvr_Literal argumentsCountLiteral =
-            XVR_TO_INTEGER_LITERAL(node->fnCall.argumentCount);
+        // push the argument COUNT to the top of the stack
+        Xvr_Literal argumentsCountLiteral = XVR_TO_INTEGER_LITERAL(
+            node->fnCall.argumentCount);  // argumentCount is set elsewhere to
+                                          // support dot operator
         int argumentsCountIndex = Xvr_findLiteralIndex(&compiler->literalCache,
                                                        argumentsCountLiteral);
         if (argumentsCountIndex < 0) {
@@ -566,30 +686,39 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
         Xvr_freeLiteral(argumentsCountLiteral);
 
         if (argumentsCountIndex >= 256) {
-            compiler->bytecode[compiler->count++] = XVR_OP_LITERAL_LONG;
+            // push a "long" index
+            compiler->bytecode[compiler->count++] =
+                XVR_OP_LITERAL_LONG;  // 1 byte
 
             *((unsigned short*)(compiler->bytecode + compiler->count)) =
-                (unsigned short)argumentsCountIndex;
+                (unsigned short)argumentsCountIndex;  // 2 bytes
             compiler->count += sizeof(unsigned short);
         } else {
-            compiler->bytecode[compiler->count++] = XVR_OP_LITERAL;
+            // push the index
+            compiler->bytecode[compiler->count++] = XVR_OP_LITERAL;  // 1 byte
             compiler->bytecode[compiler->count++] =
-                (unsigned char)argumentsCountIndex;
+                (unsigned char)argumentsCountIndex;  // 1 byte
         }
+
+        // call the function
+        // DO NOT call the collection, this is done in binary
     } break;
 
     case XVR_AST_NODE_IF: {
+        // process the condition
         Xvr_Opcode override = Xvr_writeCompilerWithJumps(
             compiler, node->pathIf.condition, breakAddressesPtr,
             continueAddressesPtr, jumpOffsets, rootNode);
-        if (override != XVR_OP_EOF) {
-            compiler->bytecode[compiler->count++] = (unsigned char) override;
+        if (override != XVR_OP_EOF) {  // compensate for indexing & dot notation
+                                       // being screwy
+            compiler->bytecode[compiler->count++] =
+                (unsigned char) override;  // 1 byte
         }
 
         // cache the point to insert the jump distance at
-        compiler->bytecode[compiler->count++] = XVR_OP_IF_FALSE_JUMP;
+        compiler->bytecode[compiler->count++] = XVR_OP_IF_FALSE_JUMP;  // 1 byte
         int jumpToElse = compiler->count;
-        compiler->count += sizeof(unsigned short);
+        compiler->count += sizeof(unsigned short);  // 2 bytes
 
         // write the then path
         override = Xvr_writeCompilerWithJumps(
@@ -597,42 +726,51 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
             continueAddressesPtr, jumpOffsets, rootNode);
         if (override != XVR_OP_EOF) {  // compensate for indexing & dot notation
                                        // being screwy
-            compiler->bytecode[compiler->count++] = (unsigned char) override;
+            compiler->bytecode[compiler->count++] =
+                (unsigned char) override;  // 1 byte
         }
 
         int jumpToEnd = 0;
 
         if (node->pathIf.elsePath) {
             // insert jump to end
-            compiler->bytecode[compiler->count++] = XVR_OP_JUMP;
+            compiler->bytecode[compiler->count++] = XVR_OP_JUMP;  // 1 byte
             jumpToEnd = compiler->count;
-            compiler->count += sizeof(unsigned short);
+            compiler->count += sizeof(unsigned short);  // 2 bytes
         }
 
+        // update the jumpToElse to point here
         unsigned short tmpVal = compiler->count + jumpOffsets;
-        memcpy(compiler->bytecode + jumpToElse, &tmpVal, sizeof(tmpVal));
+        memcpy(compiler->bytecode + jumpToElse, &tmpVal,
+               sizeof(tmpVal));  // 2 bytes
 
         if (node->pathIf.elsePath) {
+            // if there's an else path, write it and
             Xvr_Opcode override = Xvr_writeCompilerWithJumps(
                 compiler, node->pathIf.elsePath, breakAddressesPtr,
                 continueAddressesPtr, jumpOffsets, rootNode);
-            if (override != XVR_OP_EOF) {
+            if (override != XVR_OP_EOF) {  // compensate for indexing & dot
+                                           // notation being screwy
                 compiler->bytecode[compiler->count++] =
-                    (unsigned char) override;
+                    (unsigned char) override;  // 1 byte
             }
 
+            // update the jumpToEnd to point here
             tmpVal = compiler->count + jumpOffsets;
-            memcpy(compiler->bytecode + jumpToEnd, &tmpVal, sizeof(tmpVal));
+            memcpy(compiler->bytecode + jumpToEnd, &tmpVal,
+                   sizeof(tmpVal));  // 2 bytes
         }
     } break;
 
     case XVR_AST_NODE_WHILE: {
+        // for breaks and continues
         Xvr_LiteralArray breakAddresses;
         Xvr_LiteralArray continueAddresses;
 
         Xvr_initLiteralArray(&breakAddresses);
         Xvr_initLiteralArray(&continueAddresses);
 
+        // cache the jump point
         unsigned short jumpToStart = compiler->count;
 
         // process the condition
@@ -641,13 +779,14 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
             &continueAddresses, jumpOffsets, rootNode);
         if (override != XVR_OP_EOF) {  // compensate for indexing & dot notation
                                        // being screwy
-            compiler->bytecode[compiler->count++] = (unsigned char) override;
+            compiler->bytecode[compiler->count++] =
+                (unsigned char) override;  // 1 byte
         }
 
         // if false, jump to end
-        compiler->bytecode[compiler->count++] = XVR_OP_IF_FALSE_JUMP;
+        compiler->bytecode[compiler->count++] = XVR_OP_IF_FALSE_JUMP;  // 1 byte
         unsigned short jumpToEnd = compiler->count;
-        compiler->count += sizeof(unsigned short);
+        compiler->count += sizeof(unsigned short);  // 2 bytes
 
         // write the body
         override = Xvr_writeCompilerWithJumps(
@@ -655,14 +794,15 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
             &continueAddresses, jumpOffsets, rootNode);
         if (override != XVR_OP_EOF) {  // compensate for indexing & dot notation
                                        // being screwy
-            compiler->bytecode[compiler->count++] = (unsigned char) override;
+            compiler->bytecode[compiler->count++] =
+                (unsigned char) override;  // 1 byte
         }
 
         // jump to condition
-        compiler->bytecode[compiler->count++] = XVR_OP_JUMP;
+        compiler->bytecode[compiler->count++] = XVR_OP_JUMP;  // 1 byte
         unsigned short tmpVal = jumpToStart + jumpOffsets;
         memcpy(compiler->bytecode + compiler->count, &tmpVal, sizeof(tmpVal));
-        compiler->count += sizeof(unsigned short);
+        compiler->count += sizeof(unsigned short);  // 2 bytes
 
         // jump from condition
         tmpVal = compiler->count + jumpOffsets;
@@ -682,7 +822,7 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
         }
 
         // clear the stack after use
-        compiler->bytecode[compiler->count++] = XVR_OP_POP_STACK;
+        compiler->bytecode[compiler->count++] = XVR_OP_POP_STACK;  // 1 byte
 
         // cleanup
         Xvr_freeLiteralArray(&breakAddresses);
@@ -690,14 +830,16 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
     } break;
 
     case XVR_AST_NODE_FOR: {
+        // for breaks and continues
         Xvr_LiteralArray breakAddresses;
         Xvr_LiteralArray continueAddresses;
 
         Xvr_initLiteralArray(&breakAddresses);
         Xvr_initLiteralArray(&continueAddresses);
 
-        compiler->bytecode[compiler->count++] = XVR_OP_SCOPE_BEGIN;
+        compiler->bytecode[compiler->count++] = XVR_OP_SCOPE_BEGIN;  // 1 byte
 
+        // initial setup
         Xvr_Opcode override = Xvr_writeCompilerWithJumps(
             compiler, node->pathFor.preClause, &breakAddresses,
             &continueAddresses, jumpOffsets, rootNode);
@@ -714,24 +856,26 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
             &continueAddresses, jumpOffsets, rootNode);
         if (override != XVR_OP_EOF) {  // compensate for indexing & dot notation
                                        // being screwy
-            compiler->bytecode[compiler->count++] = (unsigned char) override;
+            compiler->bytecode[compiler->count++] =
+                (unsigned char) override;  // 1 byte
         }
 
         // if false jump to end
-        compiler->bytecode[compiler->count++] = XVR_OP_IF_FALSE_JUMP;
+        compiler->bytecode[compiler->count++] = XVR_OP_IF_FALSE_JUMP;  // 1 byte
         unsigned short jumpToEnd = compiler->count;
-        compiler->count += sizeof(unsigned short);
+        compiler->count += sizeof(unsigned short);  // 2 bytes
 
         // write the body
-        compiler->bytecode[compiler->count++] = XVR_OP_SCOPE_BEGIN;
+        compiler->bytecode[compiler->count++] = XVR_OP_SCOPE_BEGIN;  // 1 byte
         override = Xvr_writeCompilerWithJumps(
             compiler, node->pathFor.thenPath, &breakAddresses,
             &continueAddresses, jumpOffsets, rootNode);
         if (override != XVR_OP_EOF) {  // compensate for indexing & dot notation
                                        // being screwy
-            compiler->bytecode[compiler->count++] = (unsigned char) override;
+            compiler->bytecode[compiler->count++] =
+                (unsigned char) override;  // 1 byte
         }
-        compiler->bytecode[compiler->count++] = XVR_OP_SCOPE_END;
+        compiler->bytecode[compiler->count++] = XVR_OP_SCOPE_END;  // 1 byte
 
         // for-breaks actually jump to the bottom
         int jumpToIncrement = compiler->count;
@@ -746,7 +890,7 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
                 (unsigned char) override;  // 1 byte
         }
 
-        compiler->bytecode[compiler->count++] = XVR_OP_JUMP;
+        compiler->bytecode[compiler->count++] = XVR_OP_JUMP;  // 1 byte
         unsigned short tmpVal = jumpToStart + jumpOffsets;
         memcpy(compiler->bytecode + compiler->count, &tmpVal, sizeof(tmpVal));
         compiler->count += sizeof(unsigned short);  // 2 bytes
@@ -754,7 +898,7 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
         tmpVal = compiler->count + jumpOffsets;
         memcpy(compiler->bytecode + jumpToEnd, &tmpVal, sizeof(tmpVal));
 
-        compiler->bytecode[compiler->count++] = XVR_OP_SCOPE_END;
+        compiler->bytecode[compiler->count++] = XVR_OP_SCOPE_END;  // 1 byte
 
         // set the breaks and continues
         for (int i = 0; i < breakAddresses.count; i++) {
@@ -770,7 +914,7 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
         }
 
         // clear the stack after use
-        compiler->bytecode[compiler->count++] = XVR_OP_POP_STACK;
+        compiler->bytecode[compiler->count++] = XVR_OP_POP_STACK;  // 1 byte
 
         // cleanup
         Xvr_freeLiteralArray(&breakAddresses);
@@ -785,14 +929,15 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
             break;
         }
 
-        compiler->bytecode[compiler->count++] = XVR_OP_JUMP;
+        // insert into bytecode
+        compiler->bytecode[compiler->count++] = XVR_OP_JUMP;  // 1 byte
 
         // push to the breakAddresses array
         Xvr_Literal literal = XVR_TO_INTEGER_LITERAL(compiler->count);
         Xvr_pushLiteralArray((Xvr_LiteralArray*)breakAddressesPtr, literal);
         Xvr_freeLiteral(literal);
 
-        compiler->count += sizeof(unsigned short);
+        compiler->count += sizeof(unsigned short);  // 2 bytes
     } break;
 
     case XVR_AST_NODE_CONTINUE: {
@@ -811,10 +956,12 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
         Xvr_pushLiteralArray((Xvr_LiteralArray*)continueAddressesPtr, literal);
         Xvr_freeLiteral(literal);
 
-        compiler->count += sizeof(unsigned short);
+        compiler->count += sizeof(unsigned short);  // 2 bytes
     } break;
 
     case XVR_AST_NODE_FN_RETURN: {
+        // read each returned literal onto the stack, and return the number of
+        // values to return
         for (int i = 0; i < node->returns.returns->fnCollection.count; i++) {
             Xvr_Opcode override = Xvr_writeCompilerWithJumps(
                 compiler, &node->returns.returns->fnCollection.nodes[i],
@@ -822,7 +969,7 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
             if (override != XVR_OP_EOF) {  // compensate for indexing & dot
                                            // notation being screwy
                 compiler->bytecode[compiler->count++] =
-                    (unsigned char) override;
+                    (unsigned char) override;  // 1 byte
             }
         }
 
@@ -836,6 +983,7 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
     } break;
 
     case XVR_AST_NODE_PREFIX_INCREMENT: {
+        // push the literal to the stack (twice: add + assign)
         writeLiteralToCompiler(compiler, node->prefixIncrement.identifier);
         writeLiteralToCompiler(compiler, node->prefixIncrement.identifier);
 
@@ -844,19 +992,21 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
         writeLiteralToCompiler(compiler, increment);
 
         // push the add opcode
-        compiler->bytecode[compiler->count++] = (unsigned char)XVR_OP_ADDITION;
+        compiler->bytecode[compiler->count++] =
+            (unsigned char)XVR_OP_ADDITION;  // 1 byte
 
         // push the assign
         compiler->bytecode[compiler->count++] =
-            (unsigned char)XVR_OP_VAR_ASSIGN;
+            (unsigned char)XVR_OP_VAR_ASSIGN;  // 1 byte
 
         // leave the result on the stack
         writeLiteralToCompiler(compiler, node->prefixIncrement.identifier);
         compiler->bytecode[compiler->count++] =
-            (unsigned char)XVR_OP_LITERAL_RAW;
+            (unsigned char)XVR_OP_LITERAL_RAW;  // 1 byte
     } break;
 
     case XVR_AST_NODE_PREFIX_DECREMENT: {
+        // push the literal to the stack (twice: add + assign)
         writeLiteralToCompiler(compiler, node->prefixDecrement.identifier);
         writeLiteralToCompiler(compiler, node->prefixDecrement.identifier);
 
@@ -866,19 +1016,20 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
 
         // push the subtract opcode
         compiler->bytecode[compiler->count++] =
-            (unsigned char)XVR_OP_SUBTRACTION;
+            (unsigned char)XVR_OP_SUBTRACTION;  // 1 byte
 
         // push the assign
         compiler->bytecode[compiler->count++] =
-            (unsigned char)XVR_OP_VAR_ASSIGN;
+            (unsigned char)XVR_OP_VAR_ASSIGN;  // 1 byte
 
         // leave the result on the stack
         writeLiteralToCompiler(compiler, node->prefixDecrement.identifier);
         compiler->bytecode[compiler->count++] =
-            (unsigned char)XVR_OP_LITERAL_RAW;
+            (unsigned char)XVR_OP_LITERAL_RAW;  // 1 byte
     } break;
 
     case XVR_AST_NODE_POSTFIX_INCREMENT: {
+        // push the identifier's VALUE to the stack
         writeLiteralToCompiler(compiler, node->postfixIncrement.identifier);
         compiler->bytecode[compiler->count++] =
             (unsigned char)XVR_OP_LITERAL_RAW;  // 1 byte
@@ -892,21 +1043,25 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
         writeLiteralToCompiler(compiler, increment);
 
         // push the add opcode
-        compiler->bytecode[compiler->count++] = (unsigned char)XVR_OP_ADDITION;
+        compiler->bytecode[compiler->count++] =
+            (unsigned char)XVR_OP_ADDITION;  // 1 byte
 
         // push the assign
         compiler->bytecode[compiler->count++] =
-            (unsigned char)XVR_OP_VAR_ASSIGN;
+            (unsigned char)XVR_OP_VAR_ASSIGN;  // 1 byte
     } break;
 
     case XVR_AST_NODE_POSTFIX_DECREMENT: {
+        // push the identifier's VALUE to the stack
         writeLiteralToCompiler(compiler, node->postfixDecrement.identifier);
         compiler->bytecode[compiler->count++] =
             (unsigned char)XVR_OP_LITERAL_RAW;  // 1 byte
 
+        // push the identifier (twice: add + assign)
         writeLiteralToCompiler(compiler, node->postfixDecrement.identifier);
         writeLiteralToCompiler(compiler, node->postfixDecrement.identifier);
 
+        // push the increment / decrement
         Xvr_Literal increment = XVR_TO_INTEGER_LITERAL(1);
         writeLiteralToCompiler(compiler, increment);
 
@@ -920,10 +1075,13 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
     } break;
 
     case XVR_AST_NODE_IMPORT: {
+        // push the identifier, and the alias
         writeLiteralToCompiler(compiler, node->import.identifier);
         writeLiteralToCompiler(compiler, node->import.alias);
 
-        compiler->bytecode[compiler->count++] = (unsigned char)XVR_OP_IMPORT;
+        // push the import opcode
+        compiler->bytecode[compiler->count++] =
+            (unsigned char)XVR_OP_IMPORT;  // 1 byte
     } break;
 
     case XVR_AST_NODE_INDEX: {
@@ -936,10 +1094,11 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
             if (override != XVR_OP_EOF) {  // compensate for indexing & dot
                                            // notation being screwy
                 compiler->bytecode[compiler->count++] =
-                    (unsigned char) override;
+                    (unsigned char) override;  // 1 byte
             }
         }
 
+        // second
         if (!node->index.second) {
             writeLiteralToCompiler(compiler, XVR_TO_NULL_LITERAL);
         } else {
@@ -953,6 +1112,7 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
             }
         }
 
+        // third
         if (!node->index.third) {
             writeLiteralToCompiler(compiler, XVR_TO_NULL_LITERAL);
         } else {
@@ -969,12 +1129,14 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
         return XVR_OP_INDEX_ASSIGN;
     } break;
     }
+
     return XVR_OP_EOF;
 }
 
 void Xvr_writeCompiler(Xvr_Compiler* compiler, Xvr_ASTNode* node) {
     Xvr_Opcode op =
-        Xvr_writeCompilerWithJumps(compiler, node, NULL, NULL, 0, node);
+        Xvr_writeCompilerWithJumps(compiler, node, NULL, NULL, 0,
+                                   node);  // pass in "node" as the root node
 
     if (op !=
         XVR_OP_EOF) {  // compensate for indexing & dot notation being screwy
@@ -1039,38 +1201,52 @@ static void emitFloat(unsigned char** collationPtr, int* capacityPtr,
     emitByte(collationPtr, capacityPtr, countPtr, *ptr);
 }
 
+// return the result
 static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
                                                int* size, bool embedHeader) {
     int capacity = XVR_GROW_CAPACITY(0);
     int count = 0;
     unsigned char* collation = XVR_ALLOCATE(unsigned char, capacity);
 
-    int fnIndex = 0;
+    // for the function-section at the end of the main-collation
+    int fnIndex = 0;  // counts up for each fn
     int fnCapacity = XVR_GROW_CAPACITY(0);
     int fnCount = 0;
     unsigned char* fnCollation = XVR_ALLOCATE(unsigned char, fnCapacity);
 
     if (embedHeader) {
+        // embed the header with version information
         emitByte(&collation, &capacity, &count, XVR_VERSION_MAJOR);
         emitByte(&collation, &capacity, &count, XVR_VERSION_MINOR);
         emitByte(&collation, &capacity, &count, XVR_VERSION_PATCH);
 
+        // embed the build info
         if ((int)strlen(XVR_VERSION_BUILD) + count + 1 > capacity) {
             int oldCapacity = capacity;
-            capacity = strlen(XVR_VERSION_BUILD) + count + 1;
+            capacity =
+                strlen(XVR_VERSION_BUILD) + count + 1;  // full header size
             collation =
                 XVR_GROW_ARRAY(unsigned char, collation, oldCapacity, capacity);
         }
 
         memcpy(&collation[count], XVR_VERSION_BUILD, strlen(XVR_VERSION_BUILD));
         count += strlen(XVR_VERSION_BUILD);
-        collation[count++] = '\0';
-        emitByte(&collation, &capacity, &count, XVR_OP_SECTION_END);
+        collation[count++] = '\0';  // terminate the build string
+
+        emitByte(&collation, &capacity, &count,
+                 XVR_OP_SECTION_END);  // terminate header
     }
 
+    // embed the data section (first short is the number of literals)
     Xvr_emitShort(&collation, &capacity, &count, compiler->literalCache.count);
 
+    // emit each literal by type
     for (int i = 0; i < compiler->literalCache.count; i++) {
+        // literal Opcode
+        //  emitShort(&collation, &capacity, &count, OP_LITERAL); //This isn't
+        //  needed
+
+        // literal type, followed by literal value
         switch (compiler->literalCache.literals[i].type) {
         case XVR_LITERAL_NULL:
             emitByte(&collation, &capacity, &count, XVR_LITERAL_NULL);
@@ -1271,10 +1447,8 @@ static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
             emitByte(&collation, &capacity, &count,
                      XVR_AS_TYPE(typeLiteral).typeOf);
             emitByte(&collation, &capacity, &count,
-                     XVR_AS_TYPE(typeLiteral).constant);
+                     XVR_AS_TYPE(typeLiteral).constant);  // if it's constant
 
-            // each element of the array, If they exist, representing sub-types
-            // already in the cache
             if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_ARRAY ||
                 XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_DICTIONARY) {
                 // the type will represent how many to expect in the array
@@ -1292,6 +1466,7 @@ static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
 
         case XVR_LITERAL_INDEX_BLANK:
             emitByte(&collation, &capacity, &count, XVR_LITERAL_INDEX_BLANK);
+            // blank has no following value
             break;
 
         default:
@@ -1304,8 +1479,10 @@ static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
         }
     }
 
-    emitByte(&collation, &capacity, &count, XVR_OP_SECTION_END);
+    emitByte(&collation, &capacity, &count,
+             XVR_OP_SECTION_END);  // terminate data
 
+    // embed the function section (beginning with function count, size)
     Xvr_emitShort(&collation, &capacity, &count, fnIndex);
     Xvr_emitShort(&collation, &capacity, &count, fnCount);
 
@@ -1313,18 +1490,23 @@ static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
         emitByte(&collation, &capacity, &count, fnCollation[i]);
     }
 
-    emitByte(&collation, &capacity, &count, XVR_OP_SECTION_END);
+    emitByte(&collation, &capacity, &count,
+             XVR_OP_SECTION_END);  // terminate function section
 
-    XVR_FREE_ARRAY(unsigned char, fnCollation, fnCapacity);
+    XVR_FREE_ARRAY(unsigned char, fnCollation,
+                   fnCapacity);  // clear the function stuff
 
+    // code section
     for (int i = 0; i < compiler->count; i++) {
         emitByte(&collation, &capacity, &count, compiler->bytecode[i]);
     }
 
-    emitByte(&collation, &capacity, &count, XVR_OP_SECTION_END);
+    emitByte(&collation, &capacity, &count,
+             XVR_OP_SECTION_END);  // terminate code
 
-    emitByte(&collation, &capacity, &count, XVR_OP_EOF);
+    emitByte(&collation, &capacity, &count, XVR_OP_EOF);  // terminate bytecode
 
+    // finalize
     collation = XVR_SHRINK_ARRAY(unsigned char, collation, capacity, count);
 
     *size = count;

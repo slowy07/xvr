@@ -31,7 +31,6 @@ test: clean $(XVR_OUTDIR)
 	$(MAKE) -C test
 	@for f in $(XVR_OUTDIR)/*.exe; do \
 		if [ -x "$$f" ] && [ -f "$$f" ]; then \
-			echo "→ Running $$f"; \
 			"$$f"; \
 		fi; \
 	done

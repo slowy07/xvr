@@ -20,14 +20,17 @@
 #include "xvr_refstring.h"
 
 void inter(void) {
+    // repl does it's own thing for now
     bool error = false;
+
     const int size = 2048;
     char input[size];
     memset(input, 0, size);
 
-    Xvr_Interpreter interpreter;
+    Xvr_Interpreter interpreter;  // persist the interpreter for the scopes
     Xvr_initInterpreter(&interpreter);
 
+    // inject the libs
     Xvr_injectNativeHook(&interpreter, "about", Xvr_hookAbout);
     Xvr_injectNativeHook(&interpreter, "compound", Xvr_hookCompound);
     Xvr_injectNativeHook(&interpreter, "standard", Xvr_hookStandard);
@@ -35,17 +38,20 @@ void inter(void) {
     Xvr_injectNativeHook(&interpreter, "runner", Xvr_hookRunner);
 
     for (;;) {
-        printf(">> ");
+        printf("> ");
 
+        // handle EOF for exits
         if (!fgets(input, size, stdin)) {
             break;
         }
 
+        // escape the repl (length of 5 to accomodate the newline)
         if (strlen(input) == 5 &&
             (!strncmp(input, "exit", 4) || !strncmp(input, "quit", 4))) {
             break;
         }
 
+        // setup this iteration
         Xvr_Lexer lexer;
         Xvr_Parser parser;
         Xvr_Compiler compiler;
@@ -54,8 +60,10 @@ void inter(void) {
         Xvr_initParser(&parser, &lexer);
         Xvr_initCompiler(&compiler);
 
+        // run this iteration
         Xvr_ASTNode* node = Xvr_scanParser(&parser);
         while (node != NULL) {
+            // pack up and restart
             if (node->type == XVR_AST_NODE_ERROR) {
                 if (Xvr_commandLine.verbose) {
                     printf(XVR_CC_ERROR "Error node detected\n" XVR_CC_RESET);
@@ -71,11 +79,15 @@ void inter(void) {
         }
 
         if (!error) {
+            // get the bytecode dump
             int size = 0;
             unsigned char* tb = Xvr_collateCompiler(&compiler, &size);
+
+            // run the bytecode
             Xvr_runInterpreter(&interpreter, tb, size);
         }
 
+        // clean up this iteration
         Xvr_freeCompiler(&compiler);
         Xvr_freeParser(&parser);
         error = false;
@@ -88,6 +100,7 @@ int main(int argc, const char* argv[]) {
     Xvr_initCommandLine(argc, argv);
 
     Xvr_initDriveDictionary();
+
     Xvr_Literal driveLiteral =
         XVR_TO_STRING_LITERAL(Xvr_createRefString("scripts"));
     Xvr_Literal pathLiteral =
@@ -99,6 +112,7 @@ int main(int argc, const char* argv[]) {
     Xvr_freeLiteral(driveLiteral);
     Xvr_freeLiteral(pathLiteral);
 
+    // command line specific actions
     if (Xvr_commandLine.error) {
         Xvr_usageCommandLine(argc, argv);
         return 0;
@@ -114,26 +128,36 @@ int main(int argc, const char* argv[]) {
         return 0;
     }
 
+    // version
     if (Xvr_commandLine.verbose) {
         printf(XVR_CC_NOTICE
-               "The XVR Programming Language Version %d.%d.%d, built data "
+               "Xvr Programming Language Version %d.%d.%d, built "
                "'%s'\n" XVR_CC_RESET,
                XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH,
                XVR_VERSION_BUILD);
     }
 
+    // run source file
     if (Xvr_commandLine.sourceFile) {
         Xvr_runSourceFile(Xvr_commandLine.sourceFile);
+
+        // lib cleanup
         Xvr_freeDriveDictionary();
+
         return 0;
     }
 
+    // run from stdin
     if (Xvr_commandLine.source) {
         Xvr_runSource(Xvr_commandLine.source);
+
+        // lib cleanup
         Xvr_freeDriveDictionary();
+
         return 0;
     }
 
+    // compile source file
     if (Xvr_commandLine.compileFile && Xvr_commandLine.outFile) {
         size_t size = 0;
         char* source = Xvr_readFile(Xvr_commandLine.compileFile, &size);
@@ -147,11 +171,15 @@ int main(int argc, const char* argv[]) {
 
     if (Xvr_commandLine.binaryFile) {
         Xvr_runBinaryFile(Xvr_commandLine.binaryFile);
+
         Xvr_freeDriveDictionary();
+
         return 0;
     }
 
     inter();
+
     Xvr_freeDriveDictionary();
+
     return 0;
 }

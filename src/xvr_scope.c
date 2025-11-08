@@ -47,25 +47,31 @@ static void freeAncestorChain(Xvr_Scope* scope) {
     XVR_FREE(Xvr_Scope, scope);
 }
 
+// return false if invalid type
 static bool checkType(Xvr_Literal typeLiteral, Xvr_Literal original,
                       Xvr_Literal value, bool constCheck) {
+    // for constants, fail if original != value
     if (constCheck && XVR_AS_TYPE(typeLiteral).constant &&
         !Xvr_literalsAreEqual(original, value)) {
         return false;
     }
 
+    // for any types
     if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_ANY) {
         return true;
     }
 
+    // don't allow null types
     if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_NULL) {
         return false;
     }
 
+    // always allow null values
     if (XVR_IS_NULL(value)) {
         return true;
     }
 
+    // for each type, if a mismatch is found, return false
     if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_BOOLEAN &&
         !XVR_IS_BOOLEAN(value)) {
         return false;
@@ -92,10 +98,12 @@ static bool checkType(Xvr_Literal typeLiteral, Xvr_Literal original,
     }
 
     if (XVR_IS_ARRAY(value)) {
+        // check value's type
         if (XVR_AS_TYPE(typeLiteral).typeOf != XVR_LITERAL_ARRAY) {
             return false;
         }
 
+        // if null, assume it's a new array variable that needs checking
         if (XVR_IS_NULL(original)) {
             for (int i = 0; i < XVR_AS_ARRAY(value)->count; i++) {
                 if (!checkType(
@@ -105,13 +113,16 @@ static bool checkType(Xvr_Literal typeLiteral, Xvr_Literal original,
                     return false;
                 }
             }
+
             return true;
         }
 
+        // check children
         for (int i = 0; i < XVR_AS_ARRAY(value)->count; i++) {
             if (XVR_AS_ARRAY(original)->count <= i) {
-                return true;
+                return true;  // assume new entry pushed
             }
+
             if (!checkType(
                     ((Xvr_Literal*)(XVR_AS_TYPE(typeLiteral).subtypes))[0],
                     XVR_AS_ARRAY(original)->literals[i],
@@ -127,27 +138,44 @@ static bool checkType(Xvr_Literal typeLiteral, Xvr_Literal original,
     }
 
     if (XVR_IS_DICTIONARY(value)) {
+        // check value's type
         if (XVR_AS_TYPE(typeLiteral).typeOf != XVR_LITERAL_DICTIONARY) {
             return false;
         }
 
+        // if null, assume it's a new dictionary variable that needs checking
         if (XVR_IS_NULL(original)) {
             for (int i = 0; i < XVR_AS_DICTIONARY(value)->capacity; i++) {
+                // check the type of key and value
                 if (!checkType(
                         ((Xvr_Literal*)(XVR_AS_TYPE(typeLiteral).subtypes))[0],
                         XVR_TO_NULL_LITERAL,
                         XVR_AS_DICTIONARY(value)->entries[i].key, constCheck)) {
                     return false;
                 }
+
+                if (!checkType(
+                        ((Xvr_Literal*)(XVR_AS_TYPE(typeLiteral).subtypes))[1],
+                        XVR_TO_NULL_LITERAL,
+                        XVR_AS_DICTIONARY(value)->entries[i].value,
+                        constCheck)) {
+                    return false;
+                }
             }
+
             return true;
         }
 
+        // check each child of value against the child of original
         for (int i = 0; i < XVR_AS_DICTIONARY(value)->capacity; i++) {
-            if (XVR_IS_NULL(XVR_AS_DICTIONARY(value)->entries[i].key)) {
+            if (XVR_IS_NULL(XVR_AS_DICTIONARY(value)
+                                ->entries[i]
+                                .key)) {  // only non-tombstones
                 continue;
             }
 
+            // find the internal child of original that matches this child of
+            // value
             Xvr_private_entry* ptr = NULL;
 
             for (int j = 0; j < XVR_AS_DICTIONARY(original)->capacity; j++) {
@@ -159,10 +187,12 @@ static bool checkType(Xvr_Literal typeLiteral, Xvr_Literal original,
                 }
             }
 
+            // if not found, assume it's a new entry
             if (!ptr) {
                 continue;
             }
 
+            // check the type of key and value
             if (!checkType(
                     ((Xvr_Literal*)(XVR_AS_TYPE(typeLiteral).subtypes))[0],
                     ptr->key, XVR_AS_DICTIONARY(value)->entries[i].key,
@@ -192,12 +222,14 @@ static bool checkType(Xvr_Literal typeLiteral, Xvr_Literal original,
     return true;
 }
 
+// exposed functions
 Xvr_Scope* Xvr_pushScope(Xvr_Scope* ancestor) {
     Xvr_Scope* scope = XVR_ALLOCATE(Xvr_Scope, 1);
     scope->ancestor = ancestor;
     Xvr_initLiteralDictionary(&scope->variables);
     Xvr_initLiteralDictionary(&scope->types);
 
+    // tick up all scope reference counts
     scope->references = 0;
     for (Xvr_Scope* ptr = scope; ptr != NULL; ptr = ptr->ancestor) {
         ptr->references++;
@@ -207,13 +239,15 @@ Xvr_Scope* Xvr_pushScope(Xvr_Scope* ancestor) {
 }
 
 Xvr_Scope* Xvr_popScope(Xvr_Scope* scope) {
-    if (scope == NULL) {
+    if (scope == NULL) {  // CAN pop a null
         return NULL;
     }
 
     Xvr_Scope* ret = scope->ancestor;
 
+    // BUGFIX: when freeing a scope, free the function's scopes manually
     for (int i = 0; i < scope->variables.capacity; i++) {
+        // handle keys, just in case
         if (XVR_IS_FUNCTION(scope->variables.entries[i].key)) {
             Xvr_popScope(
                 XVR_AS_FUNCTION(scope->variables.entries[i].key).scope);
@@ -228,6 +262,7 @@ Xvr_Scope* Xvr_popScope(Xvr_Scope* scope) {
     }
 
     freeAncestorChain(scope);
+
     return ret;
 }
 
@@ -237,11 +272,13 @@ Xvr_Scope* Xvr_copyScope(Xvr_Scope* original) {
     Xvr_initLiteralDictionary(&scope->variables);
     Xvr_initLiteralDictionary(&scope->types);
 
+    // tick up all scope reference counts
     scope->references = 0;
     for (Xvr_Scope* ptr = scope; ptr != NULL; ptr = ptr->ancestor) {
         ptr->references++;
     }
 
+    // copy the contents of the dictionaries
     for (int i = 0; i < original->variables.capacity; i++) {
         if (!XVR_IS_NULL(original->variables.entries[i].key)) {
             Xvr_setLiteralDictionary(&scope->variables,
@@ -257,11 +294,14 @@ Xvr_Scope* Xvr_copyScope(Xvr_Scope* original) {
                                      original->types.entries[i].value);
         }
     }
+
     return scope;
 }
 
+// returns false if error
 bool Xvr_declareScopeVariable(Xvr_Scope* scope, Xvr_Literal key,
                               Xvr_Literal type) {
+    // don't redefine a variable within this scope
     if (Xvr_existsLiteralDictionary(&scope->variables, key)) {
         return false;
     }
@@ -270,7 +310,9 @@ bool Xvr_declareScopeVariable(Xvr_Scope* scope, Xvr_Literal key,
         return false;
     }
 
+    // store the type, for later checking on assignment
     Xvr_setLiteralDictionary(&scope->types, key, type);
+
     Xvr_setLiteralDictionary(&scope->variables, key, XVR_TO_NULL_LITERAL);
     return true;
 }
@@ -280,6 +322,7 @@ bool Xvr_isDeclaredScopeVariable(Xvr_Scope* scope, Xvr_Literal key) {
         return false;
     }
 
+    // if it's not in this scope, keep searching up the chain
     if (!Xvr_existsLiteralDictionary(&scope->variables, key)) {
         return Xvr_isDeclaredScopeVariable(scope->ancestor, key);
     }
@@ -287,16 +330,20 @@ bool Xvr_isDeclaredScopeVariable(Xvr_Scope* scope, Xvr_Literal key) {
     return true;
 }
 
+// return false if undefined, or can't be assigned
 bool Xvr_setScopeVariable(Xvr_Scope* scope, Xvr_Literal key, Xvr_Literal value,
                           bool constCheck) {
+    // dead end
     if (scope == NULL) {
         return false;
     }
 
+    // if it's not in this scope, keep searching up the chain
     if (!Xvr_existsLiteralDictionary(&scope->variables, key)) {
         return Xvr_setScopeVariable(scope->ancestor, key, value, constCheck);
     }
 
+    // type checking
     Xvr_Literal typeLiteral = Xvr_getLiteralDictionary(&scope->types, key);
     Xvr_Literal original = Xvr_getLiteralDictionary(&scope->variables, key);
 
@@ -306,6 +353,7 @@ bool Xvr_setScopeVariable(Xvr_Scope* scope, Xvr_Literal key, Xvr_Literal value,
         return false;
     }
 
+    // actually assign
     Xvr_setLiteralDictionary(&scope->variables, key, value);
 
     Xvr_freeLiteral(typeLiteral);
@@ -316,6 +364,7 @@ bool Xvr_setScopeVariable(Xvr_Scope* scope, Xvr_Literal key, Xvr_Literal value,
 
 bool Xvr_getScopeVariable(Xvr_Scope* scope, Xvr_Literal key,
                           Xvr_Literal* valueHandle) {
+    // dead end
     if (scope == NULL) {
         return false;
     }
@@ -329,10 +378,12 @@ bool Xvr_getScopeVariable(Xvr_Scope* scope, Xvr_Literal key,
 }
 
 Xvr_Literal Xvr_getScopeType(Xvr_Scope* scope, Xvr_Literal key) {
+    // dead end
     if (scope == NULL) {
         return XVR_TO_NULL_LITERAL;
     }
 
+    // if it's not in this scope, keep searching up the chain
     if (!Xvr_existsLiteralDictionary(&scope->types, key)) {
         return Xvr_getScopeType(scope->ancestor, key);
     }

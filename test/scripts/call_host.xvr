@@ -1,7 +1,0 @@
-proc asw() {
-  return 42;
-}
-
-proc identity(x) {
-  return x;
-}

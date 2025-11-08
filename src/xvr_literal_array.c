@@ -1,7 +1,6 @@
 #include "xvr_literal_array.h"
 
 #include <stdio.h>
-#include <string.h>
 
 #include "xvr_literal.h"
 #include "xvr_memory.h"
@@ -13,6 +12,7 @@ void Xvr_initLiteralArray(Xvr_LiteralArray* array) {
 }
 
 void Xvr_freeLiteralArray(Xvr_LiteralArray* array) {
+    // clean up memory
     for (int i = 0; i < array->count; i++) {
         Xvr_freeLiteral(array->literals[i]);
     }
@@ -24,6 +24,7 @@ void Xvr_freeLiteralArray(Xvr_LiteralArray* array) {
 int Xvr_pushLiteralArray(Xvr_LiteralArray* array, Xvr_Literal literal) {
     if (array->capacity < array->count + 1) {
         int oldCapacity = array->capacity;
+
         array->capacity = XVR_GROW_CAPACITY(oldCapacity);
         array->literals = XVR_GROW_ARRAY(Xvr_Literal, array->literals,
                                          oldCapacity, array->capacity);
@@ -39,7 +40,9 @@ Xvr_Literal Xvr_popLiteralArray(Xvr_LiteralArray* array) {
     }
 
     Xvr_Literal ret = array->literals[array->count - 1];
+
     array->literals[array->count - 1] = XVR_TO_NULL_LITERAL;
+
     array->count--;
     return ret;
 }
@@ -72,6 +75,7 @@ bool Xvr_setLiteralArray(Xvr_LiteralArray* array, Xvr_Literal index,
 
     Xvr_freeLiteral(array->literals[idx]);
     array->literals[idx] = Xvr_copyLiteral(value);
+
     return true;
 }
 

@@ -145,13 +145,16 @@ static void freeASTNodeCustom(Xvr_ASTNode* node, bool freeSelf) {
 void Xvr_freeASTNode(Xvr_ASTNode* node) { freeASTNodeCustom(node, true); }
 
 void Xvr_emitASTNodeLiteral(Xvr_ASTNode** nodeHandle, Xvr_Literal literal) {
+    // allocate a new node
     *nodeHandle = XVR_ALLOCATE(Xvr_ASTNode, 1);
+
     (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
     (*nodeHandle)->atomic.literal = Xvr_copyLiteral(literal);
 }
 
 void Xvr_emitASTNodeUnary(Xvr_ASTNode** nodeHandle, Xvr_Opcode opcode,
                           Xvr_ASTNode* child) {
+    // allocate a new node
     *nodeHandle = XVR_ALLOCATE(Xvr_ASTNode, 1);
 
     (*nodeHandle)->type = XVR_AST_NODE_UNARY;
@@ -188,6 +191,7 @@ void Xvr_emitASTNodeGrouping(Xvr_ASTNode** nodeHandle) {
 
     tmp->type = XVR_AST_NODE_GROUPING;
     tmp->grouping.child = *nodeHandle;
+
     *nodeHandle = tmp;
 }
 
@@ -195,7 +199,7 @@ void Xvr_emitASTNodeBlock(Xvr_ASTNode** nodeHandle) {
     Xvr_ASTNode* tmp = XVR_ALLOCATE(Xvr_ASTNode, 1);
 
     tmp->type = XVR_AST_NODE_BLOCK;
-    tmp->block.nodes = NULL;
+    tmp->block.nodes = NULL;  // NOTE: appended by the parser
     tmp->block.capacity = 0;
     tmp->block.count = 0;
 

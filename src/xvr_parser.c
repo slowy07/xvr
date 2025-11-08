@@ -13,18 +13,21 @@
 #include "xvr_token_types.h"
 
 static void error(Xvr_Parser* parser, Xvr_Token token, const char* message) {
-    if (parser->panic) {
-        return;
-    }
+    // keep going while panicing
+    if (parser->panic) return;
 
     fprintf(stderr, XVR_CC_ERROR "[Line %d] Error", token.line);
 
+    // check type
     if (token.type == XVR_TOKEN_EOF) {
         fprintf(stderr, " at end");
-    } else {
-        fprintf(stderr, " at %.*s", token.length, token.lexeme);
     }
 
+    else {
+        fprintf(stderr, " at '%.*s'", token.length, token.lexeme);
+    }
+
+    // finally
     fprintf(stderr, ": %s\n" XVR_CC_RESET, message);
     parser->error = true;
     parser->panic = true;
@@ -53,17 +56,20 @@ static void consume(Xvr_Parser* parser, Xvr_TokenType tokenType,
         error(parser, parser->current, msg);
         return;
     }
+
     advance(parser);
 }
 
 static void synchronize(Xvr_Parser* parser) {
 #ifndef XVR_EXPORT
     if (Xvr_commandLine.verbose) {
-        fprintf(stderr, XVR_CC_ERROR "synchronize input\n" XVR_CC_RESET);
+        fprintf(stderr, XVR_CC_ERROR "Synchronizing input\n" XVR_CC_RESET);
     }
-#endif /* ifndef XVR_EXPORT */
+#endif
+
     while (parser->current.type != XVR_TOKEN_EOF) {
         switch (parser->current.type) {
+        // these tokens can start a line
         case XVR_TOKEN_ASSERT:
         case XVR_TOKEN_BREAK:
         case XVR_TOKEN_CLASS:
@@ -80,12 +86,14 @@ static void synchronize(Xvr_Parser* parser) {
         case XVR_TOKEN_WHILE:
             parser->panic = false;
             return;
+
         default:
-            synchronize(parser);
+            advance(parser);
         }
     }
 }
 
+// the pratt table collates the precedence rules
 typedef enum {
     PREC_NONE,
     PREC_ASSIGNMENT,
@@ -108,13 +116,17 @@ typedef struct {
     PrecedenceRule precedence;
 } ParseRule;
 
+// no static!
 ParseRule parseRules[];
 
+// forward declarations
 static void declaration(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle);
 static void parsePrecedence(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle,
                             PrecedenceRule rule);
 static Xvr_Literal readTypeToLiteral(Xvr_Parser* parser);
 
+// TODO: resolve the messy order of these
+// the expression rules
 static Xvr_Opcode asType(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_Literal literal = readTypeToLiteral(parser);
 
@@ -125,7 +137,9 @@ static Xvr_Opcode asType(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     }
 
     Xvr_emitASTNodeLiteral(nodeHandle, literal);
+
     Xvr_freeLiteral(literal);
+
     return XVR_OP_EOF;
 }
 
@@ -137,6 +151,8 @@ static Xvr_Opcode typeOf(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 }
 
 static Xvr_Opcode compound(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+    // read either an array or a dictionary into a literal node
+
     int iterations = 0;  // count the number of entries iterated over
 
     // compound nodes to store what is read
@@ -239,11 +255,13 @@ static Xvr_Opcode compound(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         }
     }
 
+    // save the result
     if (array) {
         (*nodeHandle) = array;
     } else if (dictionary) {
         (*nodeHandle) = dictionary;
     } else {
+        // both are null, must be an array (because reasons)
         Xvr_emitASTNodeCompound(&array, XVR_LITERAL_ARRAY);
         (*nodeHandle) = array;
     }
@@ -253,17 +271,20 @@ static Xvr_Opcode compound(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 }
 
 static Xvr_Opcode string(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+    // handle strings
     switch (parser->previous.type) {
     case XVR_TOKEN_LITERAL_STRING: {
+        // unescape valid escaped characters
         int strLength = 0;
         char* buffer = XVR_ALLOCATE(char, parser->previous.length);
 
         for (int i = 0; i < parser->previous.length; i++) {
-            if (parser->previous.lexeme[i] != '\\') {
+            if (parser->previous.lexeme[i] != '\\') {  // copy normally
                 buffer[strLength++] = parser->previous.lexeme[i];
                 continue;
             }
 
+            // unescape based on the character
             switch (parser->previous.lexeme[++i]) {
             case 'n':
                 buffer[strLength++] = '\n';
@@ -289,12 +310,14 @@ static Xvr_Opcode string(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
             }
         }
 
+        // for length safety
         if (strLength > XVR_MAX_STRING_LENGTH) {
             strLength = XVR_MAX_STRING_LENGTH;
             char msg[256];
             snprintf(msg, 256,
                      XVR_CC_ERROR
-                     "String can only be max of %d character long" XVR_CC_RESET,
+                     "Strings can only be a maximum of %d characters "
+                     "long" XVR_CC_RESET,
                      XVR_MAX_STRING_LENGTH);
             error(parser, parser->previous, msg);
         }
@@ -307,6 +330,8 @@ static Xvr_Opcode string(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         return XVR_OP_EOF;
     }
 
+        // TODO: interpolated strings
+
     default:
         error(parser, parser->previous,
               "Unexpected token passed to string precedence rule");
@@ -315,17 +340,21 @@ static Xvr_Opcode string(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 }
 
 static Xvr_Opcode grouping(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+    // handle groupings with ()
     switch (parser->previous.type) {
     case XVR_TOKEN_PAREN_LEFT: {
         parsePrecedence(parser, nodeHandle, PREC_TERNARY);
         consume(parser, XVR_TOKEN_PAREN_RIGHT,
                 "Expected ')' at end of grouping");
+
+        // process the result without optimisations
         Xvr_emitASTNodeGrouping(nodeHandle);
         return XVR_OP_EOF;
     }
+
     default:
         error(parser, parser->previous,
-              "Unexpected token passing to grouping precedence rule");
+              "Unexpected token passed to grouping precedence rule");
         return XVR_OP_EOF;
     }
 }
@@ -333,8 +362,9 @@ static Xvr_Opcode grouping(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 static Xvr_Opcode binary(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     advance(parser);
 
+    // binary() is an infix rule - so only get the RHS of the operator
     switch (parser->previous.type) {
-        // arithmetic
+    // arithmetic
     case XVR_TOKEN_PLUS: {
         parsePrecedence(parser, nodeHandle, PREC_TERM);
         return XVR_OP_ADDITION;
@@ -360,6 +390,7 @@ static Xvr_Opcode binary(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         return XVR_OP_MODULO;
     }
 
+    // assignment
     case XVR_TOKEN_ASSIGN: {
         parsePrecedence(parser, nodeHandle, PREC_ASSIGNMENT);
         return XVR_OP_VAR_ASSIGN;
@@ -390,6 +421,7 @@ static Xvr_Opcode binary(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         return XVR_OP_VAR_MODULO_ASSIGN;
     }
 
+    // comparison
     case XVR_TOKEN_EQUAL: {
         parsePrecedence(parser, nodeHandle, PREC_COMPARISON);
         return XVR_OP_COMPARE_EQUAL;
@@ -432,7 +464,7 @@ static Xvr_Opcode binary(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 
     default:
         error(parser, parser->previous,
-              "Unexpected token passing to binary precedence rule");
+              "Unexpected token passed to binary precedence rule");
         return XVR_OP_EOF;
     }
 }
@@ -441,15 +473,22 @@ static Xvr_Opcode unary(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_ASTNode* tmpNode = NULL;
 
     if (parser->previous.type == XVR_TOKEN_MINUS) {
-        parsePrecedence(parser, &tmpNode, PREC_TERNARY);
+        // temp handle to potentially negate values
+        parsePrecedence(parser, &tmpNode, PREC_TERNARY);  // can be a literal
 
+        // optimisation: check for negative literals
         if (tmpNode != NULL && tmpNode->type == XVR_AST_NODE_LITERAL &&
             (XVR_IS_INTEGER(tmpNode->atomic.literal) ||
              XVR_IS_FLOAT(tmpNode->atomic.literal))) {
+            // negate directly, if int or float
             Xvr_Literal lit = tmpNode->atomic.literal;
 
             if (XVR_IS_INTEGER(lit)) {
                 lit = XVR_TO_INTEGER_LITERAL(-XVR_AS_INTEGER(lit));
+            }
+
+            if (XVR_IS_FLOAT(lit)) {
+                lit = XVR_TO_FLOAT_LITERAL(-XVR_AS_FLOAT(lit));
             }
 
             tmpNode->atomic.literal = lit;
@@ -458,6 +497,7 @@ static Xvr_Opcode unary(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
             return XVR_OP_EOF;
         }
 
+        // check for negated boolean errors
         if (tmpNode != NULL && tmpNode->type == XVR_AST_NODE_LITERAL &&
             XVR_IS_BOOLEAN(tmpNode->atomic.literal)) {
             error(parser, parser->previous,
@@ -465,25 +505,37 @@ static Xvr_Opcode unary(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
             return XVR_OP_EOF;
         }
 
+        // actually emit the negation node
         Xvr_emitASTNodeUnary(nodeHandle, XVR_OP_NEGATE, tmpNode);
     }
 
     else if (parser->previous.type == XVR_TOKEN_NOT) {
-        parsePrecedence(parser, &tmpNode, PREC_CALL);
+        // temp handle to potentially negate values
+        parsePrecedence(
+            parser, &tmpNode,
+            PREC_CALL);  // can be a literal, grouping, fn call, etc.
 
+        // optimisation: check for inverted booleans
         if (tmpNode != NULL && tmpNode->type == XVR_AST_NODE_LITERAL &&
             XVR_IS_BOOLEAN(tmpNode->atomic.literal)) {
+            // negate directly, if boolean
             Xvr_Literal lit = tmpNode->atomic.literal;
+
             lit = XVR_TO_BOOLEAN_LITERAL(!XVR_AS_BOOLEAN(lit));
+
             tmpNode->atomic.literal = lit;
             *nodeHandle = tmpNode;
+
             return XVR_OP_EOF;
         }
 
+        // actually emit the negation
         Xvr_emitASTNodeUnary(nodeHandle, XVR_OP_INVERT, tmpNode);
-    } else {
+    }
+
+    else {
         error(parser, parser->previous,
-              "Unexpected token passing to unary precedence rule");
+              "Unexpected token passed to unary precedence rule");
         return XVR_OP_EOF;
     }
 
@@ -538,6 +590,7 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 }
 
 static Xvr_Opcode identifier(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+    // make a copy of the string
     Xvr_Token identifierToken = parser->previous;
 
     if (identifierToken.type != XVR_TOKEN_IDENTIFIER) {
@@ -547,16 +600,18 @@ static Xvr_Opcode identifier(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 
     int length = identifierToken.length;
 
+    // for safety
     if (length > 256) {
         length = 256;
         error(parser, parser->previous,
-              "Identifier can onyl be a maximum 256 char long");
+              "Identifiers can only be a maximum of 256 characters long");
     }
 
     Xvr_Literal identifier = XVR_TO_IDENTIFIER_LITERAL(
         Xvr_createRefStringLength(identifierToken.lexeme, length));
     Xvr_emitASTNodeLiteral(nodeHandle, identifier);
     Xvr_freeLiteral(identifier);
+
     return XVR_OP_EOF;
 }
 
@@ -588,15 +643,17 @@ static Xvr_Opcode castingPrefix(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 
     default:
         error(parser, parser->previous,
-              "Unexpected token passinjg to casting precedence rule");
+              "Unexpected token passed to casting precedence rule");
         return XVR_OP_EOF;
     }
+
     return XVR_OP_EOF;
 }
 
 static Xvr_Opcode castingInfix(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     advance(parser);
 
+    // NOTE: using the precedence rules here
     switch (parser->previous.type) {
     case XVR_TOKEN_IDENTIFIER:
         identifier(parser, nodeHandle);
@@ -628,6 +685,7 @@ static Xvr_Opcode castingInfix(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     return XVR_OP_TYPE_CAST;
 }
 
+// TODO: fix these screwy names
 static Xvr_Opcode incrementPrefix(Xvr_Parser* parser,
                                   Xvr_ASTNode** nodeHandle) {
     advance(parser);
@@ -660,7 +718,7 @@ static Xvr_Opcode decrementPrefix(Xvr_Parser* parser,
     advance(parser);
 
     Xvr_ASTNode* tmpNode = NULL;
-    identifier(parser, &tmpNode);
+    identifier(parser, &tmpNode);  // weird
 
     Xvr_emitASTNodePrefixDecrement(nodeHandle, tmpNode->atomic.literal);
 
@@ -683,18 +741,24 @@ static Xvr_Opcode decrementInfix(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 }
 
 static Xvr_Opcode fnCall(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
-    advance(parser);
+    advance(parser);  // skip the left paren
 
+    // binary() is an infix rule - so only get the RHS of the operator
     switch (parser->previous.type) {
+    // arithmetic
     case XVR_TOKEN_PAREN_LEFT: {
         Xvr_ASTNode* arguments = NULL;
         Xvr_emitASTNodeFnCollection(&arguments);
 
+        // if there's arguments
         if (!match(parser, XVR_TOKEN_PAREN_RIGHT)) {
+            // read each argument
             do {
+                // emit the node to the argument list (grow the node if needed)
                 if (arguments->fnCollection.capacity <
                     arguments->fnCollection.count + 1) {
                     int oldCapacity = arguments->fnCollection.capacity;
+
                     arguments->fnCollection.capacity =
                         XVR_GROW_CAPACITY(oldCapacity);
                     arguments->fnCollection.nodes = XVR_GROW_ARRAY(
@@ -707,40 +771,54 @@ static Xvr_Opcode fnCall(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 
                 if (!tmpNode) {
                     error(parser, parser->previous,
-                          "[internal] No token found in procCall");
+                          "[internal] No token found in fnCall");
                     return XVR_OP_EOF;
                 }
+
                 arguments->fnCollection.nodes[arguments->fnCollection.count++] =
                     *tmpNode;
-                XVR_FREE(Xvr_ASTNode, tmpNode);
+                XVR_FREE(Xvr_ASTNode, tmpNode);  // simply free the tmpNode, so
+                                                 // you don't free the children
             } while (match(parser, XVR_TOKEN_COMMA));
+
             consume(parser, XVR_TOKEN_PAREN_RIGHT,
                     "Expected ')' at end of argument list");
         }
+
+        // emit the call
         Xvr_emitASTNodeFnCall(nodeHandle, arguments);
+
         return XVR_OP_FN_CALL;
     } break;
+
     default:
         error(parser, parser->previous,
-              "Unexpectd token passing to proc call precedence rule");
+              "Unexpected token passed to function call precedence rule");
         return XVR_OP_EOF;
     }
+
     return XVR_OP_EOF;
 }
 
-static Xvr_Opcode indexAccess(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+static Xvr_Opcode indexAccess(
+    Xvr_Parser* parser,
+    Xvr_ASTNode** nodeHandle) {  // TODO: fix indexing signalling
     advance(parser);
+
+    // val[first : second : third]
 
     Xvr_ASTNode* first = NULL;
     Xvr_ASTNode* second = NULL;
     Xvr_ASTNode* third = NULL;
 
+    // booleans indicate blank slice indexing
     Xvr_emitASTNodeLiteral(&first, XVR_TO_INDEX_BLANK_LITERAL);
     Xvr_emitASTNodeLiteral(&second, XVR_TO_INDEX_BLANK_LITERAL);
     Xvr_emitASTNodeLiteral(&third, XVR_TO_INDEX_BLANK_LITERAL);
 
-    bool readFirst = false;
+    bool readFirst = false;  // pattern matching is bullcrap
 
+    // eat the first
     if (!match(parser, XVR_TOKEN_COLON)) {
         Xvr_freeASTNode(first);
         parsePrecedence(parser, &first, PREC_TERNARY);
@@ -761,6 +839,7 @@ static Xvr_Opcode indexAccess(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         return XVR_OP_INDEX;
     }
 
+    // eat the second
     if (!match(parser, XVR_TOKEN_COLON)) {
         Xvr_freeASTNode(second);
         parsePrecedence(parser, &second, PREC_TERNARY);
@@ -774,6 +853,7 @@ static Xvr_Opcode indexAccess(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         return XVR_OP_INDEX;
     }
 
+    // eat the third
     Xvr_freeASTNode(third);
     parsePrecedence(parser, &third, PREC_TERNARY);
     Xvr_emitASTNodeIndex(nodeHandle, first, second, third);
@@ -784,7 +864,7 @@ static Xvr_Opcode indexAccess(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 }
 
 static Xvr_Opcode question(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
-    advance(parser);
+    advance(parser);  // for the question mark
 
     Xvr_ASTNode* thenPath = NULL;
     Xvr_ASTNode* elsePath = NULL;
@@ -811,10 +891,13 @@ static Xvr_Opcode dot(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     }
 
     (*nodeHandle) = tmpNode;
-    return XVR_OP_DOT;
+    return XVR_OP_DOT;  // signal that the function name and arguments are in
+                        // the wrong order
 }
 
 ParseRule parseRules[] = {
+    // must match the token types
+    // types
     {atomic, NULL, PREC_PRIMARY},      // TOKEN_NULL,
     {castingPrefix, NULL, PREC_CALL},  // TOKEN_BOOLEAN,
     {castingPrefix, NULL, PREC_CALL},  // TOKEN_INTEGER,
@@ -822,7 +905,7 @@ ParseRule parseRules[] = {
     {castingPrefix, NULL, PREC_CALL},  // TOKEN_STRING,
     {NULL, NULL, PREC_NONE},           // TOKEN_ARRAY,
     {NULL, NULL, PREC_NONE},           // TOKEN_DICTIONARY,
-    {NULL, NULL, PREC_NONE},           // TOKEN_PROC,
+    {NULL, NULL, PREC_NONE},           // TOKEN_FUNCTION,
     {NULL, NULL, PREC_NONE},           // TOKEN_OPAQUE,
     {NULL, NULL, PREC_NONE},           // TOKEN_ANY,
 
@@ -907,6 +990,7 @@ ParseRule parseRules[] = {
 
 ParseRule* getRule(Xvr_TokenType type) { return &parseRules[type]; }
 
+// optimisation: constant folding
 static bool calcStaticBinaryArithmetic(Xvr_Parser* parser,
                                        Xvr_ASTNode** nodeHandle) {
     switch ((*nodeHandle)->binary.opcode) {
@@ -922,10 +1006,12 @@ static bool calcStaticBinaryArithmetic(Xvr_Parser* parser,
     case XVR_OP_COMPARE_GREATER:
     case XVR_OP_COMPARE_GREATER_EQUAL:
         break;
+
     default:
         return true;
     }
 
+    // recurse to the left and right
     if ((*nodeHandle)->binary.left->type == XVR_AST_NODE_BINARY) {
         calcStaticBinaryArithmetic(parser, &(*nodeHandle)->binary.left);
     }
@@ -934,26 +1020,31 @@ static bool calcStaticBinaryArithmetic(Xvr_Parser* parser,
         calcStaticBinaryArithmetic(parser, &(*nodeHandle)->binary.right);
     }
 
+    // make sure left and right are both literals
     if (!((*nodeHandle)->binary.left->type == XVR_AST_NODE_LITERAL &&
           (*nodeHandle)->binary.right->type == XVR_AST_NODE_LITERAL)) {
         return true;
     }
 
+    // evaluate
     Xvr_Literal lhs = (*nodeHandle)->binary.left->atomic.literal;
     Xvr_Literal rhs = (*nodeHandle)->binary.right->atomic.literal;
     Xvr_Literal result = XVR_TO_NULL_LITERAL;
 
+    // special case for string concatenation ONLY
     if (XVR_IS_STRING(lhs) && XVR_IS_STRING(rhs) &&
         (*nodeHandle)->binary.opcode == XVR_OP_ADDITION) {
+        // check for overflow
         int totalLength =
             XVR_AS_STRING(lhs)->length + XVR_AS_STRING(rhs)->length;
         if (totalLength > XVR_MAX_STRING_LENGTH) {
             error(parser, parser->previous,
                   "Can't concatenate these strings, result is too long (error "
-                  "found in folding)\n");
+                  "found in constant folding)\n");
             return false;
         }
 
+        // concat the strings
         char buffer[XVR_MAX_STRING_LENGTH];
         snprintf(buffer, XVR_MAX_STRING_LENGTH, "%s%s",
                  Xvr_toCString(XVR_AS_STRING(lhs)),
@@ -962,6 +1053,7 @@ static bool calcStaticBinaryArithmetic(Xvr_Parser* parser,
             Xvr_createRefStringLength(buffer, totalLength));
     }
 
+    // type coersion
     if (XVR_IS_FLOAT(lhs) && XVR_IS_INTEGER(rhs)) {
         rhs = XVR_TO_FLOAT_LITERAL(XVR_AS_INTEGER(rhs));
     }
@@ -970,6 +1062,7 @@ static bool calcStaticBinaryArithmetic(Xvr_Parser* parser,
         lhs = XVR_TO_FLOAT_LITERAL(XVR_AS_INTEGER(lhs));
     }
 
+    // maths based on types
     if (XVR_IS_INTEGER(lhs) && XVR_IS_INTEGER(rhs)) {
         switch ((*nodeHandle)->binary.opcode) {
         case XVR_OP_ADDITION:
@@ -1045,10 +1138,11 @@ static bool calcStaticBinaryArithmetic(Xvr_Parser* parser,
         }
     }
 
+    // catch bad modulo
     if ((XVR_IS_FLOAT(lhs) || XVR_IS_FLOAT(rhs)) &&
         (*nodeHandle)->binary.opcode == XVR_OP_MODULO) {
         error(parser, parser->previous,
-              "Bad arithmetic argument (modulo on floats not allow)");
+              "Bad arithmetic argument (modulo on floats not allowed)");
         return false;
     }
 
@@ -1117,10 +1211,12 @@ static bool calcStaticBinaryArithmetic(Xvr_Parser* parser,
         }
     }
 
+    // nothing can be done to optimize
     if (XVR_IS_NULL(result)) {
         return true;
     }
 
+    // optimize by converting this node into a literal node
     Xvr_freeASTNode((*nodeHandle)->binary.left);
     Xvr_freeASTNode((*nodeHandle)->binary.right);
 
@@ -1130,7 +1226,10 @@ static bool calcStaticBinaryArithmetic(Xvr_Parser* parser,
     return true;
 }
 
-static void dottify(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+static void dottify(
+    Xvr_Parser* parser,
+    Xvr_ASTNode** nodeHandle) {  // TODO: remove dot from the compiler entirely
+    // only if this is chained from a higher binary "fn call"
     if ((*nodeHandle)->type == XVR_AST_NODE_BINARY) {
         if ((*nodeHandle)->binary.opcode == XVR_OP_FN_CALL) {
             (*nodeHandle)->binary.opcode = XVR_OP_DOT;
@@ -1143,34 +1242,39 @@ static void dottify(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 
 static void parsePrecedence(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle,
                             PrecedenceRule rule) {
+    // every valid expression has a prefix rule
     advance(parser);
     ParseFn prefixRule = getRule(parser->previous.type)->prefix;
 
     if (prefixRule == NULL) {
-        *nodeHandle = NULL;
+        *nodeHandle =
+            NULL;  // the handle's value MUST be set to null for error handling
         error(parser, parser->previous, "Expected expression");
         return;
     }
 
     bool canBeAssigned = rule <= PREC_ASSIGNMENT;
-    prefixRule(parser, nodeHandle);
+    prefixRule(parser, nodeHandle);  // ignore the returned opcode
 
+    // infix rules are left-recursive
     while (rule <= getRule(parser->current.type)->precedence) {
         ParseFn infixRule = getRule(parser->current.type)->infix;
 
         if (infixRule == NULL) {
-            *nodeHandle = NULL;
+            *nodeHandle = NULL;  // the handle's value MUST be set to null for
+                                 // error handling
             error(parser, parser->current, "Expected operator");
             return;
         }
 
         Xvr_ASTNode* rhsNode = NULL;
-        const Xvr_Opcode opcode = infixRule(parser, &rhsNode);
+        const Xvr_Opcode opcode = infixRule(
+            parser, &rhsNode);  // NOTE: infix rule must advance the parser
 
         if (opcode == XVR_OP_EOF) {
             Xvr_freeASTNode(*nodeHandle);
             *nodeHandle = rhsNode;
-            return;
+            return;  // we're done here
         }
 
         if (opcode == XVR_OP_DOT) {
@@ -1185,33 +1289,43 @@ static void parsePrecedence(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle,
 
         Xvr_emitASTNodeBinary(nodeHandle, rhsNode, opcode);
 
+        // optimise away the constants
         if (!calcStaticBinaryArithmetic(parser, nodeHandle)) {
             return;
         }
     }
 
+    // if your precedence is below "assignment"
     if (canBeAssigned && match(parser, XVR_TOKEN_ASSIGN)) {
         error(parser, parser->current, "Invalid assignment target");
     }
 }
 
+// expressions
 static void expression(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+    // delegate to the pratt table for expression precedence
     parsePrecedence(parser, nodeHandle, PREC_ASSIGNMENT);
 }
 
+// statements
 static void blockStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+    // init
     Xvr_emitASTNodeBlock(nodeHandle);
 
+    // sub-scope, compile it and push it up in a node
     while (!match(parser, XVR_TOKEN_BRACE_RIGHT)) {
         if ((*nodeHandle)->block.capacity < (*nodeHandle)->block.count + 1) {
             int oldCapacity = (*nodeHandle)->block.capacity;
-            (*nodeHandle)->block.capacity = XVR_GROW_CAPACITY_FAST(oldCapacity);
+
+            (*nodeHandle)->block.capacity = XVR_GROW_CAPACITY(oldCapacity);
             (*nodeHandle)->block.nodes =
                 XVR_GROW_ARRAY(Xvr_ASTNode, (*nodeHandle)->block.nodes,
                                oldCapacity, (*nodeHandle)->block.capacity);
         }
 
         Xvr_ASTNode* tmpNode = NULL;
+
+        // process the grammar rule for this line
         declaration(parser, &tmpNode);
 
         if (parser->panic) {
@@ -1219,14 +1333,15 @@ static void blockStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         }
 
         ((*nodeHandle)->block.nodes[(*nodeHandle)->block.count++]) = *tmpNode;
-        XVR_FREE(Xvr_ASTNode, tmpNode);
+        XVR_FREE(Xvr_ASTNode, tmpNode);  // simply free the tmpNode, so you
+                                         // don't free the children
     }
 }
 
 static void printStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+    // set the node info
     Xvr_ASTNode* node = NULL;
     expression(parser, &node);
-
     Xvr_emitASTNodeUnary(nodeHandle, XVR_OP_PRINT, node);
 
     consume(parser, XVR_TOKEN_SEMICOLON,
@@ -1234,13 +1349,16 @@ static void printStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 }
 
 static void assertStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
-    (*nodeHandle) = XVR_ALLOCATE(Xvr_ASTNode, 1);
+    // set the node info
+    (*nodeHandle) =
+        XVR_ALLOCATE(Xvr_ASTNode, 1);  // special case, because I'm lazy
     (*nodeHandle)->type = XVR_AST_NODE_BINARY;
     (*nodeHandle)->binary.opcode = XVR_OP_ASSERT;
 
     parsePrecedence(parser, &((*nodeHandle)->binary.left), PREC_TERNARY);
     consume(parser, XVR_TOKEN_COMMA, "Expected ',' in assert statement");
     parsePrecedence(parser, &((*nodeHandle)->binary.right), PREC_TERNARY);
+
     consume(parser, XVR_TOKEN_SEMICOLON,
             "Expected ';' at end of assert statement");
 }
@@ -1250,13 +1368,16 @@ static void ifStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_ASTNode* thenPath = NULL;
     Xvr_ASTNode* elsePath = NULL;
 
+    // read the condition
     consume(parser, XVR_TOKEN_PAREN_LEFT,
             "Expected '(' at beginning of if clause");
     parsePrecedence(parser, &condition, PREC_TERNARY);
 
+    // read the then path
     consume(parser, XVR_TOKEN_PAREN_RIGHT, "Expected ')' at end of if clause");
     declaration(parser, &thenPath);
 
+    // read the optional else path
     if (match(parser, XVR_TOKEN_ELSE)) {
         declaration(parser, &elsePath);
     }
@@ -1268,10 +1389,12 @@ static void whileStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_ASTNode* condition = NULL;
     Xvr_ASTNode* thenPath = NULL;
 
+    // read the condition
     consume(parser, XVR_TOKEN_PAREN_LEFT,
-            "Expected '(' at beginning of twhile clause");
+            "Expected '(' at beginning of while clause");
     parsePrecedence(parser, &condition, PREC_TERNARY);
 
+    // read the then path
     consume(parser, XVR_TOKEN_PAREN_RIGHT,
             "Expected ')' at end of while clause");
     declaration(parser, &thenPath);
@@ -1285,10 +1408,12 @@ static void forStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_ASTNode* postClause = NULL;
     Xvr_ASTNode* thenPath = NULL;
 
+    // read the clauses
     consume(parser, XVR_TOKEN_PAREN_LEFT,
             "Expected '(' at beginning of for clause");
 
-    declaration(parser, &preClause);
+    declaration(parser,
+                &preClause);  // allow defining variables in the pre-clause
 
     parsePrecedence(parser, &condition, PREC_TERNARY);
     consume(parser, XVR_TOKEN_SEMICOLON,
@@ -1297,6 +1422,7 @@ static void forStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     parsePrecedence(parser, &postClause, PREC_ASSIGNMENT);
     consume(parser, XVR_TOKEN_PAREN_RIGHT, "Expected ')' at end of for clause");
 
+    // read the path
     declaration(parser, &thenPath);
 
     Xvr_emitASTNodeFor(nodeHandle, preClause, condition, postClause, thenPath);
@@ -1318,39 +1444,45 @@ static void continueStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 
 static void returnStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_ASTNode* returnValues = NULL;
-
     Xvr_emitASTNodeFnCollection(&returnValues);
 
     if (!match(parser, XVR_TOKEN_SEMICOLON)) {
-        do {
+        do {  // loop for multiple returns (disabled later in the pipeline)
+            // append the node to the return list (grow the node if needed)
             if (returnValues->fnCollection.capacity <
                 returnValues->fnCollection.count + 1) {
                 int oldCapacity = returnValues->fnCollection.capacity;
+
                 returnValues->fnCollection.capacity =
                     XVR_GROW_CAPACITY(oldCapacity);
                 returnValues->fnCollection.nodes = XVR_GROW_ARRAY(
                     Xvr_ASTNode, returnValues->fnCollection.nodes, oldCapacity,
                     returnValues->fnCollection.capacity);
             }
+
             Xvr_ASTNode* node = NULL;
             parsePrecedence(parser, &node, PREC_TERNARY);
 
             if (!node) {
                 error(parser, parser->previous,
-                      "[internal] no token found in return");
+                      "[internal] No token found in return");
                 return;
             }
+
             returnValues->fnCollection
                 .nodes[returnValues->fnCollection.count++] = *node;
-            XVR_FREE(Xvr_ASTNode, node);
+            XVR_FREE(Xvr_ASTNode, node);  // free manually
         } while (match(parser, XVR_TOKEN_COMMA));
+
         consume(parser, XVR_TOKEN_SEMICOLON,
                 "Expected ';' at end of return statement");
     }
+
     Xvr_emitASTNodeFnReturn(nodeHandle, returnValues);
 }
 
 static void importStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+    // read the identifier
     Xvr_ASTNode* node = NULL;
     advance(parser);
     identifier(parser, &node);
@@ -1373,6 +1505,7 @@ static void importStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     }
 
     Xvr_emitASTNodeImport(nodeHandle, idn, alias);
+
     consume(parser, XVR_TOKEN_SEMICOLON,
             "Expected ';' at end of import statement");
 
@@ -1380,6 +1513,7 @@ static void importStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_freeLiteral(alias);
 }
 
+// precedence functions
 static void expressionStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     if (match(parser, XVR_TOKEN_SEMICOLON)) {
         Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_NULL_LITERAL);
@@ -1398,58 +1532,71 @@ static void expressionStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 }
 
 static void statement(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+    // block
     if (match(parser, XVR_TOKEN_BRACE_LEFT)) {
         blockStmt(parser, nodeHandle);
         return;
     }
 
+    // print
     if (match(parser, XVR_TOKEN_PRINT)) {
         printStmt(parser, nodeHandle);
         return;
     }
 
+    // assert
     if (match(parser, XVR_TOKEN_ASSERT)) {
         assertStmt(parser, nodeHandle);
+        return;
     }
 
+    // if-then-else
     if (match(parser, XVR_TOKEN_IF)) {
         ifStmt(parser, nodeHandle);
         return;
     }
 
+    // while-then
     if (match(parser, XVR_TOKEN_WHILE)) {
         whileStmt(parser, nodeHandle);
         return;
     }
 
+    // for-pre-clause-post-then
     if (match(parser, XVR_TOKEN_FOR)) {
         forStmt(parser, nodeHandle);
         return;
     }
 
+    // break
     if (match(parser, XVR_TOKEN_BREAK)) {
         breakStmt(parser, nodeHandle);
         return;
     }
 
+    // continue
     if (match(parser, XVR_TOKEN_CONTINUE)) {
         continueStmt(parser, nodeHandle);
         return;
     }
 
+    // return
     if (match(parser, XVR_TOKEN_RETURN)) {
         returnStmt(parser, nodeHandle);
         return;
     }
 
+    // import
     if (match(parser, XVR_TOKEN_IMPORT)) {
         importStmt(parser, nodeHandle);
         return;
     }
 
+    // default
     expressionStmt(parser, nodeHandle);
 }
 
+// declarations and definitions
 static Xvr_Literal readTypeToLiteral(Xvr_Parser* parser) {
     advance(parser);
 
@@ -1476,6 +1623,7 @@ static Xvr_Literal readTypeToLiteral(Xvr_Parser* parser) {
         XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_STRING;
         break;
 
+    // array, dictionary - read the sub-types
     case XVR_TOKEN_BRACKET_LEFT: {
         Xvr_Literal l = readTypeToLiteral(parser);
 
@@ -1508,19 +1656,22 @@ static Xvr_Literal readTypeToLiteral(Xvr_Parser* parser) {
         XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_ANY;
         break;
 
+    // wtf
     case XVR_TOKEN_IDENTIFIER: {
+        // duplicated from identifier()
         Xvr_Token identifierToken = parser->previous;
         int length = identifierToken.length;
-
+        // for safety
         if (length > 256) {
             length = 256;
             error(parser, parser->previous,
-                  "Identifiers can only be maximum of 256 character long");
+                  "Identifiers can only be a maximum of 256 characters long");
         }
         literal = XVR_TO_IDENTIFIER_LITERAL(
             Xvr_createRefStringLength(identifierToken.lexeme, length));
     } break;
 
+    // WTF
     case XVR_TOKEN_TYPE:
         XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_TYPE;
         break;
@@ -1530,6 +1681,7 @@ static Xvr_Literal readTypeToLiteral(Xvr_Parser* parser) {
         return XVR_TO_NULL_LITERAL;
     }
 
+    // const follows the type
     if (match(parser, XVR_TOKEN_CONST)) {
         XVR_AS_TYPE(literal).constant = true;
     }
@@ -1538,87 +1690,109 @@ static Xvr_Literal readTypeToLiteral(Xvr_Parser* parser) {
 }
 
 static void varDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+    // read the identifier
     consume(parser, XVR_TOKEN_IDENTIFIER,
             "Expected identifier after var keyword");
     Xvr_Token identifierToken = parser->previous;
 
     int length = identifierToken.length;
 
+    // for safety
     if (length > 256) {
         length = 256;
         error(parser, parser->previous,
-              "Identifier can only be max of 256 characters long");
+              "Identifiers can only be a maximum of 256 characters long");
     }
 
     Xvr_Literal identifier = XVR_TO_IDENTIFIER_LITERAL(
         Xvr_createRefStringLength(identifierToken.lexeme, length));
 
+    // read the type, if present
     Xvr_Literal typeLiteral;
     if (match(parser, XVR_TOKEN_COLON)) {
         typeLiteral = readTypeToLiteral(parser);
     } else {
+        // default to non-const any
         typeLiteral = XVR_TO_TYPE_LITERAL(XVR_LITERAL_ANY, false);
     }
 
+    // variable definition is an expression
     Xvr_ASTNode* expressionNode = NULL;
     if (match(parser, XVR_TOKEN_ASSIGN)) {
         expression(parser, &expressionNode);
     } else {
+        // values are null by default
         Xvr_emitASTNodeLiteral(&expressionNode, XVR_TO_NULL_LITERAL);
     }
 
+    // TODO: static type checking?
+
+    // declare it
     Xvr_emitASTNodeVarDecl(nodeHandle, identifier, typeLiteral, expressionNode);
+
     consume(parser, XVR_TOKEN_SEMICOLON,
             "Expected ';' at end of var declaration");
 }
 
 static void fnDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+    // read the identifier
     consume(parser, XVR_TOKEN_IDENTIFIER,
-            "Expected identifier after proc keyword");
+            "Expected identifier after fn keyword");
     Xvr_Token identifierToken = parser->previous;
 
     int length = identifierToken.length;
 
+    // for safety
     if (length > 256) {
         length = 256;
         error(parser, parser->previous,
-              "Identifiers can only be maximum of 256 characters long");
+              "Identifiers can only be a maximum of 256 characters long");
     }
 
     Xvr_Literal identifier = XVR_TO_IDENTIFIER_LITERAL(
         Xvr_createRefStringLength(identifierToken.lexeme, length));
 
+    // read the parameters and arity
     consume(parser, XVR_TOKEN_PAREN_LEFT,
             "Expected '(' after function identifier");
 
+    // for holding the array of arguments
     Xvr_ASTNode* argumentNode = NULL;
     Xvr_emitASTNodeFnCollection(&argumentNode);
 
+    // read args
     if (!match(parser, XVR_TOKEN_PAREN_RIGHT)) {
         do {
+            // check for rest parameter
             if (match(parser, XVR_TOKEN_REST)) {
+                // read the argument identifier
                 consume(parser, XVR_TOKEN_IDENTIFIER,
-                        "Expected identifier as procedure argument");
+                        "Expected identifier as function argument");
                 Xvr_Token argIdentifierToken = parser->previous;
 
                 int length = argIdentifierToken.length;
 
+                // for safety
                 if (length > 256) {
                     length = 256;
-                    error(
-                        parser, parser->previous,
-                        "Identifier can only be maximum of 256 character long");
+                    error(parser, parser->previous,
+                          "Identifiers can only be a maximum of 256 characters "
+                          "long");
                 }
 
                 Xvr_Literal argIdentifier =
                     XVR_TO_IDENTIFIER_LITERAL(Xvr_createRefStringLength(
                         argIdentifierToken.lexeme, length));
+
+                // set the type (array of any types)
                 Xvr_Literal argTypeLiteral =
                     XVR_TO_TYPE_LITERAL(XVR_LITERAL_FUNCTION_ARG_REST, false);
 
+                // emit the node to the argument list (grow the node if needed)
                 if (argumentNode->fnCollection.capacity <
                     argumentNode->fnCollection.count + 1) {
                     int oldCapacity = argumentNode->fnCollection.capacity;
+
                     argumentNode->fnCollection.capacity =
                         XVR_GROW_CAPACITY(oldCapacity);
                     argumentNode->fnCollection.nodes = XVR_GROW_ARRAY(
@@ -1626,6 +1800,7 @@ static void fnDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
                         oldCapacity, argumentNode->fnCollection.capacity);
                 }
 
+                // store the arg in the array
                 Xvr_ASTNode* literalNode = NULL;
                 Xvr_emitASTNodeVarDecl(&literalNode, argIdentifier,
                                        argTypeLiteral, NULL);
@@ -1637,32 +1812,38 @@ static void fnDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
                 break;
             }
 
+            // read the argument identifier
             consume(parser, XVR_TOKEN_IDENTIFIER,
-                    "Expected identifier as procedure argument");
+                    "Expected identifier as function argument");
             Xvr_Token argIdentifierToken = parser->previous;
 
             int length = argIdentifierToken.length;
 
+            // for safety
             if (length > 256) {
                 length = 256;
-                error(parser, parser->previous,
-                      "Identifier can only be maximum of 256 characters long");
+                error(
+                    parser, parser->previous,
+                    "Identifiers can only be a maximum of 256 characters long");
             }
 
             Xvr_Literal argIdentifier = XVR_TO_IDENTIFIER_LITERAL(
                 Xvr_createRefStringLength(argIdentifierToken.lexeme, length));
 
+            // read optional type of the identifier
             Xvr_Literal argTypeLiteral;
-
             if (match(parser, XVR_TOKEN_COLON)) {
                 argTypeLiteral = readTypeToLiteral(parser);
             } else {
+                // default to non-const any
                 argTypeLiteral = XVR_TO_TYPE_LITERAL(XVR_LITERAL_ANY, false);
             }
 
+            // emit the node to the argument list (grow the node if needed)
             if (argumentNode->fnCollection.capacity <
                 argumentNode->fnCollection.count + 1) {
                 int oldCapacity = argumentNode->fnCollection.capacity;
+
                 argumentNode->fnCollection.capacity =
                     XVR_GROW_CAPACITY(oldCapacity);
                 argumentNode->fnCollection.nodes = XVR_GROW_ARRAY(
@@ -1670,6 +1851,7 @@ static void fnDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
                     argumentNode->fnCollection.capacity);
             }
 
+            // store the arg in the array
             Xvr_ASTNode* literalNode = NULL;
             Xvr_emitASTNodeVarDecl(&literalNode, argIdentifier, argTypeLiteral,
                                    NULL);
@@ -1677,12 +1859,14 @@ static void fnDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
             argumentNode->fnCollection
                 .nodes[argumentNode->fnCollection.count++] = *literalNode;
             XVR_FREE(Xvr_ASTNode, literalNode);
-        } while (match(parser, XVR_TOKEN_COMMA));
+
+        } while (match(parser, XVR_TOKEN_COMMA));  // if comma is read, continue
 
         consume(parser, XVR_TOKEN_PAREN_RIGHT,
                 "Expected ')' after function argument list");
     }
 
+    // read the return types, if present
     Xvr_ASTNode* returnNode = NULL;
     Xvr_emitASTNodeFnCollection(&returnNode);
 
@@ -1691,6 +1875,7 @@ static void fnDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
             if (returnNode->fnCollection.capacity <
                 returnNode->fnCollection.count + 1) {
                 int oldCapacity = returnNode->fnCollection.capacity;
+
                 returnNode->fnCollection.capacity =
                     XVR_GROW_CAPACITY(oldCapacity);
                 returnNode->fnCollection.nodes = XVR_GROW_ARRAY(
@@ -1704,14 +1889,16 @@ static void fnDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
             returnNode->fnCollection.nodes[returnNode->fnCollection.count++] =
                 *literalNode;
             XVR_FREE(Xvr_ASTNode, literalNode);
-
         } while (match(parser, XVR_TOKEN_COMMA));
     }
 
+    // read the function body
     consume(parser, XVR_TOKEN_BRACE_LEFT, "Expected '{' after return list");
+
     Xvr_ASTNode* blockNode = NULL;
     blockStmt(parser, &blockNode);
 
+    // declare it
     Xvr_emitASTNodeFnDecl(nodeHandle, identifier, argumentNode, returnNode,
                           blockNode);
 }
@@ -1726,6 +1913,7 @@ static void declaration(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     }
 }
 
+// exposed functions
 void Xvr_initParser(Xvr_Parser* parser, Xvr_Lexer* lexer) {
     parser->lexer = lexer;
     parser->error = false;
@@ -1746,17 +1934,20 @@ void Xvr_freeParser(Xvr_Parser* parser) {
 }
 
 Xvr_ASTNode* Xvr_scanParser(Xvr_Parser* parser) {
+    // check for EOF
     if (match(parser, XVR_TOKEN_EOF)) {
         return NULL;
     }
 
+    // returns nodes on the heap
     Xvr_ASTNode* node = NULL;
 
+    // process the grammar rule for this line
     declaration(parser, &node);
 
     if (parser->panic) {
         synchronize(parser);
-
+        // return an error node for this iteration
         Xvr_freeASTNode(node);
         node = XVR_ALLOCATE(Xvr_ASTNode, 1);
         node->type = XVR_AST_NODE_ERROR;

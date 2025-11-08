@@ -56,14 +56,14 @@ char* Xvr_readFile(char* path, size_t* fileSize) {
 
     if (buffer == NULL) {
         fprintf(stderr,
-                XVR_CC_ERROR
-                "Not enough memory to reading \"%s\"\n" XVR_CC_RESET,
+                XVR_CC_ERROR "Not enough memory to read \"%s\"\n" XVR_CC_RESET,
                 path);
         return NULL;
     }
 
     size_t bytesRead = fread(buffer, sizeof(char), *fileSize, file);
-    buffer[*fileSize] = '\0';
+
+    buffer[*fileSize] = '\0';  // NOTE: fread doesn't append this
 
     if (bytesRead < *fileSize) {
         fprintf(stderr,
@@ -72,6 +72,7 @@ char* Xvr_readFile(char* path, size_t* fileSize) {
     }
 
     fclose(file);
+
     return buffer;
 }
 
@@ -94,9 +95,11 @@ int Xvr_writeFile(char* path, unsigned char* bytes, size_t size) {
     }
 
     fclose(file);
+
     return 0;
 }
 
+// repl functions
 unsigned char* Xvr_compileString(char* source, size_t* size) {
     Xvr_Lexer lexer;
     Xvr_Parser parser;
@@ -106,8 +109,10 @@ unsigned char* Xvr_compileString(char* source, size_t* size) {
     Xvr_initParser(&parser, &lexer);
     Xvr_initCompiler(&compiler);
 
+    // run the parser until the end of the source
     Xvr_ASTNode* node = Xvr_scanParser(&parser);
     while (node != NULL) {
+        // pack up and leave
         if (node->type == XVR_AST_NODE_ERROR) {
             Xvr_freeASTNode(node);
             Xvr_freeCompiler(&compiler);
@@ -120,12 +125,13 @@ unsigned char* Xvr_compileString(char* source, size_t* size) {
         node = Xvr_scanParser(&parser);
     }
 
-    unsigned char* xb = Xvr_collateCompiler(&compiler, (int*)(size));
+    // get the bytecode dump
+    unsigned char* tb = Xvr_collateCompiler(&compiler, (int*)(size));
 
+    // cleanup
     Xvr_freeCompiler(&compiler);
     Xvr_freeParser(&parser);
-
-    return xb;
+    return tb;
 }
 
 void Xvr_runBinary(unsigned char* tb, size_t size) {
@@ -142,30 +148,27 @@ void Xvr_runBinary(unsigned char* tb, size_t size) {
     Xvr_freeInterpreter(&interpreter);
 }
 
-void Xvr_runBinaryFile(char *fname) {
+void Xvr_runBinaryFile(char* fname) {
     size_t size = 0;
     unsigned char* tb = (unsigned char*)Xvr_readFile(fname, &size);
-
     if (!tb) {
-    return;
+        return;
     }
-
     Xvr_runBinary(tb, size);
+    // interpreter takes ownership of the binary data
 }
 
-void Xvr_runSource(char *source) {
+void Xvr_runSource(char* source) {
     size_t size = 0;
     unsigned char* tb = Xvr_compileString(source, &size);
-
     if (!tb) {
-    return;
+        return;
     }
-
 
     Xvr_runBinary(tb, size);
 }
 
-void Xvr_runSourceFile(char *fname) {
+void Xvr_runSourceFile(char* fname) {
     size_t size = 0;
     char* source = Xvr_readFile(fname, &size);
     Xvr_runSource(source);

@@ -48,9 +48,7 @@ static bool isAtEnd(Xvr_Lexer* lexer) {
 static char peek(Xvr_Lexer* lexer) { return lexer->source[lexer->current]; }
 
 static char peekNext(Xvr_Lexer* lexer) {
-    if (isAtEnd(lexer)) {
-        return '\0';
-    }
+    if (isAtEnd(lexer)) return '\0';
     return lexer->source[lexer->current + 1];
 }
 
@@ -59,6 +57,7 @@ static char advance(Xvr_Lexer* lexer) {
         return '\0';
     }
 
+    // new line
     if (lexer->source[lexer->current] == '\n') {
         lexer->line++;
     }
@@ -67,7 +66,7 @@ static char advance(Xvr_Lexer* lexer) {
     return lexer->source[lexer->current - 1];
 }
 
-static void eatWithspace(Xvr_Lexer* lexer) {
+static void eatWhitespace(Xvr_Lexer* lexer) {
     const char c = peek(lexer);
 
     switch (c) {
@@ -78,11 +77,15 @@ static void eatWithspace(Xvr_Lexer* lexer) {
         advance(lexer);
         break;
 
+    // comments
     case '/':
+        // eat the line
         if (peekNext(lexer) == '/') {
             while (advance(lexer) != '\n' && !isAtEnd(lexer));
             break;
         }
+
+        // eat the block
         if (peekNext(lexer) == '*') {
             advance(lexer);
             advance(lexer);
@@ -97,6 +100,9 @@ static void eatWithspace(Xvr_Lexer* lexer) {
     default:
         return;
     }
+
+    // tail recursion
+    eatWhitespace(lexer);
 }
 
 static bool isDigit(Xvr_Lexer* lexer) {
@@ -113,9 +119,11 @@ static bool match(Xvr_Lexer* lexer, char c) {
         advance(lexer);
         return true;
     }
+
     return false;
 }
 
+// token generators
 static Xvr_Token makeErrorToken(Xvr_Lexer* lexer, char* msg) {
     Xvr_Token token;
 
@@ -126,10 +134,11 @@ static Xvr_Token makeErrorToken(Xvr_Lexer* lexer, char* msg) {
 
 #ifndef XVR_EXPORT
     if (Xvr_commandLine.verbose) {
-        printf("error:");
+        printf("err:");
         Xvr_printToken(&token);
     }
-#endif /* ifndef XVR_EXPORT */
+#endif
+
     return token;
 }
 
@@ -142,28 +151,27 @@ static Xvr_Token makeToken(Xvr_Lexer* lexer, Xvr_TokenType type) {
     token.line = lexer->line;
 
 #ifndef XVR_EXPORT
+    // BUG #10: this shows TOKEN_EOF twice due to the overarching structure of
+    // the program - can't be fixed
     if (Xvr_commandLine.verbose) {
-        printf("token:");
+        printf("tok:");
         Xvr_printToken(&token);
     }
-#endif /* ifndef XVR_EXPORT */
+#endif
+
     return token;
 }
 
 static Xvr_Token makeIntegerOrFloat(Xvr_Lexer* lexer) {
-    Xvr_TokenType type = XVR_TOKEN_LITERAL_INTEGER;
+    Xvr_TokenType type = XVR_TOKEN_LITERAL_INTEGER;  // what am I making?
 
-    while (isDigit(lexer)) {
-        advance(lexer);
-    }
+    while (isDigit(lexer)) advance(lexer);
 
     if (peek(lexer) == '.' &&
         (peekNext(lexer) >= '0' && peekNext(lexer) <= '9')) {
         type = XVR_TOKEN_LITERAL_FLOAT;
         advance(lexer);
-        while (isDigit(lexer)) {
-            advance(lexer);
-        }
+        while (isDigit(lexer)) advance(lexer);
     }
 
     Xvr_Token token;
@@ -182,23 +190,27 @@ static Xvr_Token makeIntegerOrFloat(Xvr_Lexer* lexer) {
         }
         Xvr_printToken(&token);
     }
-#endif /* ifndef XVR_EXPORT */
+#endif
+
     return token;
 }
 
 static Xvr_Token makeString(Xvr_Lexer* lexer, char terminator) {
-    while (isAtEnd(lexer)) {
+    while (!isAtEnd(lexer)) {
+        // skip escaped terminators
         if (peek(lexer) == '\\' && peekNext(lexer) == terminator) {
             advance(lexer);
             advance(lexer);
             continue;
         }
 
+        // actually escape if you've hit the terminator
         if (peek(lexer) == terminator) {
-            advance(lexer);
+            advance(lexer);  // eat terminator
             break;
         }
 
+        // otherwise
         advance(lexer);
     }
 
@@ -218,17 +230,19 @@ static Xvr_Token makeString(Xvr_Lexer* lexer, char terminator) {
         printf("str:");
         Xvr_printToken(&token);
     }
-#endif /* ifndef XVR_EXPORT */
+#endif
+
     return token;
 }
 
 static Xvr_Token makeKeywordOrIdentifier(Xvr_Lexer* lexer) {
-    advance(lexer);
+    advance(lexer);  // first letter can only be alpha
 
     while (isDigit(lexer) || isAlpha(lexer)) {
         advance(lexer);
     }
 
+    // scan for a keyword
     for (int i = 0; Xvr_keywordTypes[i].keyword; i++) {
         if (strlen(Xvr_keywordTypes[i].keyword) ==
                 (long unsigned int)(lexer->current - lexer->start) &&
@@ -246,11 +260,13 @@ static Xvr_Token makeKeywordOrIdentifier(Xvr_Lexer* lexer) {
                 printf("kwd:");
                 Xvr_printToken(&token);
             }
-#endif /* ifndef XVR_EXPORT */
+#endif
+
             return token;
         }
     }
 
+    // return an identifier
     Xvr_Token token;
 
     token.type = XVR_TOKEN_IDENTIFIER;
@@ -263,10 +279,12 @@ static Xvr_Token makeKeywordOrIdentifier(Xvr_Lexer* lexer) {
         printf("idf:");
         Xvr_printToken(&token);
     }
-#endif /* ifndef XVR_EXPORT */
+#endif
+
     return token;
 }
 
+// exposed functions
 void Xvr_initLexer(Xvr_Lexer* lexer, char* source) {
     cleanLexer(lexer);
 
@@ -274,21 +292,14 @@ void Xvr_initLexer(Xvr_Lexer* lexer, char* source) {
 }
 
 Xvr_Token Xvr_scanLexer(Xvr_Lexer* lexer) {
-    eatWithspace(lexer);
+    eatWhitespace(lexer);
 
     lexer->start = lexer->current;
 
-    if (isAtEnd(lexer)) {
-        return makeToken(lexer, XVR_TOKEN_EOF);
-    }
+    if (isAtEnd(lexer)) return makeToken(lexer, XVR_TOKEN_EOF);
 
-    if (isDigit(lexer)) {
-        return makeIntegerOrFloat(lexer);
-    }
-
-    if (isAlpha(lexer)) {
-        return makeKeywordOrIdentifier(lexer);
-    }
+    if (isDigit(lexer)) return makeIntegerOrFloat(lexer);
+    if (isAlpha(lexer)) return makeKeywordOrIdentifier(lexer);
 
     char c = advance(lexer);
 
@@ -357,7 +368,6 @@ Xvr_Token Xvr_scanLexer(Xvr_Lexer* lexer) {
         return makeToken(lexer, XVR_TOKEN_SEMICOLON);
     case ',':
         return makeToken(lexer, XVR_TOKEN_COMMA);
-
     case '.':
         if (peek(lexer) == '.' && peekNext(lexer) == '.') {
             advance(lexer);
@@ -368,6 +378,7 @@ Xvr_Token Xvr_scanLexer(Xvr_Lexer* lexer) {
 
     case '"':
         return makeString(lexer, c);
+        // TODO: possibly support interpolated strings
 
     default: {
         char buffer[128];
@@ -377,7 +388,7 @@ Xvr_Token Xvr_scanLexer(Xvr_Lexer* lexer) {
     }
 }
 
-static void trim(char** s, int* l) {
+static void trim(char** s, int* l) {  // all this to remove a newline?
     while (isspace(((*((unsigned char**)(s)))[(*l) - 1]))) (*l)--;
     while (**s && isspace(**(unsigned char**)(s))) {
         (*s)++;
@@ -387,9 +398,11 @@ static void trim(char** s, int* l) {
 
 void Xvr_printToken(Xvr_Token* token) {
     if (token->type == XVR_TOKEN_ERROR) {
-        printf(XVR_CC_ERROR "Error:\t%d\t%.*s\n" XVR_CC_RESET, token->line,
+        printf(XVR_CC_ERROR "Error\t%d\t%.*s\n" XVR_CC_RESET, token->line,
                token->length, token->lexeme);
+        return;
     }
+
     printf("\t%d\t%d\t", token->type, token->line);
 
     if (token->type == XVR_TOKEN_IDENTIFIER ||

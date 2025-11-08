@@ -82,7 +82,9 @@ int Xvr_hookAbout(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
 
         Xvr_freeLiteral(dict);
         Xvr_freeLiteral(type);
-    } else {
+    }
+
+    else {
         if (Xvr_isDeclaredScopeVariable(interpreter->scope, majorKeyLiteral) ||
             Xvr_isDeclaredScopeVariable(interpreter->scope, minorKeyLiteral) ||
             Xvr_isDeclaredScopeVariable(interpreter->scope, patchKeyLiteral) ||

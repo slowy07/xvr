@@ -20,21 +20,22 @@
 
 static void printWrapper(const char* output) {
     printf("%s", output);
-    printf("\n");
+    printf("\n");  // default new line
 }
 
 static void assertWrapper(const char* output) {
-    fprintf(stderr, XVR_CC_ERROR "assertion fail: ");
+    fprintf(stderr, XVR_CC_ERROR "Assertion failure: ");
     fprintf(stderr, "%s", output);
-    fprintf(stderr, "\n" XVR_CC_RESET);
+    fprintf(stderr, "\n" XVR_CC_RESET);  // default new line
 }
 
 static void errorWrapper(const char* output) {
-    fprintf(stderr, XVR_CC_ERROR "%s" XVR_CC_RESET, output);
+    fprintf(stderr, XVR_CC_ERROR "%s" XVR_CC_RESET, output);  // no newline
 }
 
 bool Xvr_injectNativeFn(Xvr_Interpreter* interpreter, char* name,
                         Xvr_NativeFn func) {
+    // reject reserved words
     if (Xvr_findTypeByKeyword(name) != XVR_TOKEN_EOF) {
         interpreter->errorOutput("Can't override an existing keyword\n");
         return false;
@@ -44,9 +45,10 @@ bool Xvr_injectNativeFn(Xvr_Interpreter* interpreter, char* name,
     Xvr_Literal identifier = XVR_TO_IDENTIFIER_LITERAL(
         Xvr_createRefStringLength(name, identifierLength));
 
+    // make sure the name isn't taken
     if (Xvr_existsLiteralDictionary(&interpreter->scope->variables,
                                     identifier)) {
-        interpreter->errorOutput("Can't override an existing variables\n");
+        interpreter->errorOutput("Can't override an existing variable\n");
         return false;
     }
 
@@ -64,8 +66,10 @@ bool Xvr_injectNativeFn(Xvr_Interpreter* interpreter, char* name,
 
 bool Xvr_injectNativeHook(Xvr_Interpreter* interpreter, char* name,
                           Xvr_HookFn hook) {
+    // reject reserved words
     if (Xvr_findTypeByKeyword(name) != XVR_TOKEN_EOF) {
-        interpreter->errorOutput("Can't inject a hook on a existing keyword\n");
+        interpreter->errorOutput(
+            "Can't inject a hook on an existing keyword\n");
         return false;
     }
 
@@ -73,8 +77,9 @@ bool Xvr_injectNativeHook(Xvr_Interpreter* interpreter, char* name,
     Xvr_Literal identifier = XVR_TO_IDENTIFIER_LITERAL(
         Xvr_createRefStringLength(name, identifierLength));
 
+    // make sure the name isn't taken
     if (Xvr_existsLiteralDictionary(interpreter->hooks, identifier)) {
-        interpreter->errorOutput("Can't override an existing hooks\n");
+        interpreter->errorOutput("Can't override an existing hook\n");
         return false;
     }
 
@@ -92,6 +97,7 @@ void Xvr_parseCompoundToPureValues(Xvr_Interpreter* interpreter,
         Xvr_parseIdentifierToValue(interpreter, literalPtr);
     }
 
+    // parse out an array
     if (XVR_IS_ARRAY(*literalPtr)) {
         for (int i = 0; i < XVR_AS_ARRAY(*literalPtr)->count; i++) {
             Xvr_Literal index = XVR_TO_INTEGER_LITERAL(i);
@@ -101,7 +107,9 @@ void Xvr_parseCompoundToPureValues(Xvr_Interpreter* interpreter,
             if (XVR_IS_IDENTIFIER(entry)) {
                 Xvr_Literal idn = entry;
                 Xvr_parseCompoundToPureValues(interpreter, &entry);
+
                 Xvr_setLiteralArray(XVR_AS_ARRAY(*literalPtr), index, entry);
+
                 Xvr_freeLiteral(idn);
             }
 
@@ -110,6 +118,7 @@ void Xvr_parseCompoundToPureValues(Xvr_Interpreter* interpreter,
         }
     }
 
+    // parse out a dictionary
     if (XVR_IS_DICTIONARY(*literalPtr)) {
         Xvr_LiteralDictionary* ret = XVR_ALLOCATE(Xvr_LiteralDictionary, 1);
         Xvr_initLiteralDictionary(ret);
@@ -127,6 +136,7 @@ void Xvr_parseCompoundToPureValues(Xvr_Interpreter* interpreter,
             value = Xvr_copyLiteral(
                 XVR_AS_DICTIONARY(*literalPtr)->entries[i].value);
 
+            //
             if (XVR_IS_IDENTIFIER(key) || XVR_IS_IDENTIFIER(value)) {
                 Xvr_parseCompoundToPureValues(interpreter, &key);
                 Xvr_parseCompoundToPureValues(interpreter, &value);
@@ -134,6 +144,7 @@ void Xvr_parseCompoundToPureValues(Xvr_Interpreter* interpreter,
 
             Xvr_setLiteralDictionary(ret, key, value);
 
+            //
             Xvr_freeLiteral(key);
             Xvr_freeLiteral(value);
         }
@@ -145,6 +156,7 @@ void Xvr_parseCompoundToPureValues(Xvr_Interpreter* interpreter,
 
 bool Xvr_parseIdentifierToValue(Xvr_Interpreter* interpreter,
                                 Xvr_Literal* literalPtr) {
+    // this converts identifiers to values
     if (XVR_IS_IDENTIFIER(*literalPtr)) {
         if (!Xvr_getScopeVariable(interpreter->scope, *literalPtr,
                                   literalPtr)) {
@@ -162,6 +174,7 @@ bool Xvr_parseIdentifierToValue(Xvr_Interpreter* interpreter,
     return true;
 }
 
+// utilities for the host program
 void Xvr_setInterpreterPrint(Xvr_Interpreter* interpreter,
                              Xvr_PrintFn printOutput) {
     interpreter->printOutput = printOutput;
@@ -177,6 +190,7 @@ void Xvr_setInterpreterError(Xvr_Interpreter* interpreter,
     interpreter->errorOutput = errorOutput;
 }
 
+// utils
 static unsigned char readByte(unsigned char* tb, int* count) {
     unsigned char ret = *(unsigned char*)(tb + *count);
     *count += 1;
@@ -197,7 +211,7 @@ static int readInt(unsigned char* tb, int* count) {
     return ret;
 }
 
-static int readFloat(unsigned char* tb, int* count) {
+static float readFloat(unsigned char* tb, int* count) {
     float ret = 0;
     memcpy(&ret, tb + *count, 4);
     *count += 4;
@@ -206,7 +220,7 @@ static int readFloat(unsigned char* tb, int* count) {
 
 static char* readString(unsigned char* tb, int* count) {
     unsigned char* ret = tb + *count;
-    *count += strlen((char*)ret) + 1;
+    *count += strlen((char*)ret) + 1;  //+1 for null character
     return (char*)ret;
 }
 
@@ -218,6 +232,7 @@ static void consumeByte(Xvr_Interpreter* interpreter, unsigned char byte,
                  "[internal] Failed to consume the correct byte (expected %u, "
                  "found %u)\n",
                  byte, tb[*count]);
+        interpreter->errorOutput(buffer);
     }
     *count += 1;
 }
@@ -227,7 +242,7 @@ static void consumeShort(Xvr_Interpreter* interpreter, unsigned short bytes,
     if (bytes != *(unsigned short*)(tb + *count)) {
         char buffer[512];
         snprintf(buffer, 512,
-                 "[internal] Failed to consume correct bytes (expected %u, "
+                 "[internal] Failed to consume the correct bytes (expected %u, "
                  "found %u)\n",
                  bytes, *(unsigned short*)(tb + *count));
         interpreter->errorOutput(buffer);
@@ -235,6 +250,7 @@ static void consumeShort(Xvr_Interpreter* interpreter, unsigned short bytes,
     *count += 2;
 }
 
+// each available statement
 static bool execAssert(Xvr_Interpreter* interpreter) {
     Xvr_Literal rhs = Xvr_popLiteralArray(&interpreter->stack);
     Xvr_Literal lhs = Xvr_popLiteralArray(&interpreter->stack);
@@ -268,10 +284,12 @@ static bool execAssert(Xvr_Interpreter* interpreter) {
 
     Xvr_freeLiteral(lhs);
     Xvr_freeLiteral(rhs);
+
     return true;
 }
 
 static bool execPrint(Xvr_Interpreter* interpreter) {
+    // print what is on top of the stack, then pop it
     Xvr_Literal lit = Xvr_popLiteralArray(&interpreter->stack);
 
     Xvr_Literal idn = lit;
@@ -281,6 +299,7 @@ static bool execPrint(Xvr_Interpreter* interpreter) {
     }
 
     Xvr_printLiteralCustom(lit, interpreter->printOutput);
+
     Xvr_freeLiteral(lit);
 
     return true;
@@ -551,12 +570,14 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
 
 static Xvr_Literal parseTypeToValue(Xvr_Interpreter* interpreter,
                                     Xvr_Literal type) {
+    // if an identifier is embedded in the type, figure out what it iss
     Xvr_Literal typeIdn = type;
     if (XVR_IS_IDENTIFIER(type) &&
         Xvr_parseIdentifierToValue(interpreter, &type)) {
         Xvr_freeLiteral(typeIdn);
     }
 
+    // if this is an array or dictionary, continue to the subtypes
     if (XVR_IS_TYPE(type) &&
         (XVR_AS_TYPE(type).typeOf == XVR_LITERAL_ARRAY ||
          XVR_AS_TYPE(type).typeOf == XVR_LITERAL_DICTIONARY)) {
@@ -567,15 +588,17 @@ static Xvr_Literal parseTypeToValue(Xvr_Interpreter* interpreter,
     }
 
     if (!XVR_IS_TYPE(type)) {
-        interpreter->errorOutput("Bad type error encountered: ");
+        interpreter->errorOutput("Bad type encountered: ");
         Xvr_printLiteralCustom(type, interpreter->errorOutput);
         interpreter->errorOutput("\n");
+        // TODO: would be better to return an int here...
     }
 
     return type;
 }
 
 static bool execVarDecl(Xvr_Interpreter* interpreter, bool lng) {
+    // read the index in the cache
     int identifierIndex = 0;
     int typeIndex = 0;
 
@@ -603,7 +626,7 @@ static bool execVarDecl(Xvr_Interpreter* interpreter, bool lng) {
     type = parseTypeToValue(interpreter, type);
 
     if (!Xvr_declareScopeVariable(interpreter->scope, identifier, type)) {
-        interpreter->errorOutput("Can't redefined the variable \"");
+        interpreter->errorOutput("Can't redefine the variable \"");
         Xvr_printLiteralCustom(identifier, interpreter->errorOutput);
         interpreter->errorOutput("\"\n");
         return false;
@@ -644,6 +667,7 @@ static bool execVarDecl(Xvr_Interpreter* interpreter, bool lng) {
 }
 
 static bool execFnDecl(Xvr_Interpreter* interpreter, bool lng) {
+    // read the index in the cache
     int identifierIndex = 0;
     int functionIndex = 0;
 
@@ -663,7 +687,8 @@ static bool execFnDecl(Xvr_Interpreter* interpreter, bool lng) {
         interpreter->literalCache.literals[identifierIndex];
     Xvr_Literal function = interpreter->literalCache.literals[functionIndex];
 
-    XVR_AS_FUNCTION(function).scope = Xvr_pushScope(interpreter->scope);
+    XVR_AS_FUNCTION(function).scope = Xvr_pushScope(
+        interpreter->scope);  // hacked in (needed for closure persistance)
 
     Xvr_Literal type = XVR_TO_TYPE_LITERAL(XVR_LITERAL_FUNCTION, true);
 
@@ -675,15 +700,16 @@ static bool execFnDecl(Xvr_Interpreter* interpreter, bool lng) {
     }
 
     if (!Xvr_setScopeVariable(interpreter->scope, identifier, function,
-                              false)) {
+                              false)) {  // scope gets copied here
         interpreter->errorOutput("Incorrect type assigned to variable \"");
         Xvr_printLiteralCustom(identifier, interpreter->errorOutput);
         interpreter->errorOutput("\"\n");
         return false;
     }
 
-    Xvr_popScope(XVR_AS_FUNCTION(function).scope);
+    Xvr_popScope(XVR_AS_FUNCTION(function).scope);  // hacked out
     XVR_AS_FUNCTION(function).scope = NULL;
+
     Xvr_freeLiteral(type);
 
     return true;
@@ -747,6 +773,7 @@ static bool execVarArithmeticAssign(Xvr_Interpreter* interpreter) {
     Xvr_Literal rhs = Xvr_popLiteralArray(&interpreter->stack);
     Xvr_Literal lhs = Xvr_popLiteralArray(&interpreter->stack);
 
+    // duplicate the name
     Xvr_pushLiteralArray(&interpreter->stack, lhs);
     Xvr_pushLiteralArray(&interpreter->stack, lhs);
     Xvr_pushLiteralArray(&interpreter->stack, rhs);
@@ -778,6 +805,7 @@ static bool execValCast(Xvr_Interpreter* interpreter) {
         return false;
     }
 
+    // cast the rhs to the type represented by lhs
     switch (XVR_AS_TYPE(type).typeOf) {
     case XVR_LITERAL_BOOLEAN:
         result = XVR_TO_BOOLEAN_LITERAL(XVR_IS_TRUTHY(value));
@@ -826,9 +854,10 @@ static bool execValCast(Xvr_Interpreter* interpreter) {
     case XVR_LITERAL_STRING:
         if (XVR_IS_BOOLEAN(value)) {
             char* str = XVR_AS_BOOLEAN(value) ? "true" : "false";
+
             int length = strlen(str);
-            result =
-                XVR_TO_STRING_LITERAL(Xvr_createRefStringLength(str, length));
+            result = XVR_TO_STRING_LITERAL(Xvr_createRefStringLength(
+                str, length));  // TODO: static reference optimisation?
         }
 
         if (XVR_IS_INTEGER(value)) {
@@ -850,7 +879,6 @@ static bool execValCast(Xvr_Interpreter* interpreter) {
         if (XVR_IS_STRING(value)) {
             result = Xvr_copyLiteral(value);
         }
-
         break;
 
     default:
@@ -860,7 +888,9 @@ static bool execValCast(Xvr_Interpreter* interpreter) {
         return false;
     }
 
+    // leave the new value on the stack
     Xvr_pushLiteralArray(&interpreter->stack, result);
+
     Xvr_freeLiteral(result);
     Xvr_freeLiteral(value);
     Xvr_freeLiteral(type);
@@ -932,7 +962,18 @@ static bool execCompareLess(Xvr_Interpreter* interpreter, bool invert) {
         Xvr_freeLiteral(lhsIdn);
     }
 
+    // not a number, return falure
     if (!(XVR_IS_INTEGER(lhs) || XVR_IS_FLOAT(lhs))) {
+        interpreter->errorOutput("Incorrect type in comparison, value \"");
+        Xvr_printLiteralCustom(lhs, interpreter->errorOutput);
+        interpreter->errorOutput("\"\n");
+
+        Xvr_freeLiteral(lhs);
+        Xvr_freeLiteral(rhs);
+        return false;
+    }
+
+    if (!(XVR_IS_INTEGER(rhs) || XVR_IS_FLOAT(rhs))) {
         interpreter->errorOutput("Incorrect type in comparison, value \"");
         Xvr_printLiteralCustom(rhs, interpreter->errorOutput);
         interpreter->errorOutput("\"\n");
@@ -941,6 +982,7 @@ static bool execCompareLess(Xvr_Interpreter* interpreter, bool invert) {
         return false;
     }
 
+    // convert to floats - easier
     if (XVR_IS_INTEGER(lhs)) {
         lhs = XVR_TO_FLOAT_LITERAL(XVR_AS_INTEGER(lhs));
     }
@@ -958,6 +1000,7 @@ static bool execCompareLess(Xvr_Interpreter* interpreter, bool invert) {
     }
 
     Xvr_pushLiteralArray(&interpreter->stack, XVR_TO_BOOLEAN_LITERAL(result));
+
     Xvr_freeLiteral(lhs);
     Xvr_freeLiteral(rhs);
 
@@ -980,6 +1023,7 @@ static bool execCompareLessEqual(Xvr_Interpreter* interpreter, bool invert) {
         Xvr_freeLiteral(lhsIdn);
     }
 
+    // not a number, return falure
     if (!(XVR_IS_INTEGER(lhs) || XVR_IS_FLOAT(lhs))) {
         interpreter->errorOutput("Incorrect type in comparison, value \"");
         Xvr_printLiteralCustom(lhs, interpreter->errorOutput);
@@ -1000,6 +1044,7 @@ static bool execCompareLessEqual(Xvr_Interpreter* interpreter, bool invert) {
         return false;
     }
 
+    // convert to floats - easier
     if (XVR_IS_INTEGER(lhs)) {
         lhs = XVR_TO_FLOAT_LITERAL(XVR_AS_INTEGER(lhs));
     }
@@ -1088,11 +1133,13 @@ static bool execJump(Xvr_Interpreter* interpreter) {
     int target = (int)readShort(interpreter->bytecode, &interpreter->count);
 
     if (target + interpreter->codeStart > interpreter->length) {
-        interpreter->errorOutput("[internal] jump out of range\n");
+        interpreter->errorOutput("[internal] Jump out of range\n");
         return false;
     }
 
+    // actually jump
     interpreter->count = target + interpreter->codeStart;
+
     return true;
 }
 
@@ -1100,10 +1147,11 @@ static bool execFalseJump(Xvr_Interpreter* interpreter) {
     int target = (int)readShort(interpreter->bytecode, &interpreter->count);
 
     if (target + interpreter->codeStart > interpreter->length) {
-        interpreter->errorOutput("[internal] jump out of range (false jump)\n");
+        interpreter->errorOutput("[internal] Jump out of range (false jump)\n");
         return false;
     }
 
+    // actually jump
     Xvr_Literal lit = Xvr_popLiteralArray(&interpreter->stack);
 
     Xvr_Literal litIdn = lit;
@@ -1123,15 +1171,17 @@ static bool execFalseJump(Xvr_Interpreter* interpreter) {
     }
 
     Xvr_freeLiteral(lit);
+
     return true;
 }
 
+// forward declare
 static void execInterpreter(Xvr_Interpreter*);
 static void readInterpreterSections(Xvr_Interpreter* interpreter);
 
 static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
     if (interpreter->depth >= 200) {
-        interpreter->errorOutput("Infinite recursion detected - panic \n");
+        interpreter->errorOutput("Infinite recursion detected - panicking\n");
         interpreter->panic = true;
         return false;
     }
@@ -1141,31 +1191,36 @@ static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
 
     Xvr_Literal stackSize = Xvr_popLiteralArray(&interpreter->stack);
 
+    // unpack the stack of arguments
     for (int i = 0; i < XVR_AS_INTEGER(stackSize) - 1; i++) {
         Xvr_Literal lit = Xvr_popLiteralArray(&interpreter->stack);
-        Xvr_pushLiteralArray(&arguments, lit);
+        Xvr_pushLiteralArray(&arguments, lit);  // NOTE: also reverses the order
         Xvr_freeLiteral(lit);
     }
 
+    // collect one more argument
     if (!looseFirstArgument && XVR_AS_INTEGER(stackSize) > 0) {
         Xvr_Literal lit = Xvr_popLiteralArray(&interpreter->stack);
-        Xvr_pushLiteralArray(&arguments, lit);
+        Xvr_pushLiteralArray(&arguments, lit);  // NOTE: also reverses the order
         Xvr_freeLiteral(lit);
     }
 
     Xvr_Literal identifier = Xvr_popLiteralArray(&interpreter->stack);
 
+    // collect one more argument
     if (looseFirstArgument) {
         Xvr_Literal lit = Xvr_popLiteralArray(&interpreter->stack);
-        Xvr_pushLiteralArray(&arguments, lit);
+        Xvr_pushLiteralArray(&arguments, lit);  // NOTE: also reverses the order
         Xvr_freeLiteral(lit);
     }
 
+    // let's screw with the fn name, too
     if (looseFirstArgument) {
         int length = XVR_AS_IDENTIFIER(identifier)->length + 1;
         char buffer[XVR_MAX_STRING_LENGTH];
         snprintf(buffer, XVR_MAX_STRING_LENGTH, "_%s",
-                 Xvr_toCString(XVR_AS_IDENTIFIER(identifier)));
+                 Xvr_toCString(
+                     XVR_AS_IDENTIFIER(identifier)));  // prepend an underscore
 
         Xvr_freeLiteral(identifier);
         identifier = XVR_TO_IDENTIFIER_LITERAL(
@@ -1180,7 +1235,9 @@ static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
         return false;
     }
 
+    // check for side-loaded native functions
     if (XVR_IS_FUNCTION_NATIVE(func)) {
+        // reverse the order to the correct order
         Xvr_LiteralArray correct;
         Xvr_initLiteralArray(&correct);
 
@@ -1192,6 +1249,7 @@ static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
 
         Xvr_freeLiteralArray(&arguments);
 
+        // call the native function
         XVR_AS_FUNCTION_NATIVE(func)(interpreter, &correct);
 
         Xvr_freeLiteralArray(&correct);
@@ -1232,8 +1290,10 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
         return false;
     }
 
+    // set up a new interpreter
     Xvr_Interpreter inner;
 
+    // init the inner interpreter manually
     Xvr_initLiteralArray(&inner.literalCache);
     inner.scope = Xvr_pushScope(func.as.function.scope);
     inner.bytecode = XVR_AS_FUNCTION(func).bytecode;
@@ -1248,13 +1308,16 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
     Xvr_setInterpreterAssert(&inner, interpreter->assertOutput);
     Xvr_setInterpreterError(&inner, interpreter->errorOutput);
 
+    // prep the sections
     readInterpreterSections(&inner);
 
+    // prep the arguments
     Xvr_LiteralArray* paramArray = XVR_AS_ARRAY(
         inner.literalCache.literals[readShort(inner.bytecode, &inner.count)]);
     Xvr_LiteralArray* returnArray = XVR_AS_ARRAY(
         inner.literalCache.literals[readShort(inner.bytecode, &inner.count)]);
 
+    // get the rest param, if it exists
     Xvr_Literal restParam = XVR_TO_NULL_LITERAL;
     if (paramArray->count >= 2 &&
         XVR_AS_TYPE(paramArray->literals[paramArray->count - 1]).typeOf ==
@@ -1262,12 +1325,14 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
         restParam = paramArray->literals[paramArray->count - 2];
     }
 
+    // check the param total is correct
     if ((XVR_IS_NULL(restParam) && paramArray->count != arguments->count * 2) ||
         (!XVR_IS_NULL(restParam) &&
          paramArray->count - 2 > arguments->count * 2)) {
         interpreter->errorOutput(
             "Incorrect number of arguments passed to a function\n");
 
+        // free, and skip out
         Xvr_popScope(inner.scope);
 
         Xvr_freeLiteralArray(&inner.stack);
@@ -1276,10 +1341,16 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
         return false;
     }
 
+    // contents is the indexes of identifier & type
     for (int i = 0; i < paramArray->count - (XVR_IS_NULL(restParam) ? 0 : 2);
-         i += 2) {
+         i += 2) {  // don't count the rest parameter, if present
+        // declare and define each entry in the scope
         if (!Xvr_declareScopeVariable(inner.scope, paramArray->literals[i],
                                       paramArray->literals[i + 1])) {
+            interpreter->errorOutput(
+                "[internal] Could not re-declare parameter\n");
+
+            // free, and skip out
             Xvr_popScope(inner.scope);
 
             Xvr_freeLiteralArray(&inner.stack);
@@ -1289,6 +1360,7 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
         }
 
         Xvr_Literal arg = Xvr_popLiteralArray(arguments);
+
         Xvr_Literal argIdn = arg;
         if (XVR_IS_IDENTIFIER(arg) &&
             Xvr_parseIdentifierToValue(interpreter, &arg)) {
@@ -1298,8 +1370,9 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
         if (!Xvr_setScopeVariable(inner.scope, paramArray->literals[i], arg,
                                   false)) {
             interpreter->errorOutput(
-                "[internal] Could not defined parameter (bad type)\n");
+                "[internal] Could not define parameter (bad type?)\n");
 
+            // free, and skip out
             Xvr_freeLiteral(arg);
             Xvr_popScope(inner.scope);
 
@@ -1311,6 +1384,8 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
         Xvr_freeLiteral(arg);
     }
 
+    // if using rest, pack the optional extra arguments into the rest parameter
+    // (array)
     if (!XVR_IS_NULL(restParam)) {
         Xvr_LiteralArray rest;
         Xvr_initLiteralArray(&rest);
@@ -1325,14 +1400,15 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
         Xvr_Literal any = XVR_TO_TYPE_LITERAL(XVR_LITERAL_ANY, false);
         XVR_TYPE_PUSH_SUBTYPE(&restType, any);
 
+        // declare & define the rest parameter
         if (!Xvr_declareScopeVariable(inner.scope, restParam, restType)) {
             interpreter->errorOutput(
                 "[internal] Could not declare rest parameter\n");
 
+            // free, and skip out
             Xvr_freeLiteral(restType);
             Xvr_freeLiteralArray(&rest);
             Xvr_popScope(inner.scope);
-            ;
 
             Xvr_freeLiteralArray(&inner.stack);
             Xvr_freeLiteralArray(&inner.literalCache);
@@ -1343,8 +1419,9 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
         Xvr_Literal lit = XVR_TO_ARRAY_LITERAL(&rest);
         if (!Xvr_setScopeVariable(inner.scope, restParam, lit, false)) {
             interpreter->errorOutput(
-                "[internal] Could not defined rest parameter\n");
+                "[internal] Could not define rest parameter\n");
 
+            // free, and skip out
             Xvr_freeLiteral(restType);
             Xvr_freeLiteral(lit);
             Xvr_popScope(inner.scope);
@@ -1359,15 +1436,21 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
         Xvr_freeLiteralArray(&rest);
     }
 
+    // execute the interpreter
     execInterpreter(&inner);
+
+    // adopt the panic state
     interpreter->panic = inner.panic;
 
+    // accept the stack as the results
     Xvr_LiteralArray returnsFromInner;
     Xvr_initLiteralArray(&returnsFromInner);
 
+    // unpack the results
     for (int i = 0; i < (returnArray->count || 1); i++) {
         Xvr_Literal lit = Xvr_popLiteralArray(&inner.stack);
-        Xvr_pushLiteralArray(&returnsFromInner, lit);
+        Xvr_pushLiteralArray(&returnsFromInner,
+                             lit);  // NOTE: also reverses the order
         Xvr_freeLiteral(lit);
     }
 
@@ -1376,24 +1459,30 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
     if (returnsFromInner.count > 1) {
         interpreter->errorOutput(
             "Too many values returned (multiple returns not yet supported)\n");
+
         returnValue = false;
     }
 
     for (int i = 0; i < returnsFromInner.count && returnValue; i++) {
         Xvr_Literal ret = Xvr_popLiteralArray(&returnsFromInner);
 
+        // check the return types
         if (returnArray->count > 0 &&
             XVR_AS_TYPE(returnArray->literals[i]).typeOf != ret.type) {
             interpreter->errorOutput("Bad type found in return value\n");
+
+            // free, and skip out
             returnValue = false;
             break;
         }
-        Xvr_pushLiteralArray(returns, ret);
+
+        Xvr_pushLiteralArray(returns, ret);  // NOTE: reverses again
         Xvr_freeLiteral(ret);
     }
 
     while (inner.scope != XVR_AS_FUNCTION(func).scope) {
         for (int i = 0; i < inner.scope->variables.capacity; i++) {
+            // handle keys, just in case
             if (XVR_IS_FUNCTION(inner.scope->variables.entries[i].key)) {
                 Xvr_popScope(
                     XVR_AS_FUNCTION(inner.scope->variables.entries[i].key)
@@ -1410,12 +1499,14 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
                     NULL;
             }
         }
+
         inner.scope = Xvr_popScope(inner.scope);
     }
-
     Xvr_freeLiteralArray(&returnsFromInner);
     Xvr_freeLiteralArray(&inner.stack);
     Xvr_freeLiteralArray(&inner.literalCache);
+
+    // actual bytecode persists until next call
     return true;
 }
 
@@ -1444,6 +1535,7 @@ static bool execFnReturn(Xvr_Interpreter* interpreter) {
     Xvr_LiteralArray returns;
     Xvr_initLiteralArray(&returns);
 
+    // get the values of everything on the stack
     while (interpreter->stack.count > 0) {
         Xvr_Literal lit = Xvr_popLiteralArray(&interpreter->stack);
 
@@ -1457,10 +1549,11 @@ static bool execFnReturn(Xvr_Interpreter* interpreter) {
             Xvr_parseCompoundToPureValues(interpreter, &lit);
         }
 
-        Xvr_pushLiteralArray(&returns, lit);
+        Xvr_pushLiteralArray(&returns, lit);  // reverses the order
         Xvr_freeLiteral(lit);
     }
 
+    // and back again
     while (returns.count > 0) {
         Xvr_Literal lit = Xvr_popLiteralArray(&returns);
         Xvr_pushLiteralArray(&interpreter->stack, lit);
@@ -1469,6 +1562,7 @@ static bool execFnReturn(Xvr_Interpreter* interpreter) {
 
     Xvr_freeLiteralArray(&returns);
 
+    // finally
     return false;
 }
 
@@ -1476,6 +1570,7 @@ static bool execImport(Xvr_Interpreter* interpreter) {
     Xvr_Literal alias = Xvr_popLiteralArray(&interpreter->stack);
     Xvr_Literal identifier = Xvr_popLiteralArray(&interpreter->stack);
 
+    // access the hooks
     if (!Xvr_existsLiteralDictionary(interpreter->hooks, identifier)) {
         interpreter->errorOutput("Unknown library name in import statement: ");
         Xvr_printLiteralCustom(identifier, interpreter->errorOutput);
@@ -1508,6 +1603,8 @@ static bool execImport(Xvr_Interpreter* interpreter) {
 }
 
 static bool execIndex(Xvr_Interpreter* interpreter, bool assignIntermediate) {
+    // assume -> compound, first, second, third are all on the stack
+
     Xvr_Literal third = Xvr_popLiteralArray(&interpreter->stack);
     Xvr_Literal second = Xvr_popLiteralArray(&interpreter->stack);
     Xvr_Literal first = Xvr_popLiteralArray(&interpreter->stack);
@@ -1537,6 +1634,7 @@ static bool execIndex(Xvr_Interpreter* interpreter, bool assignIntermediate) {
         return false;
     }
 
+    // build the argument list
     Xvr_LiteralArray arguments;
     Xvr_initLiteralArray(&arguments);
 
@@ -1544,28 +1642,33 @@ static bool execIndex(Xvr_Interpreter* interpreter, bool assignIntermediate) {
     Xvr_pushLiteralArray(&arguments, first);
     Xvr_pushLiteralArray(&arguments, second);
     Xvr_pushLiteralArray(&arguments, third);
-    Xvr_pushLiteralArray(&arguments, XVR_TO_NULL_LITERAL);
-    Xvr_pushLiteralArray(&arguments, XVR_TO_NULL_LITERAL);
+    Xvr_pushLiteralArray(
+        &arguments, XVR_TO_NULL_LITERAL);  // it expects an assignment command
+    Xvr_pushLiteralArray(
+        &arguments, XVR_TO_NULL_LITERAL);  // it expects an assignment "opcode"
 
+    // leave the idn and compound on the stack
     if (assignIntermediate) {
         if (XVR_IS_IDENTIFIER(compoundIdn)) {
             Xvr_pushLiteralArray(&interpreter->stack, compoundIdn);
         }
-
         Xvr_pushLiteralArray(&interpreter->stack, compound);
         Xvr_pushLiteralArray(&interpreter->stack, first);
         Xvr_pushLiteralArray(&interpreter->stack, second);
         Xvr_pushLiteralArray(&interpreter->stack, third);
     }
 
+    // call the _index function
     if (Xvr_private_index(interpreter, &arguments) < 0) {
         interpreter->errorOutput(
             "Something went wrong while indexing (simple index): ");
         Xvr_printLiteralCustom(compoundIdn, interpreter->errorOutput);
         interpreter->errorOutput("\n");
 
+        // clean up
         Xvr_freeLiteral(third);
         Xvr_freeLiteral(second);
+        Xvr_freeLiteral(first);
         Xvr_freeLiteral(compound);
         if (freeIdn) {
             Xvr_freeLiteral(compoundIdn);
@@ -1574,6 +1677,7 @@ static bool execIndex(Xvr_Interpreter* interpreter, bool assignIntermediate) {
         return false;
     }
 
+    // clean up
     Xvr_freeLiteral(third);
     Xvr_freeLiteral(second);
     Xvr_freeLiteral(first);
@@ -1587,6 +1691,8 @@ static bool execIndex(Xvr_Interpreter* interpreter, bool assignIntermediate) {
 }
 
 static bool execIndexAssign(Xvr_Interpreter* interpreter) {
+    // assume -> compound, first, second, third, assign are all on the stack
+
     Xvr_Literal assign = Xvr_popLiteralArray(&interpreter->stack);
     Xvr_Literal third = Xvr_popLiteralArray(&interpreter->stack);
     Xvr_Literal second = Xvr_popLiteralArray(&interpreter->stack);
@@ -1621,6 +1727,7 @@ static bool execIndexAssign(Xvr_Interpreter* interpreter) {
         return false;
     }
 
+    // build the opcode
     unsigned char opcode = readByte(interpreter->bytecode, &interpreter->count);
     char* opStr = "";
     switch (opcode) {
@@ -1657,9 +1764,10 @@ static bool execIndexAssign(Xvr_Interpreter* interpreter) {
     }
 
     int opLength = strlen(opStr);
-    Xvr_Literal op =
-        XVR_TO_STRING_LITERAL(Xvr_createRefStringLength(opStr, opLength));
+    Xvr_Literal op = XVR_TO_STRING_LITERAL(Xvr_createRefStringLength(
+        opStr, opLength));  // TODO: static reference optimisation?
 
+    // build the argument list
     Xvr_LiteralArray arguments;
     Xvr_initLiteralArray(&arguments);
 
@@ -1667,10 +1775,13 @@ static bool execIndexAssign(Xvr_Interpreter* interpreter) {
     Xvr_pushLiteralArray(&arguments, first);
     Xvr_pushLiteralArray(&arguments, second);
     Xvr_pushLiteralArray(&arguments, third);
-    Xvr_pushLiteralArray(&arguments, assign);
-    Xvr_pushLiteralArray(&arguments, op);
+    Xvr_pushLiteralArray(&arguments,
+                         assign);          // it expects an assignment command
+    Xvr_pushLiteralArray(&arguments, op);  // it expects an assignment "opcode"
 
+    // call the _index function
     if (Xvr_private_index(interpreter, &arguments) < 0) {
+        // clean up
         Xvr_freeLiteral(assign);
         Xvr_freeLiteral(third);
         Xvr_freeLiteral(second);
@@ -1685,10 +1796,14 @@ static bool execIndexAssign(Xvr_Interpreter* interpreter) {
         return false;
     }
 
+    // save the result (assume top of the interpreter stack is the new compound
+    // value)
     Xvr_Literal result = Xvr_popLiteralArray(&interpreter->stack);
 
+    // deep
     if (!freeIdn) {
         while (interpreter->stack.count > 1) {
+            // read the new values
             Xvr_freeLiteral(compound);
             Xvr_freeLiteral(third);
             Xvr_freeLiteral(second);
@@ -1697,16 +1812,18 @@ static bool execIndexAssign(Xvr_Interpreter* interpreter) {
             Xvr_initLiteralArray(&arguments);
             Xvr_freeLiteral(op);
 
+            // reuse these like an idiot
             third = Xvr_popLiteralArray(&interpreter->stack);
             second = Xvr_popLiteralArray(&interpreter->stack);
             first = Xvr_popLiteralArray(&interpreter->stack);
             compound = Xvr_popLiteralArray(&interpreter->stack);
 
-            char* opStr = "=";
+            char* opStr = "=";  // shadow, but force assignment
             int opLength = strlen(opStr);
-            op = XVR_TO_STRING_LITERAL(
-                Xvr_createRefStringLength(opStr, opLength));
+            op = XVR_TO_STRING_LITERAL(Xvr_createRefStringLength(
+                opStr, opLength));  // TODO: static reference optimisation?
 
+            // assign to the idn / compound - with _index
             Xvr_pushLiteralArray(&arguments, compound);  //
             Xvr_pushLiteralArray(&arguments, first);
             Xvr_pushLiteralArray(&arguments, second);
@@ -1720,6 +1837,7 @@ static bool execIndexAssign(Xvr_Interpreter* interpreter) {
                 Xvr_printLiteralCustom(compound, interpreter->errorOutput);
                 interpreter->errorOutput("\n");
 
+                // clean up
                 Xvr_freeLiteral(assign);
                 Xvr_freeLiteral(third);
                 Xvr_freeLiteral(second);
@@ -1748,6 +1866,7 @@ static bool execIndexAssign(Xvr_Interpreter* interpreter) {
         Xvr_printLiteralCustom(compoundIdn, interpreter->errorOutput);
         interpreter->errorOutput("\n");
 
+        // clean up
         Xvr_freeLiteral(assign);
         Xvr_freeLiteral(third);
         Xvr_freeLiteral(second);
@@ -1762,6 +1881,7 @@ static bool execIndexAssign(Xvr_Interpreter* interpreter) {
         return false;
     }
 
+    // clean up
     Xvr_freeLiteral(assign);
     Xvr_freeLiteral(third);
     Xvr_freeLiteral(second);
@@ -1777,7 +1897,9 @@ static bool execIndexAssign(Xvr_Interpreter* interpreter) {
     return true;
 }
 
+// the heart of toy
 static void execInterpreter(Xvr_Interpreter* interpreter) {
+    // set the starting point for the interpreter
     if (interpreter->codeStart == -1) {
         interpreter->codeStart = interpreter->count;
     }
@@ -2019,6 +2141,7 @@ static void execInterpreter(Xvr_Interpreter* interpreter) {
 }
 
 static void readInterpreterSections(Xvr_Interpreter* interpreter) {
+    // data section
     const unsigned short literalCount =
         readShort(interpreter->bytecode, &interpreter->count);
 
@@ -2027,7 +2150,7 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
         printf(XVR_CC_NOTICE "Reading %d literals\n" XVR_CC_RESET,
                literalCount);
     }
-#endif /* ifndef XVR_EXPORT */
+#endif
 
     for (int i = 0; i < literalCount; i++) {
         const unsigned char literalType =
@@ -2035,16 +2158,19 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
 
         switch (literalType) {
         case XVR_LITERAL_NULL:
+            // read the null
             Xvr_pushLiteralArray(&interpreter->literalCache,
                                  XVR_TO_NULL_LITERAL);
+
 #ifndef XVR_EXPORT
             if (Xvr_commandLine.verbose) {
                 printf("(null)\n");
             }
-#endif /* ifndef XVR_EXPORT */
+#endif
             break;
 
         case XVR_LITERAL_BOOLEAN: {
+            // read the booleans
             const bool b = readByte(interpreter->bytecode, &interpreter->count);
             Xvr_Literal literal = XVR_TO_BOOLEAN_LITERAL(b);
             Xvr_pushLiteralArray(&interpreter->literalCache, literal);
@@ -2054,7 +2180,7 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
             if (Xvr_commandLine.verbose) {
                 printf("(boolean %s)\n", b ? "true" : "false");
             }
-#endif /* ifndef XVR_EXPORT */
+#endif
         } break;
 
         case XVR_LITERAL_INTEGER: {
@@ -2067,7 +2193,7 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
             if (Xvr_commandLine.verbose) {
                 printf("(integer %d)\n", d);
             }
-#endif /* ifndef XVR_EXPORT */
+#endif
         } break;
 
         case XVR_LITERAL_FLOAT: {
@@ -2081,7 +2207,7 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
             if (Xvr_commandLine.verbose) {
                 printf("(float %f)\n", f);
             }
-#endif /* ifndef XVR_EXPORT */
+#endif
         } break;
 
         case XVR_LITERAL_STRING: {
@@ -2096,7 +2222,7 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
             if (Xvr_commandLine.verbose) {
                 printf("(string \"%s\")\n", s);
             }
-#endif /* ifndef XVR_EXPORT */
+#endif
         } break;
 
         case XVR_LITERAL_ARRAY_INTERMEDIATE:
@@ -2107,6 +2233,8 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
             unsigned short length =
                 readShort(interpreter->bytecode, &interpreter->count);
 
+            // read each index, then unpack the value from the existing literal
+            // cache
             for (int i = 0; i < length; i++) {
                 int index =
                     readShort(interpreter->bytecode, &interpreter->count);
@@ -2121,9 +2249,12 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
                 Xvr_printLiteral(literal);
                 printf(")\n");
             }
-#endif /* ifndef XVR_EXPORT */
+#endif
+
+            // finally, push the array proper
             Xvr_Literal literal = XVR_TO_ARRAY_LITERAL(array);
-            Xvr_pushLiteralArray(&interpreter->literalCache, literal);
+            Xvr_pushLiteralArray(&interpreter->literalCache,
+                                 literal);  // copied
 
             Xvr_freeLiteralArray(array);
             XVR_FREE(Xvr_LiteralArray, array);
@@ -2138,6 +2269,8 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
             unsigned short length =
                 readShort(interpreter->bytecode, &interpreter->count);
 
+            // read each index, then unpack the value from the existing literal
+            // cache
             for (int i = 0; i < length / 2; i++) {
                 int key = readShort(interpreter->bytecode, &interpreter->count);
                 int val = readShort(interpreter->bytecode, &interpreter->count);
@@ -2153,28 +2286,34 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
                 Xvr_printLiteral(literal);
                 printf(")\n");
             }
-#endif /* ifndef XVR_EXPORT */
+#endif
+
+            // finally, push the dictionary proper
             Xvr_Literal literal = XVR_TO_DICTIONARY_LITERAL(dictionary);
-            Xvr_pushLiteralArray(&interpreter->literalCache, literal);
+            Xvr_pushLiteralArray(&interpreter->literalCache,
+                                 literal);  // copied
 
             Xvr_freeLiteralDictionary(dictionary);
             XVR_FREE(Xvr_LiteralDictionary, dictionary);
         } break;
 
         case XVR_LITERAL_FUNCTION: {
+            // read the index
             unsigned short index =
                 readShort(interpreter->bytecode, &interpreter->count);
             Xvr_Literal literal = XVR_TO_INTEGER_LITERAL(index);
 
+            // change the type, to read it PROPERLY below
             literal.type = XVR_LITERAL_FUNCTION_INTERMEDIATE;
 
+            // push to the literal cache
             Xvr_pushLiteralArray(&interpreter->literalCache, literal);
 
 #ifndef XVR_EXPORT
             if (Xvr_commandLine.verbose) {
                 printf("(function)\n");
             }
-#endif /* ifndef XVR_EXPORT */
+#endif
         } break;
 
         case XVR_LITERAL_IDENTIFIER: {
@@ -2183,6 +2322,7 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
             int length = strlen(str);
             Xvr_Literal identifier = XVR_TO_IDENTIFIER_LITERAL(
                 Xvr_createRefStringLength(str, length));
+
             Xvr_pushLiteralArray(&interpreter->literalCache, identifier);
 
 #ifndef XVR_EXPORT
@@ -2191,11 +2331,13 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
                        Xvr_toCString(XVR_AS_IDENTIFIER(identifier)),
                        identifier.as.identifier.hash);
             }
-#endif /* ifndef XVR_EXPORT */
+#endif
+
             Xvr_freeLiteral(identifier);
         } break;
 
         case XVR_LITERAL_TYPE: {
+            // what the literal is
             Xvr_LiteralType literalType = (Xvr_LiteralType)readByte(
                 interpreter->bytecode, &interpreter->count);
             unsigned char constant =
@@ -2204,6 +2346,7 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
             Xvr_Literal typeLiteral =
                 XVR_TO_TYPE_LITERAL(literalType, constant);
 
+            // save the type
             Xvr_pushLiteralArray(&interpreter->literalCache, typeLiteral);
 
 #ifndef XVR_EXPORT
@@ -2212,10 +2355,11 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
                 Xvr_printLiteral(typeLiteral);
                 printf(")\n");
             }
-#endif /* ifndef XVR_EXPORT */
+#endif
         } break;
 
         case XVR_LITERAL_TYPE_INTERMEDIATE: {
+            // what the literal represents
             Xvr_LiteralType literalType = (Xvr_LiteralType)readByte(
                 interpreter->bytecode, &interpreter->count);
             unsigned char constant =
@@ -2224,6 +2368,7 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
             Xvr_Literal typeLiteral =
                 XVR_TO_TYPE_LITERAL(literalType, constant);
 
+            // if it's an array type
             if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_ARRAY) {
                 unsigned short vt =
                     readShort(interpreter->bytecode, &interpreter->count);
@@ -2247,7 +2392,9 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
                     Xvr_copyLiteral(interpreter->literalCache.literals[vt]));
             }
 
-            Xvr_pushLiteralArray(&interpreter->literalCache, typeLiteral);
+            // save the type
+            Xvr_pushLiteralArray(&interpreter->literalCache,
+                                 typeLiteral);  // copied
 
 #ifndef XVR_EXPORT
             if (Xvr_commandLine.verbose) {
@@ -2255,36 +2402,48 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
                 Xvr_printLiteral(typeLiteral);
                 printf(")\n");
             }
-#endif /* ifndef XVR_EXPORT */
+#endif
 
             Xvr_freeLiteral(typeLiteral);
         } break;
 
         case XVR_LITERAL_INDEX_BLANK:
+            // read the blank
             Xvr_pushLiteralArray(&interpreter->literalCache,
                                  XVR_TO_INDEX_BLANK_LITERAL);
+
 #ifndef XVR_EXPORT
             if (Xvr_commandLine.verbose) {
                 printf("(blank)\n");
             }
-#endif /* ifndef XVR_EXPORT */
+#endif
             break;
         }
     }
 
     consumeByte(interpreter, XVR_OP_SECTION_END, interpreter->bytecode,
-                &interpreter->count);
+                &interpreter->count);  // terminate the literal section
 
+    // read the function metadata
+    int functionCount = readShort(interpreter->bytecode, &interpreter->count);
+    int functionSize = readShort(interpreter->bytecode,
+                                 &interpreter->count);  // might not be needed
+
+    // read in the functions
     for (int i = 0; i < interpreter->literalCache.count; i++) {
         if (interpreter->literalCache.literals[i].type ==
             XVR_LITERAL_FUNCTION_INTERMEDIATE) {
+            // get the size of the function
             size_t size =
                 (size_t)readShort(interpreter->bytecode, &interpreter->count);
 
+            // read the function code (literal cache and all)
             unsigned char* bytes = XVR_ALLOCATE(unsigned char, size);
-            memcpy(bytes, interpreter->bytecode + interpreter->count, size);
+            memcpy(bytes, interpreter->bytecode + interpreter->count,
+                   size);  // TODO: -1 for the ending mark
             interpreter->count += size;
 
+            // assert that the last memory slot is function end
             if (bytes[size - 1] != XVR_OP_FN_END) {
                 interpreter->errorOutput(
                     "[internal] Failed to find function end");
@@ -2292,6 +2451,7 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
                 return;
             }
 
+            // change the type to normal
             interpreter->literalCache.literals[i] =
                 XVR_TO_FUNCTION_LITERAL(bytes, size);
             XVR_AS_FUNCTION(interpreter->literalCache.literals[i]).scope = NULL;
@@ -2302,10 +2462,12 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
                 &interpreter->count);  // terminate the function section
 }
 
+// exposed functions
 void Xvr_initInterpreter(Xvr_Interpreter* interpreter) {
     interpreter->hooks = XVR_ALLOCATE(Xvr_LiteralDictionary, 1);
     Xvr_initLiteralDictionary(interpreter->hooks);
 
+    // set up the output streams
     Xvr_setInterpreterPrint(interpreter, printWrapper);
     Xvr_setInterpreterAssert(interpreter, assertWrapper);
     Xvr_setInterpreterError(interpreter, errorWrapper);
@@ -2316,6 +2478,7 @@ void Xvr_initInterpreter(Xvr_Interpreter* interpreter) {
 
 void Xvr_runInterpreter(Xvr_Interpreter* interpreter, unsigned char* bytecode,
                         int length) {
+    // initialize here instead of initInterpreter()
     Xvr_initLiteralArray(&interpreter->literalCache);
     interpreter->bytecode = NULL;
     interpreter->length = 0;
@@ -2327,6 +2490,7 @@ void Xvr_runInterpreter(Xvr_Interpreter* interpreter, unsigned char* bytecode,
     interpreter->depth = 0;
     interpreter->panic = false;
 
+    // prep the bytecode
     interpreter->bytecode = bytecode;
     interpreter->length = length;
     interpreter->count = 0;
@@ -2336,10 +2500,13 @@ void Xvr_runInterpreter(Xvr_Interpreter* interpreter, unsigned char* bytecode,
         return;
     }
 
+    // prep the literal cache
     if (interpreter->literalCache.count > 0) {
-        Xvr_freeLiteralArray(&interpreter->literalCache);
+        Xvr_freeLiteralArray(&interpreter->literalCache);  // automatically
+                                                           // inits
     }
 
+    // header section
     const unsigned char major =
         readByte(interpreter->bytecode, &interpreter->count);
     const unsigned char minor =
@@ -2363,23 +2530,27 @@ void Xvr_runInterpreter(Xvr_Interpreter* interpreter, unsigned char* bytecode,
 #ifndef XVR_EXPORT
     if (Xvr_commandLine.verbose) {
         if (strncmp(build, XVR_VERSION_BUILD, strlen(XVR_VERSION_BUILD))) {
-            printf(XVR_CC_WARN
-                   "Warning: interpreter / bytecode build "
-                   "mismatch\n" XVR_CC_RESET);
+            printf(
+                XVR_CC_WARN
+                "Warning: interpreter/bytecode build mismatch\n" XVR_CC_RESET);
         }
     }
-#endif /* ifndef XVR_EXPORT */
+#endif
 
     consumeByte(interpreter, XVR_OP_SECTION_END, interpreter->bytecode,
                 &interpreter->count);
+
+    // read the sections of the bytecode
     readInterpreterSections(interpreter);
 
+    // code section
 #ifndef XVR_EXPORT
     if (Xvr_commandLine.verbose) {
         printf(XVR_CC_NOTICE "executing bytecode\n" XVR_CC_RESET);
     }
-#endif /* ifndef XVR_EXPORT */
+#endif
 
+    // execute the interpreter
     execInterpreter(interpreter);
 
     while (interpreter->stack.count > 0) {
@@ -2409,6 +2580,7 @@ void Xvr_resetInterpreter(Xvr_Interpreter* interpreter) {
 }
 
 void Xvr_freeInterpreter(Xvr_Interpreter* interpreter) {
+    // free the interpreter scope
     while (interpreter->scope != NULL) {
         interpreter->scope = Xvr_popScope(interpreter->scope);
     }

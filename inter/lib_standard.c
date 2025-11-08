@@ -4,24 +4,31 @@
 #include <sys/time.h>
 #include <time.h>
 
-#include "../src/xvr_memory.h"
+#include "xvr_memory.h"
 
 static int nativeClock(Xvr_Interpreter* interpreter,
                        Xvr_LiteralArray* arguments) {
+    // no arguments
     if (arguments->count != 0) {
-        interpreter->errorOutput("incorrect number of arguments to clock\n");
+        interpreter->errorOutput("Incorrect number of arguments to clock\n");
         return -1;
     }
 
+    // get the time from C (what a pain)
     time_t rawtime = time(NULL);
     struct tm* timeinfo = localtime(&rawtime);
     char* timestr = asctime(timeinfo);
 
+    // push to the stack
     int len = strlen(timestr) - 1;
     Xvr_Literal timeLiteral =
         XVR_TO_STRING_LITERAL(Xvr_createRefStringLength(timestr, len));
+
     Xvr_pushLiteralArray(&interpreter->stack, timeLiteral);
+
+    // cleanup
     Xvr_freeLiteral(timeLiteral);
+
     return 1;
 }
 
@@ -41,17 +48,24 @@ int Xvr_hookStandard(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
             return -1;
         }
 
+        // create the dictionary to load up with functions
         Xvr_LiteralDictionary* dictionary =
             XVR_ALLOCATE(Xvr_LiteralDictionary, 1);
         Xvr_initLiteralDictionary(dictionary);
 
+        // load the dict with functions
         for (int i = 0; natives[i].name; i++) {
             Xvr_Literal name =
                 XVR_TO_STRING_LITERAL(Xvr_createRefString(natives[i].name));
             Xvr_Literal func = XVR_TO_FUNCTION_NATIVE_LITERAL(natives[i].fn);
+
             Xvr_setLiteralDictionary(dictionary, name, func);
+
+            Xvr_freeLiteral(name);
+            Xvr_freeLiteral(func);
         }
 
+        // build the type
         Xvr_Literal type = XVR_TO_TYPE_LITERAL(XVR_LITERAL_DICTIONARY, true);
         Xvr_Literal strType = XVR_TO_TYPE_LITERAL(XVR_LITERAL_STRING, true);
         Xvr_Literal fnType =

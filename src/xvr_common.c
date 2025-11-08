@@ -44,6 +44,7 @@ STATIC_ASSERT(sizeof(unsigned int) == 4);
 Xvr_CommandLine Xvr_commandLine;
 
 void Xvr_initCommandLine(int argc, const char* argv[]) {
+    // default values
     Xvr_commandLine.error = false;
     Xvr_commandLine.help = false;
     Xvr_commandLine.version = false;
@@ -54,8 +55,9 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
     Xvr_commandLine.source = NULL;
     Xvr_commandLine.verbose = false;
 
-    for (int i = 1; i < argc; i++) {
-        Xvr_commandLine.error = true;
+    for (int i = 1; i < argc; i++) {  // start at 1 to skip the program name
+        Xvr_commandLine.error =
+            true;  // error state by default, set to false by successful flags
 
         if (!strcmp(argv[i], "-h") || !strcmp(argv[i], "--help")) {
             Xvr_commandLine.help = true;
@@ -83,6 +85,22 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
             continue;
         }
 
+        if ((!strcmp(argv[i], "-i") || !strcmp(argv[i], "--input")) &&
+            i + 1 < argc) {
+            Xvr_commandLine.source = (char*)argv[i + 1];
+            i++;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
+        if ((!strcmp(argv[i], "-c") || !strcmp(argv[i], "--compile")) &&
+            i + 1 < argc) {
+            Xvr_commandLine.compileFile = (char*)argv[i + 1];
+            i++;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
         if ((!strcmp(argv[i], "-o") || !strcmp(argv[i], "--output")) &&
             i + 1 < argc) {
             Xvr_commandLine.outFile = (char*)argv[i + 1];
@@ -91,6 +109,7 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
             continue;
         }
 
+        // option without a flag + ending in .tb = binary input
         if (i < argc) {
             if (strncmp(&(argv[i][strlen(argv[i]) - 3]), ".xb", 3) == 0) {
                 Xvr_commandLine.binaryFile = (char*)argv[i];
@@ -98,6 +117,8 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
                 continue;
             }
         }
+
+        // don't keep reading in an error state
         return;
     }
 }

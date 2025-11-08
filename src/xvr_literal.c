@@ -29,7 +29,9 @@ static unsigned int hashUInt(unsigned int x) {
     return x;
 }
 
+// exposed functions
 void Xvr_freeLiteral(Xvr_Literal literal) {
+    // refstrings
     if (XVR_IS_STRING(literal)) {
         Xvr_deleteRefString(XVR_AS_STRING(literal));
         return;
@@ -40,6 +42,7 @@ void Xvr_freeLiteral(Xvr_Literal literal) {
         return;
     }
 
+    // compounds
     if (XVR_IS_ARRAY(literal) ||
         literal.type == XVR_LITERAL_ARRAY_INTERMEDIATE ||
         literal.type == XVR_LITERAL_DICTIONARY_INTERMEDIATE ||
@@ -55,6 +58,7 @@ void Xvr_freeLiteral(Xvr_Literal literal) {
         return;
     }
 
+    // complex literals
     if (XVR_IS_FUNCTION(literal)) {
         Xvr_popScope(XVR_AS_FUNCTION(literal).scope);
         XVR_AS_FUNCTION(literal).scope = NULL;
@@ -75,7 +79,7 @@ void Xvr_freeLiteral(Xvr_Literal literal) {
 bool Xvr_private_isTruthy(Xvr_Literal x) {
     if (XVR_IS_NULL(x)) {
         fprintf(stderr, XVR_CC_ERROR
-                "ERROR: Null is neither true nro false\n" XVR_CC_RESET);
+                "XVR_CC_ERROR: Null is neither true nor false\n" XVR_CC_RESET);
         return false;
     }
 
@@ -98,7 +102,8 @@ Xvr_Literal Xvr_private_toIdentifierLiteral(Xvr_RefString* ptr) {
 }
 
 Xvr_Literal* Xvr_private_typePushSubtype(Xvr_Literal* lit,
-                                         Xvr_Literal subType) {
+                                         Xvr_Literal subtype) {
+    // grow the subtype array
     if (XVR_AS_TYPE(*lit).count + 1 > XVR_AS_TYPE(*lit).capacity) {
         int oldCapacity = XVR_AS_TYPE(*lit).capacity;
 
@@ -108,8 +113,9 @@ Xvr_Literal* Xvr_private_typePushSubtype(Xvr_Literal* lit,
                            XVR_AS_TYPE(*lit).capacity);
     }
 
+    // actually push
     ((Xvr_Literal*)(XVR_AS_TYPE(*lit).subtypes))[XVR_AS_TYPE(*lit).count++] =
-        subType;
+        subtype;
     return &((
         Xvr_Literal*)(XVR_AS_TYPE(*lit).subtypes))[XVR_AS_TYPE(*lit).count - 1];
 }
@@ -120,6 +126,7 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
     case XVR_LITERAL_BOOLEAN:
     case XVR_LITERAL_INTEGER:
     case XVR_LITERAL_FLOAT:
+        // no copying needed
         return original;
 
     case XVR_LITERAL_STRING: {
@@ -131,6 +138,7 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
         Xvr_LiteralArray* array = XVR_ALLOCATE(Xvr_LiteralArray, 1);
         Xvr_initLiteralArray(array);
 
+        // copy each element
         for (int i = 0; i < XVR_AS_ARRAY(original)->count; i++) {
             Xvr_pushLiteralArray(array, XVR_AS_ARRAY(original)->literals[i]);
         }
@@ -143,6 +151,7 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
             XVR_ALLOCATE(Xvr_LiteralDictionary, 1);
         Xvr_initLiteralDictionary(dictionary);
 
+        // copy each entry
         for (int i = 0; i < XVR_AS_DICTIONARY(original)->capacity; i++) {
             if (!XVR_IS_NULL(XVR_AS_DICTIONARY(original)->entries[i].key)) {
                 Xvr_setLiteralDictionary(
@@ -150,6 +159,7 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
                     XVR_AS_DICTIONARY(original)->entries[i].value);
             }
         }
+
         return XVR_TO_DICTIONARY_LITERAL(dictionary);
     }
 
@@ -175,22 +185,25 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
     case XVR_LITERAL_TYPE: {
         Xvr_Literal lit = XVR_TO_TYPE_LITERAL(XVR_AS_TYPE(original).typeOf,
                                               XVR_AS_TYPE(original).constant);
+
         for (int i = 0; i < XVR_AS_TYPE(original).count; i++) {
             XVR_TYPE_PUSH_SUBTYPE(
                 &lit, Xvr_copyLiteral(
                           ((Xvr_Literal*)(XVR_AS_TYPE(original).subtypes))[i]));
         }
+
         return lit;
     }
 
     case XVR_LITERAL_OPAQUE: {
-        return original;
+        return original;  // literally a shallow copy
     }
 
     case XVR_LITERAL_ARRAY_INTERMEDIATE: {
         Xvr_LiteralArray* array = XVR_ALLOCATE(Xvr_LiteralArray, 1);
         Xvr_initLiteralArray(array);
 
+        // copy each element
         for (int i = 0; i < XVR_AS_ARRAY(original)->count; i++) {
             Xvr_Literal literal =
                 Xvr_copyLiteral(XVR_AS_ARRAY(original)->literals[i]);
@@ -207,6 +220,7 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
         Xvr_LiteralArray* array = XVR_ALLOCATE(Xvr_LiteralArray, 1);
         Xvr_initLiteralArray(array);
 
+        // copy each element
         for (int i = 0; i < XVR_AS_ARRAY(original)->count; i++) {
             Xvr_Literal literal =
                 Xvr_copyLiteral(XVR_AS_ARRAY(original)->literals[i]);
@@ -219,23 +233,43 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
         return ret;
     }
 
-    case XVR_LITERAL_FUNCTION_INTERMEDIATE:
+    case XVR_LITERAL_TYPE_INTERMEDIATE: {
+        Xvr_LiteralArray* array = XVR_ALLOCATE(Xvr_LiteralArray, 1);
+        Xvr_initLiteralArray(array);
+
+        // copy each element
+        for (int i = 0; i < XVR_AS_ARRAY(original)->count; i++) {
+            Xvr_Literal literal =
+                Xvr_copyLiteral(XVR_AS_ARRAY(original)->literals[i]);
+            Xvr_pushLiteralArray(array, literal);
+            Xvr_freeLiteral(literal);
+        }
+
+        Xvr_Literal ret = XVR_TO_ARRAY_LITERAL(array);
+        ret.type = XVR_LITERAL_TYPE_INTERMEDIATE;
+        return ret;
+    }
+
+    case XVR_LITERAL_FUNCTION_INTERMEDIATE:  // caries a compiler
     case XVR_LITERAL_FUNCTION_NATIVE:
     case XVR_LITERAL_FUNCTION_HOOK:
     case XVR_LITERAL_INDEX_BLANK:
+        // no copying possible
         return original;
 
     default:
         fprintf(stderr,
                 XVR_CC_ERROR
-                "ERROR: Can't copy that literal type: %d\n" XVR_CC_RESET,
+                "XVR_CC_ERROR: Can't copy that literal type: %d\n" XVR_CC_RESET,
                 original.type);
         return XVR_TO_NULL_LITERAL;
     }
 }
 
 bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
+    // utility for other things
     if (lhs.type != rhs.type) {
+        // ints and floats are compatible
         if ((XVR_IS_INTEGER(lhs) || XVR_IS_FLOAT(lhs)) &&
             (XVR_IS_INTEGER(rhs) || XVR_IS_FLOAT(rhs))) {
             if (XVR_IS_INTEGER(lhs)) {
@@ -244,12 +278,13 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
                 return XVR_AS_FLOAT(lhs) + XVR_AS_INTEGER(rhs);
             }
         }
+
         return false;
     }
 
     switch (lhs.type) {
     case XVR_LITERAL_NULL:
-        return true;
+        return true;  // can only be true because of the check above
 
     case XVR_LITERAL_BOOLEAN:
         return XVR_AS_BOOLEAN(lhs) == XVR_AS_BOOLEAN(rhs);
@@ -267,10 +302,12 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
     case XVR_LITERAL_ARRAY_INTERMEDIATE:
     case XVR_LITERAL_DICTIONARY_INTERMEDIATE:
     case XVR_LITERAL_TYPE_INTERMEDIATE:
+        // mismatched sizes
         if (XVR_AS_ARRAY(lhs)->count != XVR_AS_ARRAY(rhs)->count) {
             return false;
         }
 
+        // mismatched elements (in order)
         for (int i = 0; i < XVR_AS_ARRAY(lhs)->count; i++) {
             if (!Xvr_literalsAreEqual(XVR_AS_ARRAY(lhs)->literals[i],
                                       XVR_AS_ARRAY(rhs)->literals[i])) {
@@ -280,17 +317,24 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
         return true;
 
     case XVR_LITERAL_DICTIONARY:
+        // relatively slow, especially when nested
         for (int i = 0; i < XVR_AS_DICTIONARY(lhs)->capacity; i++) {
-            if (!XVR_IS_NULL(XVR_AS_DICTIONARY(lhs)->entries[i].key)) {
+            if (!XVR_IS_NULL(XVR_AS_DICTIONARY(lhs)
+                                 ->entries[i]
+                                 .key)) {  // only compare non-null keys
+                // check it exists in rhs
                 if (!Xvr_existsLiteralDictionary(
                         XVR_AS_DICTIONARY(rhs),
                         XVR_AS_DICTIONARY(lhs)->entries[i].key)) {
                     return false;
                 }
 
+                // compare the values
                 Xvr_Literal val = Xvr_getLiteralDictionary(
                     XVR_AS_DICTIONARY(rhs),
-                    XVR_AS_DICTIONARY(lhs)->entries[i].key);
+                    XVR_AS_DICTIONARY(lhs)
+                        ->entries[i]
+                        .key);  // TODO: could be more efficient
                 if (!Xvr_literalsAreEqual(
                         XVR_AS_DICTIONARY(lhs)->entries[i].value, val)) {
                     Xvr_freeLiteral(val);
@@ -299,15 +343,17 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
                 Xvr_freeLiteral(val);
             }
         }
+
         return true;
 
     case XVR_LITERAL_FUNCTION:
     case XVR_LITERAL_FUNCTION_NATIVE:
     case XVR_LITERAL_FUNCTION_HOOK:
-        return false;
+        return false;  // functions are never equal
         break;
 
     case XVR_LITERAL_IDENTIFIER:
+        // check shortcuts
         if (XVR_HASH_I(lhs) != XVR_HASH_I(rhs)) {
             return false;
         }
@@ -316,18 +362,22 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
                                    XVR_AS_IDENTIFIER(rhs));
 
     case XVR_LITERAL_TYPE:
+        // check types
         if (XVR_AS_TYPE(lhs).typeOf != XVR_AS_TYPE(rhs).typeOf) {
             return false;
         }
 
+        // const don't match
         if (XVR_AS_TYPE(lhs).constant != XVR_AS_TYPE(rhs).constant) {
             return false;
         }
 
+        // check subtypes
         if (XVR_AS_TYPE(lhs).count != XVR_AS_TYPE(rhs).count) {
             return false;
         }
 
+        // check array|dictionary signatures are the same (in order)
         if (XVR_AS_TYPE(lhs).typeOf == XVR_LITERAL_ARRAY ||
             XVR_AS_TYPE(lhs).typeOf == XVR_LITERAL_DICTIONARY) {
             for (int i = 0; i < XVR_AS_TYPE(lhs).count; i++) {
@@ -341,7 +391,7 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
         return true;
 
     case XVR_LITERAL_OPAQUE:
-        return false;
+        return false;  // IDK what this is!
 
     case XVR_LITERAL_ANY:
         return true;
@@ -349,18 +399,19 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
     case XVR_LITERAL_FUNCTION_INTERMEDIATE:
         fprintf(
             stderr, XVR_CC_ERROR
-            "[internal] Can't compare intermaediate functions\n" XVR_CC_RESET);
+            "[internal] Can't compare intermediate functions\n" XVR_CC_RESET);
         return false;
 
     case XVR_LITERAL_INDEX_BLANK:
         return false;
 
     default:
-        fprintf(
-            stderr,
-            XVR_CC_ERROR
-            "[internal] Unrecognized literal type equality: %d\n" XVR_CC_RESET,
-            lhs.type);
+        // should never be seen
+        fprintf(stderr,
+                XVR_CC_ERROR
+                "[internal] Unrecognized literal type in equality: "
+                "%d\n" XVR_CC_RESET,
+                lhs.type);
         return false;
     }
 
@@ -396,7 +447,9 @@ int Xvr_hashLiteral(Xvr_Literal lit) {
     case XVR_LITERAL_DICTIONARY: {
         unsigned int res = 0;
         for (int i = 0; i < XVR_AS_DICTIONARY(lit)->capacity; i++) {
-            if (!XVR_IS_NULL(XVR_AS_DICTIONARY(lit)->entries[i].key)) {
+            if (!XVR_IS_NULL(XVR_AS_DICTIONARY(lit)
+                                 ->entries[i]
+                                 .key)) {  // only hash non-null keys
                 res += Xvr_hashLiteral(XVR_AS_DICTIONARY(lit)->entries[i].key);
                 res +=
                     Xvr_hashLiteral(XVR_AS_DICTIONARY(lit)->entries[i].value);
@@ -408,19 +461,20 @@ int Xvr_hashLiteral(Xvr_Literal lit) {
     case XVR_LITERAL_FUNCTION:
     case XVR_LITERAL_FUNCTION_NATIVE:
     case XVR_LITERAL_FUNCTION_HOOK:
-        return 0;
+        return 0;  // can't hash these
 
     case XVR_LITERAL_IDENTIFIER:
-        return XVR_HASH_I(lit);
+        return XVR_HASH_I(lit);  // pre-computed
 
     case XVR_LITERAL_TYPE:
-        return XVR_AS_TYPE(lit).typeOf;
+        return XVR_AS_TYPE(lit).typeOf;  // nothing else I can do
 
     case XVR_LITERAL_OPAQUE:
     case XVR_LITERAL_ANY:
         return -1;
 
     default:
+        // should never bee seen
         fprintf(
             stderr,
             XVR_CC_ERROR
@@ -430,17 +484,20 @@ int Xvr_hashLiteral(Xvr_Literal lit) {
     }
 }
 
+// utils
 static void stdoutWrapper(const char* output) { printf("%s", output); }
 
+// buffer the prints
 static char* globalPrintBuffer = NULL;
 static size_t globalPrintCapacity = 0;
 static size_t globalPrintCount = 0;
 
-static char quotes = 0;
+static char quotes = 0;  // set to 0 to not show string quotes
 
 static void printToBuffer(const char* str) {
     while (strlen(str) + globalPrintCount + 1 > globalPrintCapacity) {
         int oldCapacity = globalPrintCapacity;
+
         globalPrintCapacity = XVR_GROW_CAPACITY(globalPrintCapacity);
         globalPrintBuffer = XVR_GROW_ARRAY(char, globalPrintBuffer, oldCapacity,
                                            globalPrintCapacity);
@@ -450,11 +507,12 @@ static void printToBuffer(const char* str) {
     globalPrintCount += strlen(str);
 }
 
+// exposed functions
 void Xvr_printLiteral(Xvr_Literal literal) {
     Xvr_printLiteralCustom(literal, stdoutWrapper);
 }
 
-void Xvr_printLiteralCustom(Xvr_Literal literal, void (*printFn)(const char*)) {
+void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
     switch (literal.type) {
     case XVR_LITERAL_NULL:
         printFn("null");
@@ -466,12 +524,19 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void (*printFn)(const char*)) {
 
     case XVR_LITERAL_INTEGER: {
         char buffer[256];
+        snprintf(buffer, 256, "%d", XVR_AS_INTEGER(literal));
+        printFn(buffer);
+    } break;
+
+    case XVR_LITERAL_FLOAT: {
+        char buffer[256];
 
         if (XVR_AS_FLOAT(literal) - (int)XVR_AS_FLOAT(literal)) {
             snprintf(buffer, 256, "%g", XVR_AS_FLOAT(literal));
         } else {
             snprintf(buffer, 256, "%.1f", XVR_AS_FLOAT(literal));
         }
+
         printFn(buffer);
     } break;
 
@@ -492,6 +557,7 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void (*printFn)(const char*)) {
     case XVR_LITERAL_ARRAY: {
         Xvr_LiteralArray* ptr = XVR_AS_ARRAY(literal);
 
+        // hold potential parent-call buffers on the C stack
         char* cacheBuffer = globalPrintBuffer;
         globalPrintBuffer = NULL;
         int cacheCapacity = globalPrintCapacity;
@@ -499,6 +565,7 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void (*printFn)(const char*)) {
         int cacheCount = globalPrintCount;
         globalPrintCount = 0;
 
+        // print the contents to the global buffer
         printToBuffer("[");
         for (int i = 0; i < ptr->count; i++) {
             quotes = '"';
@@ -510,13 +577,16 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void (*printFn)(const char*)) {
         }
         printToBuffer("]");
 
+        // swap the parent-call buffer back into place
         char* printBuffer = globalPrintBuffer;
         int printCapacity = globalPrintCapacity;
+        int printCount = globalPrintCount;
 
         globalPrintBuffer = cacheBuffer;
         globalPrintCapacity = cacheCapacity;
         globalPrintCount = cacheCount;
 
+        // finally, output and cleanup
         printFn(printBuffer);
         XVR_FREE_ARRAY(char, printBuffer, printCapacity);
         quotes = 0;
@@ -525,6 +595,7 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void (*printFn)(const char*)) {
     case XVR_LITERAL_DICTIONARY: {
         Xvr_LiteralDictionary* ptr = XVR_AS_DICTIONARY(literal);
 
+        // hold potential parent-call buffers on the C stack
         char* cacheBuffer = globalPrintBuffer;
         globalPrintBuffer = NULL;
         int cacheCapacity = globalPrintCapacity;
@@ -532,6 +603,7 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void (*printFn)(const char*)) {
         int cacheCount = globalPrintCount;
         globalPrintCount = 0;
 
+        // print the contents to the global buffer
         int delimCount = 0;
         printToBuffer("[");
         for (int i = 0; i < ptr->capacity; i++) {
@@ -550,19 +622,23 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void (*printFn)(const char*)) {
             Xvr_printLiteralCustom(ptr->entries[i].value, printToBuffer);
         }
 
+        // empty dicts MUST have a ":" printed
         if (ptr->count == 0) {
             printToBuffer(":");
         }
 
         printToBuffer("]");
 
+        // swap the parent-call buffer back into place
         char* printBuffer = globalPrintBuffer;
         int printCapacity = globalPrintCapacity;
+        int printCount = globalPrintCount;
 
         globalPrintBuffer = cacheBuffer;
         globalPrintCapacity = cacheCapacity;
         globalPrintCount = cacheCount;
 
+        // finally, output and cleanup
         printFn(printBuffer);
         XVR_FREE_ARRAY(char, printBuffer, printCapacity);
         quotes = 0;
@@ -571,7 +647,7 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void (*printFn)(const char*)) {
     case XVR_LITERAL_FUNCTION:
     case XVR_LITERAL_FUNCTION_NATIVE:
     case XVR_LITERAL_FUNCTION_HOOK:
-        printFn("(procedure)");
+        printFn("(function)");
         break;
 
     case XVR_LITERAL_IDENTIFIER: {
@@ -614,6 +690,7 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void (*printFn)(const char*)) {
             break;
 
         case XVR_LITERAL_ARRAY:
+            // print all in the array
             printToBuffer("[");
             for (int i = 0; i < XVR_AS_TYPE(literal).count; i++) {
                 Xvr_printLiteralCustom(
@@ -625,7 +702,8 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void (*printFn)(const char*)) {
 
         case XVR_LITERAL_DICTIONARY:
             printToBuffer("[");
-            for (int i = 0; i < XVR_AS_TYPE(literal).count; i++) {
+
+            for (int i = 0; i < XVR_AS_TYPE(literal).count; i += 2) {
                 Xvr_printLiteralCustom(
                     ((Xvr_Literal*)(XVR_AS_TYPE(literal).subtypes))[i],
                     printToBuffer);
@@ -638,7 +716,11 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void (*printFn)(const char*)) {
             break;
 
         case XVR_LITERAL_FUNCTION:
-            printToBuffer("procedure");
+            printToBuffer("proc");
+            break;
+
+        case XVR_LITERAL_FUNCTION_NATIVE:
+            printToBuffer("native");
             break;
 
         case XVR_LITERAL_IDENTIFIER:
@@ -658,13 +740,15 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void (*printFn)(const char*)) {
             break;
 
         default:
+            // should never be seen
             fprintf(stderr,
                     XVR_CC_ERROR
-                    "[internal] Unrecognized literal type in print Type: "
+                    "[internal] Unrecognized literal type in print type: "
                     "%d\n" XVR_CC_RESET,
                     XVR_AS_TYPE(literal).typeOf);
         }
 
+        // const (printed last)
         if (XVR_AS_TYPE(literal).constant) {
             printToBuffer(" const");
         }
@@ -673,6 +757,7 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void (*printFn)(const char*)) {
 
         char* printBuffer = globalPrintBuffer;
         int printCapacity = globalPrintCapacity;
+        int printCount = globalPrintCount;
 
         globalPrintBuffer = cacheBuffer;
         globalPrintCapacity = cacheCapacity;

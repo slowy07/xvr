@@ -15,6 +15,7 @@ void* Xvr_private_defaultMemoryAllocator(void* pointer, size_t oldSize,
 
     if (newSize == 0) {
         free(pointer);
+
         return NULL;
     }
 
@@ -28,6 +29,7 @@ void* Xvr_private_defaultMemoryAllocator(void* pointer, size_t oldSize,
                 (int)newSize, (int)oldSize);
         exit(-1);
     }
+
     return mem;
 }
 
@@ -41,13 +43,13 @@ void Xvr_setMemoryAllocator(Xvr_MemoryAllocatorFn fn) {
     if (fn == NULL) {
         fprintf(
             stderr, XVR_CC_ERROR
-            "[internal] memory allocator error (can't be null)\n" XVR_CC_RESET);
+            "[internal] Memory allocator error (can't be null)\n" XVR_CC_RESET);
         exit(-1);
     }
 
     if (fn == Xvr_reallocate) {
         fprintf(stderr, XVR_CC_ERROR
-                "[internal] memory allocator error (can't loop the "
+                "[internal] Memory allocator error (can't loop the "
                 "Xvr_reallocate function)\n" XVR_CC_RESET);
         exit(-1);
     }

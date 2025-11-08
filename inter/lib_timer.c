@@ -5,7 +5,7 @@
 #include <sys/time.h>
 #include <time.h>
 
-#include "../src/xvr_memory.h"
+#include "xvr_memory.h"
 
 static int timeval_subtract(struct timeval* result, struct timeval* x,
                             struct timeval* y) {
@@ -19,6 +19,7 @@ static int timeval_subtract(struct timeval* result, struct timeval* x,
         y->tv_usec %= 1000000;
     }
 
+    // calc
     result->tv_sec = x->tv_sec - y->tv_sec;
 
     if ((result->tv_usec = x->tv_usec - y->tv_usec) < 0) {
@@ -33,25 +34,32 @@ static int timeval_subtract(struct timeval* result, struct timeval* x,
 
 static struct timeval* diff(struct timeval* lhs, struct timeval* rhs) {
     struct timeval* d = XVR_ALLOCATE(struct timeval, 1);
+
     timeval_subtract(d, rhs, lhs);
 
     return d;
 }
 
+// callbacks
 static int nativeStartTimer(Xvr_Interpreter* interpreter,
                             Xvr_LiteralArray* arguments) {
+    // no arguments
     if (arguments->count != 0) {
         interpreter->errorOutput(
-            "incorrect number of arguments to startTimer\n");
+            "Incorrect number of arguments to startTimer\n");
         return -1;
     }
 
+    // get the timeinfo from C
     struct timeval* timeinfo = XVR_ALLOCATE(struct timeval, 1);
     gettimeofday(timeinfo, NULL);
 
+    // wrap in an opaque literal for Xvr
     Xvr_Literal timeLiteral = XVR_TO_OPAQUE_LITERAL(timeinfo, -1);
     Xvr_pushLiteralArray(&interpreter->stack, timeLiteral);
+
     Xvr_freeLiteral(timeLiteral);
+
     return 1;
 }
 
@@ -59,7 +67,7 @@ static int nativeStopTimer(Xvr_Interpreter* interpreter,
                            Xvr_LiteralArray* arguments) {
     if (arguments->count != 1) {
         interpreter->errorOutput(
-            "incorrect number of arguments to _stopTimer\n");
+            "Incorrect number of arguments to _stopTimer\n");
         return -1;
     }
 
@@ -76,17 +84,19 @@ static int nativeStopTimer(Xvr_Interpreter* interpreter,
 
     if (!XVR_IS_OPAQUE(timeLiteral)) {
         interpreter->errorOutput(
-            "incorrect argument type pased to _stopTimer\n");
+            "Incorrect argument type passed to _stopTimer\n");
         Xvr_freeLiteral(timeLiteral);
         return -1;
     }
 
     struct timeval* timerStart = XVR_AS_OPAQUE(timeLiteral);
 
+    // determine the difference, and wrap it
     struct timeval* d = diff(timerStart, &timerStop);
     Xvr_Literal diffLiteral = XVR_TO_OPAQUE_LITERAL(d, -1);
     Xvr_pushLiteralArray(&interpreter->stack, diffLiteral);
 
+    // cleanup
     Xvr_freeLiteral(timeLiteral);
     Xvr_freeLiteral(diffLiteral);
 
@@ -95,12 +105,14 @@ static int nativeStopTimer(Xvr_Interpreter* interpreter,
 
 static int nativeCreateTimer(Xvr_Interpreter* interpreter,
                              Xvr_LiteralArray* arguments) {
+    // no arguments
     if (arguments->count != 2) {
         interpreter->errorOutput(
-            "incorrect number of arguments to createTimer\n");
+            "Incorrect number of arguments to createTimer\n");
         return -1;
     }
 
+    // get the args
     Xvr_Literal microsecondLiteral = Xvr_popLiteralArray(arguments);
     Xvr_Literal secondLiteral = Xvr_popLiteralArray(arguments);
 
@@ -134,10 +146,12 @@ static int nativeCreateTimer(Xvr_Interpreter* interpreter,
         return -1;
     }
 
+    // get the timeinfo from toy
     struct timeval* timeinfo = XVR_ALLOCATE(struct timeval, 1);
     timeinfo->tv_sec = XVR_AS_INTEGER(secondLiteral);
     timeinfo->tv_usec = XVR_AS_INTEGER(microsecondLiteral);
 
+    // wrap in an opaque literal for Xvr
     Xvr_Literal timeLiteral = XVR_TO_OPAQUE_LITERAL(timeinfo, -1);
     Xvr_pushLiteralArray(&interpreter->stack, timeLiteral);
 
@@ -150,12 +164,14 @@ static int nativeCreateTimer(Xvr_Interpreter* interpreter,
 
 static int nativeGetTimerSeconds(Xvr_Interpreter* interpreter,
                                  Xvr_LiteralArray* arguments) {
+    // no arguments
     if (arguments->count != 1) {
         interpreter->errorOutput(
-            "incorrect number of arguments to _getTimerSeconds\n");
+            "Incorrect number of arguments to _getTimerSeconds\n");
         return -1;
     }
 
+    // unwrap the opaque literal
     Xvr_Literal timeLiteral = Xvr_popLiteralArray(arguments);
 
     Xvr_Literal timeLiteralIdn = timeLiteral;
@@ -173,9 +189,11 @@ static int nativeGetTimerSeconds(Xvr_Interpreter* interpreter,
 
     struct timeval* timer = XVR_AS_OPAQUE(timeLiteral);
 
+    // create the result literal
     Xvr_Literal result = XVR_TO_INTEGER_LITERAL(timer->tv_sec);
     Xvr_pushLiteralArray(&interpreter->stack, result);
 
+    // cleanup
     Xvr_freeLiteral(timeLiteral);
     Xvr_freeLiteral(result);
 
@@ -184,12 +202,14 @@ static int nativeGetTimerSeconds(Xvr_Interpreter* interpreter,
 
 static int nativeGetTimerMicroseconds(Xvr_Interpreter* interpreter,
                                       Xvr_LiteralArray* arguments) {
+    // no arguments
     if (arguments->count != 1) {
         interpreter->errorOutput(
-            "incorrect number of arguments to _getTimerMicroseconds\n");
+            "Incorrect number of arguments to _getTimerMicroseconds\n");
         return -1;
     }
 
+    // unwrap the opaque literal
     Xvr_Literal timeLiteral = Xvr_popLiteralArray(arguments);
 
     Xvr_Literal timeLiteralIdn = timeLiteral;
@@ -207,9 +227,11 @@ static int nativeGetTimerMicroseconds(Xvr_Interpreter* interpreter,
 
     struct timeval* timer = XVR_AS_OPAQUE(timeLiteral);
 
+    // create the result literal
     Xvr_Literal result = XVR_TO_INTEGER_LITERAL(timer->tv_usec);
     Xvr_pushLiteralArray(&interpreter->stack, result);
 
+    // cleanup
     Xvr_freeLiteral(timeLiteral);
     Xvr_freeLiteral(result);
 
@@ -218,12 +240,14 @@ static int nativeGetTimerMicroseconds(Xvr_Interpreter* interpreter,
 
 static int nativeCompareTimer(Xvr_Interpreter* interpreter,
                               Xvr_LiteralArray* arguments) {
+    // no arguments
     if (arguments->count != 2) {
         interpreter->errorOutput(
-            "incorrect number of arguments to _compareTimer\n");
+            "Incorrect number of arguments to _compareTimer\n");
         return -1;
     }
 
+    // unwrap the opaque literals
     Xvr_Literal rhsLiteral = Xvr_popLiteralArray(arguments);
     Xvr_Literal lhsLiteral = Xvr_popLiteralArray(arguments);
 
@@ -250,10 +274,12 @@ static int nativeCompareTimer(Xvr_Interpreter* interpreter,
     struct timeval* lhsTimer = XVR_AS_OPAQUE(lhsLiteral);
     struct timeval* rhsTimer = XVR_AS_OPAQUE(rhsLiteral);
 
+    // determine the difference, and wrap it
     struct timeval* d = diff(lhsTimer, rhsTimer);
     Xvr_Literal diffLiteral = XVR_TO_OPAQUE_LITERAL(d, -1);
     Xvr_pushLiteralArray(&interpreter->stack, diffLiteral);
 
+    // cleanup
     Xvr_freeLiteral(lhsLiteral);
     Xvr_freeLiteral(rhsLiteral);
     Xvr_freeLiteral(diffLiteral);
@@ -263,15 +289,17 @@ static int nativeCompareTimer(Xvr_Interpreter* interpreter,
 
 static int nativeTimerToString(Xvr_Interpreter* interpreter,
                                Xvr_LiteralArray* arguments) {
+    // no arguments
     if (arguments->count != 1) {
         interpreter->errorOutput(
-            "incorrect number of arguments to _timerToString\n");
+            "Incorrect number of arguments to _timerToString\n");
         return -1;
     }
 
+    // unwrap in an opaque literal
     Xvr_Literal timeLiteral = Xvr_popLiteralArray(arguments);
-    Xvr_Literal timeLiteralIdn = timeLiteral;
 
+    Xvr_Literal timeLiteralIdn = timeLiteral;
     if (XVR_IS_IDENTIFIER(timeLiteral) &&
         Xvr_parseIdentifierToValue(interpreter, &timeLiteral)) {
         Xvr_freeLiteral(timeLiteralIdn);
@@ -286,16 +314,25 @@ static int nativeTimerToString(Xvr_Interpreter* interpreter,
 
     struct timeval* timer = XVR_AS_OPAQUE(timeLiteral);
 
+    // create the string literal
     Xvr_Literal resultLiteral = XVR_TO_NULL_LITERAL;
-    if (timer->tv_sec == 0 && timer->tv_usec < 0) {
+    if (timer->tv_sec == 0 &&
+        timer->tv_usec < 0) {  // special case, for when the negative sign is
+                               // encoded in the usec
         char buffer[128];
         snprintf(buffer, 128, "-%ld.%06ld", timer->tv_sec, -timer->tv_usec);
+        resultLiteral = XVR_TO_STRING_LITERAL(
+            Xvr_createRefStringLength(buffer, strlen(buffer)));
+    } else {  // normal case
+        char buffer[128];
+        snprintf(buffer, 128, "%ld.%06ld", timer->tv_sec, timer->tv_usec);
         resultLiteral = XVR_TO_STRING_LITERAL(
             Xvr_createRefStringLength(buffer, strlen(buffer)));
     }
 
     Xvr_pushLiteralArray(&interpreter->stack, resultLiteral);
 
+    // cleanup
     Xvr_freeLiteral(timeLiteral);
     Xvr_freeLiteral(resultLiteral);
 
@@ -304,12 +341,14 @@ static int nativeTimerToString(Xvr_Interpreter* interpreter,
 
 static int nativeDestroyTimer(Xvr_Interpreter* interpreter,
                               Xvr_LiteralArray* arguments) {
+    // no arguments
     if (arguments->count != 1) {
         interpreter->errorOutput(
-            "incorrect number of arguments to _destroyTime\n");
+            "Incorrect number of arguments to _destroyTimer\n");
         return -1;
     }
 
+    // unwrap in an opaque literal
     Xvr_Literal timeLiteral = Xvr_popLiteralArray(arguments);
 
     Xvr_Literal timeLiteralIdn = timeLiteral;
@@ -334,6 +373,7 @@ static int nativeDestroyTimer(Xvr_Interpreter* interpreter,
     return 0;
 }
 
+// call the hook
 typedef struct Natives {
     char* name;
     Xvr_NativeFn fn;
@@ -341,6 +381,7 @@ typedef struct Natives {
 
 int Xvr_hookTimer(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
                   Xvr_Literal alias) {
+    // build the natives list
     Natives natives[] = {{"startTimer", nativeStartTimer},
                          {"_stopTimer", nativeStopTimer},
                          {"createTimer", nativeCreateTimer},
@@ -351,7 +392,9 @@ int Xvr_hookTimer(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
                          {"_destroyTimer", nativeDestroyTimer},
                          {NULL, NULL}};
 
+    // store the library in an aliased dictionary
     if (!XVR_IS_NULL(alias)) {
+        // make sure the name isn't taken
         if (Xvr_isDeclaredScopeVariable(interpreter->scope, alias)) {
             interpreter->errorOutput("Can't override an existing variable\n");
             Xvr_freeLiteral(alias);
@@ -362,16 +405,19 @@ int Xvr_hookTimer(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
             XVR_ALLOCATE(Xvr_LiteralDictionary, 1);
         Xvr_initLiteralDictionary(dictionary);
 
+        // load the dict with functions
         for (int i = 0; natives[i].name; i++) {
             Xvr_Literal name =
                 XVR_TO_STRING_LITERAL(Xvr_createRefString(natives[i].name));
             Xvr_Literal func = XVR_TO_FUNCTION_NATIVE_LITERAL(natives[i].fn);
 
             Xvr_setLiteralDictionary(dictionary, name, func);
+
             Xvr_freeLiteral(name);
             Xvr_freeLiteral(func);
         }
 
+        // build the type
         Xvr_Literal type = XVR_TO_TYPE_LITERAL(XVR_LITERAL_DICTIONARY, true);
         Xvr_Literal strType = XVR_TO_TYPE_LITERAL(XVR_LITERAL_STRING, true);
         Xvr_Literal fnType =
@@ -379,15 +425,18 @@ int Xvr_hookTimer(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
         XVR_TYPE_PUSH_SUBTYPE(&type, strType);
         XVR_TYPE_PUSH_SUBTYPE(&type, fnType);
 
+        // set scope
         Xvr_Literal dict = XVR_TO_DICTIONARY_LITERAL(dictionary);
         Xvr_declareScopeVariable(interpreter->scope, alias, type);
         Xvr_setScopeVariable(interpreter->scope, alias, dict, false);
 
+        // cleanup
         Xvr_freeLiteral(dict);
         Xvr_freeLiteral(type);
         return 0;
     }
 
+    // default
     for (int i = 0; natives[i].name; i++) {
         Xvr_injectNativeFn(interpreter, natives[i].name, natives[i].fn);
     }

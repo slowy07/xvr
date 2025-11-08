@@ -61,6 +61,7 @@ char* Xvr_findKeywordByType(Xvr_TokenType type) {
             return Xvr_keywordTypes[i].keyword;
         }
     }
+
     return NULL;
 }
 
@@ -72,5 +73,6 @@ Xvr_TokenType Xvr_findTypeByKeyword(const char* keyword) {
             return Xvr_keywordTypes[i].type;
         }
     }
+
     return XVR_TOKEN_EOF;
 }

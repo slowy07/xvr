@@ -10,7 +10,7 @@
 static int nativeConcat(Xvr_Interpreter* interpreter,
                         Xvr_LiteralArray* arguments) {
     if (arguments->count != 2) {
-        interpreter->errorOutput("incorrect number of arguments to _concat\n");
+        interpreter->errorOutput("Incorrect number of arguments to _concat\n");
         return -1;
     }
 
@@ -32,7 +32,7 @@ static int nativeConcat(Xvr_Interpreter* interpreter,
     if (XVR_IS_ARRAY(selfLiteral)) {
         if (!XVR_IS_ARRAY(otherLiteral)) {
             interpreter->errorOutput(
-                "incorrect argument type passed to _concat (unknown type for "
+                "Incorrect argument type passed to _concat (unknown type for "
                 "other)\n");
             Xvr_freeLiteral(selfLiteral);
             Xvr_freeLiteral(otherLiteral);
@@ -45,6 +45,7 @@ static int nativeConcat(Xvr_Interpreter* interpreter,
         }
 
         Xvr_pushLiteralArray(&interpreter->stack, selfLiteral);
+
         Xvr_freeLiteral(selfLiteral);
         Xvr_freeLiteral(otherLiteral);
 
@@ -54,7 +55,7 @@ static int nativeConcat(Xvr_Interpreter* interpreter,
     if (XVR_IS_DICTIONARY(selfLiteral)) {
         if (!XVR_IS_DICTIONARY(otherLiteral)) {
             interpreter->errorOutput(
-                "incorrect argument type passed to _concat (unknown type for "
+                "Incorrect argument type passed to _concat (unknown type for "
                 "other)\n");
             Xvr_freeLiteral(selfLiteral);
             Xvr_freeLiteral(otherLiteral);
@@ -71,15 +72,17 @@ static int nativeConcat(Xvr_Interpreter* interpreter,
         }
 
         Xvr_pushLiteralArray(&interpreter->stack, otherLiteral);
+
         Xvr_freeLiteral(selfLiteral);
         Xvr_freeLiteral(otherLiteral);
+
         return 1;
     }
 
     if (XVR_IS_STRING(selfLiteral)) {
         if (!XVR_IS_STRING(otherLiteral)) {
             interpreter->errorOutput(
-                "incorrect argument type passed to _concat (unknown type for "
+                "Incorrect argument type passed to _concat (unknown type for "
                 "other)\n");
             Xvr_freeLiteral(selfLiteral);
             Xvr_freeLiteral(otherLiteral);
@@ -104,6 +107,7 @@ static int nativeConcat(Xvr_Interpreter* interpreter,
                  Xvr_toCString(XVR_AS_STRING(otherLiteral)));
 
         Xvr_Literal result = XVR_TO_STRING_LITERAL(Xvr_createRefString(buffer));
+
         Xvr_pushLiteralArray(&interpreter->stack, result);
 
         XVR_FREE_ARRAY(char, buffer, length);
@@ -115,7 +119,7 @@ static int nativeConcat(Xvr_Interpreter* interpreter,
     }
 
     interpreter->errorOutput(
-        "incorrect argument type passed to _concat (unknown type for self)\n");
+        "Incorrect argument type passed to _concat (unknown type for self)\n");
     Xvr_freeLiteral(selfLiteral);
     Xvr_freeLiteral(otherLiteral);
     return -1;
@@ -124,7 +128,7 @@ static int nativeConcat(Xvr_Interpreter* interpreter,
 static int nativeGetKeys(Xvr_Interpreter* interpreter,
                          Xvr_LiteralArray* arguments) {
     if (arguments->count != 1) {
-        interpreter->errorOutput("incorrect number of arguments to _getKeys\n");
+        interpreter->errorOutput("Incorrect number of arguments to _getKeys\n");
         return -1;
     }
 
@@ -138,7 +142,7 @@ static int nativeGetKeys(Xvr_Interpreter* interpreter,
 
     if (!XVR_IS_DICTIONARY(selfLiteral)) {
         interpreter->errorOutput(
-            "incorrect argument type passed to _getKeys\n");
+            "Incorrect argument type passed to _getKeys\n");
         Xvr_freeLiteral(selfLiteral);
         return -1;
     }
@@ -159,6 +163,7 @@ static int nativeGetKeys(Xvr_Interpreter* interpreter,
     Xvr_freeLiteralArray(resultPtr);
     XVR_FREE(Xvr_LiteralArray, resultPtr);
     Xvr_freeLiteral(selfLiteral);
+
     return 1;
 }
 
@@ -166,7 +171,7 @@ static int nativeGetValues(Xvr_Interpreter* interpreter,
                            Xvr_LiteralArray* arguments) {
     if (arguments->count != 1) {
         interpreter->errorOutput(
-            "incorrect number of arguments to _getValues\n");
+            "Incorrect number of arguments to _getValues\n");
         return -1;
     }
 
@@ -180,7 +185,7 @@ static int nativeGetValues(Xvr_Interpreter* interpreter,
 
     if (!XVR_IS_DICTIONARY(selfLiteral)) {
         interpreter->errorOutput(
-            "incorrect argument type passed to _getvalues\n");
+            "Incorrect argument type passed to _getValues\n");
         Xvr_freeLiteral(selfLiteral);
         return -1;
     }
@@ -208,7 +213,7 @@ static int nativeGetValues(Xvr_Interpreter* interpreter,
 static int nativeToLower(Xvr_Interpreter* interpreter,
                          Xvr_LiteralArray* arguments) {
     if (arguments->count != 1) {
-        interpreter->errorOutput("incorrect number of arguments to _tolower\n");
+        interpreter->errorOutput("Incorrect number of arguments to _toLower\n");
         return -1;
     }
 
@@ -222,7 +227,7 @@ static int nativeToLower(Xvr_Interpreter* interpreter,
 
     if (!XVR_IS_STRING(selfLiteral)) {
         interpreter->errorOutput(
-            "incorrect argument type passed to _toLower\n");
+            "Incorrect argument type passed to _toLower\n");
         Xvr_freeLiteral(selfLiteral);
         return -1;
     }
@@ -251,7 +256,6 @@ static int nativeToLower(Xvr_Interpreter* interpreter,
 }
 
 static char* toStringUtilObject = NULL;
-
 static void toStringUtil(const char* input) {
     int len = strlen(input) + 1;
 
@@ -260,6 +264,7 @@ static void toStringUtil(const char* input) {
     }
 
     toStringUtilObject = XVR_ALLOCATE(char, len);
+
     snprintf(toStringUtilObject, len, "%s", input);
 }
 
@@ -267,7 +272,7 @@ static int nativeToString(Xvr_Interpreter* interpreter,
                           Xvr_LiteralArray* arguments) {
     if (arguments->count != 1) {
         interpreter->errorOutput(
-            "incorrect number of arguments to _toString\n");
+            "Incorrect number of arguments to _toString\n");
         return -1;
     }
 
@@ -285,8 +290,10 @@ static int nativeToString(Xvr_Interpreter* interpreter,
     }
 
     Xvr_printLiteralCustom(selfLiteral, toStringUtil);
+
     Xvr_Literal result =
         XVR_TO_STRING_LITERAL(Xvr_createRefString(toStringUtilObject));
+
     Xvr_pushLiteralArray(&interpreter->stack, result);
 
     XVR_FREE_ARRAY(char, toStringUtilObject,
@@ -295,17 +302,19 @@ static int nativeToString(Xvr_Interpreter* interpreter,
 
     Xvr_freeLiteral(result);
     Xvr_freeLiteral(selfLiteral);
+
     return 1;
 }
 
 static int nativeToUpper(Xvr_Interpreter* interpreter,
                          Xvr_LiteralArray* arguments) {
     if (arguments->count != 1) {
-        interpreter->errorOutput("incorrect number of arguments to _toUpper\n");
+        interpreter->errorOutput("Incorrect number of arguments to _toUpper\n");
         return -1;
     }
 
     Xvr_Literal selfLiteral = Xvr_popLiteralArray(arguments);
+
     Xvr_Literal selfLiteralIdn = selfLiteral;
     if (XVR_IS_IDENTIFIER(selfLiteral) &&
         Xvr_parseIdentifierToValue(interpreter, &selfLiteral)) {
@@ -314,7 +323,7 @@ static int nativeToUpper(Xvr_Interpreter* interpreter,
 
     if (!XVR_IS_STRING(selfLiteral)) {
         interpreter->errorOutput(
-            "incorrect argument type passed to _toUpper\n");
+            "Incorrect argument type passed to _toUpper\n");
         Xvr_freeLiteral(selfLiteral);
         return -1;
     }
@@ -327,13 +336,12 @@ static int nativeToUpper(Xvr_Interpreter* interpreter,
     for (int i = 0; i < Xvr_lengthRefString(selfRefString); i++) {
         result[i] = toupper(self[i]);
     }
-
     result[Xvr_lengthRefString(selfRefString)] = '\0';
 
     Xvr_RefString* resultRefString =
         Xvr_createRefStringLength(result, Xvr_lengthRefString(selfRefString));
-
     Xvr_Literal resultLiteral = XVR_TO_STRING_LITERAL(resultRefString);
+
     Xvr_pushLiteralArray(&interpreter->stack, resultLiteral);
 
     XVR_FREE_ARRAY(char, result, Xvr_lengthRefString(resultRefString) + 1);
@@ -346,7 +354,7 @@ static int nativeToUpper(Xvr_Interpreter* interpreter,
 static int nativeTrim(Xvr_Interpreter* interpreter,
                       Xvr_LiteralArray* arguments) {
     if (arguments->count < 1 || arguments->count > 2) {
-        interpreter->errorOutput("incorrect number of arguments to _trim\n");
+        interpreter->errorOutput("Incorrect number of arguments to _trim\n");
         return -1;
     }
 
@@ -355,6 +363,7 @@ static int nativeTrim(Xvr_Interpreter* interpreter,
 
     if (arguments->count == 2) {
         trimCharsLiteral = Xvr_popLiteralArray(arguments);
+
         Xvr_Literal trimCharsLiteralIdn = trimCharsLiteral;
         if (XVR_IS_IDENTIFIER(trimCharsLiteral) &&
             Xvr_parseIdentifierToValue(interpreter, &trimCharsLiteral)) {
@@ -364,8 +373,8 @@ static int nativeTrim(Xvr_Interpreter* interpreter,
         trimCharsLiteral =
             XVR_TO_STRING_LITERAL(Xvr_createRefString(" \t\n\r"));
     }
-
     selfLiteral = Xvr_popLiteralArray(arguments);
+
     Xvr_Literal selfLiteralIdn = selfLiteral;
     if (XVR_IS_IDENTIFIER(selfLiteral) &&
         Xvr_parseIdentifierToValue(interpreter, &selfLiteral)) {
@@ -373,7 +382,7 @@ static int nativeTrim(Xvr_Interpreter* interpreter,
     }
 
     if (!XVR_IS_STRING(selfLiteral)) {
-        interpreter->errorOutput("incorrect argument type passed to _trim\n");
+        interpreter->errorOutput("Incorrect argument type passed to _trim\n");
         Xvr_freeLiteral(trimCharsLiteral);
         Xvr_freeLiteral(selfLiteral);
         return -1;
@@ -393,6 +402,7 @@ static int nativeTrim(Xvr_Interpreter* interpreter,
                 Xvr_toCString(trimCharsRefString)[trimIndex]) {
                 break;
             }
+
             trimIndex++;
         }
 
@@ -501,5 +511,6 @@ int Xvr_hookCompound(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
     for (int i = 0; natives[i].name; i++) {
         Xvr_injectNativeFn(interpreter, natives[i].name, natives[i].fn);
     }
+
     return 0;
 }

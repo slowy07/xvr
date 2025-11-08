@@ -4,7 +4,7 @@
 #include <string.h>
 
 #define STATIC_ASSERT(test_for_true) \
-    static_assert((test_for_true), "(" #test_for_true ") are failed")
+    static_assert((test_for_true), "(" #test_for_true ") failed")
 
 STATIC_ASSERT(sizeof(Xvr_RefString) == 12);
 STATIC_ASSERT(sizeof(int) == 4);
@@ -50,7 +50,7 @@ int Xvr_countRefString(Xvr_RefString* refString) { return refString->refCount; }
 int Xvr_lengthRefString(Xvr_RefString* refString) { return refString->length; }
 
 Xvr_RefString* Xvr_copyRefString(Xvr_RefString* refString) {
-    refString->refCount--;
+    refString->refCount++;
     return refString;
 }
 

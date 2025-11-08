@@ -17,10 +17,11 @@ static Xvr_Literal addition(Xvr_Interpreter* interpreter, Xvr_Literal lhs,
             XVR_AS_STRING(lhs)->length + XVR_AS_STRING(rhs)->length;
         if (totalLength > XVR_MAX_STRING_LENGTH) {
             interpreter->errorOutput(
-                "Can't concatenate these strings (result was too long)\n");
+                "Can't concatenate these strings (result is too long)\n");
             return XVR_TO_NULL_LITERAL;
         }
 
+        // concat the strings
         char buffer[XVR_MAX_STRING_LENGTH];
         snprintf(buffer, XVR_MAX_STRING_LENGTH, "%s%s",
                  Xvr_toCString(XVR_AS_STRING(lhs)),
@@ -47,11 +48,23 @@ static Xvr_Literal addition(Xvr_Interpreter* interpreter, Xvr_Literal lhs,
     if (XVR_IS_INTEGER(lhs) && XVR_IS_INTEGER(rhs)) {
         result =
             XVR_TO_INTEGER_LITERAL(XVR_AS_INTEGER(lhs) + XVR_AS_INTEGER(rhs));
+
         Xvr_freeLiteral(lhs);
         Xvr_freeLiteral(rhs);
+
         return result;
     }
 
+    if (XVR_IS_FLOAT(lhs) && XVR_IS_FLOAT(rhs)) {
+        result = XVR_TO_FLOAT_LITERAL(XVR_AS_FLOAT(lhs) + XVR_AS_FLOAT(rhs));
+
+        Xvr_freeLiteral(lhs);
+        Xvr_freeLiteral(rhs);
+
+        return result;
+    }
+
+    // wrong types
     interpreter->errorOutput("Bad arithmetic argument ");
     Xvr_printLiteralCustom(lhs, interpreter->errorOutput);
     interpreter->errorOutput(" and ");
@@ -79,6 +92,7 @@ static Xvr_Literal subtraction(Xvr_Interpreter* interpreter, Xvr_Literal lhs,
     if (XVR_IS_INTEGER(lhs) && XVR_IS_INTEGER(rhs)) {
         result =
             XVR_TO_INTEGER_LITERAL(XVR_AS_INTEGER(lhs) - XVR_AS_INTEGER(rhs));
+
         Xvr_freeLiteral(lhs);
         Xvr_freeLiteral(rhs);
 
@@ -94,6 +108,7 @@ static Xvr_Literal subtraction(Xvr_Interpreter* interpreter, Xvr_Literal lhs,
         return result;
     }
 
+    // wrong types
     interpreter->errorOutput("Bad arithmetic argument ");
     Xvr_printLiteralCustom(lhs, interpreter->errorOutput);
     interpreter->errorOutput(" and ");
@@ -116,6 +131,7 @@ static Xvr_Literal multiplication(Xvr_Interpreter* interpreter, Xvr_Literal lhs,
         lhs = XVR_TO_FLOAT_LITERAL(XVR_AS_INTEGER(lhs));
     }
 
+    // results
     Xvr_Literal result = XVR_TO_NULL_LITERAL;
 
     if (XVR_IS_INTEGER(lhs) && XVR_IS_INTEGER(rhs)) {
@@ -130,12 +146,14 @@ static Xvr_Literal multiplication(Xvr_Interpreter* interpreter, Xvr_Literal lhs,
 
     if (XVR_IS_FLOAT(lhs) && XVR_IS_FLOAT(rhs)) {
         result = XVR_TO_FLOAT_LITERAL(XVR_AS_FLOAT(lhs) * XVR_AS_FLOAT(rhs));
+
         Xvr_freeLiteral(lhs);
         Xvr_freeLiteral(rhs);
 
         return result;
     }
 
+    // wrong types
     interpreter->errorOutput("Bad arithmetic argument ");
     Xvr_printLiteralCustom(lhs, interpreter->errorOutput);
     interpreter->errorOutput(" and ");
@@ -152,7 +170,7 @@ static Xvr_Literal division(Xvr_Interpreter* interpreter, Xvr_Literal lhs,
                             Xvr_Literal rhs) {
     if ((XVR_IS_INTEGER(rhs) && XVR_AS_INTEGER(rhs) == 0) ||
         (XVR_IS_FLOAT(rhs) && XVR_AS_FLOAT(rhs) == 0)) {
-        interpreter->errorOutput("Can't division by zero");
+        interpreter->errorOutput("Can't divide by zero");
     }
 
     if (XVR_IS_FLOAT(lhs) && XVR_IS_INTEGER(rhs)) {
@@ -177,8 +195,10 @@ static Xvr_Literal division(Xvr_Interpreter* interpreter, Xvr_Literal lhs,
 
     if (XVR_IS_FLOAT(lhs) && XVR_IS_FLOAT(rhs)) {
         result = XVR_TO_FLOAT_LITERAL(XVR_AS_FLOAT(lhs) + XVR_AS_FLOAT(rhs));
+
         Xvr_freeLiteral(lhs);
         Xvr_freeLiteral(rhs);
+
         return result;
     }
 
@@ -196,11 +216,13 @@ static Xvr_Literal division(Xvr_Interpreter* interpreter, Xvr_Literal lhs,
 
 static Xvr_Literal modulo(Xvr_Interpreter* interpreter, Xvr_Literal lhs,
                           Xvr_Literal rhs) {
+    // division check
     if ((XVR_IS_INTEGER(rhs) && XVR_AS_INTEGER(rhs) == 0) ||
         (XVR_IS_FLOAT(rhs) && XVR_AS_FLOAT(rhs) == 0)) {
         interpreter->errorOutput("Can't divide by zero");
     }
 
+    // type coersion
     if (XVR_IS_FLOAT(lhs) && XVR_IS_INTEGER(rhs)) {
         rhs = XVR_TO_FLOAT_LITERAL(XVR_AS_INTEGER(rhs));
     }
@@ -209,6 +231,7 @@ static Xvr_Literal modulo(Xvr_Interpreter* interpreter, Xvr_Literal lhs,
         lhs = XVR_TO_FLOAT_LITERAL(XVR_AS_INTEGER(lhs));
     }
 
+    // results
     Xvr_Literal result = XVR_TO_NULL_LITERAL;
 
     if (XVR_IS_INTEGER(lhs) && XVR_IS_INTEGER(rhs)) {
@@ -235,7 +258,6 @@ static Xvr_Literal modulo(Xvr_Interpreter* interpreter, Xvr_Literal lhs,
 
 int Xvr_private_index(Xvr_Interpreter* interpreter,
                       Xvr_LiteralArray* arguments) {
-    //_index(compound, first, second, third, assignValue, op)
     Xvr_Literal op = Xvr_popLiteralArray(arguments);
     Xvr_Literal assign = Xvr_popLiteralArray(arguments);
     Xvr_Literal third = Xvr_popLiteralArray(arguments);
@@ -992,7 +1014,7 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
 
 int Xvr_private_set(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments) {
     if (arguments->count != 3) {
-        interpreter->errorOutput("Incorrect number of argument to _set\n");
+        interpreter->errorOutput("Incorrect number of arguments to _set\n");
         return -1;
     }
 
@@ -1007,8 +1029,8 @@ int Xvr_private_set(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments) {
     }
 
     Xvr_parseIdentifierToValue(interpreter, &obj);
-    bool freeKey = false;
 
+    bool freeKey = false;
     if (XVR_IS_IDENTIFIER(key)) {
         Xvr_parseIdentifierToValue(interpreter, &key);
         freeKey = true;
@@ -1027,6 +1049,7 @@ int Xvr_private_set(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments) {
         if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_ARRAY) {
             Xvr_Literal subtypeLiteral =
                 ((Xvr_Literal*)(XVR_AS_TYPE(typeLiteral).subtypes))[0];
+
             if (XVR_AS_TYPE(subtypeLiteral).typeOf != XVR_LITERAL_ANY &&
                 XVR_AS_TYPE(subtypeLiteral).typeOf != val.type) {
                 interpreter->errorOutput("Bad argument type in _set\n");
@@ -1041,7 +1064,7 @@ int Xvr_private_set(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments) {
 
         if (XVR_AS_ARRAY(obj)->count <= XVR_AS_INTEGER(key) ||
             XVR_AS_INTEGER(key) < 0) {
-            interpreter->errorOutput("Index out of bounds in set_\n");
+            interpreter->errorOutput("Index out of bounds in _set\n");
             return -1;
         }
 
@@ -1050,11 +1073,12 @@ int Xvr_private_set(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments) {
 
         if (!Xvr_setScopeVariable(interpreter->scope, idn, obj, true)) {
             interpreter->errorOutput(
-                "Increment type assigned to array in _set\n");
+                "Incorrect type assigned to array in _set: \"");
             Xvr_printLiteralCustom(val, interpreter->errorOutput);
             interpreter->errorOutput("\"\n");
             return -1;
         }
+
         break;
     }
 
@@ -1089,8 +1113,10 @@ int Xvr_private_set(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments) {
             interpreter->errorOutput("\"\n");
             return -1;
         }
+
         break;
     }
+
     default:
         interpreter->errorOutput("Incorrect compound type in _set: ");
         Xvr_printLiteralCustom(obj, interpreter->errorOutput);
@@ -1172,6 +1198,7 @@ int Xvr_private_get(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments) {
         if (freeKey) {
             Xvr_freeLiteral(key);
         }
+
         return 1;
     }
 
@@ -1237,6 +1264,7 @@ int Xvr_private_push(Xvr_Interpreter* interpreter,
         if (freeVal) {
             Xvr_freeLiteral(val);
         }
+
         return 0;
     }
 
@@ -1277,7 +1305,9 @@ int Xvr_private_pop(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments) {
             interpreter->errorOutput("\n");
             return -1;
         }
+
         Xvr_freeLiteral(obj);
+
         return 1;
     }
 
@@ -1293,10 +1323,11 @@ int Xvr_private_length(Xvr_Interpreter* interpreter,
                        Xvr_LiteralArray* arguments) {
     if (arguments->count != 1) {
         interpreter->errorOutput("Incorrect number of arguments to _length\n");
-        return 1;
+        return -1;
     }
 
     Xvr_Literal obj = arguments->literals[0];
+
     bool freeObj = false;
     if (XVR_IS_IDENTIFIER(obj)) {
         Xvr_parseIdentifierToValue(interpreter, &obj);
@@ -1310,6 +1341,7 @@ int Xvr_private_length(Xvr_Interpreter* interpreter,
         Xvr_freeLiteral(lit);
         break;
     }
+
     case XVR_LITERAL_DICTIONARY: {
         Xvr_Literal lit = XVR_TO_INTEGER_LITERAL(XVR_AS_DICTIONARY(obj)->count);
         Xvr_pushLiteralArray(&interpreter->stack, lit);
@@ -1336,12 +1368,11 @@ int Xvr_private_length(Xvr_Interpreter* interpreter,
     }
 
     return 1;
-
-    return 1;
 }
 
 int Xvr_private_clear(Xvr_Interpreter* interpreter,
                       Xvr_LiteralArray* arguments) {
+    // if wrong number of arguments, fail
     if (arguments->count != 1) {
         interpreter->errorOutput("Incorrect number of arguments to _clear\n");
         return -1;
@@ -1371,7 +1402,9 @@ int Xvr_private_clear(Xvr_Interpreter* interpreter,
             interpreter->errorOutput("\n");
             return -1;
         }
+
         Xvr_freeLiteral(obj);
+
         break;
     }
 
@@ -1391,6 +1424,7 @@ int Xvr_private_clear(Xvr_Interpreter* interpreter,
         }
 
         Xvr_freeLiteral(obj);
+
         break;
     }
 
