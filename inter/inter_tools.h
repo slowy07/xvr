@@ -22,24 +22,18 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef XVR_PARSER_H
-#define XVR_PARSER_H
+#ifndef INTER_TOOLS_H
+#define INTER_TOOLS_H
 
-#include "xvr_ast_node.h"
 #include "xvr_common.h"
-#include "xvr_lexer.h"
 
-typedef struct {
-    Xvr_Lexer* lexer;
-    bool error;
-    bool panic;
+char* Xvr_readFile(char* path, size_t* fileSize);
+int Xvr_writeFile(char *path, unsigned char *bytes, size_t size);
+unsigned char* Xvr_compileString(char* source, size_t* size);
 
-    Xvr_Token current;
-    Xvr_Token previous;
-} Xvr_Parser;
+void Xvr_runBinary(unsigned char* tb, size_t size);
+void Xvr_runBinaryFile(char* fname);
+void Xvr_runSource(char* source);
+void Xvr_runSourceFile(char* fname);
 
-XVR_API void Xvr_initParser(Xvr_Parser* parser, Xvr_Lexer* lexer);
-XVR_API void Xvr_freeParser(Xvr_Parser* parser);
-XVR_API Xvr_ASTNode* Xvr_scanParser(Xvr_Parser* parser);
-
-#endif  // !XVR_PARSER_H
+#endif // !INTER_TOOLS_H

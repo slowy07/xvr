@@ -1,55 +1,54 @@
-#compiler settings
 CC=gcc
-CFLAGS+=-std=c17 -g -Wall -Werror -Wextra -Wpedantic -Wformat=2 -Wno-newline-eof
-LIBS+=-lm
-LDFLAGS+=
 
-#directories
-SRC_ROOTDIR=..
-SRC_SOURCEDIR=.
+IDIR+=.
+CFLAGS+=$(addprefix -I,$(IDIR)) -g -Wall -W -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable -Wstrict-prototypes
+LIBS+=
 
-SRC_OUTDIR=$(SRC_ROOTDIR)/out
-SRC_OBJDIR=obj
+ODIR = obj
+SRC = $(wildcard *.c)
+OBJ = $(addprefix $(ODIR)/,$(SRC:.c=.o))
 
-#file names
-SRC_SOURCEFILES=$(wildcard $(SRC_SOURCEDIR)/*.c)
-SRC_OBJFILES=$(addprefix $(SRC_OBJDIR)/,$(notdir $(SRC_SOURCEFILES:.c=.o)))
-SRC_TARGETNAME=Xvr
+OUTNAME=xvr
 
-#SRC_LIBLINE is a fancy way of making the linker work correctly
-ifeq ($(shell uname),Linux)
-	SRC_TARGETEXT=.so
-	SRC_LIBLINE=-shared -Wl,-rpath,. -Wl,--out-implib=$(SRC_OUTDIR)/lib$(SRC_TARGETNAME).a -Wl,--whole-archive $(SRC_OBJFILES) -Wl,--no-whole-archive
-	CFLAGS+=-fPIC
+ifeq ($(findstring CYGWIN, $(shell uname)),CYGWIN)
+	LIBLINE =-Wl,--out-implib=../$(XVR_OUTDIR)/lib$(OUTNAME).dll.a -Wl,--export-all-symbols -Wl,--enable-auto-import -Wl,--whole-archive $(OBJ) -Wl,--no-whole-archive
+	OUT=../$(XVR_OUTDIR)/$(OUTNAME).dll
+else ifeq ($(shell uname),Linux)
+	LIBLINE=-Wl,--out-implib=../$(XVR_OUTDIR)/lib$(OUTNAME).a -Wl,--whole-archive $(OBJ) -Wl,--no-whole-archive
+	OUT=../$(XVR_OUTDIR)/lib$(OUTNAME).so
+	CFLAGS += -fPIC
 else ifeq ($(OS),Windows_NT)
-	SRC_TARGETEXT=.dll
-	SRC_LIBLINE=-shared -Wl,-rpath,. -Wl,--out-implib=$(SRC_OUTDIR)/lib$(SRC_TARGETNAME).a -Wl,--whole-archive $(SRC_OBJFILES) -Wl,--no-whole-archive -Wl,--export-all-symbols -Wl,--enable-auto-import
+	LIBLINE =-Wl,--out-implib=../$(XVR_OUTDIR)/lib$(OUTNAME).dll.a -Wl,--export-all-symbols -Wl,--enable-auto-import -Wl,--whole-archive $(OBJ) -Wl,--no-whole-archive
+	OUT=../$(XVR_OUTDIR)/$(OUTNAME).dll
 else ifeq ($(shell uname),Darwin)
-	SRC_TARGETEXT=.dylib
-	SRC_LIBLINE=-shared -Wl,-rpath,.  $(SRC_OBJFILES)
+	LIBLINE = $(OBJ)
+	OUT=../$(XVR_OUTDIR)/lib$(OUTNAME).dylib
 else
-	@echo "Platform test failed - what platform is this?"
+	@echo "Platform test failed - are you using temple os?"
 	exit 1
 endif
 
-#build the object files, compile the test cases, and run
-all: build link
+library: $(OBJ)
+	$(CC) -DXVR_EXPORT $(CFLAGS) -shared -o $(OUT) $(LIBLINE)
 
-#targets for each step
-.PHONY: build
-build: $(SRC_OUTDIR) $(SRC_OBJDIR) $(SRC_OBJFILES)
+static: $(OBJ)
+	ar crs ../$(XVR_OUTDIR)/lib$(OUTNAME).a $(OBJ)
 
-.PHONY: link
-link: $(SRC_OUTDIR)
-	$(CC) -DXVR_EXPORT $(CFLAGS) -o $(SRC_OUTDIR)/lib$(SRC_TARGETNAME)$(SRC_TARGETEXT) $(SRC_LIBLINE)
+library-release: $(OBJ) library
+	strip $(OUT)
 
-#util targets
-$(SRC_OUTDIR):
-	mkdir $(SRC_OUTDIR)
+static-release: $(OBJ) static
+	strip -d ../$(XVR_OUTDIR)/lib$(OUTNAME).a
 
-$(SRC_OBJDIR):
-	mkdir $(SRC_OBJDIR)
+$(OBJ): | $(ODIR)
 
-#compilation steps
-$(SRC_OBJDIR)/%.o: $(SRC_SOURCEDIR)/%.c
-	$(CC) -c -o $@ $< $(addprefix -I,$(SRC_SOURCEDIR)) $(CFLAGS)	
+$(ODIR):
+	mkdir $(ODIR)
+
+$(ODIR)/%.o: %.c
+	$(CC) -c -o $@ $< $(CFLAGS)
+
+.PHONY: clean
+
+clean:
+	$(RM) $(ODIR)

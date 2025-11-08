@@ -1,84 +1,78 @@
-# CFLAGS+=-std=c17 -Wpedantic -Werror -Wno-newline-eof
-# LIBS=-lm
+export CFLAGS+=-std=c18 -pedantic -Werror
+export XVR_OUTDIR = out
 
-export XVR_SOURCEDIR=src
-export XVR_INTERDIR=inter
-export XVR_CASESDIR=tests/cases
-export XVR_INTEGRATIONSDIR=tests/integrations
-export XVR_BENCHMARKSDIR=tests/benchmarks
-export XVR_OUTDIR=out
-export XVR_OBJDIR=obj
+all: $(XVR_OUTDIR) inter
 
-export XVR_SOURCEFILES=$(wildcard $(XVR_SOURCEDIR)/*.c)
+inter: $(XVR_OUTDIR) library
+	$(MAKE) -C inter
 
-# all: clean tests
-# 	@echo no targets ready
+inter-static: $(XVR_OUTDIR) static
+	$(MAKE) -C inter
 
-.PHONY: src
-src:
-	$(MAKE) -C src -k
+inter-release: clean $(XVR_OUTDIR) library-release
+	$(MAKE) -C inter release
 
-.PHONY: inter
-inter: src
-	$(MAKE) -C inter -k
+inter-static-release: clean $(XVR_OUTDIR) static-release
+	$(MAKE) -C inter release
 
+library: $(XVR_OUTDIR)
+	$(MAKE) -j8 -C src library
 
-.PHONY: tests
-tests: clean tests-cases
+static: $(XVR_OUTDIR)
+	$(MAKE) -j8 -C src static
 
-.PHONY: test-all
-test-all: clean tests-cases tests-integrations
+library-release: $(XVR_OUTDIR)
+	$(MAKE) -j8 -C src library-release
 
-.PHONY: tests-cases
-tests-cases:
-	$(MAKE) -C $(XVR_CASESDIR) -k
+static-release: $(XVR_OUTDIR)
+	$(MAKE) -j8 -C src static-release
 
-.PHONY: tests-gdb
-tests-gdb:
-	$(MAKE) -C tests all-gdb -k
+test: clean $(XVR_OUTDIR)
+	$(MAKE) -C test
 
-.PHONY: tests-integrations
-tests-integrations:
-	$(MAKE) -C $(XVR_INTEGRATIONSDIR) -k
+test-sanitized: export CFLAGS+=-fsanitize=address,undefined
+test-sanitized: export LIBS+=-static-libasan
+test-sanitized: export DISABLE_VALGRIND=true
+test-sanitized: clean $(XVR_OUTDIR)
+	$(MAKE) -C test
 
 $(XVR_OUTDIR):
 	mkdir $(XVR_OUTDIR)
 
-$(XVR_OBJDIR):
-	mkdir $(XVR_OBJDIR)
-
-$(XVR_OBJDIR)/%.o: $(XVR_SOURCEDIR)/%.c
-	$(CC) -c -o $@ $< $(addprefix -I,$(XVR_SOURCEDIR)) $(CFLAGS)
-
 .PHONY: clean
+
 clean:
-ifeq ($(shell uname),Linux)
-	find . -type f -name '*.o' -delete
-	find . -type f -name '*.a' -delete
-	find . -type f -name '*.exe' -delete
-	find . -type f -name '*.dll' -delete
-	find . -type f -name '*.lib' -delete
-	find . -type f -name '*.so' -delete
-	find . -type f -name '*.dylib' -delete
-	find . -type d -name 'out' -delete
-	find . -type d -name 'obj' -delete
+ifeq ($(findstring CYGWIN, $(shell uname)),CYGWIN)
+	find . -type f -name '*.o' -exec rm -f -r -v {} \;
+	find . -type f -name '*.a' -exec rm -f -r -v {} \;
+	find . -type f -name '*.exe' -exec rm -f -r -v {} \;
+	find . -type f -name '*.dll' -exec rm -f -r -v {} \;
+	find . -type f -name '*.lib' -exec rm -f -r -v {} \;
+	find . -type f -name '*.so' -exec rm -f -r -v {} \;
+	find . -empty -type d -delete
+else ifeq ($(shell uname),Linux)
+	find . -type f -name '*.o' -exec rm -f -r -v {} \;
+	find . -type f -name '*.a' -exec rm -f -r -v {} \;
+	find . -type f -name '*.exe' -exec rm -f -r -v {} \;
+	find . -type f -name '*.dll' -exec rm -f -r -v {} \;
+	find . -type f -name '*.lib' -exec rm -f -r -v {} \;
+	find . -type f -name '*.so' -exec rm -f -r -v {} \;
+	rm -rf out
+	find . -empty -type d -delete
 else ifeq ($(OS),Windows_NT)
-	del *.o *.a *.exe *.dll *.lib *.so *.dylib
-	del /s out
-	del /s obj
+	$(RM) *.o *.a *.exe 
 else ifeq ($(shell uname),Darwin)
-	find . -type f -name '*.o' -delete
-	find . -type f -name '*.a' -delete
-	find . -type f -name '*.exe' -delete
-	find . -type f -name '*.dll' -delete
-	find . -type f -name '*.lib' -delete
-	find . -type f -name '*.so' -delete
-	find . -type f -name '*.dylib' -delete
-	find . -type d -name 'out' -delete
-	find . -type d -name 'obj' -delete
+	find . -type f -name '*.o' -exec rm -f -r -v {} \;
+	find . -type f -name '*.a' -exec rm -f -r -v {} \;
+	find . -type f -name '*.exe' -exec rm -f -r -v {} \;
+	find . -type f -name '*.dll' -exec rm -f -r -v {} \;
+	find . -type f -name '*.lib' -exec rm -f -r -v {} \;
+	find . -type f -name '*.dylib' -exec rm -f -r -v {} \;
+	find . -type f -name '*.so' -exec rm -f -r -v {} \;
+	rm -rf out
+	find . -empty -type d -delete
 else
-	@echo "Deletion failed - what platform is this?"
+	@echo "deletion failed - are you using temple os?"
 endif
 
-.PHONY: rebuild
 rebuild: clean all

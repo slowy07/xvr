@@ -82,7 +82,27 @@ SOFTWARE.
 #define XVR_VERSION_PATCH 0
 
 // defined as a function, for technical reasons
-#define XVR_VERSION_BUILD Xvr_private_version_build()
-XVR_API const char* Xvr_private_version_build(void);
+#define XVR_VERSION_BUILD __DATE__ " " __TIME__
 
+#ifndef XVR_EXPORT
+
+typedef struct {
+    bool error;
+    bool help;
+    bool version;
+    char* binaryFile;
+    char* sourceFile;
+    char* compileFile;
+    char* outFile;
+    char* source;
+    bool verbose;
+} Xvr_CommandLine;
+
+extern Xvr_CommandLine Xvr_commandLine;
+void Xvr_initCommandLine(int argc, const char* argv[]);
+void Xvr_usageCommandLine(int argc, const char* argv[]);
+void Xvr_copyrightCommandLine(int argc, const char* argv[]);
+void Xvr_helpCommandLine(int argc, const char* argv[]);
+
+#endif  // !XVR_EXPORT
 #endif  // !XVR_COMMON_H

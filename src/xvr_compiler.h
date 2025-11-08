@@ -22,24 +22,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef XVR_PARSER_H
-#define XVR_PARSER_H
+#pragma once
 
 #include "xvr_ast_node.h"
 #include "xvr_common.h"
-#include "xvr_lexer.h"
+#include "xvr_literal_array.h"
+#include "xvr_opcodes.h"
 
-typedef struct {
-    Xvr_Lexer* lexer;
-    bool error;
-    bool panic;
+typedef struct Xvr_Compiler {
+    Xvr_LiteralArray literalCache;
+    unsigned char* bytecode;
+    int capacity;
+    int count;
+} Xvr_Compiler;
 
-    Xvr_Token current;
-    Xvr_Token previous;
-} Xvr_Parser;
+XVR_API void Xvr_initCompiler(Xvr_Compiler* compiler);
+XVR_API void Xvr_writeCompiler(Xvr_Compiler* compiler, Xvr_ASTNode* node);
+XVR_API void Xvr_freeCompiler(Xvr_Compiler* compiler);
 
-XVR_API void Xvr_initParser(Xvr_Parser* parser, Xvr_Lexer* lexer);
-XVR_API void Xvr_freeParser(Xvr_Parser* parser);
-XVR_API Xvr_ASTNode* Xvr_scanParser(Xvr_Parser* parser);
+XVR_API unsigned char* Xvr_collateCompiler(Xvr_Compiler* compiler, int* size);
 
-#endif  // !XVR_PARSER_H

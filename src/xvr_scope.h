@@ -25,31 +25,29 @@ SOFTWARE.
 #ifndef XVR_SCOPE_H
 #define XVR_SCOPE_H
 
-#include "xvr_bucket.h"
-#include "xvr_common.h"
-#include "xvr_string.h"
-#include "xvr_table.h"
-#include "xvr_value.h"
+#include "xvr_literal_array.h"
+#include "xvr_literal_dictionary.h"
 
 typedef struct Xvr_Scope {
-    struct Xvr_Scope* next;
-    Xvr_Table* table;
-    unsigned int refCount;
+    Xvr_LiteralDictionary variables;
+    Xvr_LiteralDictionary types;
+    struct Xvr_Scope* ancestor;
+    int references;
 } Xvr_Scope;
 
-XVR_API Xvr_Scope* Xvr_pushScope(Xvr_Bucket** bucketHandle, Xvr_Scope* scope);
-XVR_API Xvr_Scope* Xvr_popScope(Xvr_Scope* scope);
-XVR_API Xvr_Scope* Xvr_private_pushDummyScope(Xvr_Bucket** bucketHandle,
-                                              Xvr_Scope* scope);
+Xvr_Scope* Xvr_pushScope(Xvr_Scope* scope);
+Xvr_Scope* Xvr_popScope(Xvr_Scope* scope);
+Xvr_Scope* Xvr_copyScope(Xvr_Scope* original);
 
-XVR_API Xvr_Scope* Xvr_deepCopyScope(Xvr_Bucket** bucketHandle,
-                                     Xvr_Scope* scope);
+bool Xvr_declareScopeVariable(Xvr_Scope* scope, Xvr_Literal key,
+                              Xvr_Literal type);
+bool Xvr_isDeclaredScopeVariable(Xvr_Scope* scope, Xvr_Literal key);
 
-XVR_API void Xvr_declareScope(Xvr_Scope* scope, Xvr_String* key,
-                              Xvr_Value value);
-XVR_API void Xvr_assignScope(Xvr_Scope* scope, Xvr_String* key,
-                             Xvr_Value value);
-XVR_API Xvr_Value* Xvr_accessScopeAsPointer(Xvr_Scope* scope, Xvr_String* key);
-XVR_API bool Xvr_isDeclaredScope(Xvr_Scope* scope, Xvr_String* key);
+bool Xvr_setScopeVariable(Xvr_Scope* scope, Xvr_Literal key, Xvr_Literal value,
+                          bool constCheck);
+bool Xvr_getScopeVariable(Xvr_Scope* scope, Xvr_Literal key,
+                          Xvr_Literal* value);
+
+Xvr_Literal Xvr_getScopeType(Xvr_Scope* scope, Xvr_Literal key);
 
 #endif  // !XVR_SCOPE_H

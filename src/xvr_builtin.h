@@ -22,24 +22,20 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef XVR_PARSER_H
-#define XVR_PARSER_H
+#ifndef XVR_BUILTIN_H
+#define XVR_BUILTIN_H
 
-#include "xvr_ast_node.h"
-#include "xvr_common.h"
-#include "xvr_lexer.h"
+#include "xvr_interpreter.h"
 
-typedef struct {
-    Xvr_Lexer* lexer;
-    bool error;
-    bool panic;
+int Xvr_private_index(Xvr_Interpreter* interpreter,
+                      Xvr_LiteralArray* arguments);
+int Xvr_private_set(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments);
+int Xvr_private_get(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments);
+int Xvr_private_push(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments);
+int Xvr_private_pop(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments);
+int Xvr_private_length(Xvr_Interpreter* interpreter,
+                       Xvr_LiteralArray* arguments);
+int Xvr_private_clear(Xvr_Interpreter* interpreter,
+                      Xvr_LiteralArray* arguments);
 
-    Xvr_Token current;
-    Xvr_Token previous;
-} Xvr_Parser;
-
-XVR_API void Xvr_initParser(Xvr_Parser* parser, Xvr_Lexer* lexer);
-XVR_API void Xvr_freeParser(Xvr_Parser* parser);
-XVR_API Xvr_ASTNode* Xvr_scanParser(Xvr_Parser* parser);
-
-#endif  // !XVR_PARSER_H
+#endif  // !XVR_BUILTIN_H

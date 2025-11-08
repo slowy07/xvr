@@ -22,24 +22,12 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef XVR_PARSER_H
-#define XVR_PARSER_H
+#ifndef LIB_ABOUT_H
+#define LIB_ABOUT_H
 
-#include "xvr_ast_node.h"
-#include "xvr_common.h"
-#include "xvr_lexer.h"
+#include "xvr_interpreter.h"
 
-typedef struct {
-    Xvr_Lexer* lexer;
-    bool error;
-    bool panic;
+int Xvr_hookAbout(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
+                  Xvr_Literal alias);
 
-    Xvr_Token current;
-    Xvr_Token previous;
-} Xvr_Parser;
-
-XVR_API void Xvr_initParser(Xvr_Parser* parser, Xvr_Lexer* lexer);
-XVR_API void Xvr_freeParser(Xvr_Parser* parser);
-XVR_API Xvr_ASTNode* Xvr_scanParser(Xvr_Parser* parser);
-
-#endif  // !XVR_PARSER_H
+#endif  // !LIB_ABOUT_H

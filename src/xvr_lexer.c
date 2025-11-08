@@ -25,96 +25,20 @@ SOFTWARE.
 #include "xvr_lexer.h"
 
 #include <ctype.h>
+#include <stddef.h>
 #include <stdio.h>
 #include <string.h>
 
+#include "xvr_common.h"
 #include "xvr_console_colors.h"
+#include "xvr_keyword_types.h"
 #include "xvr_token_types.h"
 
-typedef struct {
-    const Xvr_TokenType type;
-    const char* keyword;
-} Xvr_KeywordTypeTuple;
-
-const Xvr_KeywordTypeTuple keywordTuples[] = {
-    // null
-    {XVR_TOKEN_NULL, "null"},
-
-    // types
-    {XVR_TOKEN_TYPE_BOOLEAN, "bool"},
-    {XVR_TOKEN_TYPE_INTEGER, "int"},
-    {XVR_TOKEN_TYPE_FLOAT, "float"},
-    {XVR_TOKEN_TYPE_STRING, "string"},
-
-    {XVR_TOKEN_TYPE_ARRAY, "array"},
-    {XVR_TOKEN_TYPE_TABLE, "table"},
-    {XVR_TOKEN_TYPE_FUNCTION, "function"},
-
-    {XVR_TOKEN_TYPE_OPAQUE, "opaque"},
-    {XVR_TOKEN_TYPE_ANY, "any"},
-
-    // keywords and reserved words
-    {XVR_TOKEN_KEYWORD_AS, "as"},
-    {XVR_TOKEN_KEYWORD_ASSERT, "assert"},
-    {XVR_TOKEN_KEYWORD_BREAK, "break"},
-    {XVR_TOKEN_KEYWORD_CLASS, "class"},
-    {XVR_TOKEN_KEYWORD_CONST, "const"},
-    {XVR_TOKEN_KEYWORD_CONTINUE, "continue"},
-    {XVR_TOKEN_KEYWORD_DO, "do"},
-    {XVR_TOKEN_KEYWORD_ELSE, "else"},
-    {XVR_TOKEN_KEYWORD_EXPORT, "export"},
-    {XVR_TOKEN_KEYWORD_FOR, "for"},
-    {XVR_TOKEN_KEYWORD_FOREACH, "foreach"},
-    {XVR_TOKEN_KEYWORD_FUNCTION, "proc"},
-    {XVR_TOKEN_KEYWORD_IF, "if"},
-    {XVR_TOKEN_KEYWORD_IMPORT, "import"},
-    {XVR_TOKEN_KEYWORD_IN, "in"},
-    {XVR_TOKEN_KEYWORD_OF, "of"},
-    {XVR_TOKEN_KEYWORD_PASS, "pass"},
-    {XVR_TOKEN_KEYWORD_PRINT, "print"},
-    {XVR_TOKEN_KEYWORD_RETURN, "return"},
-    {XVR_TOKEN_KEYWORD_VAR, "var"},
-    {XVR_TOKEN_KEYWORD_WHILE, "while"},
-    {XVR_TOKEN_KEYWORD_YIELD, "yield"},
-
-    // literal values
-    {XVR_TOKEN_LITERAL_TRUE, "true"},
-    {XVR_TOKEN_LITERAL_FALSE, "false"},
-
-    {XVR_TOKEN_EOF, NULL},
-};
-
-const char* Xvr_private_findKeywordByType(const Xvr_TokenType type) {
-    if (type == XVR_TOKEN_EOF) {
-        return "EOF";
-    }
-
-    for (int i = 0; keywordTuples[i].keyword; i++) {
-        if (keywordTuples[i].type == type) {
-            return keywordTuples[i].keyword;
-        }
-    }
-
-    return NULL;
-}
-
-Xvr_TokenType Xvr_private_findTypeByKeyword(const char* keyword) {
-    const int length = strlen(keyword);
-
-    for (int i = 0; keywordTuples[i].keyword; i++) {
-        if (!strncmp(keyword, keywordTuples[i].keyword, length)) {
-            return keywordTuples[i].type;
-        }
-    }
-
-    return XVR_TOKEN_EOF;
-}
-
 static void cleanLexer(Xvr_Lexer* lexer) {
+    lexer->source = NULL;
     lexer->start = 0;
     lexer->current = 0;
     lexer->line = 1;
-    lexer->source = NULL;
 }
 
 static bool isAtEnd(Xvr_Lexer* lexer) {
@@ -124,7 +48,9 @@ static bool isAtEnd(Xvr_Lexer* lexer) {
 static char peek(Xvr_Lexer* lexer) { return lexer->source[lexer->current]; }
 
 static char peekNext(Xvr_Lexer* lexer) {
-    if (isAtEnd(lexer)) return '\0';
+    if (isAtEnd(lexer)) {
+        return '\0';
+    }
     return lexer->source[lexer->current + 1];
 }
 
@@ -133,7 +59,6 @@ static char advance(Xvr_Lexer* lexer) {
         return '\0';
     }
 
-    // new line
     if (lexer->source[lexer->current] == '\n') {
         lexer->line++;
     }
@@ -142,7 +67,7 @@ static char advance(Xvr_Lexer* lexer) {
     return lexer->source[lexer->current - 1];
 }
 
-static void eatWhitespace(Xvr_Lexer* lexer) {
+static void eatWithspace(Xvr_Lexer* lexer) {
     const char c = peek(lexer);
 
     switch (c) {
@@ -153,20 +78,15 @@ static void eatWhitespace(Xvr_Lexer* lexer) {
         advance(lexer);
         break;
 
-    // comments
     case '/':
-        // eat the line
         if (peekNext(lexer) == '/') {
-            while (!isAtEnd(lexer) && advance(lexer) != '\n');
+            while (advance(lexer) != '\n' && !isAtEnd(lexer));
             break;
         }
-
-        // eat the block
         if (peekNext(lexer) == '*') {
             advance(lexer);
             advance(lexer);
-            while (!isAtEnd(lexer) &&
-                   !(peek(lexer) == '*' && peekNext(lexer) == '/'))
+            while (!(peek(lexer) == '*' && peekNext(lexer) == '/'))
                 advance(lexer);
             advance(lexer);
             advance(lexer);
@@ -177,9 +97,6 @@ static void eatWhitespace(Xvr_Lexer* lexer) {
     default:
         return;
     }
-
-    // tail recursion
-    eatWhitespace(lexer);
 }
 
 static bool isDigit(Xvr_Lexer* lexer) {
@@ -196,19 +113,23 @@ static bool match(Xvr_Lexer* lexer, char c) {
         advance(lexer);
         return true;
     }
-
     return false;
 }
 
-// token generators
 static Xvr_Token makeErrorToken(Xvr_Lexer* lexer, char* msg) {
     Xvr_Token token;
 
     token.type = XVR_TOKEN_ERROR;
+    token.lexeme = msg;
     token.length = strlen(msg);
     token.line = lexer->line;
-    token.lexeme = msg;
 
+#ifndef XVR_EXPORT
+    if (Xvr_commandLine.verbose) {
+        printf("error:");
+        Xvr_printToken(&token);
+    }
+#endif /* ifndef XVR_EXPORT */
     return token;
 }
 
@@ -217,69 +138,67 @@ static Xvr_Token makeToken(Xvr_Lexer* lexer, Xvr_TokenType type) {
 
     token.type = type;
     token.length = lexer->current - lexer->start;
-    token.line = lexer->line;
     token.lexeme = &lexer->source[lexer->current - token.length];
+    token.line = lexer->line;
 
+#ifndef XVR_EXPORT
+    if (Xvr_commandLine.verbose) {
+        printf("token:");
+        Xvr_printToken(&token);
+    }
+#endif /* ifndef XVR_EXPORT */
     return token;
 }
 
 static Xvr_Token makeIntegerOrFloat(Xvr_Lexer* lexer) {
-    Xvr_TokenType type =
-        XVR_TOKEN_LITERAL_INTEGER;  // assume we're reading an integer
+    Xvr_TokenType type = XVR_TOKEN_LITERAL_INTEGER;
 
-    // the character '_' can be inserted into numbers as a separator
-    while (isDigit(lexer) || peek(lexer) == '_') advance(lexer);
-
-    if (peek(lexer) == '.' &&
-        (peekNext(lexer) >= '0' &&
-         peekNext(lexer) <= '9')) {      // peekNext(lexer) == digit
-        type = XVR_TOKEN_LITERAL_FLOAT;  // change the assumption to reading a
-                                         // float
-        advance(lexer);                  // eat the '.'
-
-        //'_' again
-        while (isDigit(lexer) || peek(lexer) == '_') advance(lexer);
+    while (isDigit(lexer)) {
+        advance(lexer);
     }
 
-    // make the token
+    if (peek(lexer) == '.' &&
+        (peekNext(lexer) >= '0' && peekNext(lexer) <= '9')) {
+        type = XVR_TOKEN_LITERAL_FLOAT;
+        advance(lexer);
+        while (isDigit(lexer)) {
+            advance(lexer);
+        }
+    }
+
     Xvr_Token token;
 
     token.type = type;
+    token.lexeme = &lexer->source[lexer->start];
     token.length = lexer->current - lexer->start;
     token.line = lexer->line;
-    token.lexeme = &lexer->source[lexer->start];
 
+#ifndef XVR_EXPORT
+    if (Xvr_commandLine.verbose) {
+        if (type == XVR_TOKEN_LITERAL_INTEGER) {
+            printf("int:");
+        } else {
+            printf("flt:");
+        }
+        Xvr_printToken(&token);
+    }
+#endif /* ifndef XVR_EXPORT */
     return token;
 }
 
-static bool isEscapableCharacter(char c) {
-    switch (c) {
-    case 'n':
-    case 't':
-    case '\\':
-    case '"':
-        return true;
-
-    default:
-        return false;
-    }
-}
-
 static Xvr_Token makeString(Xvr_Lexer* lexer, char terminator) {
-    while (!isAtEnd(lexer)) {
-        // stop if you've hit the terminator
-        if (peek(lexer) == terminator) {
-            break;
-        }
-
-        // skip escaped control characters
-        if (peek(lexer) == '\\' && isEscapableCharacter(peekNext(lexer))) {
+    while (isAtEnd(lexer)) {
+        if (peek(lexer) == '\\' && peekNext(lexer) == terminator) {
             advance(lexer);
             advance(lexer);
             continue;
         }
 
-        // otherwise
+        if (peek(lexer) == terminator) {
+            advance(lexer);
+            break;
+        }
+
         advance(lexer);
     }
 
@@ -287,69 +206,75 @@ static Xvr_Token makeString(Xvr_Lexer* lexer, char terminator) {
         return makeErrorToken(lexer, "Unterminated string");
     }
 
-    advance(lexer);
-    // make the token
     Xvr_Token token;
 
     token.type = XVR_TOKEN_LITERAL_STRING;
-    token.length = lexer->current - lexer->start - 2;  //-1 to omit the quotes
+    token.lexeme = &lexer->source[lexer->start + 1];
+    token.length = lexer->current - lexer->start - 2;
     token.line = lexer->line;
-    token.lexeme =
-        &lexer->source[lexer->start + 1];  //+1 to omit the first quote
 
+#ifndef XVR_EXPORT
+    if (Xvr_commandLine.verbose) {
+        printf("str:");
+        Xvr_printToken(&token);
+    }
+#endif /* ifndef XVR_EXPORT */
     return token;
 }
 
-static Xvr_Token makeKeywordOrName(Xvr_Lexer* lexer) {
-    advance(lexer);  // first letter can only be alpha
+static Xvr_Token makeKeywordOrIdentifier(Xvr_Lexer* lexer) {
+    advance(lexer);
 
     while (isDigit(lexer) || isAlpha(lexer)) {
         advance(lexer);
     }
 
-    // scan for a keyword
-    for (int i = 0; keywordTuples[i].keyword; i++) {
-        // WONTFIX: could squeeze miniscule performance gain from this, but ROI
-        // isn't worth it
-        if (strlen(keywordTuples[i].keyword) ==
-                (lexer->current - lexer->start) &&
-            !strncmp(keywordTuples[i].keyword, &lexer->source[lexer->start],
+    for (int i = 0; Xvr_keywordTypes[i].keyword; i++) {
+        if (strlen(Xvr_keywordTypes[i].keyword) ==
+                (long unsigned int)(lexer->current - lexer->start) &&
+            !strncmp(Xvr_keywordTypes[i].keyword, &lexer->source[lexer->start],
                      lexer->current - lexer->start)) {
-            // make token (keyword)
             Xvr_Token token;
 
-            token.type = keywordTuples[i].type;
+            token.type = Xvr_keywordTypes[i].type;
+            token.lexeme = &lexer->source[lexer->start];
             token.length = lexer->current - lexer->start;
             token.line = lexer->line;
-            token.lexeme = &lexer->source[lexer->start];
 
+#ifndef XVR_EXPORT
+            if (Xvr_commandLine.verbose) {
+                printf("kwd:");
+                Xvr_printToken(&token);
+            }
+#endif /* ifndef XVR_EXPORT */
             return token;
         }
     }
 
-    // make token (name)
     Xvr_Token token;
 
-    token.type = XVR_TOKEN_NAME;
+    token.type = XVR_TOKEN_IDENTIFIER;
+    token.lexeme = &lexer->source[lexer->start];
     token.length = lexer->current - lexer->start;
     token.line = lexer->line;
-    token.lexeme = &lexer->source[lexer->start];
 
+#ifndef XVR_EXPORT
+    if (Xvr_commandLine.verbose) {
+        printf("idf:");
+        Xvr_printToken(&token);
+    }
+#endif /* ifndef XVR_EXPORT */
     return token;
 }
 
-// exposed functions
-void Xvr_bindLexer(Xvr_Lexer* lexer, const char* source) {
+void Xvr_initLexer(Xvr_Lexer* lexer, char* source) {
     cleanLexer(lexer);
+
     lexer->source = source;
 }
 
-Xvr_Token Xvr_private_scanLexer(Xvr_Lexer* lexer) {
-    if (lexer->source == NULL) {
-        return makeErrorToken(lexer, "Missing source code in lexer");
-    }
-
-    eatWhitespace(lexer);
+Xvr_Token Xvr_scanLexer(Xvr_Lexer* lexer) {
+    eatWithspace(lexer);
 
     lexer->start = lexer->current;
 
@@ -360,111 +285,99 @@ Xvr_Token Xvr_private_scanLexer(Xvr_Lexer* lexer) {
     if (isDigit(lexer)) {
         return makeIntegerOrFloat(lexer);
     }
+
     if (isAlpha(lexer)) {
-        return makeKeywordOrName(lexer);
+        return makeKeywordOrIdentifier(lexer);
     }
 
     char c = advance(lexer);
 
     switch (c) {
     case '(':
-        return makeToken(lexer, XVR_TOKEN_OPERATOR_PAREN_LEFT);
+        return makeToken(lexer, XVR_TOKEN_PAREN_LEFT);
     case ')':
-        return makeToken(lexer, XVR_TOKEN_OPERATOR_PAREN_RIGHT);
-    case '[':
-        return makeToken(lexer, XVR_TOKEN_OPERATOR_BRACKET_LEFT);
-    case ']':
-        return makeToken(lexer, XVR_TOKEN_OPERATOR_BRACKET_RIGHT);
+        return makeToken(lexer, XVR_TOKEN_PAREN_RIGHT);
     case '{':
-        return makeToken(lexer, XVR_TOKEN_OPERATOR_BRACE_LEFT);
+        return makeToken(lexer, XVR_TOKEN_BRACE_LEFT);
     case '}':
-        return makeToken(lexer, XVR_TOKEN_OPERATOR_BRACE_RIGHT);
+        return makeToken(lexer, XVR_TOKEN_BRACE_RIGHT);
+    case '[':
+        return makeToken(lexer, XVR_TOKEN_BRACKET_LEFT);
+    case ']':
+        return makeToken(lexer, XVR_TOKEN_BRACKET_RIGHT);
 
     case '+':
-        return makeToken(lexer,
-                         match(lexer, '=')   ? XVR_TOKEN_OPERATOR_ADD_ASSIGN
-                         : match(lexer, '+') ? XVR_TOKEN_OPERATOR_INCREMENT
-                                             : XVR_TOKEN_OPERATOR_ADD);
+        return makeToken(lexer, match(lexer, '=')   ? XVR_TOKEN_PLUS_ASSIGN
+                                : match(lexer, '+') ? XVR_TOKEN_PLUS_PLUS
+                                                    : XVR_TOKEN_PLUS);
     case '-':
-        return makeToken(lexer,
-                         match(lexer, '=') ? XVR_TOKEN_OPERATOR_SUBTRACT_ASSIGN
-                         : match(lexer, '-') ? XVR_TOKEN_OPERATOR_DECREMENT
-                                             : XVR_TOKEN_OPERATOR_SUBTRACT);
+        return makeToken(lexer, match(lexer, '=')   ? XVR_TOKEN_MINUS_ASSIGN
+                                : match(lexer, '-') ? XVR_TOKEN_MINUS_MINUS
+                                                    : XVR_TOKEN_MINUS);
     case '*':
-        return makeToken(lexer, match(lexer, '=')
-                                    ? XVR_TOKEN_OPERATOR_MULTIPLY_ASSIGN
-                                    : XVR_TOKEN_OPERATOR_MULTIPLY);
+        return makeToken(lexer, match(lexer, '=') ? XVR_TOKEN_MULTIPLY_ASSIGN
+                                                  : XVR_TOKEN_MULTIPLY);
     case '/':
-        return makeToken(lexer, match(lexer, '=')
-                                    ? XVR_TOKEN_OPERATOR_DIVIDE_ASSIGN
-                                    : XVR_TOKEN_OPERATOR_DIVIDE);
+        return makeToken(lexer, match(lexer, '=') ? XVR_TOKEN_DIVIDE_ASSIGN
+                                                  : XVR_TOKEN_DIVIDE);
     case '%':
-        return makeToken(lexer, match(lexer, '=')
-                                    ? XVR_TOKEN_OPERATOR_MODULO_ASSIGN
-                                    : XVR_TOKEN_OPERATOR_MODULO);
+        return makeToken(lexer, match(lexer, '=') ? XVR_TOKEN_MODULO_ASSIGN
+                                                  : XVR_TOKEN_MODULO);
 
     case '!':
-        return makeToken(lexer, match(lexer, '=')
-                                    ? XVR_TOKEN_OPERATOR_COMPARE_NOT
-                                    : XVR_TOKEN_OPERATOR_NEGATE);
+        return makeToken(
+            lexer, match(lexer, '=') ? XVR_TOKEN_NOT_EQUAL : XVR_TOKEN_NOT);
     case '=':
-        return makeToken(lexer, match(lexer, '=')
-                                    ? XVR_TOKEN_OPERATOR_COMPARE_EQUAL
-                                    : XVR_TOKEN_OPERATOR_ASSIGN);
+        return makeToken(
+            lexer, match(lexer, '=') ? XVR_TOKEN_EQUAL : XVR_TOKEN_ASSIGN);
 
     case '<':
-        return makeToken(lexer, match(lexer, '=')
-                                    ? XVR_TOKEN_OPERATOR_COMPARE_LESS_EQUAL
-                                    : XVR_TOKEN_OPERATOR_COMPARE_LESS);
+        return makeToken(
+            lexer, match(lexer, '=') ? XVR_TOKEN_LESS_EQUAL : XVR_TOKEN_LESS);
     case '>':
-        return makeToken(lexer, match(lexer, '=')
-                                    ? XVR_TOKEN_OPERATOR_COMPARE_GREATER_EQUAL
-                                    : XVR_TOKEN_OPERATOR_COMPARE_GREATER);
+        return makeToken(lexer, match(lexer, '=') ? XVR_TOKEN_GREATER_EQUAL
+                                                  : XVR_TOKEN_GREATER);
 
-    case '&':  // XVR_TOKEN_OPERATOR_AMPERSAND is unused
-        if (match(lexer, '&')) {
-            return makeToken(lexer, XVR_TOKEN_OPERATOR_AND);
-        } else {
+    case '&':
+        if (advance(lexer) != '&') {
             return makeErrorToken(lexer, "Unexpected '&'");
+        } else {
+            return makeToken(lexer, XVR_TOKEN_AND);
         }
 
-    case '|':  // XVR_TOKEN_OPERATOR_PIPE is unused
-        if (match(lexer, '|')) {
-            return makeToken(lexer, XVR_TOKEN_OPERATOR_OR);
-        } else {
-            return makeErrorToken(lexer, "Unexpected '|'");
-        }
+    case '|':
+        return makeToken(lexer,
+                         match(lexer, '|') ? XVR_TOKEN_OR : XVR_TOKEN_PIPE);
 
     case '?':
-        return makeToken(lexer, XVR_TOKEN_OPERATOR_QUESTION);
+        return makeToken(lexer, XVR_TOKEN_QUESTION);
     case ':':
-        return makeToken(lexer, XVR_TOKEN_OPERATOR_COLON);
+        return makeToken(lexer, XVR_TOKEN_COLON);
     case ';':
-        return makeToken(lexer, XVR_TOKEN_OPERATOR_SEMICOLON);
+        return makeToken(lexer, XVR_TOKEN_SEMICOLON);
     case ',':
-        return makeToken(lexer, XVR_TOKEN_OPERATOR_COMMA);
+        return makeToken(lexer, XVR_TOKEN_COMMA);
 
     case '.':
-        if (match(lexer, '.')) {
-            if (match(lexer, '.')) {
-                return makeToken(lexer, XVR_TOKEN_OPERATOR_REST);  // three dots
-            } else {
-                return makeToken(lexer, XVR_TOKEN_OPERATOR_CONCAT);  // two dots
-            }
-        } else {
-            return makeToken(lexer, XVR_TOKEN_OPERATOR_DOT);  // one dot
+        if (peek(lexer) == '.' && peekNext(lexer) == '.') {
+            advance(lexer);
+            advance(lexer);
+            return makeToken(lexer, XVR_TOKEN_REST);
         }
+        return makeToken(lexer, XVR_TOKEN_DOT);
 
     case '"':
         return makeString(lexer, c);
 
     default: {
-        return makeErrorToken(lexer, "Unknown token value found in lexer");
+        char buffer[128];
+        snprintf(buffer, 128, "Unexpected token: %c", c);
+        return makeErrorToken(lexer, buffer);
     }
     }
 }
 
-static void trim(char** s, unsigned int* l) {  // util
+static void trim(char** s, int* l) {
     while (isspace(((*((unsigned char**)(s)))[(*l) - 1]))) (*l)--;
     while (**s && isspace(**(unsigned char**)(s))) {
         (*s)++;
@@ -472,34 +385,28 @@ static void trim(char** s, unsigned int* l) {  // util
     }
 }
 
-// for debugging
-void Xvr_private_printToken(Xvr_Token* token) {
-    // print errors
+void Xvr_printToken(Xvr_Token* token) {
     if (token->type == XVR_TOKEN_ERROR) {
-        printf(XVR_CC_ERROR "ERROR: \t%d\t%.*s\n" XVR_CC_RESET,
-               (int)token->line, (int)token->length, token->lexeme);
-        return;
+        printf(XVR_CC_ERROR "Error:\t%d\t%.*s\n" XVR_CC_RESET, token->line,
+               token->length, token->lexeme);
     }
+    printf("\t%d\t%d\t", token->type, token->line);
 
-    // print the line number
-    printf("\t%d\t%d\t", token->type, (int)token->line);
-
-    // print based on type
-    if (token->type == XVR_TOKEN_NAME ||
+    if (token->type == XVR_TOKEN_IDENTIFIER ||
         token->type == XVR_TOKEN_LITERAL_INTEGER ||
         token->type == XVR_TOKEN_LITERAL_FLOAT ||
         token->type == XVR_TOKEN_LITERAL_STRING) {
-        printf("%.*s\t", (int)token->length, token->lexeme);
+        printf("%.*s\t", token->length, token->lexeme);
     } else {
-        const char* keyword = Xvr_private_findKeywordByType(token->type);
+        char* keyword = Xvr_findKeywordByType(token->type);
 
         if (keyword != NULL) {
             printf("%s", keyword);
         } else {
-            char* str = (char*)token->lexeme;  // strip const-ness for trimming
-            unsigned int length = token->length;
+            char* str = token->lexeme;
+            int length = token->length;
             trim(&str, &length);
-            printf("%.*s", (int)length, str);
+            printf("%.*s", length, str);
         }
     }
 
