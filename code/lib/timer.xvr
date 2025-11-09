@@ -1,0 +1,87 @@
+{
+  // create the timer, run for short period time
+  import timer;
+
+  var timerStart: opaque = startTimer();
+  for (var i: int = 0; i < 1000 * 1; i++);
+  var timerStop: opaque = timerStart.stopTimer();
+
+  // create some timer for longer period
+  var timerStartTwo: opaque = startTimer();
+  for (var i: int = 0; i < 1000 * 10; i++);
+  var timerStopTwo: opaque = timerStartTwo.stopTimer();
+
+  // check to makesure that the second timer took will longer than the first timer
+  // INFO: this was the small possibility of failing due to external factors
+  var diffData: opaque = timerStop.compareTimer(timerStopTwo);
+
+  assert diffData.getTimerSeconds() >= 0, "compareTimer() second are failed";
+  if (diffData.getTimerSeconds() == 0) {
+    assert diffData.getTimerMicroseconds() >= 0, "compareTimer() microseconds failed";
+  }
+
+  timerStart.destroyTimer();
+  timerStartTwo.destroyTimer();
+  
+  timerStop.destroyTimer();
+  timerStopTwo.destroyTimer();
+  diffData.destroyTimer();
+}
+
+{
+  // create timer, and manipulate it's value
+  import timer;
+
+  // set the timer values manually
+  var timer: opaque = createTimer(42, 8891);
+
+  // check the value data
+  assert timer.getTimerSeconds() == 42, "getTimerSeconds() failed cik";
+  assert timer.getTimerMicroseconds() == 8891, "getTimerMicroseconds() woilah cik bermasalah loh ya";
+  
+  // destroy instance after using
+  timer.destroyTimer();
+}
+
+{
+  // set timer to check the string representation
+  import timer;
+
+  var timer: opaque = createTimer(20, 999);
+  assert timer.timerToString() == "20.000999", "timerToString() gagal loh ya lagi";
+
+  timer.destroyTimer();
+}
+
+{
+  // test positive and negative values of timers
+  import timer;
+
+  var a: opaque = createTimer(1, 0);
+  var b: opaque = createTimer(2, 0);
+
+  var acmp: opaque = a.compareTimer(b);
+  var bcmp: opaque = b.compareTimer(a);
+
+  var c: opaque = createTimer(0, 1);
+  var d: opaque = createTimer(0, 2);
+
+  var ccmp: opaque = c.compareTimer(d);
+  var dcmp: opaque = d.compareTimer(c);
+
+  assert acmp.timerToString() == "1.000000", "positive and negative test failed loh ya (acmp)";
+  assert bcmp.timerToString() == "-1.000000", "positive and negative test failed loh ya (bcmp)";
+  assert ccmp.timerToString() == "0.000001", "positive and negative test failed loy ya (ccmp)";
+  assert dcmp.timerToString() == "-0.000001", "positive and negative test failed loh ya (dcmp)";
+
+  a.destroyTimer();
+  b.destroyTimer();
+  c.destroyTimer();
+  d.destroyTimer();
+  acmp.destroyTimer();
+  bcmp.destroyTimer();
+  ccmp.destroyTimer();
+  dcmp.destroyTimer();
+}
+
+print("woilah cik aman loh ya");

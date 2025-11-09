@@ -8,7 +8,7 @@ ODIR = obj
 SRC = $(wildcard *.c)
 OBJ = $(addprefix $(ODIR)/,$(SRC:.c=.o))
 OUTNAME=xvr
-OUT=../$(XVR_OUTDIR)/xvrinter
+OUT=../$(XVR_OUTDIR)/xvr
 
 all: $(OBJ)
 ifeq ($(shell uname),Darwin)

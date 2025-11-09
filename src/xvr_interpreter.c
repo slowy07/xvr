@@ -1285,6 +1285,51 @@ static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
 
 bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
                        Xvr_LiteralArray* arguments, Xvr_LiteralArray* returns) {
+    // check for side-loaded native functions
+    if (XVR_IS_FUNCTION_NATIVE(func)) {
+        // reverse the order to the correct order
+        Xvr_LiteralArray correct;
+        Xvr_initLiteralArray(&correct);
+
+        while (arguments->count) {
+            Xvr_Literal lit = Xvr_popLiteralArray(arguments);
+            Xvr_pushLiteralArray(&correct, lit);
+            Xvr_freeLiteral(lit);
+        }
+
+        // call the native function
+        int returnsCount = XVR_AS_FUNCTION_NATIVE(func)(interpreter, &correct);
+
+        if (returnsCount < 0) {
+            interpreter->errorOutput("Unknown error from native function\n");
+            Xvr_freeLiteralArray(&correct);
+            return false;
+        }
+
+        // get the results
+        Xvr_LiteralArray returnsFromInner;
+        Xvr_initLiteralArray(&returnsFromInner);
+
+        for (int i = 0; i < (returnsCount || 1); i++) {
+            Xvr_Literal lit = Xvr_popLiteralArray(&interpreter->stack);
+            Xvr_pushLiteralArray(&returnsFromInner,
+                                 lit);  // NOTE: also reverses the order
+            Xvr_freeLiteral(lit);
+        }
+
+        // flip them around and pass to returns
+        while (returnsFromInner.count > 0) {
+            Xvr_Literal lit = Xvr_popLiteralArray(&returnsFromInner);
+            Xvr_pushLiteralArray(returns, lit);
+            Xvr_freeLiteral(lit);
+        }
+
+        Xvr_freeLiteralArray(&returnsFromInner);
+        Xvr_freeLiteralArray(&correct);
+        return true;
+    }
+
+    // normal Xvr function
     if (!XVR_IS_FUNCTION(func)) {
         interpreter->errorOutput("Function required in Xvr_callLiteralFn()\n");
         return false;
@@ -1480,6 +1525,9 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
         Xvr_freeLiteral(ret);
     }
 
+    // manual free
+    // BUGFIX: handle scopes of functions, which refer to the parent scope
+    // (leaking memory)
     while (inner.scope != XVR_AS_FUNCTION(func).scope) {
         for (int i = 0; i < inner.scope->variables.capacity; i++) {
             // handle keys, just in case

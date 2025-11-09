@@ -1,0 +1,16 @@
+{
+  // standard library
+  import standard;
+  
+  print(clock().length());
+  print(clock());
+
+  assert clock().length() == 24, "clock() cek gagal lah woilah ngawour loh ya";
+}
+
+{
+  import standard as std;
+  
+  print(std["clock"]());
+  assert std["clock"]().length() == 24, "import lib alias gagal loh ya cik";
+}

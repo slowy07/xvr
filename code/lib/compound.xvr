@@ -1,0 +1,81 @@
+import compound;
+
+{
+  // attempt to testing a concat
+  {
+    var a: [int] = [1, 2, 3];
+    var b: [int] = [4, 5, 6];
+    var c: [int] = a.concat(b);
+    var d: [int] = a.concat(b).concat(b);
+
+    assert c == [1, 2, 3, 4, 5, 6], "woilah cik gagal loh ya";
+    assert d == [1, 2, 3, 4, 5, 6, 4, 5, 6], "woilah cik gagal loh ya";
+    print(c);
+  }
+
+  // test dictionary concatenate
+  {
+    var a: [string : int] = ["pertama": 1, "kedua": 2, "ketiga": 3];
+    var b: [string : int] = ["keempat": 4, "kelima": 5, "keenam": 6];
+    var c: [string : int] = a.concat(b);
+    print(c);
+  }
+
+  // testing string concat
+  {
+    var b: string = "xaviera ";
+    var c: string = "putri";
+    var d: string = b.concat(c);
+    print(d);
+    
+    assert d == "xaviera putri", "string.concat() failed cik";
+  }
+}
+
+{
+  {
+		proc increment(k, v) {
+			return v + 1;
+		}
+
+		var a: [int] = [1, 2, 3];
+		var d: [string : int] = ["four": 4, "five": 5, "six": 6];
+
+		assert a.map(increment).map(increment).map(increment) == [4,5,6], "array.map() failed cik";
+		assert d.map(increment).map(increment).map(increment) == [8,9,7], "dictionary.map() failed cik";
+	}
+}
+
+{
+  // applied to lowerString for string literals
+  var nama: string = "Arfy Slowy";
+  assert nama.toLower() == "arfy slowy", "_toLower() failed";
+  print(nama.toLower());
+  print("Xaviera Putri".toLower());
+}
+
+{
+  // test list to string
+  var data: [[int]] = [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+  // using to string to convert
+  var ke_string: string = data.toString();
+  print(data);
+
+  assert ke_string == "[[1,2,3],[4,5,6],[7,8,9]]", "array._toString() error cik";
+}
+
+{
+  // test to upperString
+  var nama: string = "Arfy Slowy";
+  assert nama.toUpper() == "ARFY SLOWY", "_toUpper() failed";
+  print(nama.toUpper());
+  print("Xaviera Putri".toUpper());
+}
+
+{
+  // testing trim custom values
+  var kata: string = "arfy";
+  var trim_kata: string = "arfy slowy".trim(kata);
+  assert trim_kata == " slow", "custom _trim() failed cik";
+  print(trim_kata);
+}

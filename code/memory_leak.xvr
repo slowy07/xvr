@@ -1,0 +1,25 @@
+{
+  import compound;
+  import timer;
+
+  proc start(k, v) {
+    return startTimer();
+  }
+
+  proc check(k, v) {
+    var data = v.stopTimer();
+    print(data.timerToString());
+    data.destroyTimer();
+    return v;
+  }
+
+  proc destroy(k, v) {
+    v.destroyTimer();
+  }
+
+  var arr = [1];
+
+  arr.map(start).map(check).map(destroy);
+}
+
+print("aman cik");
