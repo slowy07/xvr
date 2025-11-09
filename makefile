@@ -3,7 +3,7 @@ export XVR_OUTDIR = out
 
 all: $(XVR_OUTDIR) inter
 
-inter: $(XVR_OUTDIR) library
+inter: $(XVR_OUTDIR) library static inter
 	$(MAKE) -C inter
 
 inter-static: $(XVR_OUTDIR) static
@@ -16,16 +16,16 @@ inter-static-release: clean $(XVR_OUTDIR) static-release
 	$(MAKE) -C inter release
 
 library: $(XVR_OUTDIR)
-	$(MAKE) -j8 -C src library
+	$(MAKE) -j$(nproc) -C src library
 
 static: $(XVR_OUTDIR)
-	$(MAKE) -j8 -C src static
+	$(MAKE) -j$(nproc) -C src static
 
 library-release: $(XVR_OUTDIR)
-	$(MAKE) -j8 -C src library-release
+	$(MAKE) -j$(nproc) -C src library-release
 
 static-release: $(XVR_OUTDIR)
-	$(MAKE) -j8 -C src static-release
+	$(MAKE) -j$(nproc) -C src static-release
 
 test: clean $(XVR_OUTDIR)
 	$(MAKE) -C test
