@@ -29,9 +29,10 @@ else
 endif
 
 library: $(OBJ)
-	$(CC) -DXVR_EXPORT $(CFLAGS) -shared -o $(OUT) $(LIBLINE)
+	$(CC) -DXVR_EXPORT $(CFLAGS) -shared -fPIC -o $(OUT) $(LIBLINE)
 
 static: $(OBJ)
+	$(RM) ../$(XVR_OUTDIR)/lib$(OUTNAME).a
 	ar crs ../$(XVR_OUTDIR)/lib$(OUTNAME).a $(OBJ)
 
 library-release: $(OBJ) library
