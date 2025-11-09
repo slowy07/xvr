@@ -55,3 +55,8 @@ print nilai_kedua;
     hitung += 1;
   }
 }
+
+{
+  var panjangArray: [int] = [2, 3, 4, 5];
+  print(_length(panjangArray));
+}

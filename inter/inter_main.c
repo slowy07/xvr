@@ -161,6 +161,11 @@ int main(int argc, const char* argv[]) {
     if (Xvr_commandLine.compileFile && Xvr_commandLine.outFile) {
         size_t size = 0;
         char* source = Xvr_readFile(Xvr_commandLine.compileFile, &size);
+
+        if (!source) {
+            return 1;
+        }
+
         unsigned char* tb = Xvr_compileString(source, &size);
         if (!tb) {
             return 1;

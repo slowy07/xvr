@@ -171,6 +171,11 @@ void Xvr_runSource(char* source) {
 void Xvr_runSourceFile(char* fname) {
     size_t size = 0;
     char* source = Xvr_readFile(fname, &size);
+
+    if (!source) {
+        return;
+    }
+
     Xvr_runSource(source);
     free((void*)source);
 }
