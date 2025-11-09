@@ -165,13 +165,13 @@ static Xvr_Token makeToken(Xvr_Lexer* lexer, Xvr_TokenType type) {
 static Xvr_Token makeIntegerOrFloat(Xvr_Lexer* lexer) {
     Xvr_TokenType type = XVR_TOKEN_LITERAL_INTEGER;  // what am I making?
 
-    while (isDigit(lexer)) advance(lexer);
+    while (isDigit(lexer) || peek(lexer) == '_') advance(lexer);
 
     if (peek(lexer) == '.' &&
         (peekNext(lexer) >= '0' && peekNext(lexer) <= '9')) {
         type = XVR_TOKEN_LITERAL_FLOAT;
         advance(lexer);
-        while (isDigit(lexer)) advance(lexer);
+        while (isDigit(lexer) || peek(lexer) == '_') advance(lexer);
     }
 
     Xvr_Token token;
