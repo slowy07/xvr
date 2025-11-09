@@ -79,3 +79,14 @@ import compound;
   assert trim_kata == " slow", "custom _trim() failed cik";
   print(trim_kata);
 }
+
+{
+  print("  xaviera putri   ".trimBegin());
+  print("  xaviera putri   ".trimEnd());
+
+  var nama: string = " arfy slowy ";
+  assert nama.trimBegin() == "arfy slowy ", "string.trimBegin() error cik";
+  assert nama.trimEnd() == " arfy slowy", "string.trimEnd() error juga cik";
+  print(nama.trimBegin());
+  print(nama.trimEnd());
+}
