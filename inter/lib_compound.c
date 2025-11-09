@@ -10,6 +10,7 @@
 #include "xvr_literal_array.h"
 #include "xvr_literal_dictionary.h"
 #include "xvr_memory.h"
+#include "xvr_refstring.h"
 
 static int nativeConcat(Xvr_Interpreter* interpreter,
                         Xvr_LiteralArray* arguments) {
@@ -640,6 +641,169 @@ static int nativeTrim(Xvr_Interpreter* interpreter,
     return 1;
 }
 
+static int nativeTrimBegin(Xvr_Interpreter* interpreter,
+                           Xvr_LiteralArray* arguments) {
+    if (arguments->count < 1 || arguments->count > 2) {
+        interpreter->errorOutput(
+            "incorrect number of arguments too _trimBegin\n");
+        return -1;
+    }
+
+    Xvr_Literal trimCharsLiteral;
+    Xvr_Literal selfLiteral;
+
+    if (arguments->count == 2) {
+        trimCharsLiteral = Xvr_popLiteralArray(arguments);
+        Xvr_Literal trimCharsLiteralIdn = trimCharsLiteral;
+        if (XVR_IS_IDENTIFIER(trimCharsLiteral) &&
+            Xvr_parseIdentifierToValue(interpreter, &trimCharsLiteral)) {
+            Xvr_freeLiteral(trimCharsLiteralIdn);
+        }
+    } else {
+        trimCharsLiteral =
+            XVR_TO_STRING_LITERAL(Xvr_createRefString(" \t\n\r"));
+    }
+    selfLiteral = Xvr_popLiteralArray(arguments);
+    Xvr_Literal selfLiteralIdn = selfLiteral;
+    if (XVR_IS_IDENTIFIER(selfLiteral) &&
+        Xvr_parseIdentifierToValue(interpreter, &selfLiteral)) {
+        Xvr_freeLiteral(selfLiteralIdn);
+    }
+
+    if (!XVR_IS_STRING(selfLiteral)) {
+        interpreter->errorOutput(
+            "Incorrect argument type passed to _trimBegin\n");
+        Xvr_freeLiteral(trimCharsLiteral);
+        Xvr_freeLiteral(selfLiteral);
+        return -1;
+    }
+
+    Xvr_RefString* trimCharsRefString = XVR_AS_STRING(trimCharsLiteral);
+    Xvr_RefString* selfRefString = XVR_AS_STRING(selfLiteral);
+
+    int bufferBegin = 0;
+    int bufferEnd = Xvr_lengthRefString(selfRefString);
+
+    for (int i = 0; i < Xvr_lengthRefString(selfRefString); i++) {
+        int trimIndex = 0;
+
+        while (trimIndex < Xvr_lengthRefString(trimCharsRefString)) {
+            if (Xvr_toCString(selfRefString)[i] ==
+                Xvr_toCString(trimCharsRefString)[trimIndex]) {
+                break;
+            }
+            trimIndex++;
+        }
+
+        if (trimIndex < Xvr_lengthRefString(trimCharsRefString)) {
+            bufferBegin++;
+            continue;
+        } else {
+            break;
+        }
+    }
+
+    Xvr_Literal resultLiteral;
+    if (bufferBegin >= bufferEnd) {
+        resultLiteral = XVR_TO_STRING_LITERAL(Xvr_createRefString(""));
+    } else {
+        char buffer[XVR_MAX_STRING_LENGTH];
+        snprintf(buffer, bufferEnd - bufferBegin + 1, "%s",
+                 &Xvr_toCString(selfRefString)[bufferBegin]);
+        resultLiteral = XVR_TO_STRING_LITERAL(Xvr_createRefString(buffer));
+    }
+
+    Xvr_pushLiteralArray(&interpreter->stack, resultLiteral);
+
+    Xvr_freeLiteral(resultLiteral);
+    Xvr_freeLiteral(trimCharsLiteral);
+    Xvr_freeLiteral(selfLiteral);
+
+    return 1;
+}
+
+static int nativeTrimEnd(Xvr_Interpreter* interpreter,
+                         Xvr_LiteralArray* arguments) {
+    if (arguments->count < 1 || arguments->count > 2) {
+        interpreter->errorOutput("Incorrect number of arguments to _trimEnd\n");
+        return -1;
+    }
+
+    Xvr_Literal trimCharsLiteral;
+    Xvr_Literal selfLiteral;
+
+    if (arguments->count == 2) {
+        trimCharsLiteral = Xvr_popLiteralArray(arguments);
+
+        Xvr_Literal trimCharsLiteralIdn = trimCharsLiteral;
+        if (XVR_IS_IDENTIFIER(trimCharsLiteral) &&
+            Xvr_parseIdentifierToValue(interpreter, &trimCharsLiteral)) {
+            Xvr_freeLiteral(trimCharsLiteralIdn);
+        }
+    } else {
+        trimCharsLiteral =
+            XVR_TO_STRING_LITERAL(Xvr_createRefString(" \t\n\r"));
+    }
+
+    selfLiteral = Xvr_popLiteralArray(arguments);
+
+    Xvr_Literal selfLiteralIdn = selfLiteral;
+    if (XVR_IS_IDENTIFIER(selfLiteral) &&
+        Xvr_parseIdentifierToValue(interpreter, &selfLiteral)) {
+        Xvr_freeLiteral(selfLiteralIdn);
+    }
+
+    if (!XVR_IS_STRING(selfLiteral)) {
+        interpreter->errorOutput(
+            "Incorrect arguments type passed to _trimEnd\n");
+        Xvr_freeLiteral(trimCharsLiteral);
+        Xvr_freeLiteral(selfLiteral);
+        return -1;
+    }
+
+    Xvr_RefString* trimCharsRefString = XVR_AS_STRING(trimCharsLiteral);
+    Xvr_RefString* selfRefString = XVR_AS_STRING(selfLiteral);
+
+    int bufferBegin = 0;
+    int bufferEnd = Xvr_lengthRefString(selfRefString);
+
+    for (int i = Xvr_lengthRefString(selfRefString); i >= 0; i--) {
+        int trimIndex = 0;
+
+        while (trimIndex < Xvr_lengthRefString(trimCharsRefString)) {
+            if (Xvr_toCString(selfRefString)[i - 1] ==
+                Xvr_toCString(trimCharsRefString)[trimIndex]) {
+                break;
+            }
+            trimIndex++;
+        }
+
+        if (trimIndex < Xvr_lengthRefString(trimCharsRefString)) {
+            bufferEnd--;
+            continue;
+        } else {
+            break;
+        }
+    }
+
+    Xvr_Literal resultLiteral;
+    if (bufferBegin >= bufferEnd) {
+        resultLiteral = XVR_TO_STRING_LITERAL(Xvr_createRefString(""));
+    } else {
+        char buffer[XVR_MAX_STRING_LENGTH];
+        snprintf(buffer, bufferEnd - bufferBegin + 1, "%s",
+                 &Xvr_toCString(selfRefString)[bufferBegin]);
+        resultLiteral = XVR_TO_STRING_LITERAL(Xvr_createRefString(buffer));
+    }
+
+    Xvr_pushLiteralArray(&interpreter->stack, resultLiteral);
+    Xvr_freeLiteral(resultLiteral);
+    Xvr_freeLiteral(trimCharsLiteral);
+    Xvr_freeLiteral(selfLiteral);
+
+    return 1;
+}
+
 typedef struct Natives {
     char* name;
     Xvr_NativeFn fn;
@@ -657,6 +821,8 @@ int Xvr_hookCompound(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
         {"_toString", nativeToString},    // array, dictionary
         {"_toUpper", nativeToUpper},      // string
         {"_trim", nativeTrim},            // string
+        {"_trimBegin", nativeTrimBegin},  // string
+        {"_trimEnd", nativeTrimEnd},      // string
         {NULL, NULL}};
 
     if (!XVR_IS_NULL(alias)) {
