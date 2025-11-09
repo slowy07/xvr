@@ -8,6 +8,7 @@
 #include "xvr_interpreter.h"
 #include "xvr_literal.h"
 #include "xvr_literal_array.h"
+#include "xvr_literal_dictionary.h"
 #include "xvr_memory.h"
 
 static int nativeConcat(Xvr_Interpreter* interpreter,
@@ -199,6 +200,9 @@ static int nativeForEach(Xvr_Interpreter* interpreter,
         }
     }
 
+    Xvr_freeLiteral(procLiteral);
+    Xvr_freeLiteral(selfLiteral);
+
     return 0;
 }
 
@@ -386,6 +390,9 @@ static int nativeMap(Xvr_Interpreter* interpreter,
         Xvr_pushLiteralArray(&interpreter->stack, returnsLiteral);
         Xvr_freeLiteral(returnsLiteral);
     }
+
+    Xvr_freeLiteral(procLiteral);
+    Xvr_freeLiteral(selfLiteral);
 
     return 0;
 }

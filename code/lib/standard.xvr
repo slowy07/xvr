@@ -14,3 +14,16 @@
   print(std["clock"]());
   assert std["clock"]().length() == 24, "import lib alias gagal loh ya cik";
 }
+
+
+{
+  // test import within from procedure
+  proc function() {
+    import standard;
+    assert clock != null, "import library within the procedure failed cik";
+    
+    return clock;
+  }
+
+  assert function()().length() == 24, "import library within procedure and return failed";
+}

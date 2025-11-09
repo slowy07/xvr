@@ -1,0 +1,29 @@
+import timer;
+
+var memo: [int : int] = [:];
+
+proc fiboMemo(angka: int) {
+  if (angka < 2) {
+    return angka;
+  }
+
+  var hasil = memo[angka];
+  if (hasil == null) {
+    hasil = fiboMemo(angka - 1) + fiboMemo(angka - 2);
+    memo[angka] = hasil;
+  }
+
+  return hasil;
+}
+
+
+var timeUtama: opaque = startTimer();
+
+for (var i: int = 0; i < 40; i++) {
+  var hasil = fiboMemo(i);
+  print(hasil);
+}
+
+var timerStop: opaque = timeUtama.stopTimer();
+print(timerStop.timerToString() + " detik");
+timerStop.destroyTimer();
