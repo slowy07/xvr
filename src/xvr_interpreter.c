@@ -1216,6 +1216,15 @@ static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
 
     // let's screw with the fn name, too
     if (looseFirstArgument) {
+        if (!XVR_IS_IDENTIFIER(identifier)) {
+            interpreter->errorOutput(
+                "bad literal passing as procedure identifier\n");
+            Xvr_freeLiteral(identifier);
+            Xvr_freeLiteral(stackSize);
+            Xvr_freeLiteralArray(&arguments);
+            return false;
+        }
+
         int length = XVR_AS_IDENTIFIER(identifier)->length + 1;
         char buffer[XVR_MAX_STRING_LENGTH];
         snprintf(buffer, XVR_MAX_STRING_LENGTH, "_%s",
@@ -1231,6 +1240,7 @@ static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
 
     if (!Xvr_parseIdentifierToValue(interpreter, &func)) {
         Xvr_freeLiteralArray(&arguments);
+        Xvr_freeLiteral(stackSize);
         Xvr_freeLiteral(identifier);
         return false;
     }
@@ -1253,6 +1263,7 @@ static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
         XVR_AS_FUNCTION_NATIVE(func)(interpreter, &correct);
 
         Xvr_freeLiteralArray(&correct);
+        Xvr_freeLiteral(stackSize);
         Xvr_freeLiteral(identifier);
         return true;
     }
@@ -1263,6 +1274,7 @@ static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
         interpreter->errorOutput("\n");
 
         Xvr_freeLiteral(identifier);
+        Xvr_freeLiteral(stackSize);
         Xvr_freeLiteralArray(&arguments);
         return false;
     }
@@ -1278,6 +1290,7 @@ static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
 
     Xvr_freeLiteralArray(&arguments);
     Xvr_freeLiteral(func);
+    Xvr_freeLiteral(stackSize);
     Xvr_freeLiteral(identifier);
 
     return ret;

@@ -17,6 +17,7 @@ void Xvr_initCompiler(Xvr_Compiler* compiler) {
     compiler->bytecode = NULL;
     compiler->capacity = 0;
     compiler->count = 0;
+    compiler->panic = false;
 }
 
 // separated out, so it can be recursive
@@ -493,6 +494,11 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
     case XVR_AST_NODE_COMPOUND: {
         int index = writeNodeCompoundToCache(compiler, node);
 
+        if (index < 0) {
+            compiler->panic = true;
+            return XVR_OP_EOF;
+        }
+
         // push the node opcode to the bytecode
         if (index >= 256) {
             // push a "long" index
@@ -579,6 +585,10 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
                 (unsigned char) override;  // 1 byte
         }
 
+        if (fnCompiler->panic) {
+            compiler->panic = true;
+        }
+
         // create the function in the literal cache (by storing the compiler
         // object)
         Xvr_Literal fnLiteral = XVR_TO_FUNCTION_LITERAL(fnCompiler, 0);
@@ -623,6 +633,11 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
         // embed these in the bytecode...
         unsigned short index =
             (unsigned short)writeNodeCollectionToCache(compiler, node);
+
+        if (index == (unsigned short)-1) {
+            compiler->panic = true;
+            return XVR_OP_EOF;
+        }
 
         memcpy(compiler->bytecode + compiler->count, &index, sizeof(index));
         compiler->count += sizeof(unsigned short);
@@ -1204,6 +1219,11 @@ static void emitFloat(unsigned char** collationPtr, int* capacityPtr,
 // return the result
 static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
                                                int* size, bool embedHeader) {
+    if (compiler->panic) {
+        fprintf(stderr, XVR_CC_ERROR
+                "[internal] Can't collate panicked compiler\n" XVR_CC_RESET);
+        return NULL;
+    }
     int capacity = XVR_GROW_CAPACITY(0);
     int count = 0;
     unsigned char* collation = XVR_ALLOCATE(unsigned char, capacity);

@@ -24,6 +24,8 @@ SOFTWARE.
 
 #pragma once
 
+#include <stdbool.h>
+
 #include "xvr_ast_node.h"
 #include "xvr_common.h"
 #include "xvr_literal_array.h"
@@ -34,6 +36,7 @@ typedef struct Xvr_Compiler {
     unsigned char* bytecode;
     int capacity;
     int count;
+    bool panic;
 } Xvr_Compiler;
 
 XVR_API void Xvr_initCompiler(Xvr_Compiler* compiler);
@@ -41,4 +44,3 @@ XVR_API void Xvr_writeCompiler(Xvr_Compiler* compiler, Xvr_ASTNode* node);
 XVR_API void Xvr_freeCompiler(Xvr_Compiler* compiler);
 
 XVR_API unsigned char* Xvr_collateCompiler(Xvr_Compiler* compiler, int* size);
-
