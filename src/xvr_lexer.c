@@ -77,6 +77,21 @@ static void eatWhitespace(Xvr_Lexer* lexer) {
         advance(lexer);
         break;
 
+    // INFO: add shebang feature
+    case '#':
+        if (lexer->start == 0 && peekNext(lexer) == '!') {
+            // eat the entire shebang line
+            while (peek(lexer) != '\n' && !isAtEnd(lexer)) {
+                advance(lexer);
+            }
+            // eat the newline character as well
+            if (peek(lexer) == '\n') {
+                advance(lexer);
+            }
+            break;
+        }
+        return;
+
     // comments
     case '/':
         // eat the line
