@@ -1,16 +1,25 @@
+// initializate procedure
 proc wello() {
   print("wello");
 }
 
+// procedure with return
 proc withReturn() {
   return 20 + 33;
 }
 
+// procedure with literal type with parameter
 proc withParameter(name: string) {
   return "wello " + name;
+}
+
+// procedure with return literal type with parameter
+proc withReturnLiteral(name: string): string {
+  return "wello " + nama;
 }
 
 
 wello();
 print(withReturn());
 print(withParameter("arfy"));
+print(withReturnLiteral("Xveria"))
