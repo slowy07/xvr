@@ -90,3 +90,17 @@ import compound;
   print(nama.trimBegin());
   print(nama.trimEnd());
 }
+
+{
+  var data: [int] = [1, 2, 3, 4];
+  var data_kedua: [string : int] = ["satu": 1, "dua": 2, "tiga": 3, "empat": 4];
+  
+  proc fungsi(acc, k, v) {
+    return acc + v;
+  }
+
+  assert data.reduce(0, fungsi) == 10, "array.reduce() gagal cik";
+  assert data_kedua.reduce(0, fungsi) == 10, "array.reduce() gagal cik";
+  print(data.reduce(0, fungsi));
+  print(data_kedua.reduce(0, fungsi));
+}

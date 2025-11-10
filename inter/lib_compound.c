@@ -398,6 +398,97 @@ static int nativeMap(Xvr_Interpreter* interpreter,
     return 0;
 }
 
+static int nativeReduce(Xvr_Interpreter* interpreter,
+                        Xvr_LiteralArray* arguments) {
+    if (arguments->count != 3) {
+        interpreter->errorOutput("Incorrect number of arguments to _reduce\n");
+        return -1;
+    }
+
+    Xvr_Literal procLiteral = Xvr_popLiteralArray(arguments);
+    Xvr_Literal defaultLiteral = Xvr_popLiteralArray(arguments);
+    Xvr_Literal selfLiteral = Xvr_popLiteralArray(arguments);
+
+    Xvr_Literal selfLiteralIdn = selfLiteral;
+    if (XVR_IS_IDENTIFIER(selfLiteral) &&
+        Xvr_parseIdentifierToValue(interpreter, &selfLiteral)) {
+        Xvr_freeLiteral(selfLiteralIdn);
+    }
+
+    Xvr_Literal procLiteralIdn = procLiteral;
+    if (XVR_IS_IDENTIFIER(procLiteral) &&
+        Xvr_parseIdentifierToValue(interpreter, &procLiteral)) {
+        Xvr_freeLiteral(procLiteralIdn);
+    }
+
+    if (!(XVR_IS_ARRAY(selfLiteral) || XVR_IS_DICTIONARY(selfLiteral)) ||
+        !(XVR_IS_FUNCTION(procLiteral) ||
+          XVR_IS_FUNCTION_NATIVE(procLiteral))) {
+        interpreter->errorOutput("Incorrect argument type passed to _reduce\n");
+        Xvr_freeLiteral(selfLiteral);
+        return -1;
+    }
+
+    if (XVR_IS_ARRAY(selfLiteral)) {
+        for (int i = 0; i < XVR_AS_ARRAY(selfLiteral)->count; i++) {
+            Xvr_Literal indexLiteral = XVR_TO_INTEGER_LITERAL(i);
+
+            Xvr_LiteralArray arguments;
+            Xvr_initLiteralArray(&arguments);
+            Xvr_pushLiteralArray(&arguments,
+                                 XVR_AS_ARRAY(selfLiteral)->literals[i]);
+            Xvr_pushLiteralArray(&arguments, indexLiteral);
+            Xvr_pushLiteralArray(&arguments, defaultLiteral);
+
+            Xvr_LiteralArray returns;
+            Xvr_initLiteralArray(&returns);
+            Xvr_callLiteralFn(interpreter, procLiteral, &arguments, &returns);
+
+            Xvr_freeLiteral(defaultLiteral);
+            defaultLiteral = Xvr_popLiteralArray(&returns);
+
+            Xvr_freeLiteralArray(&arguments);
+            Xvr_freeLiteralArray(&returns);
+            Xvr_freeLiteral(indexLiteral);
+        }
+        Xvr_pushLiteralArray(&interpreter->stack, defaultLiteral);
+    }
+
+    if (XVR_IS_DICTIONARY(selfLiteral)) {
+        for (int i = 0; i < XVR_AS_DICTIONARY(selfLiteral)->capacity; i++) {
+            if (XVR_IS_NULL(XVR_AS_DICTIONARY(selfLiteral)->entries[i].key)) {
+                continue;
+            }
+            Xvr_LiteralArray arguments;
+            Xvr_initLiteralArray(&arguments);
+            Xvr_pushLiteralArray(
+                &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].value);
+            Xvr_pushLiteralArray(
+                &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].key);
+            Xvr_pushLiteralArray(&arguments, defaultLiteral);
+
+            Xvr_LiteralArray returns;
+            Xvr_initLiteralArray(&returns);
+
+            Xvr_callLiteralFn(interpreter, procLiteral, &arguments, &returns);
+
+            Xvr_freeLiteral(defaultLiteral);
+            defaultLiteral = Xvr_popLiteralArray(&returns);
+
+            Xvr_freeLiteralArray(&arguments);
+            Xvr_freeLiteralArray(&returns);
+        }
+
+        Xvr_pushLiteralArray(&interpreter->stack, defaultLiteral);
+    }
+
+    Xvr_freeLiteral(procLiteral);
+    Xvr_freeLiteral(defaultLiteral);
+    Xvr_freeLiteral(selfLiteral);
+
+    return 0;
+}
+
 static int nativeToLower(Xvr_Interpreter* interpreter,
                          Xvr_LiteralArray* arguments) {
     if (arguments->count != 1) {
@@ -817,6 +908,7 @@ int Xvr_hookCompound(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
         {"_getKeys", nativeGetKeys},      // dictionary
         {"_getValues", nativeGetValues},  // dictionary
         {"_map", nativeMap},              // array, dictionary
+        {"_reduce", nativeReduce},        // array, dictionary
         {"_toLower", nativeToLower},      // string
         {"_toString", nativeToString},    // array, dictionary
         {"_toUpper", nativeToUpper},      // string
