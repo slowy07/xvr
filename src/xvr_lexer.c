@@ -195,19 +195,31 @@ static Xvr_Token makeIntegerOrFloat(Xvr_Lexer* lexer) {
     return token;
 }
 
+static bool isEscapeableCharacter(char c) {
+    switch (c) {
+    case 'n':
+    case 't':
+    case '\\':
+    case '"':
+        return true;
+    default:
+        return false;
+    }
+}
+
 static Xvr_Token makeString(Xvr_Lexer* lexer, char terminator) {
     while (!isAtEnd(lexer)) {
-        // skip escaped terminators
-        if (peek(lexer) == '\\' && peekNext(lexer) == terminator) {
-            advance(lexer);
-            advance(lexer);
-            continue;
-        }
-
         // actually escape if you've hit the terminator
         if (peek(lexer) == terminator) {
             advance(lexer);  // eat terminator
             break;
+        }
+
+        // skip escaped terminators
+        if (peek(lexer) == '\\' && isEscapeableCharacter(peekNext(lexer))) {
+            advance(lexer);
+            advance(lexer);
+            continue;
         }
 
         // otherwise

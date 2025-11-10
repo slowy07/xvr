@@ -1312,7 +1312,7 @@ static void parsePrecedence(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle,
         Xvr_emitASTNodeBinary(nodeHandle, rhsNode, opcode);
 
         // optimise away the constants
-        if (!calcStaticBinaryArithmetic(parser, nodeHandle)) {
+        if (!parser->panic && !calcStaticBinaryArithmetic(parser, nodeHandle)) {
             return;
         }
     }
