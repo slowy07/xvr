@@ -8,7 +8,7 @@
 
 int main(void) {
     {
-        char* source = "print null;";
+        const char* source = "print null;";
         Xvr_Lexer lexer;
         Xvr_Parser parser;
         Xvr_initLexer(&lexer, source);
@@ -16,7 +16,7 @@ int main(void) {
     }
 
     {
-        char* source = "print(100_000);";
+        const char* source = "print(100_000);";
         Xvr_Lexer lexer;
         Xvr_Parser parser;
         Xvr_initLexer(&lexer, source);

@@ -312,7 +312,7 @@ static Xvr_Token makeKeywordOrIdentifier(Xvr_Lexer* lexer) {
 }
 
 // exposed functions
-void Xvr_initLexer(Xvr_Lexer* lexer, char* source) {
+void Xvr_initLexer(Xvr_Lexer* lexer, const char* source) {
     cleanLexer(lexer);
 
     lexer->source = source;
@@ -443,7 +443,7 @@ void Xvr_printToken(Xvr_Token* token) {
         if (keyword != NULL) {
             printf("%s", keyword);
         } else {
-            char* str = token->lexeme;
+            char* str = (char*)token->lexeme;
             int length = token->length;
             trim(&str, &length);
             printf("%.*s", length, str);

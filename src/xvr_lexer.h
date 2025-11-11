@@ -29,7 +29,7 @@ SOFTWARE.
 #include "xvr_token_types.h"
 
 typedef struct {
-    char* source;
+    const char* source;
     int start;
     int current;
     int line;
@@ -37,12 +37,12 @@ typedef struct {
 
 typedef struct {
     Xvr_TokenType type;
-    char* lexeme;
+    const char* lexeme;
     int length;
     int line;
 } Xvr_Token;
 
-XVR_API void Xvr_initLexer(Xvr_Lexer* lexer, char* source);
+XVR_API void Xvr_initLexer(Xvr_Lexer* lexer, const char* source);
 Xvr_Token Xvr_scanLexer(Xvr_Lexer* lexer);
 
 void Xvr_printToken(Xvr_Token* token);

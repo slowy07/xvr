@@ -39,7 +39,7 @@ SOFTWARE.
 #include "xvr_lexer.h"
 #include "xvr_parser.h"
 
-char* Xvr_readFile(char* path, size_t* fileSize) {
+const char* Xvr_readFile(const char* path, size_t* fileSize) {
     FILE* file = fopen(path, "rb");
 
     if (file == NULL) {
@@ -76,7 +76,7 @@ char* Xvr_readFile(char* path, size_t* fileSize) {
     return buffer;
 }
 
-int Xvr_writeFile(char* path, unsigned char* bytes, size_t size) {
+int Xvr_writeFile(const char* path, const unsigned char* bytes, size_t size) {
     FILE* file = fopen(path, "wb");
 
     if (file == NULL) {
@@ -100,7 +100,7 @@ int Xvr_writeFile(char* path, unsigned char* bytes, size_t size) {
 }
 
 // repl functions
-unsigned char* Xvr_compileString(char* source, size_t* size) {
+const unsigned char* Xvr_compileString(const char* source, size_t* size) {
     Xvr_Lexer lexer;
     Xvr_Parser parser;
     Xvr_Compiler compiler;
@@ -126,7 +126,7 @@ unsigned char* Xvr_compileString(char* source, size_t* size) {
     }
 
     // get the bytecode dump
-    unsigned char* tb = Xvr_collateCompiler(&compiler, (int*)(size));
+    const unsigned char* tb = Xvr_collateCompiler(&compiler, (int*)(size));
 
     // cleanup
     Xvr_freeCompiler(&compiler);
@@ -134,7 +134,7 @@ unsigned char* Xvr_compileString(char* source, size_t* size) {
     return tb;
 }
 
-void Xvr_runBinary(unsigned char* tb, size_t size) {
+void Xvr_runBinary(const unsigned char* tb, size_t size) {
     Xvr_Interpreter interpreter;
     Xvr_initInterpreter(&interpreter);
 
@@ -148,9 +148,9 @@ void Xvr_runBinary(unsigned char* tb, size_t size) {
     Xvr_freeInterpreter(&interpreter);
 }
 
-void Xvr_runBinaryFile(char* fname) {
+void Xvr_runBinaryFile(const char* fname) {
     size_t size = 0;
-    unsigned char* tb = (unsigned char*)Xvr_readFile(fname, &size);
+    const unsigned char* tb = (unsigned char*)Xvr_readFile(fname, &size);
     if (!tb) {
         return;
     }
@@ -158,9 +158,9 @@ void Xvr_runBinaryFile(char* fname) {
     // interpreter takes ownership of the binary data
 }
 
-void Xvr_runSource(char* source) {
+void Xvr_runSource(const char* source) {
     size_t size = 0;
-    unsigned char* tb = Xvr_compileString(source, &size);
+    const unsigned char* tb = Xvr_compileString(source, &size);
     if (!tb) {
         return;
     }
@@ -168,9 +168,9 @@ void Xvr_runSource(char* source) {
     Xvr_runBinary(tb, size);
 }
 
-void Xvr_runSourceFile(char* fname) {
+void Xvr_runSourceFile(const char* fname) {
     size_t size = 0;
-    char* source = Xvr_readFile(fname, &size);
+    const char* source = Xvr_readFile(fname, &size);
 
     if (!source) {
         return;

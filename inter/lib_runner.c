@@ -17,7 +17,7 @@
 
 typedef struct Xvr_Runner {
     Xvr_Interpreter interpreter;
-    unsigned char* bytecode;
+    const unsigned char* bytecode;
     size_t size;
 
     bool dirty;
@@ -54,11 +54,11 @@ static int nativeLoadScript(Xvr_Interpreter* interpreter,
     Xvr_freeLiteral(drivePathLiteral);
 
     // use raw types - easier
-    char* filePath = Xvr_toCString(XVR_AS_STRING(filePathLiteral));
+    const char* filePath = Xvr_toCString(XVR_AS_STRING(filePathLiteral));
 
     // load and compile the bytecode
     size_t fileSize = 0;
-    char* source = Xvr_readFile(filePath, &fileSize);
+    const char* source = Xvr_readFile(filePath, &fileSize);
 
     if (!source) {
         interpreter->errorOutput("Failed to load source file\n");
@@ -66,7 +66,7 @@ static int nativeLoadScript(Xvr_Interpreter* interpreter,
         return -1;
     }
 
-    unsigned char* bytecode = Xvr_compileString(source, &fileSize);
+    const unsigned char* bytecode = Xvr_compileString(source, &fileSize);
     free((void*)source);
 
     if (!bytecode) {
@@ -121,7 +121,7 @@ static int nativeLoadScriptBytecode(Xvr_Interpreter* interpreter,
 
     // get the drive and path as a string (can't trust that pesky strtok -
     // custom split) TODO: move this to refstring library
-    int driveLength = 0;
+    size_t driveLength = 0;
     while (Xvr_toCString(drivePath)[driveLength] != ':') {
         if (driveLength >= Xvr_lengthRefString(drivePath)) {
             interpreter->errorOutput(
@@ -538,7 +538,7 @@ static int nativeCheckScriptDirty(Xvr_Interpreter* interpreter,
 }
 
 typedef struct Natives {
-    char* name;
+    const char* name;
     Xvr_NativeFn fn;
 } Natives;
 
@@ -628,7 +628,7 @@ Xvr_Literal Xvr_getFilePathLiteral(Xvr_Interpreter* interpreter,
     Xvr_RefString* drivePath =
         Xvr_copyRefString(XVR_AS_STRING(*drivePathLiteral));
 
-    int driveLength = 0;
+    size_t driveLength = 0;
     while (Xvr_toCString(drivePath)[driveLength] != ':') {
         if (driveLength >= Xvr_lengthRefString(drivePath)) {
             interpreter->errorOutput(

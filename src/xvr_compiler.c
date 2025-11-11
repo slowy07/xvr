@@ -1296,7 +1296,8 @@ static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
 
             Xvr_Literal str = compiler->literalCache.literals[i];
 
-            for (int c = 0; c < XVR_AS_STRING(str)->length; c++) {
+            for (int c = 0; c < (int)Xvr_lengthRefString(XVR_AS_STRING(str));
+                 c++) {
                 emitByte(&collation, &capacity, &count,
                          Xvr_toCString(XVR_AS_STRING(str))[c]);
             }
@@ -1430,7 +1431,9 @@ static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
 
             Xvr_Literal identifier = compiler->literalCache.literals[i];
 
-            for (int c = 0; c < XVR_AS_IDENTIFIER(identifier)->length; c++) {
+            for (int c = 0;
+                 c < (int)Xvr_lengthRefString(XVR_AS_IDENTIFIER(identifier));
+                 c++) {
                 emitByte(&collation, &capacity, &count,
                          Xvr_toCString(XVR_AS_IDENTIFIER(identifier))[c]);
             }
