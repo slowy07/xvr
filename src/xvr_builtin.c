@@ -265,8 +265,6 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
     Xvr_Literal first = Xvr_popLiteralArray(arguments);
     Xvr_Literal compound = Xvr_popLiteralArray(arguments);
 
-    Xvr_Literal value = XVR_TO_NULL_LITERAL;
-
     // dictionary - no slicing
     if (XVR_IS_DICTIONARY(compound)) {
         if (XVR_IS_IDENTIFIER(first)) {
@@ -287,7 +285,24 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
             Xvr_freeLiteral(idn);
         }
 
-        value = Xvr_getLiteralDictionary(XVR_AS_DICTIONARY(compound), first);
+        // second and third are bad args to dictionaries
+        if (!XVR_IS_NULL(second) || !XVR_IS_NULL(third)) {
+            interpreter->errorOutput(
+                "Index slicing not allowed for dictionaries\n");
+
+            Xvr_freeLiteral(op);
+            Xvr_freeLiteral(assign);
+            Xvr_freeLiteral(third);
+            Xvr_freeLiteral(second);
+            Xvr_freeLiteral(first);
+            Xvr_freeLiteral(compound);
+
+            return -1;
+        }
+
+        // get the value
+        Xvr_Literal value =
+            Xvr_getLiteralDictionary(XVR_AS_DICTIONARY(compound), first);
 
         // dictionary
         if (XVR_IS_NULL(op)) {
@@ -338,6 +353,19 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
             Xvr_setLiteralDictionary(XVR_AS_DICTIONARY(compound), first, lit);
             Xvr_freeLiteral(lit);
         }
+
+        // leave the dictionary on the stack
+        Xvr_pushLiteralArray(&interpreter->stack, compound);
+
+        Xvr_freeLiteral(op);
+        Xvr_freeLiteral(assign);
+        Xvr_freeLiteral(third);
+        Xvr_freeLiteral(second);
+        Xvr_freeLiteral(first);
+        Xvr_freeLiteral(compound);
+        Xvr_freeLiteral(value);
+
+        return 1;
     }
 
     // array - slicing
@@ -383,8 +411,11 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
                 Xvr_freeLiteral(idn);
             }
 
-            // handle each null case
-            if (XVR_IS_NULL(first) || !XVR_IS_INTEGER(first)) {
+            // handle each error case
+            if (!XVR_IS_INTEGER(first) || XVR_AS_INTEGER(first) < 0 ||
+                XVR_AS_INTEGER(first) >= XVR_AS_ARRAY(compound)->count) {
+                interpreter->errorOutput("Bad first indexing\n");
+
                 // something is weird - skip out
                 Xvr_freeLiteral(op);
                 Xvr_freeLiteral(assign);
@@ -392,17 +423,46 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
                 Xvr_freeLiteral(second);
                 Xvr_freeLiteral(first);
                 Xvr_freeLiteral(compound);
-                Xvr_freeLiteral(value);
 
                 return -1;
             }
 
-            if (XVR_IS_NULL(second)) {  // assign only a single character
-                // get the "first" within the array, then skip out
+            if ((!XVR_IS_NULL(second) && !XVR_IS_INTEGER(second)) ||
+                XVR_AS_INTEGER(second) < 0 ||
+                XVR_AS_INTEGER(second) >= XVR_AS_ARRAY(compound)->count) {
+                interpreter->errorOutput("Bad second indexing\n");
 
-                Xvr_freeLiteral(value);
-                value = Xvr_getLiteralArray(XVR_AS_ARRAY(compound), first);
-                Xvr_pushLiteralArray(&interpreter->stack, value);
+                // something is weird - skip out
+                Xvr_freeLiteral(op);
+                Xvr_freeLiteral(assign);
+                Xvr_freeLiteral(third);
+                Xvr_freeLiteral(second);
+                Xvr_freeLiteral(first);
+                Xvr_freeLiteral(compound);
+
+                return -1;
+            }
+
+            if ((!XVR_IS_NULL(third) && !XVR_IS_INTEGER(third)) ||
+                XVR_AS_INTEGER(third) == 0) {
+                interpreter->errorOutput("Bad third indexing\n");
+
+                // something is weird - skip out
+                Xvr_freeLiteral(op);
+                Xvr_freeLiteral(assign);
+                Xvr_freeLiteral(third);
+                Xvr_freeLiteral(second);
+                Xvr_freeLiteral(first);
+                Xvr_freeLiteral(compound);
+
+                return -1;
+            }
+
+            // simple indexing if second is null
+            if (XVR_IS_NULL(second)) {
+                Xvr_Literal result =
+                    Xvr_getLiteralArray(XVR_AS_ARRAY(compound), first);
+                Xvr_pushLiteralArray(&interpreter->stack, result);
 
                 Xvr_freeLiteral(op);
                 Xvr_freeLiteral(assign);
@@ -410,52 +470,55 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
                 Xvr_freeLiteral(second);
                 Xvr_freeLiteral(first);
                 Xvr_freeLiteral(compound);
-                Xvr_freeLiteral(value);
+                Xvr_freeLiteral(result);
 
                 return 1;
-            }
-
-            if (!XVR_IS_INTEGER(second) ||
-                (!XVR_IS_NULL(third) && !XVR_IS_INTEGER(third)) ||
-                XVR_AS_INTEGER(second) < 0 ||
-                XVR_AS_INTEGER(second) > XVR_AS_ARRAY(compound)->count ||
-                XVR_AS_INTEGER(third) == 0) {
-                // something is weird - skip out
-                Xvr_freeLiteral(op);
-                Xvr_freeLiteral(assign);
-                Xvr_freeLiteral(third);
-                Xvr_freeLiteral(second);
-                Xvr_freeLiteral(first);
-                Xvr_freeLiteral(compound);
-                Xvr_freeLiteral(value);
-
-                return -1;
             }
 
             // start building a new array from the old one
             Xvr_LiteralArray* result = XVR_ALLOCATE(Xvr_LiteralArray, 1);
             Xvr_initLiteralArray(result);
 
-            int min = XVR_AS_INTEGER(third) > 0 ? XVR_AS_INTEGER(first)
-                                                : XVR_AS_INTEGER(second);
-
             // copy compound into result
-            for (int i = min;
-                 i >= 0 && i <= XVR_AS_ARRAY(compound)->count &&
-                 i >= XVR_AS_INTEGER(first) && i <= XVR_AS_INTEGER(second);
-                 i += XVR_AS_INTEGER(third)) {
-                Xvr_Literal idx = XVR_TO_INTEGER_LITERAL(i);
-                Xvr_Literal tmp =
-                    Xvr_getLiteralArray(XVR_AS_ARRAY(compound), idx);
-                Xvr_pushLiteralArray(result, tmp);
+            if (XVR_AS_INTEGER(third) > 0) {
+                for (int i = XVR_AS_INTEGER(first); i <= XVR_AS_INTEGER(second);
+                     i += XVR_AS_INTEGER(third)) {
+                    Xvr_Literal idx = XVR_TO_INTEGER_LITERAL(i);
+                    Xvr_Literal tmp =
+                        Xvr_getLiteralArray(XVR_AS_ARRAY(compound), idx);
+                    Xvr_pushLiteralArray(result, tmp);
 
-                Xvr_freeLiteral(idx);
-                Xvr_freeLiteral(tmp);
+                    Xvr_freeLiteral(idx);
+                    Xvr_freeLiteral(tmp);
+                }
+            } else {
+                for (int i = XVR_AS_INTEGER(second); i >= XVR_AS_INTEGER(first);
+                     i += XVR_AS_INTEGER(third)) {
+                    Xvr_Literal idx = XVR_TO_INTEGER_LITERAL(i);
+                    Xvr_Literal tmp =
+                        Xvr_getLiteralArray(XVR_AS_ARRAY(compound), idx);
+                    Xvr_pushLiteralArray(result, tmp);
+
+                    Xvr_freeLiteral(idx);
+                    Xvr_freeLiteral(tmp);
+                }
             }
 
             // finally, swap out the compound for the result
             Xvr_freeLiteral(compound);
             compound = XVR_TO_ARRAY_LITERAL(result);
+
+            // leave the array on the stack
+            Xvr_pushLiteralArray(&interpreter->stack, compound);
+
+            Xvr_freeLiteral(op);
+            Xvr_freeLiteral(assign);
+            Xvr_freeLiteral(third);
+            Xvr_freeLiteral(second);
+            Xvr_freeLiteral(first);
+            Xvr_freeLiteral(compound);
+
+            return 1;
         }
 
         // array slice assignment
@@ -499,8 +562,11 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
                 Xvr_freeLiteral(idn);
             }
 
-            // handle each null case
-            if (XVR_IS_NULL(first) || !XVR_IS_INTEGER(first)) {
+            // handle each error case
+            if (!XVR_IS_INTEGER(first) || XVR_AS_INTEGER(first) < 0 ||
+                XVR_AS_INTEGER(first) >= XVR_AS_ARRAY(compound)->count) {
+                interpreter->errorOutput("Bad first indexing assignment\n");
+
                 // something is weird - skip out
                 Xvr_freeLiteral(op);
                 Xvr_freeLiteral(assign);
@@ -508,57 +574,65 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
                 Xvr_freeLiteral(second);
                 Xvr_freeLiteral(first);
                 Xvr_freeLiteral(compound);
-                Xvr_freeLiteral(value);
 
                 return -1;
             }
 
+            if ((!XVR_IS_NULL(second) && !XVR_IS_INTEGER(second)) ||
+                XVR_AS_INTEGER(second) < 0 ||
+                XVR_AS_INTEGER(second) >= XVR_AS_ARRAY(compound)->count) {
+                interpreter->errorOutput("Bad second indexing assignment\n");
+
+                // something is weird - skip out
+                Xvr_freeLiteral(op);
+                Xvr_freeLiteral(assign);
+                Xvr_freeLiteral(third);
+                Xvr_freeLiteral(second);
+                Xvr_freeLiteral(first);
+                Xvr_freeLiteral(compound);
+
+                return -1;
+            }
+
+            if ((!XVR_IS_NULL(third) && !XVR_IS_INTEGER(third)) ||
+                XVR_AS_INTEGER(third) == 0) {
+                interpreter->errorOutput("Bad third indexing assignment\n");
+
+                // something is weird - skip out
+                Xvr_freeLiteral(op);
+                Xvr_freeLiteral(assign);
+                Xvr_freeLiteral(third);
+                Xvr_freeLiteral(second);
+                Xvr_freeLiteral(first);
+                Xvr_freeLiteral(compound);
+
+                return -1;
+            }
+
+            // simple indexing assignment if second is null
             if (XVR_IS_NULL(second)) {
-                // set the "first" within the array, then skip out
+                bool ret = -1;
+
                 if (!Xvr_setLiteralArray(XVR_AS_ARRAY(compound), first,
                                          assign)) {
                     interpreter->errorOutput(
-                        "Index assignment out of bounds\n");
-
-                    Xvr_freeLiteral(op);
-                    Xvr_freeLiteral(assign);
-                    Xvr_freeLiteral(third);
-                    Xvr_freeLiteral(second);
-                    Xvr_freeLiteral(first);
-                    Xvr_freeLiteral(compound);
-                    Xvr_freeLiteral(value);
-
+                        "Array index out of bounds in assignment");
                     return -1;
+                } else {
+                    Xvr_pushLiteralArray(
+                        &interpreter->stack,
+                        compound);  // leave the array on the stack
+                    ret = 1;
                 }
 
-                Xvr_pushLiteralArray(&interpreter->stack, compound);
-
                 Xvr_freeLiteral(op);
                 Xvr_freeLiteral(assign);
                 Xvr_freeLiteral(third);
                 Xvr_freeLiteral(second);
                 Xvr_freeLiteral(first);
                 Xvr_freeLiteral(compound);
-                Xvr_freeLiteral(value);
 
-                return 1;
-            }
-
-            if (!XVR_IS_INTEGER(second) ||
-                (!XVR_IS_NULL(third) && !XVR_IS_INTEGER(third)) ||
-                XVR_AS_INTEGER(second) < 0 ||
-                XVR_AS_INTEGER(second) > XVR_AS_ARRAY(compound)->count ||
-                XVR_AS_INTEGER(third) == 0) {
-                // something is weird - skip out
-                Xvr_freeLiteral(op);
-                Xvr_freeLiteral(assign);
-                Xvr_freeLiteral(third);
-                Xvr_freeLiteral(second);
-                Xvr_freeLiteral(first);
-                Xvr_freeLiteral(compound);
-                Xvr_freeLiteral(value);
-
-                return -1;
+                return ret;
             }
 
             // start building a new array from the old one
@@ -646,18 +720,29 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
                 }
             }
 
-            // finally, swap out the compound for the result
             Xvr_freeLiteral(compound);
             compound = XVR_TO_ARRAY_LITERAL(result);
+
+            Xvr_pushLiteralArray(&interpreter->stack, compound);
+
+            Xvr_freeLiteral(op);
+            Xvr_freeLiteral(assign);
+            Xvr_freeLiteral(third);
+            Xvr_freeLiteral(second);
+            Xvr_freeLiteral(first);
+            Xvr_freeLiteral(compound);
+
+            return 1;
         }
 
+        // assignment and other operations
         if (XVR_IS_IDENTIFIER(first)) {
             Xvr_Literal idn = first;
             Xvr_parseIdentifierToValue(interpreter, &first);
             Xvr_freeLiteral(idn);
         }
 
-        value = Xvr_getLiteralArray(XVR_AS_ARRAY(compound), first);
+        Xvr_Literal value = Xvr_getLiteralArray(XVR_AS_ARRAY(compound), first);
 
         if (XVR_IS_STRING(op) &&
             Xvr_equalsRefStringCString(XVR_AS_STRING(op), "+=")) {
@@ -693,6 +778,18 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
             Xvr_setLiteralArray(XVR_AS_ARRAY(compound), first, lit);
             Xvr_freeLiteral(lit);
         }
+
+        // leave the array on the stack
+        Xvr_pushLiteralArray(&interpreter->stack, compound);
+
+        Xvr_freeLiteral(op);
+        Xvr_freeLiteral(assign);
+        Xvr_freeLiteral(third);
+        Xvr_freeLiteral(second);
+        Xvr_freeLiteral(first);
+        Xvr_freeLiteral(compound);
+
+        return 1;
     }
 
     // string - slicing
@@ -717,7 +814,7 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
             if (!XVR_IS_NULL(second)) {
                 if (XVR_IS_INDEX_BLANK(second)) {
                     Xvr_freeLiteral(second);
-                    second = XVR_TO_INTEGER_LITERAL(compoundLength);
+                    second = XVR_TO_INTEGER_LITERAL(compoundLength - 1);
                 }
 
                 if (XVR_IS_IDENTIFIER(second)) {
@@ -738,8 +835,12 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
                 Xvr_freeLiteral(idn);
             }
 
-            // handle each null case
-            if (XVR_IS_NULL(first) || !XVR_IS_INTEGER(first)) {
+            // handle each error case
+            if (!XVR_IS_INTEGER(first) || XVR_AS_INTEGER(first) < 0 ||
+                XVR_AS_INTEGER(first) >=
+                    (int)Xvr_lengthRefString(XVR_AS_STRING(compound))) {
+                interpreter->errorOutput("Bad first indexing in string\n");
+
                 // something is weird - skip out
                 Xvr_freeLiteral(op);
                 Xvr_freeLiteral(assign);
@@ -747,24 +848,52 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
                 Xvr_freeLiteral(second);
                 Xvr_freeLiteral(first);
                 Xvr_freeLiteral(compound);
-                Xvr_freeLiteral(value);
 
                 return -1;
             }
 
-            if (XVR_IS_NULL(second)) {  // assign only a single character
-                char c = Xvr_toCString(
-                    XVR_AS_STRING(compound))[XVR_AS_INTEGER(first)];
+            if ((!XVR_IS_NULL(second) && !XVR_IS_INTEGER(second)) ||
+                XVR_AS_INTEGER(second) < 0 ||
+                XVR_AS_INTEGER(second) >=
+                    (int)Xvr_lengthRefString(XVR_AS_STRING(compound))) {
+                interpreter->errorOutput("Bad second indexing in string\n");
 
-                char buffer[16];
-                snprintf(buffer, 16, "%c", c);
+                // something is weird - skip out
+                Xvr_freeLiteral(op);
+                Xvr_freeLiteral(assign);
+                Xvr_freeLiteral(third);
+                Xvr_freeLiteral(second);
+                Xvr_freeLiteral(first);
+                Xvr_freeLiteral(compound);
 
-                Xvr_freeLiteral(value);
-                int totalLength = strlen(buffer);
-                value = XVR_TO_STRING_LITERAL(
-                    Xvr_createRefStringLength(buffer, totalLength));
+                return -1;
+            }
 
-                Xvr_pushLiteralArray(&interpreter->stack, value);
+            if ((!XVR_IS_NULL(third) && !XVR_IS_INTEGER(third)) ||
+                XVR_AS_INTEGER(third) == 0) {
+                interpreter->errorOutput("Bad third indexing in string\n");
+
+                // something is weird - skip out
+                Xvr_freeLiteral(op);
+                Xvr_freeLiteral(assign);
+                Xvr_freeLiteral(third);
+                Xvr_freeLiteral(second);
+                Xvr_freeLiteral(first);
+                Xvr_freeLiteral(compound);
+
+                return -1;
+            }
+
+            // simple indexing if second is null
+            if (XVR_IS_NULL(second)) {
+                const char* cstr = Xvr_toCString(XVR_AS_STRING(compound));
+                char buf[16];
+
+                snprintf(buf, 16, "%s", &(cstr[XVR_AS_INTEGER(first)]));
+                Xvr_Literal result =
+                    XVR_TO_STRING_LITERAL(Xvr_createRefStringLength(buf, 1));
+
+                Xvr_pushLiteralArray(&interpreter->stack, result);
 
                 Xvr_freeLiteral(op);
                 Xvr_freeLiteral(assign);
@@ -772,57 +901,49 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
                 Xvr_freeLiteral(second);
                 Xvr_freeLiteral(first);
                 Xvr_freeLiteral(compound);
-                Xvr_freeLiteral(value);
+                Xvr_freeLiteral(result);
 
                 return 1;
-            }
-
-            if (!XVR_IS_INTEGER(second) ||
-                (!XVR_IS_NULL(third) && !XVR_IS_INTEGER(third)) ||
-                XVR_AS_INTEGER(second) < 0 ||
-                XVR_AS_INTEGER(second) > compoundLength ||
-                XVR_AS_INTEGER(third) == 0) {
-                // something is weird - skip out
-                Xvr_freeLiteral(op);
-                Xvr_freeLiteral(assign);
-                Xvr_freeLiteral(third);
-                Xvr_freeLiteral(second);
-                Xvr_freeLiteral(first);
-                Xvr_freeLiteral(compound);
-                Xvr_freeLiteral(value);
-
-                return -1;
             }
 
             // start building a new string from the old one
             char* result = XVR_ALLOCATE(char, XVR_MAX_STRING_LENGTH);
 
-            int lower = XVR_AS_INTEGER(third) > 0 ? XVR_AS_INTEGER(first)
-                                                  : XVR_AS_INTEGER(first) - 1;
-            int min = XVR_AS_INTEGER(third) > 0 ? XVR_AS_INTEGER(first)
-                                                : XVR_AS_INTEGER(second) - 1;
-            int max =
-                XVR_AS_INTEGER(third) > 0
-                    ? XVR_AS_INTEGER(second) +
-                          (XVR_AS_INTEGER(second) == compoundLength ? -1 : 0)
-                    : XVR_AS_INTEGER(second);
-
             // copy compound into result
             int resultIndex = 0;
-            for (int i = min; i >= 0 && i >= lower && i <= max;
-                 i += XVR_AS_INTEGER(third)) {
-                result[resultIndex++] =
-                    Xvr_toCString(XVR_AS_STRING(compound))[i];
+
+            if (XVR_AS_INTEGER(third) > 0) {
+                for (int i = XVR_AS_INTEGER(first); i <= XVR_AS_INTEGER(second);
+                     i += XVR_AS_INTEGER(third)) {
+                    result[resultIndex++] =
+                        Xvr_toCString(XVR_AS_STRING(compound))[i];
+                }
+            } else {
+                for (int i = XVR_AS_INTEGER(second); i >= XVR_AS_INTEGER(first);
+                     i += XVR_AS_INTEGER(third)) {
+                    result[resultIndex++] =
+                        Xvr_toCString(XVR_AS_STRING(compound))[i];
+                }
             }
 
             result[resultIndex] = '\0';
 
-            // finally, swap out the compound for the result
             Xvr_freeLiteral(compound);
             compound = XVR_TO_STRING_LITERAL(
                 Xvr_createRefStringLength(result, resultIndex));
 
             XVR_FREE_ARRAY(char, result, XVR_MAX_STRING_LENGTH);
+
+            Xvr_pushLiteralArray(&interpreter->stack, compound);
+
+            Xvr_freeLiteral(op);
+            Xvr_freeLiteral(assign);
+            Xvr_freeLiteral(third);
+            Xvr_freeLiteral(second);
+            Xvr_freeLiteral(first);
+            Xvr_freeLiteral(compound);
+
+            return 1;
         }
 
         // string slice assignment
@@ -846,7 +967,7 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
             if (!XVR_IS_NULL(second)) {
                 if (XVR_IS_INDEX_BLANK(second)) {
                     Xvr_freeLiteral(second);
-                    second = XVR_TO_INTEGER_LITERAL(compoundLength);
+                    second = XVR_TO_INTEGER_LITERAL(compoundLength - 1);
                 }
 
                 if (XVR_IS_IDENTIFIER(second)) {
@@ -867,42 +988,28 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
                 Xvr_freeLiteral(idn);
             }
 
-            // handle each null case
-            if (XVR_IS_NULL(first) || !XVR_IS_INTEGER(first)) {
-                // something is weird - skip out
+            if (!XVR_IS_INTEGER(first) || XVR_AS_INTEGER(first) < 0 ||
+                XVR_AS_INTEGER(first) >=
+                    (int)Xvr_lengthRefString(XVR_AS_STRING(compound))) {
+                interpreter->errorOutput(
+                    "Bad first indexing in string assignment\n");
+
                 Xvr_freeLiteral(op);
                 Xvr_freeLiteral(assign);
                 Xvr_freeLiteral(third);
                 Xvr_freeLiteral(second);
                 Xvr_freeLiteral(first);
                 Xvr_freeLiteral(compound);
-                Xvr_freeLiteral(value);
 
                 return -1;
             }
 
-            if (XVR_IS_NULL(second)) {  // assign only a single character
-                // set the "first" within the array, then skip out
-                if (XVR_AS_STRING(assign)->length != 1) {
-                    // something is weird - skip out
-                    Xvr_freeLiteral(op);
-                    Xvr_freeLiteral(assign);
-                    Xvr_freeLiteral(third);
-                    Xvr_freeLiteral(second);
-                    Xvr_freeLiteral(first);
-                    Xvr_freeLiteral(compound);
-                    Xvr_freeLiteral(value);
-
-                    return -1;
-                }
-
-                Xvr_Literal copiedCompound = XVR_TO_STRING_LITERAL(
-                    Xvr_deepCopyRefString(XVR_AS_STRING(compound)));
-
-                XVR_AS_STRING(copiedCompound)->data[XVR_AS_INTEGER(first)] =
-                    Xvr_toCString(XVR_AS_STRING(assign))[0];
-
-                Xvr_pushLiteralArray(&interpreter->stack, copiedCompound);
+            if ((!XVR_IS_NULL(second) && !XVR_IS_INTEGER(second)) ||
+                XVR_AS_INTEGER(second) < 0 ||
+                XVR_AS_INTEGER(second) >=
+                    (int)Xvr_lengthRefString(XVR_AS_STRING(compound))) {
+                interpreter->errorOutput(
+                    "Bad second indexing in string assignment\n");
 
                 Xvr_freeLiteral(op);
                 Xvr_freeLiteral(assign);
@@ -910,16 +1017,15 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
                 Xvr_freeLiteral(second);
                 Xvr_freeLiteral(first);
                 Xvr_freeLiteral(compound);
-                Xvr_freeLiteral(value);
 
-                return 1;
+                return -1;
             }
 
-            if (!XVR_IS_INTEGER(second) ||
-                (!XVR_IS_NULL(third) && !XVR_IS_INTEGER(third)) ||
-                XVR_AS_INTEGER(second) < 0 ||
-                XVR_AS_INTEGER(second) > compoundLength ||
+            if ((!XVR_IS_NULL(third) && !XVR_IS_INTEGER(third)) ||
                 XVR_AS_INTEGER(third) == 0) {
+                interpreter->errorOutput(
+                    "Bad third indexing in string assignment\n");
+
                 // something is weird - skip out
                 Xvr_freeLiteral(op);
                 Xvr_freeLiteral(assign);
@@ -927,7 +1033,6 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
                 Xvr_freeLiteral(second);
                 Xvr_freeLiteral(first);
                 Xvr_freeLiteral(compound);
-                Xvr_freeLiteral(value);
 
                 return -1;
             }
@@ -989,27 +1094,41 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
                 Xvr_createRefStringLength(result, resultIndex));
 
             XVR_FREE_ARRAY(char, result, XVR_MAX_STRING_LENGTH);
+
+            Xvr_pushLiteralArray(&interpreter->stack, compound);
+
+            Xvr_freeLiteral(op);
+            Xvr_freeLiteral(assign);
+            Xvr_freeLiteral(third);
+            Xvr_freeLiteral(second);
+            Xvr_freeLiteral(first);
+            Xvr_freeLiteral(compound);
+
+            return 1;
+
         }
 
         else if (XVR_IS_STRING(op) &&
                  Xvr_equalsRefStringCString(XVR_AS_STRING(op), "+=")) {
             Xvr_Literal tmp = addition(interpreter, compound, assign);
             Xvr_freeLiteral(compound);
-            compound = tmp;
+            compound = tmp;  // don't clear tmp
         }
+
+        // leave the string on the stack
+        Xvr_pushLiteralArray(&interpreter->stack, compound);
+
+        Xvr_freeLiteral(op);
+        Xvr_freeLiteral(assign);
+        Xvr_freeLiteral(third);
+        Xvr_freeLiteral(second);
+        Xvr_freeLiteral(first);
+        Xvr_freeLiteral(compound);
+
+        return 1;
     }
 
-    Xvr_pushLiteralArray(&interpreter->stack, compound);
-
-    Xvr_freeLiteral(op);
-    Xvr_freeLiteral(assign);
-    Xvr_freeLiteral(third);
-    Xvr_freeLiteral(second);
-    Xvr_freeLiteral(first);
-    Xvr_freeLiteral(compound);
-    Xvr_freeLiteral(value);
-
-    return 1;
+    return -1;
 }
 
 int Xvr_private_set(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments) {

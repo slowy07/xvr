@@ -33,19 +33,19 @@ typedef void* (*Xvr_RefStringAllocatorFn)(void* pointer, size_t oldSize,
 void Xvr_setRefStringAllocatorFn(Xvr_RefStringAllocatorFn);
 
 typedef struct Xvr_RefString {
+    size_t length;
     int refCount;
-    int length;
-    char data[1];
+    char data[];
 } Xvr_RefString;
 
-Xvr_RefString* Xvr_createRefString(char* cstring);
-Xvr_RefString* Xvr_createRefStringLength(char* cstring, int length);
+Xvr_RefString* Xvr_createRefString(const char* cstring);
+Xvr_RefString* Xvr_createRefStringLength(const char* cstring, size_t length);
 void Xvr_deleteRefString(Xvr_RefString* refString);
 int Xvr_countRefString(Xvr_RefString* refString);
-int Xvr_lengthRefString(Xvr_RefString* refString);
+size_t Xvr_lengthRefString(Xvr_RefString* refString);
 Xvr_RefString* Xvr_copyRefString(Xvr_RefString* refString);
 Xvr_RefString* Xvr_deepCopyRefString(Xvr_RefString* refString);
-char* Xvr_toCString(Xvr_RefString* refString);
+const char* Xvr_toCString(Xvr_RefString* refString);
 bool Xvr_equalsRefString(Xvr_RefString* lhs, Xvr_RefString* rhs);
 bool Xvr_equalsRefStringCString(Xvr_RefString* lhs, char* cstring);
 

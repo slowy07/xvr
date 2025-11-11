@@ -27,13 +27,13 @@ SOFTWARE.
 
 #include "xvr_common.h"
 
-char* Xvr_readFile(char* path, size_t* fileSize);
-int Xvr_writeFile(char *path, unsigned char *bytes, size_t size);
-unsigned char* Xvr_compileString(char* source, size_t* size);
+const char* Xvr_readFile(const char* path, size_t* fileSize);
+int Xvr_writeFile(const char *path, const unsigned char *bytes, size_t size);
+const unsigned char* Xvr_compileString(const char* source, size_t* size);
 
-void Xvr_runBinary(unsigned char* tb, size_t size);
-void Xvr_runBinaryFile(char* fname);
-void Xvr_runSource(char* source);
-void Xvr_runSourceFile(char* fname);
+void Xvr_runBinary(const unsigned char* tb, size_t size);
+void Xvr_runBinaryFile(const char* fname);
+void Xvr_runSource(const char* source);
+void Xvr_runSourceFile(const char* fname);
 
 #endif // !INTER_TOOLS_H

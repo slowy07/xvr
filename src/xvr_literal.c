@@ -544,11 +544,11 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
         char buffer[XVR_MAX_STRING_LENGTH];
         if (!quotes) {
             snprintf(buffer, XVR_MAX_STRING_LENGTH, "%.*s",
-                     Xvr_lengthRefString(XVR_AS_STRING(literal)),
+                     (int)Xvr_lengthRefString(XVR_AS_STRING(literal)),
                      Xvr_toCString(XVR_AS_STRING(literal)));
         } else {
             snprintf(buffer, XVR_MAX_STRING_LENGTH, "%c%.*s%c", quotes,
-                     Xvr_lengthRefString(XVR_AS_STRING(literal)),
+                     (int)Xvr_lengthRefString(XVR_AS_STRING(literal)),
                      Xvr_toCString(XVR_AS_STRING(literal)), quotes);
         }
         printFn(buffer);
@@ -653,7 +653,7 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
     case XVR_LITERAL_IDENTIFIER: {
         char buffer[256];
         snprintf(buffer, 256, "%.*s",
-                 Xvr_lengthRefString(XVR_AS_IDENTIFIER(literal)),
+                 (int)Xvr_lengthRefString(XVR_AS_IDENTIFIER(literal)),
                  Xvr_toCString(XVR_AS_IDENTIFIER(literal)));
         printFn(buffer);
     } break;
