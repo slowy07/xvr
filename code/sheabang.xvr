@@ -1,0 +1,9 @@
+#! xvr
+
+// when the text file with the sheabang
+// is run as an executable in a unix-like
+// operating system, the program
+// loader mechanism interprets the remainder
+// of the file's line as interpreter directive
+
+print("wello xvr");

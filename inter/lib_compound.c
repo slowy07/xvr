@@ -512,11 +512,11 @@ static int nativeToLower(Xvr_Interpreter* interpreter,
     }
 
     Xvr_RefString* selfRefString = XVR_AS_STRING(selfLiteral);
-    char* self = Xvr_toCString(selfRefString);
+    const char* self = Xvr_toCString(selfRefString);
 
     char* result = XVR_ALLOCATE(char, Xvr_lengthRefString(selfRefString) + 1);
 
-    for (int i = 0; i < Xvr_lengthRefString(selfRefString); i++) {
+    for (int i = 0; i < (int)Xvr_lengthRefString(selfRefString); i++) {
         result[i] = tolower(self[i]);
     }
     result[Xvr_lengthRefString(selfRefString)] = '\0';
@@ -536,7 +536,7 @@ static int nativeToLower(Xvr_Interpreter* interpreter,
 
 static char* toStringUtilObject = NULL;
 static void toStringUtil(const char* input) {
-    int len = strlen(input) + 1;
+    size_t len = strlen(input) + 1;
 
     if (len > XVR_MAX_STRING_LENGTH) {
         len = XVR_MAX_STRING_LENGTH;
@@ -608,11 +608,11 @@ static int nativeToUpper(Xvr_Interpreter* interpreter,
     }
 
     Xvr_RefString* selfRefString = XVR_AS_STRING(selfLiteral);
-    char* self = Xvr_toCString(selfRefString);
+    const char* self = Xvr_toCString(selfRefString);
 
     char* result = XVR_ALLOCATE(char, Xvr_lengthRefString(selfRefString) + 1);
 
-    for (int i = 0; i < Xvr_lengthRefString(selfRefString); i++) {
+    for (int i = 0; i < (int)Xvr_lengthRefString(selfRefString); i++) {
         result[i] = toupper(self[i]);
     }
     result[Xvr_lengthRefString(selfRefString)] = '\0';
@@ -673,10 +673,10 @@ static int nativeTrim(Xvr_Interpreter* interpreter,
     int bufferBegin = 0;
     int bufferEnd = Xvr_lengthRefString(selfRefString);
 
-    for (int i = 0; i < Xvr_lengthRefString(selfRefString); i++) {
+    for (int i = 0; i < (int)Xvr_lengthRefString(selfRefString); i++) {
         int trimIndex = 0;
 
-        while (trimIndex < Xvr_lengthRefString(trimCharsRefString)) {
+        while (trimIndex < (int)Xvr_lengthRefString(trimCharsRefString)) {
             if (Xvr_toCString(selfRefString)[i] ==
                 Xvr_toCString(trimCharsRefString)[trimIndex]) {
                 break;
@@ -685,7 +685,7 @@ static int nativeTrim(Xvr_Interpreter* interpreter,
             trimIndex++;
         }
 
-        if (trimIndex < Xvr_lengthRefString(trimCharsRefString)) {
+        if (trimIndex < (int)Xvr_lengthRefString(trimCharsRefString)) {
             bufferBegin++;
             continue;
         } else {
@@ -696,7 +696,7 @@ static int nativeTrim(Xvr_Interpreter* interpreter,
     for (int i = Xvr_lengthRefString(selfRefString); i >= 0; i--) {
         int trimIndex = 0;
 
-        while (trimIndex < Xvr_lengthRefString(trimCharsRefString)) {
+        while (trimIndex < (int)Xvr_lengthRefString(trimCharsRefString)) {
             if (Xvr_toCString(selfRefString)[i - 1] ==
                 Xvr_toCString(trimCharsRefString)[trimIndex]) {
                 break;
@@ -705,7 +705,7 @@ static int nativeTrim(Xvr_Interpreter* interpreter,
             trimIndex++;
         }
 
-        if (trimIndex < Xvr_lengthRefString(trimCharsRefString)) {
+        if (trimIndex < (int)Xvr_lengthRefString(trimCharsRefString)) {
             bufferEnd--;
             continue;
         } else {
@@ -775,10 +775,10 @@ static int nativeTrimBegin(Xvr_Interpreter* interpreter,
     int bufferBegin = 0;
     int bufferEnd = Xvr_lengthRefString(selfRefString);
 
-    for (int i = 0; i < Xvr_lengthRefString(selfRefString); i++) {
+    for (int i = 0; i < (int)Xvr_lengthRefString(selfRefString); i++) {
         int trimIndex = 0;
 
-        while (trimIndex < Xvr_lengthRefString(trimCharsRefString)) {
+        while (trimIndex < (int)Xvr_lengthRefString(trimCharsRefString)) {
             if (Xvr_toCString(selfRefString)[i] ==
                 Xvr_toCString(trimCharsRefString)[trimIndex]) {
                 break;
@@ -786,7 +786,7 @@ static int nativeTrimBegin(Xvr_Interpreter* interpreter,
             trimIndex++;
         }
 
-        if (trimIndex < Xvr_lengthRefString(trimCharsRefString)) {
+        if (trimIndex < (int)Xvr_lengthRefString(trimCharsRefString)) {
             bufferBegin++;
             continue;
         } else {
@@ -858,10 +858,10 @@ static int nativeTrimEnd(Xvr_Interpreter* interpreter,
     int bufferBegin = 0;
     int bufferEnd = Xvr_lengthRefString(selfRefString);
 
-    for (int i = Xvr_lengthRefString(selfRefString); i >= 0; i--) {
+    for (int i = (int)Xvr_lengthRefString(selfRefString); i >= 0; i--) {
         int trimIndex = 0;
 
-        while (trimIndex < Xvr_lengthRefString(trimCharsRefString)) {
+        while (trimIndex < (int)Xvr_lengthRefString(trimCharsRefString)) {
             if (Xvr_toCString(selfRefString)[i - 1] ==
                 Xvr_toCString(trimCharsRefString)[trimIndex]) {
                 break;
@@ -869,7 +869,7 @@ static int nativeTrimEnd(Xvr_Interpreter* interpreter,
             trimIndex++;
         }
 
-        if (trimIndex < Xvr_lengthRefString(trimCharsRefString)) {
+        if (trimIndex < (int)Xvr_lengthRefString(trimCharsRefString)) {
             bufferEnd--;
             continue;
         } else {

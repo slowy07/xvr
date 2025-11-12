@@ -33,7 +33,7 @@ static void errorWrapper(const char* output) {
     fprintf(stderr, XVR_CC_ERROR "%s" XVR_CC_RESET, output);  // no newline
 }
 
-bool Xvr_injectNativeFn(Xvr_Interpreter* interpreter, char* name,
+bool Xvr_injectNativeFn(Xvr_Interpreter* interpreter, const char* name,
                         Xvr_NativeFn func) {
     // reject reserved words
     if (Xvr_findTypeByKeyword(name) != XVR_TOKEN_EOF) {
@@ -64,7 +64,7 @@ bool Xvr_injectNativeFn(Xvr_Interpreter* interpreter, char* name,
     return true;
 }
 
-bool Xvr_injectNativeHook(Xvr_Interpreter* interpreter, char* name,
+bool Xvr_injectNativeHook(Xvr_Interpreter* interpreter, const char* name,
                           Xvr_HookFn hook) {
     // reject reserved words
     if (Xvr_findTypeByKeyword(name) != XVR_TOKEN_EOF) {
@@ -191,41 +191,41 @@ void Xvr_setInterpreterError(Xvr_Interpreter* interpreter,
 }
 
 // utils
-static unsigned char readByte(unsigned char* tb, int* count) {
+static unsigned char readByte(const unsigned char* tb, int* count) {
     unsigned char ret = *(unsigned char*)(tb + *count);
     *count += 1;
     return ret;
 }
 
-static unsigned short readShort(unsigned char* tb, int* count) {
+static unsigned short readShort(const unsigned char* tb, int* count) {
     unsigned short ret = 0;
     memcpy(&ret, tb + *count, 2);
     *count += 2;
     return ret;
 }
 
-static int readInt(unsigned char* tb, int* count) {
+static int readInt(const unsigned char* tb, int* count) {
     int ret = 0;
     memcpy(&ret, tb + *count, 4);
     *count += 4;
     return ret;
 }
 
-static float readFloat(unsigned char* tb, int* count) {
+static float readFloat(const unsigned char* tb, int* count) {
     float ret = 0;
     memcpy(&ret, tb + *count, 4);
     *count += 4;
     return ret;
 }
 
-static char* readString(unsigned char* tb, int* count) {
-    unsigned char* ret = tb + *count;
+static const char* readString(const unsigned char* tb, int* count) {
+    const unsigned char* ret = tb + *count;
     *count += strlen((char*)ret) + 1;  //+1 for null character
-    return (char*)ret;
+    return (const char*)ret;
 }
 
-static void consumeByte(Xvr_Interpreter* interpreter, unsigned char byte,
-                        unsigned char* tb, int* count) {
+static void consumeByte(Xvr_Interpreter* interpreter, const unsigned char byte,
+                        const unsigned char* tb, int* count) {
     if (byte != tb[*count]) {
         char buffer[512];
         snprintf(buffer, 512,
@@ -238,7 +238,7 @@ static void consumeByte(Xvr_Interpreter* interpreter, unsigned char byte,
 }
 
 static void consumeShort(Xvr_Interpreter* interpreter, unsigned short bytes,
-                         unsigned char* tb, int* count) {
+                         const unsigned char* tb, int* count) {
     if (bytes != *(unsigned short*)(tb + *count)) {
         char buffer[512];
         snprintf(buffer, 512,
@@ -1571,7 +1571,7 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
     return true;
 }
 
-bool Xvr_callFn(Xvr_Interpreter* interpreter, char* name,
+bool Xvr_callFn(Xvr_Interpreter* interpreter, const char* name,
                 Xvr_LiteralArray* arguments, Xvr_LiteralArray* returns) {
     Xvr_Literal key = XVR_TO_IDENTIFIER_LITERAL(
         Xvr_createRefStringLength(name, strlen(name)));
@@ -2272,7 +2272,8 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
         } break;
 
         case XVR_LITERAL_STRING: {
-            char* s = readString(interpreter->bytecode, &interpreter->count);
+            const char* s =
+                readString(interpreter->bytecode, &interpreter->count);
             int length = strlen(s);
             Xvr_Literal literal =
                 XVR_TO_STRING_LITERAL(Xvr_createRefStringLength(s, length));
@@ -2378,7 +2379,8 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
         } break;
 
         case XVR_LITERAL_IDENTIFIER: {
-            char* str = readString(interpreter->bytecode, &interpreter->count);
+            const char* str =
+                readString(interpreter->bytecode, &interpreter->count);
 
             int length = strlen(str);
             Xvr_Literal identifier = XVR_TO_IDENTIFIER_LITERAL(
@@ -2537,8 +2539,8 @@ void Xvr_initInterpreter(Xvr_Interpreter* interpreter) {
     Xvr_resetInterpreter(interpreter);
 }
 
-void Xvr_runInterpreter(Xvr_Interpreter* interpreter, unsigned char* bytecode,
-                        int length) {
+void Xvr_runInterpreter(Xvr_Interpreter* interpreter,
+                        const unsigned char* bytecode, int length) {
     // initialize here instead of initInterpreter()
     Xvr_initLiteralArray(&interpreter->literalCache);
     interpreter->bytecode = NULL;

@@ -34,7 +34,7 @@ SOFTWARE.
 typedef void (*Xvr_PrintFn)(const char*);
 
 typedef struct Xvr_Interpreter {
-    unsigned char* bytecode;
+    const unsigned char* bytecode;
     int length;
     int count;
     int codeStart;
@@ -54,15 +54,15 @@ typedef struct Xvr_Interpreter {
     bool panic;
 } Xvr_Interpreter;
 
-XVR_API bool Xvr_injectNativeFn(Xvr_Interpreter* interpreter, char* name,
+XVR_API bool Xvr_injectNativeFn(Xvr_Interpreter* interpreter, const char* name,
                                 Xvr_NativeFn func);
-XVR_API bool Xvr_injectNativeHook(Xvr_Interpreter* interpreter, char* name,
+XVR_API bool Xvr_injectNativeHook(Xvr_Interpreter* interpreter, const char* name,
                                   Xvr_HookFn hook);
 
 XVR_API bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
                                Xvr_LiteralArray* arguments,
                                Xvr_LiteralArray* returns);
-XVR_API bool Xvr_callFn(Xvr_Interpreter* interpreter, char* name,
+XVR_API bool Xvr_callFn(Xvr_Interpreter* interpreter, const char* name,
                         Xvr_LiteralArray* arguments, Xvr_LiteralArray* returns);
 
 XVR_API bool Xvr_parseIdentifierToValue(Xvr_Interpreter* interpreter,
@@ -76,7 +76,7 @@ XVR_API void Xvr_setInterpreterError(Xvr_Interpreter* interpreter,
 
 XVR_API void Xvr_initInterpreter(Xvr_Interpreter* interpreter);
 XVR_API void Xvr_runInterpreter(Xvr_Interpreter* interpreter,
-                                unsigned char* bytecode, int length);
+                                const unsigned char* bytecode, int length);
 XVR_API void Xvr_resetInterpreter(Xvr_Interpreter* interpreter);
 XVR_API void Xvr_freeInterpreter(Xvr_Interpreter* interpreter);
 

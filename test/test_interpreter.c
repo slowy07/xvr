@@ -25,7 +25,7 @@ static void noAssertFn(const char* output) {
     }
 }
 
-void runBinaryCustom(unsigned char* tb, size_t size) {
+void runBinaryCustom(const unsigned char* tb, size_t size) {
     Xvr_Interpreter interpreter;
     Xvr_initInterpreter(&interpreter);
 
@@ -36,18 +36,18 @@ void runBinaryCustom(unsigned char* tb, size_t size) {
     Xvr_freeInterpreter(&interpreter);
 }
 
-void runSourceCustom(char* source) {
+void runSourceCustom(const char* source) {
     size_t size = 0;
-    unsigned char* tb = Xvr_compileString(source, &size);
+    const unsigned char* tb = Xvr_compileString(source, &size);
     if (!tb) {
         return;
     }
     runBinaryCustom(tb, size);
 }
 
-void runSourceFileCustom(char* fname) {
+void runSourceFileCustom(const char* fname) {
     size_t size = 0;  // not used
-    char* source = Xvr_readFile(fname, &size);
+    const char* source = Xvr_readFile(fname, &size);
     runSourceCustom(source);
     free((void*)source);
 }
@@ -60,7 +60,7 @@ int main(void) {
     }
 
     {
-        char* source = "print null;";
+        const char* source = "print null;";
         Xvr_Lexer lexer;
         Xvr_Parser parser;
         Xvr_Compiler compiler;
@@ -76,7 +76,7 @@ int main(void) {
         Xvr_writeCompiler(&compiler, node);
 
         int size = 0;
-        unsigned char* bytecode = Xvr_collateCompiler(&compiler, &size);
+        const unsigned char* bytecode = Xvr_collateCompiler(&compiler, &size);
         Xvr_setInterpreterPrint(&interpreter, noPrintFn);
         Xvr_setInterpreterAssert(&interpreter, noAssertFn);
         Xvr_runInterpreter(&interpreter, bytecode, size);

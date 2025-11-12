@@ -542,7 +542,7 @@ static Xvr_Opcode unary(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     return XVR_OP_EOF;
 }
 
-static char* removeChar(char* lexeme, int length, char c) {
+static char* removeChar(const char* lexeme, int length, char c) {
     int resPos = 0;
     char* result = XVR_ALLOCATE(char, length + 1);
 
@@ -574,7 +574,7 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 
     case XVR_TOKEN_LITERAL_INTEGER: {
         int value = 0;
-        char* lexeme =
+        const char* lexeme =
             removeChar(parser->previous.lexeme, parser->previous.length, '_');
         sscanf(lexeme, "%d", &value);
         XVR_FREE_ARRAY(char, lexeme, parser->previous.length + 1);
@@ -584,7 +584,7 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 
     case XVR_TOKEN_LITERAL_FLOAT: {
         float value = 0;
-        char* lexeme =
+        const char* lexeme =
             removeChar(parser->previous.lexeme, parser->previous.length, '_');
         sscanf(lexeme, "%f", &value);
         XVR_FREE_ARRAY(char, lexeme, parser->previous.length + 1);
