@@ -22,6 +22,34 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/**
+ * @brief unified memory management interface for XVR runtime
+ *
+ * providing:
+ *  - a single, flexible reallocation
+ *  - macro wrappers for common operations
+ *  - pluggable allocator backend (for arenas, GC, debug allocators)
+ *
+ * principle of design:
+ *  - zero external dependencies
+ *  - explicit size tracking
+ *  - growth policy separation
+ *  - type-safe macros
+ *  - deterministic behaviour
+ *
+ * memory Contract for `Xvr_reallocate`:
+ *   | pointer | oldSize | newSize | Behavior                              |
+ *   |---------|---------|---------|---------------------------------------|
+ *   | NULL    | 0       | >0      | Allocate `newSize` bytes              |
+ *   | p       | >0      | >0      | Resize `p` ->`newSize` (reserve min(old,
+ * new))
+ *   | |        p       | >0      | 0       | Free `p` | | NULL    | 0       | 0
+ * | No-op (return NULL)                   |
+ *
+ * @note all macros are `nul-safe` and `size-safe` - missues yields compile-time
+ * errors
+ */
+
 #ifndef XVR_MEMORY_H
 #define XVR_MEMORY_H
 
@@ -43,8 +71,36 @@ SOFTWARE.
 
 void* Xvr_reallocate(void* pointer, size_t oldSize, size_t newSize);
 
+/**
+ * @typedef Xvr_MemoryAllocatorFn
+ * @brief custom memory allocation callback
+ *
+ * @param[in, out] pointer existing allocation (NULL for first alloc)
+ * @param[in] oldSize previous size in bytes
+ * @param[in] newSize desired size in bytes (0 to free)
+ * @return
+ *  - on alloc / resize: pointer to newSize - byte buffer
+ *  - on free
+ *
+ * requirements:
+ *   - preserve min(oldSize, newSize) bytes on resize
+ *   - return NULL on OOM
+ *   - be thread safe if used in multi-threaded context
+ */
 typedef void* (*Xvr_MemoryAllocatorFn)(void* pointer, size_t oldSize,
                                        size_t newSize);
+
+/**
+ * @brief core memory reallocation primitive
+ *
+ * @param[in, out] pointer current allocation (NULL allowed)
+ * @param[in] oldSize current size in bytes
+ * @param[in] newSize desired size in bytes (0 to free)
+ * @return pointer to reallocation memory, or NULL on failure / free
+ *
+ * @note this is the only memory function the runtime should call directly all
+ * higher-level allocators.
+ */
 XVR_API void Xvr_setMemoryAllocator(Xvr_MemoryAllocatorFn);
 
 #endif  // !XVR_MEMORY_H
