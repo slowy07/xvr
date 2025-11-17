@@ -41,6 +41,15 @@ var number: int = answer(20);
 print(number);
 ```
 
+```
+proc answer(value: int): int {
+    return value + 12;
+}
+
+var number: int = answer(3) + 20;
+print(number);
+```
+
 ## Lets we play it
 
 How about fibonacci ?
