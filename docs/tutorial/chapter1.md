@@ -7,7 +7,6 @@ Currently Xvr can be installation from release zip and manual installation or la
 **requirements**
 - Operating System: `Linux`, `Windows` or `MacOS`
 - Tools
-    - `Windows`: CygWin with `gcc` compiler or just `gcc` compiler.
     - `Linux`, `MacOS`: `gcc` compiler, you can worry about that, its Currently available.
 
 ```sh
