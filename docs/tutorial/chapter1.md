@@ -4,6 +4,11 @@
 
 Currently Xvr can be installation from release zip and manual installation or latest interpreter can be clone on github by
 
+**requirements**
+- Operating System: `Linux`, `Windows` or `MacOS`
+- Tools
+    - `Windows`: CygWin with `gcc` compiler or just `gcc` compiler.
+    - `Linux`, `MacOS`: `gcc` compiler, you can worry about that, its Currently available.
 
 ```sh
 git clone https://github.com/slowy07/xvr
