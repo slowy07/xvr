@@ -69,3 +69,7 @@ for (var i: int = 0; i < 30; i++) {
     print(hasil);
 }
 ```
+
+## Need Tutorial?
+
+You can check on [tutorial](docs/tutorial) for explore some tutorials.

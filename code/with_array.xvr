@@ -1,4 +1,4 @@
-var hasil: array = [1, 2, 3, 4, 5];
+var hasil: [int] = [1, 2, 3, 4, 5];
 
 var hitung: int = 0;
 while (hitung < 5) {
@@ -9,7 +9,7 @@ while (hitung < 5) {
 print(hasil);
 
 // assign new value on array
-var angka = [1, 2, 3];
+var [int] = [1, 2, 3];
 angka[1] = 20;
 
 var nilai = [
@@ -24,7 +24,7 @@ var nilai_kedua: array = [
 ];
 
 // support trailing comma
-var data_pertama: array = [1, 2, 3, ];
+var data_pertama: [int] = [1, 2, 3, ];
 print data_pertama;
 
 // support with empty array
