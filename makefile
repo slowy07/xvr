@@ -1,6 +1,20 @@
 export CFLAGS+=-std=c18 -pedantic -Werror
 export XVR_OUTDIR = out
 
+ifeq ($(shell uname),Linux)
+    BINDIR = /usr/bin
+    LIBDIR = /usr/lib64
+else ifeq ($(shell uname),Darwin)
+    BINDIR = /usr/local/bin
+    LIBDIR = /usr/local/lib
+else ifeq ($(findstring CYGWIN, $(shell uname)),CYGWIN)
+    BINDIR = /usr/bin
+    LIBDIR = /usr/lib
+else
+    BINDIR = /usr/bin
+    LIBDIR = /usr/lib
+endif
+
 all: $(XVR_OUTDIR) inter
 
 inter: $(XVR_OUTDIR) library static inter
@@ -44,7 +58,47 @@ test-sanitized: clean $(XVR_OUTDIR)
 $(XVR_OUTDIR):
 	mkdir $(XVR_OUTDIR)
 
-.PHONY: clean
+install: inter library static
+ifeq ($(shell uname),Linux)
+	install -d $(DESTDIR)$(BINDIR)
+	install -m 755 $(XVR_OUTDIR)/xvr $(DESTDIR)$(BINDIR)/
+	install -d $(DESTDIR)$(LIBDIR)
+	install -m 755 $(XVR_OUTDIR)/libxvr.so $(DESTDIR)$(LIBDIR)/
+	install -m 644 $(XVR_OUTDIR)/libxvr.a $(DESTDIR)$(LIBDIR)/
+	ldconfig
+else ifeq ($(shell uname),Darwin)
+	install -d $(DESTDIR)$(BINDIR)
+	install -m 755 $(XVR_OUTDIR)/xvr $(DESTDIR)$(BINDIR)/
+	install -d $(DESTDIR)$(LIBDIR)
+	install -m 755 $(XVR_OUTDIR)/libxvr.dylib $(DESTDIR)$(LIBDIR)/
+	install -m 644 $(XVR_OUTDIR)/libxvr.a $(DESTDIR)$(LIBDIR)/
+else ifeq ($(findstring CYGWIN, $(shell uname)),CYGWIN)
+	install -d $(DESTDIR)$(BINDIR)
+	install -m 755 $(XVR_OUTDIR)/xvr.exe $(DESTDIR)$(BINDIR)/
+	install -m 755 $(XVR_OUTDIR)/xvr.dll $(DESTDIR)$(BINDIR)/
+	install -d $(DESTDIR)$(LIBDIR)
+	install -m 644 $(XVR_OUTDIR)/libxvr.dll.a $(DESTDIR)$(LIBDIR)/
+else
+	@echo "Install target not supported on this platform."
+endif
+
+uninstall:
+ifeq ($(shell uname),Linux)
+	rm -f $(DESTDIR)$(BINDIR)/xvr
+	rm -f $(DESTDIR)$(LIBDIR)/libxvr.so
+	rm -f $(DESTDIR)$(LIBDIR)/libxvr.a
+	ldconfig
+else ifeq ($(shell uname),Darwin)
+	rm -f $(DESTDIR)$(BINDIR)/xvr
+	rm -f $(DESTDIR)$(LIBDIR)/libxvr.dylib
+	rm -f $(DESTDIR)$(LIBDIR)/libxvr.a
+else ifeq ($(findstring CYGWIN, $(shell uname)),CYGWIN)
+	rm -f $(DESTDIR)$(BINDIR)/xvr.exe
+	rm -f $(DESTDIR)$(BINDIR)/xvr.dll
+	rm -f $(DESTDIR)$(LIBDIR)/libxvr.dll.a
+else
+	@echo "Uninstall target not supported on this platform."
+endif
 
 clean:
 ifeq ($(findstring CYGWIN, $(shell uname)),CYGWIN)
@@ -81,3 +135,6 @@ else
 endif
 
 rebuild: clean all
+
+.PHONY: all inter inter-static inter-release inter-static-release library static library-release static-release test test-sanitized install uninstall clean rebuild
+
