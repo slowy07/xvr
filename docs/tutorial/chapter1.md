@@ -18,6 +18,10 @@ cd xvr
 make interpreter
 
 # the interpreter application was installed on `out` folder with shared library xvr
+
+# for install access to globally you can do by
+# installed on bin/
+sudo make install
 ```
 
 ## Hello world
