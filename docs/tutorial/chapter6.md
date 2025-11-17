@@ -1,4 +1,4 @@
-# Chapter 7
+# Chapter 6
 
 ## Are you good at math?
 

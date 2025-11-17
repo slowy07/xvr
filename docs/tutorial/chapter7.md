@@ -1,4 +1,4 @@
-# Chapter 8
+# Chapter 7
 
 ## Lets we repeat some name
 
@@ -22,7 +22,6 @@ while (increment < 50) {
 ```
 
 We can using `while` looping, its look more logically but its very different from `for`. `while` are used if we don't know how much will count it, `for` loop basically we know how much we need to repeat some statement.
-
 
 But, be carefully when you using `while` loops.
 
