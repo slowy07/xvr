@@ -5,7 +5,6 @@ on: [push, pull_request]
 jobs:
   test-ubuntu-latest:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -14,10 +13,10 @@ jobs:
 
       - name: find C source files
         run: find . -type f \( -name "*.c" -o -name "*.h" \) > c_files.txt
-        
+
       - name: check formatting
         run: |
-          while IFS= read - r file; do
+          while IFS= read -r file; do
             if ! clang-format --dry-run -Werror "$file"; then
               echo "not formatted: $file"
               exit 1
@@ -27,3 +26,43 @@ jobs:
 
       - name: testing
         run: make test
+
+  test-windows-latest:
+    runs-on: windows-latest
+    defaults:
+      run:
+        shell: msys2 {0}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup MSYS2
+        uses: msys2/setup-msys2@v2
+        with:
+          msystem: MINGW64
+          install: |
+            mingw-w64-x86_64-gcc
+            mingw-w64-x86_64-make
+            mingw-w64-x86_64-pkg-config
+            mingw-w64-x86_64-pthreads
+            mingw-w64-x86_64-clang # optional, untuk clang-format
+
+      - name: Install clang-format (via MSYS2)
+        run: pacman -S --needed --noconfirm mingw-w64-x86_64-clang
+
+      - name: Find C source files
+        run: |
+          find . -type f \( -name "*.c" -o -name "*.h" \) > c_files.txt
+
+      - name: Check formatting
+        run: |
+          while IFS= read -r file; do
+            if ! clang-format --dry-run -Werror "$file"; then
+              echo "not formatted: $file"
+              exit 1
+            fi
+          done < c_files.txt
+
+      - name: Build and test
+        run: |
+          make test
