@@ -45,9 +45,6 @@ jobs:
             mingw-w64-x86_64-clang
             mingw-w64-x86_64-clang-tools-extra
 
-      - name: Install clang-format (via MSYS2)
-        run: pacman -S --needed --noconfirm mingw-w64-x86_64-clang-tools-extra
-
       - name: Find C source files
         run: |
           find . -type f \( -name "*.c" -o -name "*.h" \) > c_files.txt
