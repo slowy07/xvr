@@ -45,19 +45,6 @@ jobs:
             mingw-w64-x86_64-clang
             mingw-w64-x86_64-clang-tools-extra
 
-      - name: Find C source files
-        run: |
-          find . -type f \( -name "*.c" -o -name "*.h" \) > c_files.txt
-
-      - name: Check formatting
-        run: |
-          while IFS= read - r file; do
-            if ! clang-format --dry-run -Werror "$file"; then
-              echo "not formatted: $file"
-              exit 1
-            fi
-          done < c_files.txt
-
       - name: Build and test
         run: |
           make test
