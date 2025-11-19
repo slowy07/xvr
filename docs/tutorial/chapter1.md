@@ -23,6 +23,10 @@ make interpreter
 sudo make install
 ```
 
+## Installing the syntax highlighting
+
+Your code does not look cool?, you can using syntax highlighter which is available for [vscode](https://github.com/WargaSlowy/xvrlang-vscode) and [neovim](https://github.com/WargaSlowy/xvrlang-treesitter)
+
 ## Hello world
 
 first step to learning, we create some xvr files , with extension `.xvr` 

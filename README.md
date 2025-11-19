@@ -73,3 +73,8 @@ for (var i: int = 0; i < 30; i++) {
 ## Need Tutorial?
 
 You can check on [tutorial](docs/tutorial) for explore some tutorials.
+
+## Side project XvrLang
+
+- Neovim Syntax highlighting for XvrLang: [xvrlang-treesitter](https://github.com/WargaSlowy/xvrlang-treesitter)
+- Vscode Syntax highlighting for XvrLang: [xvrlang-vscode](https://github.com/WargaSlowy/xvrlang-vscode)
