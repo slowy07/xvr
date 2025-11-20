@@ -1,0 +1,28 @@
+{
+  // define with another type
+  // use variable to alias for specific
+  // data types
+  var tipeInteger: type = int;
+  var angka_saya: tipeInteger = 20;
+
+  assert tipeInteger == int, "type are not first class";
+  assert angka_saya == 20, "first class of type are confuse with that value";
+}
+
+{
+  // definition with  another type
+  // here using list of integer
+  var tipeListInteger: type = astype [int];
+  var listData: tipeListInteger = [1, 2, 3];
+  assert tipeListInteger == astype [int], "failed to re assign data types, failed";
+}
+
+{
+  var complex: type = astype [string : [int]];
+  var dictionary: complex = [
+    "array pertama": [1, 2, 3],
+    "array kedua": [4, 5, 6],
+    "array ketiga": [7, 8, 9]
+  ];
+  print(dictionary);
+}
