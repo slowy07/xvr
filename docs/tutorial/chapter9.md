@@ -40,6 +40,30 @@ this are special line at very beginning of script file in Unix-like operating sy
 print("wello");
 ```
 
+### Custom procedure for working with variables
+
+```
+// make custom procedure to work with variables
+proc _increment(self) {
+    return self + 1;
+}
+
+var number: int = 1;
+
+print(number.increment());
+```
+
+```
+// make custom procedure to work with variables
+proc _toString(self) {
+    return string self;
+}
+
+var number: int = 20;
+
+print("my number are: " + number.toString() + " looks great boys");
+```
+
 this will be telling the system to running the script using xvr interpreter apps located at /bin/xvr
 
 <!-- TODO: update more tutorials explore, some 3rd library -->

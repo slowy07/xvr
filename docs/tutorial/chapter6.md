@@ -37,5 +37,39 @@ print(data);
 print("jane " + "slowy");
 ```
 
+## Playing with variable
+
+Can we print other data types combine with string ?, absolutely no, you must convert data types to string like `integer`, `float`
+
+```
+var age: int = 20;
+
+print("mamads are: " + string age + " years old");
+```
+
+in `xvr` you can use `string` keyword to convert `integer` or `float` data type to string for print it with strings
+
+## Assign with other data types
+
+you can make some variable names as alias for data types, using `astype`, with specific are `type`
+
+```
+// dataList cannot assign a value
+// only working with assign as data type
+var dataList: type = astype [int];
+var my_list_number: dataList = [1, 2, 3, 4];
+
+print(my_list_number);
+```
+
+```
+// integersNumber cannot assign a value
+// only working with assign as data type
+var integersNumber: type = astype int;
+var my_number: integersNumber = 20;
+
+print("my number are: " + string my_number + " look cool right");
+```
+
 > [!NOTE]
 > print will support with or without parentheses (round bracket).
