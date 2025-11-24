@@ -22,10 +22,24 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/**
+ * @brief cross-platform console colors code for runtime diagnostics
+ *
+ * platforms:
+ *   - ANSI capable terminal: linux, macOs, modern windows
+ *
+ * threading:
+ *   - color codes are immutable constant
+ *
+ * @warning always pair color codes with XVR_CC_RRESET to preventing formatting
+ * bleed, do not rely on colors for semantic meaning - purely only visual
+ */
+
 #ifndef XVR_CONSOLE_COLORS_H
 #define XVR_CONSOLE_COLORS_H
 
-#if defined(__linux__) || defined(__MINGW32__) || defined(__GNUC__)
+#if defined(__linux__) || defined(__MINGW32__) || defined(__GNUC__) || \
+    (defined(_WIN32) && defined(XVR_CC_WINDOWS_VT_ENABLED))
 
 // fonts color
 #    define XVR_CC_FONT_BLACK "\x1b[30m"

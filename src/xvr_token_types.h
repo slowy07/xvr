@@ -22,9 +22,33 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/**
+ * @brief token type enumeration for lexer and parser
+ *
+ * token categories:
+ *   - types (0 - 9): runtime type descriptors
+ *   - keywords (10 - 30): reserved words
+ *   - literal (31 - 36): values and identifiers
+ *   - math ops (37 - 47): arithmetic and assignment
+ *   - logical ops (48 - 62): parentheses, comparison, logic
+ *   - other ops (63 - 69): punctuation
+ *   - meta (70 - 72): lexer / parser control
+ *
+ * threading:
+ *   - thread-safe for read-only access (no mutable state)
+ *   - token types are immutable constants
+ */
+
 #ifndef XVR_TOKEN_TYPES_H
 #define XVR_TOKEN_TYPES_H
 
+/**
+ * @enum Xvr_TokenType
+ * @brief enumeration of all possible lexical tokens
+ *
+ * @note value are explicit (no auto-increment) to preserve binary compatibilty
+ *  add new tokens only at end to maintain serialization
+ */
 typedef enum Xvr_TokenType {
     // types
     XVR_TOKEN_NULL,
