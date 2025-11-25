@@ -2,7 +2,7 @@ export CFLAGS+=-std=c18 -pedantic -Werror
 export XVR_OUTDIR = out
 
 ifeq ($(shell uname),Linux)
-    BINDIR = /usr/bin
+    BINDIR = /usr/local/bin
     LIBDIR = /usr/lib64
 else ifeq ($(shell uname),Darwin)
     BINDIR = /usr/local/bin
@@ -16,6 +16,12 @@ else
 endif
 
 all: $(XVR_OUTDIR) inter
+
+clean:
+	rm -rf $(XVR_OUTDIR)
+	$(MAKE) -C src clean
+	$(MAKE) -C inter clean
+	$(MAKE) -C test clean
 
 inter: $(XVR_OUTDIR) library static inter
 	$(MAKE) -C inter
@@ -100,41 +106,6 @@ else
 	@echo "Uninstall target not supported on this platform."
 endif
 
-clean:
-ifeq ($(findstring CYGWIN, $(shell uname)),CYGWIN)
-	find . -type f -name '*.o' -exec rm -f -r -v {} \;
-	find . -type f -name '*.a' -exec rm -f -r -v {} \;
-	find . -type f -name '*.exe' -exec rm -f -r -v {} \;
-	find . -type f -name '*.dll' -exec rm -f -r -v {} \;
-	find . -type f -name '*.lib' -exec rm -f -r -v {} \;
-	find . -type f -name '*.so' -exec rm -f -r -v {} \;
-	find . -empty -type d -delete
-else ifeq ($(shell uname),Linux)
-	find . -type f -name '*.o' -exec rm -f -r -v {} \;
-	find . -type f -name '*.a' -exec rm -f -r -v {} \;
-	find . -type f -name '*.exe' -exec rm -f -r -v {} \;
-	find . -type f -name '*.dll' -exec rm -f -r -v {} \;
-	find . -type f -name '*.lib' -exec rm -f -r -v {} \;
-	find . -type f -name '*.so' -exec rm -f -r -v {} \;
-	rm -rf out
-	find . -empty -type d -delete
-else ifeq ($(OS),Windows_NT)
-	$(RM) *.o *.a *.exe 
-else ifeq ($(shell uname),Darwin)
-	find . -type f -name '*.o' -exec rm -f -r -v {} \;
-	find . -type f -name '*.a' -exec rm -f -r -v {} \;
-	find . -type f -name '*.exe' -exec rm -f -r -v {} \;
-	find . -type f -name '*.dll' -exec rm -f -r -v {} \;
-	find . -type f -name '*.lib' -exec rm -f -r -v {} \;
-	find . -type f -name '*.dylib' -exec rm -f -r -v {} \;
-	find . -type f -name '*.so' -exec rm -f -r -v {} \;
-	rm -rf out
-	find . -empty -type d -delete
-else
-	@echo "deletion failed - are you using temple os?"
-endif
-
 rebuild: clean all
 
 .PHONY: all inter inter-static inter-release inter-static-release library static library-release static-release test test-sanitized install uninstall clean rebuild
-
