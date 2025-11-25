@@ -1,0 +1,32 @@
+// create custom procedure that working with specific 
+// variable
+proc _identity(self) {
+  return self;
+}
+
+// make simple function if value are same as check on
+// procedure
+proc _check(self) {
+  assert self == 42, "dot chaining error cikl";
+  return self;
+}
+
+var value: int  = 42;
+
+// make dot chaining
+value.identity().check().identity().check();
+
+// create custom procedure for increment that
+// are working on variable
+proc _increment(self) {
+  return self + 1;
+}
+
+// test all
+assert 3.increment().increment() == 5, "dot chaining increment gagal cik";
+var angka: int = 2;
+if (angka.increment() == 3) {
+  print("ganjil");
+} else {
+  print("genap");
+}

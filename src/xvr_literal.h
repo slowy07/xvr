@@ -22,6 +22,23 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
+/**
+ * @brief unified value representation for the XVR runtime: dynamically typed,
+ * GC-friendly literals
+ *
+ * design goals:
+ *  - zero overhead abstaction: sizeof(Xvr_Literal) = 16 - 24 byte (cache-line
+ * friendly)
+ *  - explicit ownership semantics: manual refcounting via `Xvr_RefString`
+ *
+ * memory Layout (typical on LP64):
+ *     +------------------+-----------------+------------------+
+ *     | type (4 bytes)   | padding (4)     | union (16 bytes) |
+ *     +------------------+-----------------+------------------+
+ *     total: 24 bytes (fits in 3x64b registers; 2 cache lines max)
+ *
+ */
+
 #ifndef XVR_LITERAL_H
 #define XVR_LITERAL_H
 
@@ -34,12 +51,50 @@ SOFTWARE.
 struct Xvr_Literal;
 struct Xvr_Interpreter;
 struct Xvr_LiteralArray;
+
+/**
+ * @typedef Xvr_NativeFn
+ * @brief C function callable from XVR bytecode (native extension)
+ *
+ * @param[in, out] interpreter current VM instance (for stack, error, GC access)
+ * @param[in] arguments array of arguments (length known from call site)
+ * @return integer status code
+ *  - 0 -> succes
+ *  - < 0 -> runtime error
+ *  - > 0 -> reserved
+ */
 typedef int (*Xvr_NativeFn)(struct Xvr_Interpreter* interpreter,
                             struct Xvr_LiteralArray* arguments);
+
+/**
+ * @typedef Xvr_HookFn
+ * @brief callback for identifier resolution / interception
+ *
+ * invoked when:
+ *  - global identifier is accessed
+ *  - module import
+ *  - debugger instropection runs
+ *
+ * @param[in, out] interpreter VM context
+ * @param[in] identifier the symbol being lookup
+ * @param[in] alias optional alias
+ * @return same convetion as `Xvr_NativeFn`
+ */
 typedef int (*Xvr_HookFn)(struct Xvr_Interpreter* interpreter,
                           struct Xvr_Literal identifier,
                           struct Xvr_Literal alias);
 
+/**
+ * @enum Xvr_LiteralType
+ * @brief discriminant for `Xvr_Literal` union
+ *
+ * Ordering:
+ *  - primitive (NULL to string) -> fast switch / case
+ *  - aggregate (ARRAY, DICTIONARY)
+ *  - code objects (FUNCTION variants)
+ *  - Metadata / compile-time types (IDENTIFIER, TYPE)
+ *  - opaque / any for FFI
+ */
 typedef enum {
     XVR_LITERAL_NULL,
     XVR_LITERAL_BOOLEAN,
@@ -64,32 +119,68 @@ typedef enum {
     XVR_LITERAL_INDEX_BLANK,
 } Xvr_LiteralType;
 
+/**
+ * @strcut Xvr_Literal
+ * @brief tagged union representing any runtime value
+ *
+ * invariants
+ * - if type is XVR_LITERAL_STRING or XVR_STRING_IDENTIFIER, `as.string.ptr` /
+ * `as.identifier.ptr` must be non-NULL and have `refCount >= 1`
+ * - if type is XVR_LITERAL_ARRAY / DICTIONARY, pointers must be valid or NULL
+ * - XVR_LITERAL_FUNCTION variants store distinct metadata in same union layout
+ * - padding after `type` ensure `union as` is naturally aligned (critical for
+ * `double` if added)
+ *
+ * union layout:
+ * - `boolean`, `integer`, `number`: stored value (fast)
+ * - `string`, `identifier`: store `Xvr_RefString` (shared ownership)
+ * - `array`, `dictionary`: void* to avoiding circular header deps
+ * - `function`: polymorphic container:
+ *    -`.bytecode`: `void*` to compiled chunk
+ *    - `.naative`: Xvr_NativeFn
+ *    - `.hook`: `Xvr_HookFn`
+ *    - `.scope`: closure environment
+ *    - `.length`: arity (argument count), for rest args
+ * - identifier: including precomputed hash
+ * - type: supports parametric types via `subtypes` array
+ * - opaque: `ptr` + `tag` enables safe downcastring
+ */
 typedef struct Xvr_Literal {
     Xvr_LiteralType type;
     union {
-        bool boolean;
-        int integer;
-        float number;
+        bool boolean;  // XVR_LITERAL_BOOLEAN
+        int integer;   // XVR_LITERAL_INTEGER
+        float number;  // XVR_LITERAL_FLOAT
+
+        // XVR_LITERAL_STRING or XVR_LITERAL_IDENTIFIER
         struct {
-            Xvr_RefString* ptr;
+            Xvr_RefString* ptr;  // Ref-counted string data
         } string;
 
+        // XVR_LITERAL_ARRAY
         void* array;
+        // XVR_LITERAL_DICTIONARY
         void* dictionary;
 
+        // XVR_LITERAL_FUNCTION, XVR_LITERAL_FUNCTION_NATIVE,
+        // XVR_LITERAL_FUNCTION_HOOK
         struct {
-            void* bytecode;
-            Xvr_NativeFn native;
-            Xvr_HookFn hook;
+            union {
+                void* bytecode;
+                Xvr_NativeFn native;
+                Xvr_HookFn hook;
+            };
             void* scope;
             int length;
         } function;
 
+        // XVR_LITERAL_IDENTIFIER
         struct {
             Xvr_RefString* ptr;
             int hash;
         } identifier;
 
+        // XVR_LITERAL_TYPE
         struct {
             Xvr_LiteralType typeOf;
             bool constant;
@@ -98,6 +189,7 @@ typedef struct Xvr_Literal {
             int count;
         } type;
 
+        // XVR_LITERAL_OPAQUE
         struct {
             void* ptr;
             int tag;
@@ -176,6 +268,14 @@ typedef struct Xvr_Literal {
 #define XVR_TO_INDEX_BLANK_LITERAL \
     ((Xvr_Literal){XVR_LITERAL_INDEX_BLANK, {.integer = 0}})
 
+/**
+ * @brief release resource
+ *
+ * by type
+ * - STRING, IDENTIFIER
+ * - ARRAY, DICTIONARY
+ * - PROCEDURE
+ */
 XVR_API void Xvr_freeLiteral(Xvr_Literal literal);
 
 #define XVR_IS_TRUTHY(x) Xvr_private_isTruthy(x)
@@ -186,17 +286,49 @@ XVR_API void Xvr_freeLiteral(Xvr_Literal literal);
     Xvr_private_typePushSubtype(lit, subtype)
 #define XVR_GET_OPAQUE_TAG(o) o.as.opaque.tag
 
+/**
+ * @private
+ * @brief implement truthniess semantics
+ */
 XVR_API bool Xvr_private_isTruthy(Xvr_Literal x);
+
+/**
+ * @private
+ * @brief convert `Xvr_String` to `XVR_LITERAL_STRING`, incrementing refcount
+ * @pre `ptr != NULL`
+ */
 XVR_API Xvr_Literal Xvr_private_toStringLiteral(Xvr_RefString* ptr);
 XVR_API Xvr_Literal Xvr_private_toIdentifierLiteral(Xvr_RefString* ptr);
 XVR_API Xvr_Literal* Xvr_private_typePushSubtype(Xvr_Literal* lit,
                                                  Xvr_Literal subtype);
 
+/**
+ * @brief compare two literal for value equality
+ *
+ * @param[in] lhs, rhs literals to compare
+ * @return `true` if equal
+ */
 XVR_API Xvr_Literal Xvr_copyLiteral(Xvr_Literal original);
 XVR_API bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs);
 XVR_API int Xvr_hashLiteral(Xvr_Literal lit);
 
+/**
+ * @brief print literal to `stdout` in human-readable
+ *
+ * for sample:
+ * `proc` -> `<native procedure>` or `<bytecode @0xdeadbeef>`
+ *
+ * @param[in] lliteral literal to print it
+ */
 XVR_API void Xvr_printLiteral(Xvr_Literal literal);
+
+/**
+ * @brief print literal using custom output function (example: to buffer, file)
+ *
+ * @param[in] literal literal to print it
+ * @param[in] printFn function to receive each output chunk (example: `fwrite`,
+ * `sbuf_push`)
+ */
 XVR_API void Xvr_printLiteralCustom(Xvr_Literal literal,
                                     void(printFn)(const char*));
 
