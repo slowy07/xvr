@@ -52,4 +52,4 @@ $(ODIR)/%.o: %.c
 .PHONY: clean
 
 clean:
-	$(RM) $(ODIR)
+	rm -rf $(ODIR)

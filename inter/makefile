@@ -11,12 +11,7 @@ OUTNAME=xvr
 OUT=../$(XVR_OUTDIR)/xvr
 
 all: $(OBJ)
-ifeq ($(shell uname),Darwin)
-	cp $(PWD)/$(XVR_OUTDIR)/lib$(OUTNAME).dylib /usr/local/lib/
-	$(CC) -DXVR_IMPORT $(CFLAGS) -o $(OUT) $(OBJ) $(LIBS)
-else
-	$(CC) -DXVR_IMPORT $(CFLAGS) -o $(OUT) $(OBJ) -Wl,-rpath,. -L$(realpath $(shell pwd)/../$(XVR_OUTDIR)) $(LIBS)
-endif
+	$(CC) -DXVR_IMPORT $(CFLAGS) -o $(OUT) $(OBJ) -L$(realpath $(shell pwd)/../$(XVR_OUTDIR)) $(LIBS)
 
 release: all
 	strip $(OUT)
@@ -32,5 +27,4 @@ $(ODIR)/%.o: %.c
 .PHONY: clean
 
 clean:
-	$(RM) $(ODIR)
-	rm /usr/local/lib/lib$(OUTNAME).dylib
+	rm -rf $(ODIR)
