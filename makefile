@@ -2,7 +2,7 @@ export CFLAGS+=-std=c18 -pedantic -Werror
 export XVR_OUTDIR = out
 
 ifeq ($(shell uname),Linux)
-    BINDIR = /usr/bin
+    BINDIR = /usr/local/bin
     LIBDIR = /usr/lib64
 else ifeq ($(shell uname),Darwin)
     BINDIR = /usr/local/bin
@@ -137,4 +137,3 @@ endif
 rebuild: clean all
 
 .PHONY: all inter inter-static inter-release inter-static-release library static library-release static-release test test-sanitized install uninstall clean rebuild
-
