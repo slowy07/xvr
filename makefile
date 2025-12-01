@@ -17,37 +17,31 @@ endif
 
 all: $(XVR_OUTDIR) inter
 
-clean:
-	rm -rf $(XVR_OUTDIR)
-	$(MAKE) -C src clean
-	$(MAKE) -C inter clean
-	$(MAKE) -C test clean
-
-inter: $(XVR_OUTDIR) library static inter
+inter: $(XVR_OUTDIR) library static inter ## build shared lib, static lib and xvr interpreter (default)
 	$(MAKE) -C inter
 
-inter-static: $(XVR_OUTDIR) static
+inter-static: $(XVR_OUTDIR) static ## build static lib and xvr interpreter
 	$(MAKE) -C inter
 
-inter-release: clean $(XVR_OUTDIR) library-release
+inter-release: clean $(XVR_OUTDIR) library-release ## build release shared lib and xvr interpreter
 	$(MAKE) -C inter release
 
-inter-static-release: clean $(XVR_OUTDIR) static-release
+inter-static-release: clean $(XVR_OUTDIR) static-release ## build release static lib and xvr interpreter
 	$(MAKE) -C inter release
 
-library: $(XVR_OUTDIR)
+library: $(XVR_OUTDIR) ## build shared library
 	$(MAKE) -j$(nproc) -C src library
 
-static: $(XVR_OUTDIR)
+static: $(XVR_OUTDIR) ## build static lib
 	$(MAKE) -j$(nproc) -C src static
 
-library-release: $(XVR_OUTDIR)
+library-release: $(XVR_OUTDIR) ## build shared lib release version
 	$(MAKE) -j$(nproc) -C src library-release
 
-static-release: $(XVR_OUTDIR)
+static-release: $(XVR_OUTDIR) ## build static lib release version
 	$(MAKE) -j$(nproc) -C src static-release
 
-test: clean $(XVR_OUTDIR)
+test: clean $(XVR_OUTDIR) ## clean and test
 	$(MAKE) -C test
 	@for f in $(XVR_OUTDIR)/*.exe; do \
 		if [ -x "$$f" ] && [ -f "$$f" ]; then \
@@ -104,6 +98,40 @@ else ifeq ($(findstring CYGWIN, $(shell uname)),CYGWIN)
 	rm -f $(DESTDIR)$(LIBDIR)/libxvr.dll.a
 else
 	@echo "Uninstall target not supported on this platform."
+endif
+
+clean: ## clean
+ifeq ($(findstring CYGWIN, $(shell uname)),CYGWIN)
+	find . -type f -name '*.o' -exec rm -f -r -v {} \;
+	find . -type f -name '*.a' -exec rm -f -r -v {} \;
+	find . -type f -name '*.exe' -exec rm -f -r -v {} \;
+	find . -type f -name '*.dll' -exec rm -f -r -v {} \;
+	find . -type f -name '*.lib' -exec rm -f -r -v {} \;
+	find . -type f -name '*.so' -exec rm -f -r -v {} \;
+	find . -empty -type d -delete
+else ifeq ($(shell uname),Linux)
+	find . -type f -name '*.o' -exec rm -f -r -v {} \;
+	find . -type f -name '*.a' -exec rm -f -r -v {} \;
+	find . -type f -name '*.exe' -exec rm -f -r -v {} \;
+	find . -type f -name '*.dll' -exec rm -f -r -v {} \;
+	find . -type f -name '*.lib' -exec rm -f -r -v {} \;
+	find . -type f -name '*.so' -exec rm -f -r -v {} \;
+	rm -rf out
+	find . -empty -type d -delete
+else ifeq ($(OS),Windows_NT)
+	$(RM) *.o *.a *.exe 
+else ifeq ($(shell uname),Darwin)
+	find . -type f -name '*.o' -exec rm -f -r -v {} \;
+	find . -type f -name '*.a' -exec rm -f -r -v {} \;
+	find . -type f -name '*.exe' -exec rm -f -r -v {} \;
+	find . -type f -name '*.dll' -exec rm -f -r -v {} \;
+	find . -type f -name '*.lib' -exec rm -f -r -v {} \;
+	find . -type f -name '*.dylib' -exec rm -f -r -v {} \;
+	find . -type f -name '*.so' -exec rm -f -r -v {} \;
+	rm -rf out
+	find . -empty -type d -delete
+else
+	@echo "deletion failed - are you using temple os?"
 endif
 
 rebuild: clean all
