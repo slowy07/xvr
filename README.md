@@ -27,46 +27,9 @@ make inter
 ```
 
 ## Say wello with Xvr
-```
-var nama: string = "arfy slowy";
-
-print("wello " + nama);
-```
-
-```
-var hitung: int = 1;
-
-while (hitung < 10) {
-  print(hitung);
-  hitung += 1;
-}
-
-print ("woilah cik kelar loh ya");
-```
-
-```
-proc wello(name: string) {
+```xvr
+proc say_hello(name: string): string {
     return "wello " + name;
-}
-
-print(wello("xvr"));
-```
-
-```
-// simple fibonacci
-
-proc fibonacci(number: int): int {
-    if (number < 2) {
-        return number;
-    }
-
-    return fibonacci(number - 1) + fibonacci(number - 2);
-}
-
-// with looping using 'for' loops
-for (var i: int = 0; i < 30; i++) {
-    var hasil = fibonacci(i);
-    print(hasil);
 }
 ```
 

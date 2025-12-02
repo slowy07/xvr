@@ -166,8 +166,8 @@ static Xvr_Token makeToken(Xvr_Lexer* lexer, Xvr_TokenType type) {
     token.line = lexer->line;
 
 #ifndef XVR_EXPORT
-    // BUG #10: this shows TOKEN_EOF twice due to the overarching structure of
-    // the program - can't be fixed
+    // BUG: this shows TOKEN_EOF twice due to the overarching structure of
+    // program
     if (Xvr_commandLine.verbose) {
         printf("tok:");
         Xvr_printToken(&token);

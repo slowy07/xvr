@@ -104,3 +104,18 @@ import compound;
   print(data.reduce(0, fungsi));
   print(data_kedua.reduce(0, fungsi));
 }
+
+{
+  var my_list: [bool] = [false, false, false];
+  var my_dict: [string : bool] = ["one": false, "two": false];
+
+  var counter: int = 0;
+  
+  proc f(k, v) {
+    counter++;
+    return v;
+  }
+
+  assert my_list.some(f) == false, "list.some() == false failed loh ya";
+  assert my_dict.some(f) == false, "list.some() == false failed juga cik";
+}

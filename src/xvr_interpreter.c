@@ -1539,7 +1539,7 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
     }
 
     // manual free
-    // BUGFIX: handle scopes of functions, which refer to the parent scope
+    // NOTE: handle scopes of functions, which refer to the parent scope
     // (leaking memory)
     while (inner.scope != XVR_AS_FUNCTION(func).scope) {
         for (int i = 0; i < inner.scope->variables.capacity; i++) {
