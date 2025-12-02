@@ -672,7 +672,7 @@ static int nativeSome(Xvr_Interpreter* interpreter,
     }
 
     if (XVR_IS_DICTIONARY(selfLiteral)) {
-        bool result = true;
+        bool result = false;
 
         for (int i = 0; i < XVR_AS_DICTIONARY(selfLiteral)->capacity; i++) {
             if (XVR_IS_NULL(XVR_AS_DICTIONARY(selfLiteral)->entries[i].key)) {
