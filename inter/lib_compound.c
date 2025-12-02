@@ -130,6 +130,124 @@ static int nativeConcat(Xvr_Interpreter* interpreter,
     return -1;
 }
 
+static int nativeContainsKey(Xvr_Interpreter* interpreter,
+                             Xvr_LiteralArray* arguments) {
+    if (arguments->count != 2) {
+        interpreter->errorOutput(
+            "incorrect number of arguments to _containsKey\n");
+        return -1;
+    }
+
+    Xvr_Literal keyLiteral = Xvr_popLiteralArray(arguments);
+    Xvr_Literal selfLiteral = Xvr_popLiteralArray(arguments);
+
+    Xvr_Literal selfLiteralIdn = selfLiteral;
+    if (XVR_IS_IDENTIFIER(selfLiteral) &&
+        Xvr_parseIdentifierToValue(interpreter, &selfLiteral)) {
+        Xvr_freeLiteral(selfLiteralIdn);
+    }
+
+    Xvr_Literal keyLiteralIdn = keyLiteral;
+    if (XVR_IS_IDENTIFIER(keyLiteral) &&
+        Xvr_parseIdentifierToValue(interpreter, &keyLiteral)) {
+        Xvr_freeLiteral(keyLiteralIdn);
+    }
+
+    if (!(XVR_IS_DICTIONARY(selfLiteral))) {
+        interpreter->errorOutput(
+            "incorrect argument type passed to _containsKey\n");
+        Xvr_freeLiteral(selfLiteral);
+        Xvr_freeLiteral(keyLiteral);
+        return -1;
+    }
+
+    Xvr_Literal resultLiteral = XVR_TO_BOOLEAN_LITERAL(false);
+    if (XVR_IS_DICTIONARY(selfLiteral) &&
+        Xvr_existsLiteralDictionary(XVR_AS_DICTIONARY(selfLiteral),
+                                    keyLiteral)) {
+        Xvr_freeLiteral(resultLiteral);
+        resultLiteral = XVR_TO_BOOLEAN_LITERAL(true);
+    }
+
+    Xvr_pushLiteralArray(&interpreter->stack, resultLiteral);
+    Xvr_freeLiteral(resultLiteral);
+    Xvr_freeLiteral(selfLiteral);
+    Xvr_freeLiteral(keyLiteral);
+
+    return 1;
+}
+
+static int nativeContainsValue(Xvr_Interpreter* interpreter,
+                               Xvr_LiteralArray* arguments) {
+    if (arguments->count != 2) {
+        interpreter->errorOutput(
+            "incorrect number of arguments to _containsValue\n");
+        return -1;
+    }
+
+    Xvr_Literal valueLiteral = Xvr_popLiteralArray(arguments);
+    Xvr_Literal selfLiteral = Xvr_popLiteralArray(arguments);
+
+    Xvr_Literal selfLiteralIdn = selfLiteral;
+    if (XVR_IS_IDENTIFIER(selfLiteral) &&
+        Xvr_parseIdentifierToValue(interpreter, &selfLiteral)) {
+        Xvr_freeLiteral(selfLiteralIdn);
+    }
+
+    Xvr_Literal valueLiteralIdn = valueLiteral;
+    if (XVR_IS_IDENTIFIER(valueLiteral) &&
+        Xvr_parseIdentifierToValue(interpreter, &valueLiteral)) {
+        Xvr_freeLiteral(valueLiteralIdn);
+    }
+
+    if (!(XVR_IS_ARRAY(selfLiteral) || XVR_IS_DICTIONARY(selfLiteral))) {
+        interpreter->errorOutput(
+            "incorrect argument type passed to _containsValue\n");
+        Xvr_freeLiteral(selfLiteral);
+        Xvr_freeLiteral(valueLiteral);
+        return -1;
+    }
+
+    Xvr_Literal resultLiteral = XVR_TO_BOOLEAN_LITERAL(false);
+    if (XVR_IS_DICTIONARY(selfLiteral)) {
+        for (int i = 0; i < XVR_AS_DICTIONARY(selfLiteral)->capacity; i++) {
+            if (!XVR_IS_NULL(XVR_AS_DICTIONARY(selfLiteral)->entries[i].key) &&
+                Xvr_literalsAreEqual(
+                    XVR_AS_DICTIONARY(selfLiteral)->entries[i].value,
+                    valueLiteral)) {
+                Xvr_freeLiteral(selfLiteral);
+                resultLiteral = XVR_TO_BOOLEAN_LITERAL(true);
+                break;
+            }
+        }
+    } else if (XVR_IS_ARRAY(selfLiteral)) {
+        for (int i = 0; i < XVR_AS_ARRAY(selfLiteral)->count; i++) {
+            Xvr_Literal indexLiteral = XVR_TO_INTEGER_LITERAL(i);
+            Xvr_Literal elementLiteral =
+                Xvr_getLiteralArray(XVR_AS_ARRAY(selfLiteral), indexLiteral);
+
+            if (Xvr_literalsAreEqual(elementLiteral, valueLiteral)) {
+                Xvr_freeLiteral(indexLiteral);
+                Xvr_freeLiteral(elementLiteral);
+
+                Xvr_freeLiteral(resultLiteral);
+                resultLiteral = XVR_TO_BOOLEAN_LITERAL(true);
+                break;
+            }
+
+            Xvr_freeLiteral(indexLiteral);
+            Xvr_freeLiteral(elementLiteral);
+        }
+    }
+
+    Xvr_pushLiteralArray(&interpreter->stack, resultLiteral);
+    Xvr_freeLiteral(resultLiteral);
+    Xvr_freeLiteral(selfLiteral);
+    Xvr_freeLiteral(valueLiteral);
+
+    return 1;
+}
+
 static int nativeEvery(Xvr_Interpreter* interpreter,
                        Xvr_LiteralArray* arguments) {
     if (arguments->count != 2) {
@@ -159,6 +277,7 @@ static int nativeEvery(Xvr_Interpreter* interpreter,
           XVR_IS_FUNCTION_NATIVE(procLiteral))) {
         interpreter->errorOutput("incorrect argument type passed to _every\n");
         Xvr_freeLiteral(selfLiteral);
+        Xvr_freeLiteral(procLiteral);
 
         return -1;
     }
@@ -242,7 +361,7 @@ static int nativeEvery(Xvr_Interpreter* interpreter,
     Xvr_freeLiteral(procLiteral);
     Xvr_freeLiteral(selfLiteral);
 
-    return 0;
+    return 1;
 }
 
 static int nativeForEach(Xvr_Interpreter* interpreter,
@@ -273,6 +392,7 @@ static int nativeForEach(Xvr_Interpreter* interpreter,
         interpreter->errorOutput(
             "Incorrect argument type passing to _forEach\n");
         Xvr_freeLiteral(selfLiteral);
+        Xvr_freeLiteral(procLiteral);
         return -1;
     }
 
@@ -434,6 +554,7 @@ static int nativeMap(Xvr_Interpreter* interpreter,
           XVR_IS_FUNCTION_NATIVE(procLiteral))) {
         interpreter->errorOutput("Incorrect argument type passed to _map\n");
         Xvr_freeLiteral(selfLiteral);
+        Xvr_freeLiteral(procLiteral);
         return -1;
     }
 
@@ -541,6 +662,7 @@ static int nativeReduce(Xvr_Interpreter* interpreter,
           XVR_IS_FUNCTION_NATIVE(procLiteral))) {
         interpreter->errorOutput("Incorrect argument type passed to _reduce\n");
         Xvr_freeLiteral(selfLiteral);
+        Xvr_freeLiteral(procLiteral);
         return -1;
     }
 
@@ -601,7 +723,7 @@ static int nativeReduce(Xvr_Interpreter* interpreter,
     Xvr_freeLiteral(defaultLiteral);
     Xvr_freeLiteral(selfLiteral);
 
-    return 0;
+    return 1;
 }
 
 static int nativeSome(Xvr_Interpreter* interpreter,
@@ -1130,20 +1252,22 @@ typedef struct Natives {
 int Xvr_hookCompound(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
                      Xvr_Literal alias) {
     Natives natives[] = {
-        {"_concat", nativeConcat},        // array, dictionary, string
-        {"_every", nativeEvery},          // array, dictionary
-        {"_forEach", nativeForEach},      // array, dictionary
-        {"_getKeys", nativeGetKeys},      // dictionary
-        {"_getValues", nativeGetValues},  // dictionary
-        {"_map", nativeMap},              // array, dictionary
-        {"_reduce", nativeReduce},        // array, dictionary
-        {"_some", nativeSome},            // array, dictionary
-        {"_toLower", nativeToLower},      // string
-        {"_toString", nativeToString},    // array, dictionary
-        {"_toUpper", nativeToUpper},      // string
-        {"_trim", nativeTrim},            // string
-        {"_trimBegin", nativeTrimBegin},  // string
-        {"_trimEnd", nativeTrimEnd},      // string
+        {"_concat", nativeConcat},                // array, dictionary, string
+        {"_containsKey", nativeContainsKey},      // dictionary
+        {"_containsValue", nativeContainsValue},  // array, dictionary
+        {"_every", nativeEvery},                  // array, dictionary
+        {"_forEach", nativeForEach},              // array, dictionary
+        {"_getKeys", nativeGetKeys},              // dictionary
+        {"_getValues", nativeGetValues},          // dictionary
+        {"_map", nativeMap},                      // array, dictionary
+        {"_reduce", nativeReduce},                // array, dictionary
+        {"_some", nativeSome},                    // array, dictionary
+        {"_toLower", nativeToLower},              // string
+        {"_toString", nativeToString},            // array, dictionary
+        {"_toUpper", nativeToUpper},              // string
+        {"_trim", nativeTrim},                    // string
+        {"_trimBegin", nativeTrimBegin},          // string
+        {"_trimEnd", nativeTrimEnd},              // string
         {NULL, NULL}};
 
     if (!XVR_IS_NULL(alias)) {

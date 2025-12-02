@@ -22,7 +22,7 @@ make inter
 ```
 
 ```
-make tests-cases
+make test
 make inter
 ```
 
