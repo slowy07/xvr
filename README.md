@@ -33,6 +33,17 @@ proc say_hello(name: string): string {
 }
 ```
 
+```xvr
+import compound;
+
+proc even(k, v) {
+    return v % 2 == 0;
+}
+
+var data: [int] = [1, 2, 3, 4, 5, 6, 7, 8];
+print(data.filter(even));
+```
+
 ## Need Tutorial?
 
 You can check on [tutorial](docs/tutorial) for explore some tutorials.
