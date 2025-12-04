@@ -18,10 +18,7 @@
 #include "xvr_scope.h"
 #include "xvr_token_types.h"
 
-static void printWrapper(const char* output) {
-    printf("%s", output);
-    printf("\n");  // default new line
-}
+static void printWrapper(const char* output) { printf("%s", output); }
 
 static void assertWrapper(const char* output) {
     fprintf(stderr, XVR_CC_ERROR "Assertion failure: ");
@@ -1354,8 +1351,8 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
     // init the inner interpreter manually
     Xvr_initLiteralArray(&inner.literalCache);
     inner.scope = Xvr_pushScope(func.as.function.scope);
-    inner.bytecode = XVR_AS_FUNCTION(func).bytecode;
-    inner.length = XVR_AS_FUNCTION(func).length;
+    inner.bytecode = XVR_AS_FUNCTION(func).inner.bytecode;
+    inner.length = XVR_AS_FUNCTION_BYTECODE_LENGTH(func);
     inner.count = 0;
     inner.codeStart = -1;
     inner.depth = interpreter->depth + 1;
