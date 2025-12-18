@@ -113,7 +113,7 @@ SOFTWARE.
  */
 #define XVR_VERSION_MAJOR 0
 #define XVR_VERSION_MINOR 1
-#define XVR_VERSION_PATCH 0
+#define XVR_VERSION_PATCH 2
 
 /**
  * @brief build timestamp (compile-time constant)

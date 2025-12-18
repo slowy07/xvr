@@ -104,3 +104,47 @@ import compound;
   print(data.reduce(0, fungsi));
   print(data_kedua.reduce(0, fungsi));
 }
+
+{
+  var my_list: [bool] = [false, false, false];
+  var my_dict: [string : bool] = ["one": false, "two": false];
+
+  var counter: int = 0;
+  
+  proc f(k, v) {
+    counter++;
+    return v;
+  }
+
+  assert my_list.some(f) == false, "list.some() == false failed loh ya";
+  assert my_dict.some(f) == false, "list.some() == false failed juga cik";
+}
+
+{
+  var my_list: [int] = [1, 2, 3, 4, 5, 6];
+  var my_dict: [string : int] = ["one": 1, "two": 2, "three": 3, "four": 4, "five": 5, "six": 6];
+
+  assert my_list.containsValue(4) == true, "list.containsValue() == true failed loh ya cik";
+  assert my_dict.containsKey("four") == true, "dictionary.containsKey() == true failed juga loh ya";
+}
+
+{
+  proc f(k, v) {
+    return v % 2 == 0;
+  }
+
+  var data_list: [int] = [1, 2, 3, 4, 5, 6, 7, 8];
+  var data_dict: [string : int] = [
+    "one": 1,
+    "two": 2,
+    "three": 3,
+    "four": 4,
+    "five": 5,
+    "six": 6,
+    "seven": 7,
+    "eight": 8
+  ];
+
+  assert data_list.filter(f) == [2, 4, 6, 8], "list.filter() failed loh ya cik";
+  assert data_dict.filter(f) == ["two": 2, "four": 4, "six": 6, "eight": 8], "dict.filter() failed loh ya cik";
+}

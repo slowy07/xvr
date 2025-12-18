@@ -245,7 +245,7 @@ Xvr_Scope* Xvr_popScope(Xvr_Scope* scope) {
 
     Xvr_Scope* ret = scope->ancestor;
 
-    // BUGFIX: when freeing a scope, free the function's scopes manually
+    // INFO: when freeing a scope, free the function's scopes manually
     for (int i = 0; i < scope->variables.capacity; i++) {
         // handle keys, just in case
         if (XVR_IS_FUNCTION(scope->variables.entries[i].key)) {

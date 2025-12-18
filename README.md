@@ -22,52 +22,26 @@ make inter
 ```
 
 ```
-make tests-cases
+make test
 make inter
 ```
 
 ## Say wello with Xvr
-```
-var nama: string = "arfy slowy";
-
-print("wello " + nama);
-```
-
-```
-var hitung: int = 1;
-
-while (hitung < 10) {
-  print(hitung);
-  hitung += 1;
-}
-
-print ("woilah cik kelar loh ya");
-```
-
-```
-proc wello(name: string) {
+```xvr
+proc say_hello(name: string): string {
     return "wello " + name;
 }
-
-print(wello("xvr"));
 ```
 
-```
-// simple fibonacci
+```xvr
+import compound;
 
-proc fibonacci(number: int): int {
-    if (number < 2) {
-        return number;
-    }
-
-    return fibonacci(number - 1) + fibonacci(number - 2);
+proc even(k, v) {
+    return v % 2 == 0;
 }
 
-// with looping using 'for' loops
-for (var i: int = 0; i < 30; i++) {
-    var hasil = fibonacci(i);
-    print(hasil);
-}
+var data: [int] = [1, 2, 3, 4, 5, 6, 7, 8];
+print(data.filter(even));
 ```
 
 ## Need Tutorial?

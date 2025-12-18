@@ -2,10 +2,6 @@
 
 thank you for contributing for Xvr Programming Languages!
 
-## Building block
-
-![images](.github/images/building_blocks.png)
-
 ## Code style
 
 - **Identation** : using **4 spaces** for all Identation
@@ -72,3 +68,6 @@ make inter
 bear -- make tests
 bear -- make inter
 ```
+
+> [!NOTE]
+> You can start contributing by fixing some code with comments started with `// BUG`, `// WARN`.

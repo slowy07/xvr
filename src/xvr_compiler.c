@@ -1395,7 +1395,7 @@ static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
             Xvr_Literal fn = compiler->literalCache.literals[i];
             void* fnCompiler =
                 XVR_AS_FUNCTION(fn)
-                    .bytecode;  // store the compiler here for now
+                    .inner.bytecode;  // store the compiler here for now
 
             // collate the function into bytecode (without header)
             int size = 0;
