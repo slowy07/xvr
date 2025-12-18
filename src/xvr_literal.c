@@ -257,6 +257,8 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
         return original;
 
     default:
+        // FIXME: error when running interpreter, which is cannot copy literal
+        // value / type
         fprintf(stderr,
                 XVR_CC_ERROR
                 "XVR_CC_ERROR: Can't copy that literal type: %d\n" XVR_CC_RESET,
