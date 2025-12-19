@@ -18,7 +18,10 @@
 #include "xvr_scope.h"
 #include "xvr_token_types.h"
 
-static void printWrapper(const char* output) { printf("%s", output); }
+static void printWrapper(const char* output) {
+    printf("%s", output);
+    printf("\n");
+}
 
 static void assertWrapper(const char* output) {
     fprintf(stderr, XVR_CC_ERROR "Assertion failure: ");
