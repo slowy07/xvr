@@ -77,9 +77,8 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
             continue;
         }
 
-        if ((!strcmp(argv[i], "-f") || !strcmp(argv[i], "--file")) &&
-            i + 1 < argc) {
-            Xvr_commandLine.sourceFile = (char*)argv[i + 1];
+        if (argv[i][0] != '-') {  // if argv not start with '-' its a file
+            Xvr_commandLine.sourceFile = (char*)argv[i];
             i++;
             Xvr_commandLine.error = false;
             continue;
@@ -125,7 +124,7 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
 
 void Xvr_usageCommandLine(int argc, const char* argv[]) {
     printf(
-        "usage: %s [file.xb | -h | -v | [-d][-f file | -i source | -c  file "
+        "usage: %s [file.xb | -h | -v | [-d] | -i source | -c  file "
         "[-o outfile]]]\n\n",
         argv[0]);
 }
@@ -141,10 +140,6 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
     printf("-h\t\t --help\t\tShow this help\n");
     printf("-v\t\t --verrsion\t\tShow version and information\n");
     printf("-d\t\t --debug\t\tBe versbose when operating\n");
-
-    printf(
-        "-f\t\t --file filename\t\tParse, Compile and execute the source "
-        "file\n");
 
     printf(
         "-i\t\t --input source\t\tParse, compile and execute the given string "
