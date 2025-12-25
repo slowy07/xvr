@@ -453,11 +453,13 @@ static Xvr_Opcode binary(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     }
 
     case XVR_TOKEN_AND: {
+        parsePrecedence(parser, nodeHandle, PREC_COMPARISON);
         parsePrecedence(parser, nodeHandle, PREC_AND);
         return XVR_OP_AND;
     }
 
     case XVR_TOKEN_OR: {
+        parsePrecedence(parser, nodeHandle, PREC_COMPARISON);
         parsePrecedence(parser, nodeHandle, PREC_OR);
         return XVR_OP_OR;
     }
@@ -474,7 +476,8 @@ static Xvr_Opcode unary(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 
     if (parser->previous.type == XVR_TOKEN_MINUS) {
         // temp handle to potentially negate values
-        parsePrecedence(parser, &tmpNode, PREC_TERM);  // can be a literal
+        parsePrecedence(parser, &tmpNode, PREC_TERNARY);  // can be a literal
+        parsePrecedence(parser, &tmpNode, PREC_TERM);
 
         // optimisation: check for negative literals
         if (tmpNode != NULL && tmpNode->type == XVR_AST_NODE_LITERAL &&
