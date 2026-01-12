@@ -119,3 +119,10 @@ import compound;
   assert my_list.some(f) == false, "list.some() == false failed loh ya";
   assert my_dict.some(f) == false, "list.some() == false failed juga cik";
 }
+
+{
+  var list_kita: [string: int] = ["satu": 1, "dua": 2, "tiga": 3];
+  
+  assert list_kita.containsKey("tiga") == true, "containsKey() gagal loh ya";
+  assert list_kita.containsValue(2) == true, "containsValue() gagal loh ya";
+}
