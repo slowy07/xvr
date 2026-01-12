@@ -368,6 +368,120 @@ static int nativeEvery(Xvr_Interpreter* interpreter,
     return 1;
 }
 
+static int nativeFilter(Xvr_Interpreter* interpreter,
+                        Xvr_LiteralArray* arguments) {
+    if (arguments->count != 2) {
+        interpreter->errorOutput("incorrect number of arguments to _filter\n");
+        return -1;
+    }
+
+    Xvr_Literal procLiteral = Xvr_popLiteralArray(arguments);
+    Xvr_Literal selfLiteral = Xvr_popLiteralArray(arguments);
+
+    Xvr_Literal selfLiteralIdn = selfLiteral;
+    if (XVR_IS_IDENTIFIER(procLiteral) &&
+        Xvr_parseIdentifierToValue(interpreter, &selfLiteral)) {
+        Xvr_freeLiteral(selfLiteralIdn);
+    }
+
+    Xvr_Literal procLiteralIdn = procLiteral;
+    if (XVR_IS_IDENTIFIER(procLiteral) &&
+        Xvr_parseIdentifierToValue(interpreter, &procLiteral)) {
+        Xvr_freeLiteral(procLiteralIdn);
+    }
+
+    if (!(XVR_IS_ARRAY(selfLiteral) || XVR_IS_DICTIONARY(selfLiteral)) ||
+        !(XVR_IS_FUNCTION(procLiteral))) {
+        interpreter->errorOutput(
+            "incorrect argument type passing to _filter\n");
+        Xvr_freeLiteral(selfLiteral);
+        Xvr_freeLiteral(procLiteral);
+        return -1;
+    }
+
+    if (XVR_IS_ARRAY(selfLiteral)) {
+        Xvr_LiteralArray* result = XVR_ALLOCATE(Xvr_LiteralArray, 1);
+        Xvr_initLiteralArray(result);
+
+        for (int i = 0; i < XVR_AS_ARRAY(selfLiteral)->count; i++) {
+            Xvr_Literal indexLiteral = XVR_TO_INTEGER_LITERAL(i);
+
+            Xvr_LiteralArray arguments;
+            Xvr_initLiteralArray(&arguments);
+            Xvr_pushLiteralArray(&arguments,
+                                 XVR_AS_ARRAY(selfLiteral)->literals[i]);
+            Xvr_pushLiteralArray(&arguments, indexLiteral);
+
+            Xvr_LiteralArray returns;
+            Xvr_initLiteralArray(&returns);
+
+            Xvr_callLiteralFn(interpreter, procLiteral, &arguments, &returns);
+
+            Xvr_Literal lit = Xvr_popLiteralArray(&returns);
+
+            Xvr_freeLiteralArray(&arguments);
+            Xvr_freeLiteralArray(&returns);
+            Xvr_freeLiteral(indexLiteral);
+
+            if (XVR_IS_TRUTHY(lit)) {
+                Xvr_pushLiteralArray(result,
+                                     XVR_AS_ARRAY(selfLiteral)->literals[i]);
+            }
+
+            Xvr_freeLiteral(lit);
+        }
+
+        Xvr_Literal resultLiteral = XVR_TO_ARRAY_LITERAL(result);
+        Xvr_pushLiteralArray(&interpreter->stack, resultLiteral);
+        Xvr_freeLiteral(resultLiteral);
+    }
+
+    if (XVR_IS_DICTIONARY(selfLiteral)) {
+        Xvr_LiteralDictionary* result = XVR_ALLOCATE(Xvr_LiteralDictionary, 1);
+        Xvr_initLiteralDictionary(result);
+
+        for (int i = 0; i < XVR_AS_DICTIONARY(selfLiteral)->capacity; i++) {
+            if (XVR_IS_NULL(XVR_AS_DICTIONARY(selfLiteral)->entries[i].key)) {
+                continue;
+            }
+
+            Xvr_LiteralArray arguments;
+            Xvr_initLiteralArray(&arguments);
+            Xvr_pushLiteralArray(
+                &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].value);
+            Xvr_pushLiteralArray(
+                &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].key);
+
+            Xvr_LiteralArray returns;
+            Xvr_initLiteralArray(&returns);
+
+            Xvr_callLiteralFn(interpreter, procLiteral, &arguments, &returns);
+
+            Xvr_Literal lit = Xvr_popLiteralArray(&returns);
+
+            Xvr_freeLiteralArray(&arguments);
+            Xvr_freeLiteralArray(&returns);
+
+            if (XVR_IS_TRUTHY(lit)) {
+                Xvr_setLiteralDictionary(
+                    result, XVR_AS_DICTIONARY(selfLiteral)->entries[i].key,
+                    XVR_AS_DICTIONARY(selfLiteral)->entries[i].value);
+            }
+
+            Xvr_freeLiteral(lit);
+        }
+
+        Xvr_Literal resultLiteral = XVR_TO_DICTIONARY_LITERAL(result);
+        Xvr_pushLiteralArray(&interpreter->stack, resultLiteral);
+        Xvr_freeLiteral(resultLiteral);
+    }
+
+    Xvr_freeLiteral(procLiteral);
+    Xvr_freeLiteral(selfLiteral);
+
+    return 1;
+}
+
 static int nativeForEach(Xvr_Interpreter* interpreter,
                          Xvr_LiteralArray* arguments) {
     if (arguments->count != 2) {
@@ -1259,6 +1373,7 @@ int Xvr_hookCompound(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
         {"_containsKey", nativeContainsKey},      // dictionary
         {"_containsValue", nativeContainsValue},  // dictionary
         {"_every", nativeEvery},                  // array, dictionary
+        {"_filter", nativeFilter},                // array, dictionary
         {"_forEach", nativeForEach},              // array, dictionary
         {"_getKeys", nativeGetKeys},              // dictionary
         {"_getValues", nativeGetValues},          // dictionary

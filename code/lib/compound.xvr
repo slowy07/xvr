@@ -126,3 +126,15 @@ import compound;
   assert list_kita.containsKey("tiga") == true, "containsKey() gagal loh ya";
   assert list_kita.containsValue(2) == true, "containsValue() gagal loh ya";
 }
+
+{
+  var data: [int] = [1, 2, 3, 4, 5];
+  var dataDict: [string : int] = ["satu": 1, "dua": 2, "tiga": 3, "empat": 4, "lima": 5];
+
+  proc f(k, v) {
+    return v % 2 == 0;
+  }
+
+  assert data.filter(f) == [2, 4], "filter() array gagal cik";
+  assert dataDict.filter(f) == ["dua":2,"empat":4], "filter() dictionary gagal cik";
+}
