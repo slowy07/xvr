@@ -60,13 +60,17 @@ any corner case that can cause problems on any supported platform.
 
 ```sh
 # for testing
-make tests
+make test
 # for compiling interpreter
 make inter
 
 # if using bear
-bear -- make tests
+bear -- make test
 bear -- make inter
+
+# using clang intercept-build
+intercept-build make test
+intercept-build make inter
 ```
 
 > [!NOTE]
