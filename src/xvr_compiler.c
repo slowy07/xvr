@@ -351,6 +351,15 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
             Xvr_writeCompilerWithJumps(compiler, node->binary.right,
                                        breakAddressesPtr, continueAddressesPtr,
                                        jumpOffsets, rootNode);
+
+            if (node->binary.left->type == XVR_AST_NODE_BINARY &&
+                node->binary.right->type == XVR_AST_NODE_BINARY &&
+                node->binary.left->binary.opcode == XVR_OP_INDEX &&
+                node->binary.right->binary.opcode == XVR_OP_INDEX) {
+                compiler->bytecode[compiler->count++] =
+                    (unsigned char)XVR_OP_INDEX;
+            }
+
             compiler->bytecode[compiler->count++] = (unsigned char)
                 XVR_OP_INDEX_ASSIGN;  // 1 byte WARNING: enum trickery
             compiler->bytecode[compiler->count++] =
@@ -372,8 +381,8 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
         if (node->binary.opcode == XVR_OP_INDEX &&
             rootNode->type == XVR_AST_NODE_BINARY &&
             (rootNode->binary.opcode >= XVR_OP_VAR_ASSIGN &&
-             rootNode->binary.opcode <=
-                 XVR_OP_VAR_MODULO_ASSIGN)) {  // range-based check for
+             rootNode->binary.opcode <= XVR_OP_VAR_MODULO_ASSIGN) &&
+            rootNode->binary.right != node) {  // range-based check for
                                                // assignment type
             return XVR_OP_INDEX_ASSIGN_INTERMEDIATE;
         }
