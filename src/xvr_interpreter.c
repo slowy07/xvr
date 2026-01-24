@@ -1636,6 +1636,7 @@ static bool execImport(Xvr_Interpreter* interpreter) {
         interpreter->errorOutput("Unknown library name in import statement: ");
         Xvr_printLiteralCustom(identifier, interpreter->errorOutput);
         interpreter->errorOutput("\"\n");
+        interpreter->errorOutput("\n");
 
         Xvr_freeLiteral(alias);
         Xvr_freeLiteral(identifier);
