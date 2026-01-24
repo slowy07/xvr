@@ -138,3 +138,12 @@ import compound;
   assert data.filter(f) == [2, 4], "filter() array gagal cik";
   assert dataDict.filter(f) == ["dua":2,"empat":4], "filter() dictionary gagal cik";
 }
+
+{
+  var data: [int] = [1, 2, 3, 4];
+  print(data.indexOf(3));
+
+  if (data.indexOf(3) == 2) {
+    print("add cik");
+  }
+}
