@@ -1,8 +1,8 @@
 # XVR Standard Library Documentation
 
-## Compound
+## Standard
 
-Compound library in xvr providing set of built-in method for array (list) types, an array is ordered, mutable collection of elements of the same type, denoted as `[T]` where `T` are the element type (e.g, `[int]`, `[string]`, `[float]`, etc).
+Standard library in xvr providing set of built-in method for array (list) types, an array is ordered, mutable collection of elements of the same type, denoted as `[T]` where `T` are the element type (e.g, `[int]`, `[string]`, `[float]`, etc).
 
 ### `concat`
 
@@ -93,7 +93,7 @@ var fullName: string = firstName.concat(lastName);
 
 ## Combined with procedure
 
-Compound also includes functional-style methods for transforming collections. The most common of these is `map`. `map` method create new collection by appplying a transformation function to every element of the original collection. It is available for both arrats and dictionaries
+Standard also includes functional-style methods for transforming collections. The most common of these is `map`. `map` method create new collection by appplying a transformation function to every element of the original collection. It is available for both arrats and dictionaries
 
 ```
 var newArray: [U] = originalArray.map(transformProcedure);

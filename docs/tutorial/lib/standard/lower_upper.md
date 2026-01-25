@@ -1,6 +1,6 @@
 # XVR Standard Library Documentation
 
-## Compound
+## Standard
 
 String Library in XVR provides set of built-in methods for string manipulation and case conversion
 

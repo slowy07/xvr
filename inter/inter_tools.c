@@ -28,7 +28,6 @@ SOFTWARE.
 #include <stdlib.h>
 
 #include "lib_about.h"
-#include "lib_compound.h"
 #include "lib_runner.h"
 #include "lib_standard.h"
 #include "lib_timer.h"
@@ -139,7 +138,6 @@ void Xvr_runBinary(const unsigned char* tb, size_t size) {
     Xvr_initInterpreter(&interpreter);
 
     Xvr_injectNativeHook(&interpreter, "about", Xvr_hookAbout);
-    Xvr_injectNativeHook(&interpreter, "compound", Xvr_hookCompound);
     Xvr_injectNativeHook(&interpreter, "standard", Xvr_hookStandard);
     Xvr_injectNativeHook(&interpreter, "timer", Xvr_hookTimer);
     Xvr_injectNativeHook(&interpreter, "runner", Xvr_hookRunner);
