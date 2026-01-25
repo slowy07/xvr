@@ -149,6 +149,16 @@ int main(int argc, const char* argv[]) {
 
     // run from stdin
     if (Xvr_commandLine.source) {
+        const char* s = strrchr(Xvr_commandLine.sourceFile, '.');
+        if (!s || strcmp(s, ".xvr")) {
+            fprintf(stderr,
+                    XVR_CC_ERROR
+                    "bad file extension passing to %s (expected `.xvr`, got "
+                    "%s)" XVR_CC_ERROR,
+                    argv[0], s);
+            return -1;
+        }
+
         Xvr_runSource(Xvr_commandLine.source);
 
         // lib cleanup
@@ -159,6 +169,27 @@ int main(int argc, const char* argv[]) {
 
     // compile source file
     if (Xvr_commandLine.compileFile && Xvr_commandLine.outFile) {
+        const char* c = strrchr(Xvr_commandLine.compileFile, '.');
+        if (!c || strcmp(c, ".xvr")) {
+            fprintf(stderr,
+                    XVR_CC_ERROR
+                    "bad file extension passing to %s (expecting `.xvr` got "
+                    "%s)" XVR_CC_RESET,
+                    argv[0], c);
+
+            return -1;
+        }
+
+        const char* o = strrchr(Xvr_commandLine.outFile, '.');
+        if (!o || strcmp(o, ".xb")) {
+            fprintf(stderr,
+                    XVR_CC_ERROR
+                    "bad file extension passing to %s (expted  '.xb') got "
+                    "%s" XVR_CC_RESET,
+                    argv[0], o);
+            return -1;
+        }
+
         size_t size = 0;
         const char* source = Xvr_readFile(Xvr_commandLine.compileFile, &size);
 
