@@ -991,6 +991,98 @@ static int nativeSome(Xvr_Interpreter* interpreter,
     return 0;
 }
 
+static void swapLiteralsUtil(Xvr_Literal* lhs, Xvr_Literal* rhs) {
+    Xvr_Literal tmp = *lhs;
+    *lhs = *rhs;
+    *rhs = tmp;
+}
+
+static void recursiveLiteralQuickSortUtil(Xvr_Interpreter* interpreter,
+                                          Xvr_Literal* ptr, int literalCount,
+                                          Xvr_Literal fnCompareLiteral) {
+    if (literalCount <= 1) {
+        return;
+    }
+
+    int runner = 0;
+
+    for (int checker = 0; checker < literalCount - 1; checker++) {
+        Xvr_LiteralArray arguments;
+        Xvr_LiteralArray returns;
+
+        Xvr_initLiteralArray(&arguments);
+        Xvr_initLiteralArray(&returns);
+
+        Xvr_pushLiteralArray(&arguments, ptr[literalCount - 1]);
+        Xvr_pushLiteralArray(&arguments, ptr[checker]);
+
+        Xvr_callLiteralFn(interpreter, fnCompareLiteral, &arguments, &returns);
+
+        Xvr_Literal lessThan = Xvr_popLiteralArray(&returns);
+
+        Xvr_freeLiteralArray(&arguments);
+        Xvr_freeLiteralArray(&returns);
+
+        if (XVR_IS_TRUTHY(lessThan)) {
+            swapLiteralsUtil(&ptr[runner++], &ptr[checker]);
+        }
+
+        Xvr_freeLiteral(lessThan);
+    }
+
+    swapLiteralsUtil(&ptr[runner], &ptr[literalCount - 1]);
+
+    recursiveLiteralQuickSortUtil(interpreter, &ptr[0], runner,
+                                  fnCompareLiteral);
+    recursiveLiteralQuickSortUtil(interpreter, &ptr[runner + 1],
+                                  literalCount - runner - 1, fnCompareLiteral);
+}
+
+static int nativeSort(Xvr_Interpreter* interpreter,
+                      Xvr_LiteralArray* arguments) {
+    if (arguments->count != 2) {
+        interpreter->errorOutput("incorrect number of arguments to _sort\n");
+        return -1;
+    }
+
+    Xvr_Literal fnLiteral = Xvr_popLiteralArray(arguments);
+    Xvr_Literal selfLiteral = Xvr_popLiteralArray(arguments);
+
+    Xvr_Literal selfLiteralIdn = selfLiteral;
+
+    if (XVR_IS_IDENTIFIER(selfLiteral) &&
+        Xvr_parseIdentifierToValue(interpreter, &selfLiteral)) {
+        Xvr_freeLiteral(selfLiteralIdn);
+    }
+
+    Xvr_Literal fnLiteralIdn = fnLiteral;
+    if (XVR_IS_IDENTIFIER(fnLiteral) &&
+        Xvr_parseIdentifierToValue(interpreter, &fnLiteral)) {
+        Xvr_freeLiteral(fnLiteralIdn);
+    }
+
+    if (!XVR_IS_ARRAY(selfLiteral) ||
+        !(XVR_IS_FUNCTION(fnLiteral) || XVR_IS_FUNCTION_NATIVE(fnLiteral))) {
+        interpreter->errorOutput("incorrect argument type to passing _sort\n");
+        Xvr_freeLiteral(selfLiteral);
+        Xvr_freeLiteral(fnLiteral);
+        return -1;
+    }
+
+    if (XVR_IS_ARRAY(selfLiteral)) {
+        recursiveLiteralQuickSortUtil(
+            interpreter, XVR_AS_ARRAY(selfLiteral)->literals,
+            XVR_AS_ARRAY(selfLiteral)->count, fnLiteral);
+    }
+
+    Xvr_pushLiteralArray(&interpreter->stack, selfLiteral);
+
+    Xvr_freeLiteral(fnLiteral);
+    Xvr_freeLiteral(selfLiteral);
+
+    return 1;
+}
+
 static int nativeToLower(Xvr_Interpreter* interpreter,
                          Xvr_LiteralArray* arguments) {
     if (arguments->count != 1) {
@@ -1416,6 +1508,7 @@ int Xvr_hookCompound(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
         {"_map", nativeMap},                      // array, dictionary
         {"_reduce", nativeReduce},                // array, dictionary
         {"_some", nativeSome},                    // array, dictionary
+        {"_sort", nativeSort},                    // array
         {"_toLower", nativeToLower},              // string
         {"_toString", nativeToString},            // array, dictionary
         {"_toUpper", nativeToUpper},              // string
