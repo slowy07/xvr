@@ -206,6 +206,17 @@ int main(int argc, const char* argv[]) {
     }
 
     if (Xvr_commandLine.binaryFile) {
+        const char* c = strrchr(Xvr_commandLine.binaryFile, '.');
+        if (!c || strcmp(c, ".xb")) {
+            fprintf(
+                stderr,
+                XVR_CC_ERROR
+                "bad file extension passing to %s (expected are `.xb` got %s)",
+                argv[0], c);
+
+            return -1;
+        }
+
         Xvr_runBinaryFile(Xvr_commandLine.binaryFile);
 
         Xvr_freeDriveDictionary();
