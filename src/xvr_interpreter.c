@@ -20,6 +20,13 @@
 
 static void printWrapper(const char* output) {
     printf("%s", output);
+
+    if (Xvr_commandLine.enablePrintNewline) {
+        printf("%s\n", output);
+    } else {
+        printf("%s", output);
+    }
+
     printf("\n");  // default new line
 }
 

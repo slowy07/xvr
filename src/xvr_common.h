@@ -151,6 +151,7 @@ typedef struct {
     char* compileFile;
     char* outFile;
     char* source;
+    bool enablePrintNewline;
     bool verbose;
 } Xvr_CommandLine;
 

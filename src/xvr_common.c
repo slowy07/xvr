@@ -53,6 +53,7 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
     Xvr_commandLine.compileFile = NULL;
     Xvr_commandLine.outFile = "out.xb";
     Xvr_commandLine.source = NULL;
+    Xvr_commandLine.enablePrintNewline = true;
     Xvr_commandLine.verbose = false;
 
     for (int i = 1; i < argc; i++) {  // start at 1 to skip the program name
@@ -157,6 +158,9 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
     printf(
         "-o\t\t --output outfile\t\tName of the output file built with "
         "--compile (default output.xb)\n");
+
+    printf(
+        "-n\t\t disable the newline char at the end of the print statement\n");
 }
 
 void Xvr_copyrightCommandLine(int argc, const char* argv[]) {
