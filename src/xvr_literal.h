@@ -146,7 +146,6 @@ typedef enum {
  * - opaque: `ptr` + `tag` enables safe downcastring
  */
 typedef struct Xvr_Literal {
-    Xvr_LiteralType type;
     union {
         bool boolean;  // XVR_LITERAL_BOOLEAN
         int integer;   // XVR_LITERAL_INTEGER
@@ -169,9 +168,8 @@ typedef struct Xvr_Literal {
                 void* bytecode;
                 Xvr_NativeFn native;
                 Xvr_HookFn hook;
-            };
+            } inner;
             void* scope;
-            int length;
         } function;
 
         // XVR_LITERAL_IDENTIFIER
@@ -182,11 +180,11 @@ typedef struct Xvr_Literal {
 
         // XVR_LITERAL_TYPE
         struct {
-            Xvr_LiteralType typeOf;
-            bool constant;
             void* subtypes;
-            int capacity;
-            int count;
+            Xvr_LiteralType typeOf;
+            unsigned char capacity;
+            unsigned char count;
+            bool constant;
         } type;
 
         // XVR_LITERAL_OPAQUE
@@ -195,6 +193,9 @@ typedef struct Xvr_Literal {
             int tag;
         } opaque;
     } as;
+
+    Xvr_LiteralType type;
+    int bytecodeLength;
 } Xvr_Literal;
 
 #define XVR_IS_NULL(value) ((value).type == XVR_LITERAL_NULL)
@@ -220,53 +221,53 @@ typedef struct Xvr_Literal {
 #define XVR_AS_DICTIONARY(value) \
     ((Xvr_LiteralDictionary*)((value).as.dictionary))
 #define XVR_AS_FUNCTION(value) ((value).as.function)
-#define XVR_AS_FUNCTION_NATIVE(value) ((value).as.function.native)
-#define XVR_AS_FUNCTION_HOOK(value) ((value).as.function.hook)
+#define XVR_AS_FUNCTION_NATIVE(value) ((value).as.function.inner.native)
+#define XVR_AS_FUNCTION_HOOK(value) ((value).as.function.inner.hook)
 #define XVR_AS_IDENTIFIER(value) ((value).as.identifier.ptr)
 #define XVR_AS_TYPE(value) ((value).as.type)
 #define XVR_AS_OPAQUE(value) ((value).as.opaque.ptr)
 
-#define XVR_TO_NULL_LITERAL ((Xvr_Literal){XVR_LITERAL_NULL, {.integer = 0}})
+#define XVR_TO_NULL_LITERAL ((Xvr_Literal){{.integer = 0}, XVR_LITERAL_NULL, 0})
 #define XVR_TO_BOOLEAN_LITERAL(value) \
-    ((Xvr_Literal){XVR_LITERAL_BOOLEAN, {.boolean = value}})
+    ((Xvr_Literal){{.boolean = value}, XVR_LITERAL_BOOLEAN, 0})
 #define XVR_TO_INTEGER_LITERAL(value) \
-    ((Xvr_Literal){XVR_LITERAL_INTEGER, {.integer = value}})
+    ((Xvr_Literal){{.integer = value}, XVR_LITERAL_INTEGER, 0})
 #define XVR_TO_FLOAT_LITERAL(value) \
-    ((Xvr_Literal){XVR_LITERAL_FLOAT, {.number = value}})
+    ((Xvr_Literal){{.number = value}, XVR_LITERAL_FLOAT, 0})
 #define XVR_TO_STRING_LITERAL(value) Xvr_private_toStringLiteral(value)
 #define XVR_TO_ARRAY_LITERAL(value) \
-    ((Xvr_Literal){XVR_LITERAL_ARRAY, {.array = value}})
+    ((Xvr_Literal){{.array = value}, XVR_LITERAL_ARRAY, 0})
 #define XVR_TO_DICTIONARY_LITERAL(value) \
-    ((Xvr_Literal){XVR_LITERAL_DICTIONARY, {.dictionary = value}})
-#define XVR_TO_FUNCTION_LITERAL(value, l)       \
-    ((Xvr_Literal){XVR_LITERAL_FUNCTION,        \
-                   {.function.bytecode = value, \
-                    .function.scope = NULL,     \
-                    .function.length = l}})
-#define XVR_TO_FUNCTION_NATIVE_LITERAL(value)   \
-    ((Xvr_Literal){XVR_LITERAL_FUNCTION_NATIVE, \
-                   {.function.native = value,   \
-                    .function.scope = NULL,     \
-                    .function.length = 0}})
-#define XVR_TO_FUNCTION_HOOK_LITERAL(value)   \
-    ((Xvr_Literal){XVR_LITERAL_FUNCTION_HOOK, \
-                   {.function.hook = value,   \
-                    .function.scope = NULL,   \
-                    .function.length = 0}})
+    ((Xvr_Literal){{.dictionary = value}, XVR_LITERAL_DICTIONARY, 0})
+#define XVR_TO_FUNCTION_LITERAL(value, l)                                      \
+    ((Xvr_Literal){{.function.inner.bytecode = value, .function.scope = NULL}, \
+                   XVR_LITERAL_FUNCTION,                                       \
+                   l})
+#define XVR_TO_FUNCTION_NATIVE_LITERAL(value)                                \
+    ((Xvr_Literal){{.function.inner.native = value, .function.scope = NULL}, \
+                   XVR_LITERAL_FUNCTION_NATIVE,                              \
+                   0})
+#define XVR_TO_FUNCTION_HOOK_LITERAL(value)                                \
+    ((Xvr_Literal){{.function.inner.hook = value, .function.scope = NULL}, \
+                   XVR_LITERAL_FUNCTION_HOOK,                              \
+                   0})
 #define XVR_TO_IDENTIFIER_LITERAL(value) Xvr_private_toIdentifierLiteral(value)
 #define XVR_TO_TYPE_LITERAL(value, c)      \
-    ((Xvr_Literal){XVR_LITERAL_TYPE,       \
-                   {.type.typeOf = value,  \
+    ((Xvr_Literal){{.type.typeOf = value,  \
                     .type.constant = c,    \
                     .type.subtypes = NULL, \
                     .type.capacity = 0,    \
-                    .type.count = 0}})
-#define XVR_TO_OPAQUE_LITERAL(value, t) \
-    ((Xvr_Literal){XVR_LITERAL_OPAQUE, {.opaque.ptr = value, .opaque.tag = t}})
+                    .type.count = 0},      \
+                   XVR_LITERAL_TYPE,       \
+                   0})
+#define XVR_TO_OPAQUE_LITERAL(value, t)                    \
+    ((Xvr_Literal){{.opaque.ptr = value, .opaque.tag = t}, \
+                   XVR_LITERAL_OPAQUE,                     \
+                   0})
 
 #define XVR_IS_INDEX_BLANK(value) ((value).type == XVR_LITERAL_INDEX_BLANK)
 #define XVR_TO_INDEX_BLANK_LITERAL \
-    ((Xvr_Literal){XVR_LITERAL_INDEX_BLANK, {.integer = 0}})
+    ((Xvr_Literal){{.integer = 0}, XVR_LITERAL_INDEX_BLANK, 0})
 
 /**
  * @brief release resource
@@ -279,6 +280,8 @@ typedef struct Xvr_Literal {
 XVR_API void Xvr_freeLiteral(Xvr_Literal literal);
 
 #define XVR_IS_TRUTHY(x) Xvr_private_isTruthy(x)
+
+#define XVR_AS_FUNCTION_BYTECODE_LENGTH(lit) ((lit).bytecodeLength)
 
 #define XVR_MAX_STRING_LENGTH 4096
 #define XVR_HASH_I(lit) ((lit).as.identifier.hash)

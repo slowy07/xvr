@@ -108,14 +108,6 @@ SOFTWARE.
 #endif
 
 /**
- * @defgroup version XVR versioning constant
- * @brief Embedded bytecode and runtime version metadata
- */
-#define XVR_VERSION_MAJOR 0
-#define XVR_VERSION_MINOR 1
-#define XVR_VERSION_PATCH 3
-
-/**
  * @brief build timestamp (compile-time constant)
  *
  * Format will be: "MMM DD YYYY HH:MM:SS"
@@ -196,4 +188,12 @@ void Xvr_copyrightCommandLine(int argc, const char* argv[]);
 void Xvr_helpCommandLine(int argc, const char* argv[]);
 
 #endif  // !XVR_EXPORT
+
+/**
+ * @defgroup version XVR versioning constant
+ * @brief Embedded bytecode and runtime version metadata
+ */
+#define XVR_VERSION_MAJOR 0
+#define XVR_VERSION_MINOR 1
+#define XVR_VERSION_PATCH 3
 #endif  // !XVR_COMMON_H

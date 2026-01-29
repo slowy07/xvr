@@ -166,7 +166,7 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
 void Xvr_copyrightCommandLine(int argc, const char* argv[]) {
     printf("The Xvr Programming Language\n");
     printf("Interpreter version %d.%d.%d (built date %s)\n\n",
-           XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_MINOR,
+           XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH,
            XVR_VERSION_BUILD);
     printf("Copyright (c) Arfy Slowy - MIT License\n");
 }
