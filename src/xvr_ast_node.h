@@ -89,6 +89,7 @@ typedef enum Xvr_ASTNodeType {
     XVR_AST_NODE_PREFIX_DECREMENT,   // --x
     XVR_AST_NODE_POSTFIX_DECREMENT,  // x--
     XVR_AST_NODE_IMPORT,             // import lib as alias_lib
+    XVR_AST_NODE_PASS                // for do nothing
 } Xvr_ASTNodeType;
 
 void Xvr_emitASTNodeLiteral(Xvr_ASTNode** nodeHandle, Xvr_Literal literal);
@@ -448,6 +449,14 @@ typedef struct Xvr_NodeImport {
     Xvr_Literal identifier;
     Xvr_Literal alias;
 } Xvr_NodeImport;
+
+/**
+ *  @brief perform single compiler pass over an AST node,
+ *      generate bytecode transform based on the node type
+ *
+ *      @param nodeaHandle double pointer to AST node being processed
+ */
+void Xvr_emitASTNodePass(Xvr_ASTNode** nodeHandle);
 
 /**
  * @union Xvr_private_node

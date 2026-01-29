@@ -1434,15 +1434,34 @@ static void forStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     consume(parser, XVR_TOKEN_PAREN_LEFT,
             "Expected '(' at beginning of for clause");
 
-    declaration(parser,
-                &preClause);  // allow defining variables in the pre-clause
+    if (parser->current.type != XVR_TOKEN_SEMICOLON) {
+        declaration(parser, &preClause);
+    } else {
+        consume(parser, XVR_TOKEN_SEMICOLON,
+                "Expected `;` after empty declaration of for clause");
+        Xvr_emitASTNodePass(&preClause);
+    }
 
-    parsePrecedence(parser, &condition, PREC_TERNARY);
-    consume(parser, XVR_TOKEN_SEMICOLON,
-            "Expected ';' after condition of for clause");
+    if (parser->current.type != XVR_TOKEN_SEMICOLON) {
+        parsePrecedence(parser, &condition, PREC_TERNARY);
+        consume(parser, XVR_TOKEN_SEMICOLON,
+                "Expected ';' after condition of for clause");
+    } else {
+        consume(parser, XVR_TOKEN_SEMICOLON,
+                "Expected `;` after empty condition of for clause");
+        Xvr_Literal f = XVR_TO_BOOLEAN_LITERAL(true);
+        Xvr_emitASTNodeLiteral(&condition, f);
+    }
 
-    parsePrecedence(parser, &postClause, PREC_ASSIGNMENT);
-    consume(parser, XVR_TOKEN_PAREN_RIGHT, "Expected ')' at end of for clause");
+    if (parser->current.type != XVR_TOKEN_PAREN_RIGHT) {
+        parsePrecedence(parser, &postClause, PREC_ASSIGNMENT);
+        consume(parser, XVR_TOKEN_PAREN_RIGHT,
+                "Expected ')' at end of for clause");
+    } else {
+        consume(parser, XVR_TOKEN_PAREN_RIGHT,
+                "Expected `)` after empty increment of for clause");
+        Xvr_emitASTNodePass(&postClause);
+    }
 
     // read the path
     declaration(parser, &thenPath);

@@ -50,6 +50,9 @@ typedef enum Xvr_Opcode {
     XVR_OP_EOF,  // internally by parser / compiler to mark end of instruction
                  // stream
 
+    // do nothing statements
+    XVR_OP_PASS,
+
     // basic statements
     XVR_OP_ASSERT,  // if `condition` is false, raises runtime error, otherwise
                     // continue

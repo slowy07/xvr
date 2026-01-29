@@ -1152,6 +1152,10 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
 
         return XVR_OP_INDEX_ASSIGN;
     } break;
+
+    case XVR_AST_NODE_PASS: {
+        return XVR_OP_PASS;
+    } break;
     }
 
     return XVR_OP_EOF;

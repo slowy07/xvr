@@ -1971,6 +1971,9 @@ static void execInterpreter(Xvr_Interpreter* interpreter) {
     while (opcode != XVR_OP_EOF && opcode != XVR_OP_SECTION_END &&
            !interpreter->panic) {
         switch (opcode) {
+        case XVR_OP_PASS:
+            break;
+
         case XVR_OP_ASSERT:
             if (!execAssert(interpreter)) {
                 return;
