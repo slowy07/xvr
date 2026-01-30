@@ -341,7 +341,7 @@ static int nativeCallScriptFn(Xvr_Interpreter* interpreter,
     Xvr_LiteralArray rest;
     Xvr_initLiteralArray(&rest);
 
-    while (tmp.count) {  // correct the order of the rest args
+    while (tmp.count > 0) {  // correct the order of the rest args
         Xvr_Literal lit = Xvr_popLiteralArray(&tmp);
         Xvr_pushLiteralArray(&rest, lit);
         Xvr_freeLiteral(lit);

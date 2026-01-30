@@ -6,6 +6,8 @@
 #include <sys/time.h>
 #include <time.h>
 
+#include "xvr_literal.h"
+#include "xvr_literal_array.h"
 #include "xvr_memory.h"
 
 static int nativeClock(Xvr_Interpreter* interpreter,
@@ -316,9 +318,9 @@ static int nativeEvery(Xvr_Interpreter* interpreter,
 
             Xvr_LiteralArray arguments;
             Xvr_initLiteralArray(&arguments);
+            Xvr_pushLiteralArray(&arguments, indexLiteral);
             Xvr_pushLiteralArray(&arguments,
                                  XVR_AS_ARRAY(selfLiteral)->literals[i]);
-            Xvr_pushLiteralArray(&arguments, indexLiteral);
 
             Xvr_LiteralArray returns;
             Xvr_initLiteralArray(&returns);
@@ -356,9 +358,9 @@ static int nativeEvery(Xvr_Interpreter* interpreter,
             Xvr_LiteralArray arguments;
             Xvr_initLiteralArray(&arguments);
             Xvr_pushLiteralArray(
-                &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].value);
-            Xvr_pushLiteralArray(
                 &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].key);
+            Xvr_pushLiteralArray(
+                &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].value);
 
             Xvr_LiteralArray returns;
             Xvr_initLiteralArray(&returns);
@@ -424,9 +426,9 @@ static int nativeFilter(Xvr_Interpreter* interpreter,
 
             Xvr_LiteralArray arguments;
             Xvr_initLiteralArray(&arguments);
+            Xvr_pushLiteralArray(&arguments, indexLiteral);
             Xvr_pushLiteralArray(&arguments,
                                  XVR_AS_ARRAY(selfLiteral)->literals[i]);
-            Xvr_pushLiteralArray(&arguments, indexLiteral);
 
             Xvr_LiteralArray returns;
             Xvr_initLiteralArray(&returns);
@@ -464,9 +466,9 @@ static int nativeFilter(Xvr_Interpreter* interpreter,
             Xvr_LiteralArray arguments;
             Xvr_initLiteralArray(&arguments);
             Xvr_pushLiteralArray(
-                &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].value);
-            Xvr_pushLiteralArray(
                 &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].key);
+            Xvr_pushLiteralArray(&arguments,
+                                 XVR_AS_ARRAY(selfLiteral)->literals[i]);
 
             Xvr_LiteralArray returns;
             Xvr_initLiteralArray(&returns);
@@ -783,9 +785,9 @@ static int nativeMap(Xvr_Interpreter* interpreter,
             Xvr_LiteralArray arguments;
             Xvr_initLiteralArray(&arguments);
             Xvr_pushLiteralArray(
-                &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].value);
-            Xvr_pushLiteralArray(
                 &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].key);
+            Xvr_pushLiteralArray(
+                &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].value);
 
             Xvr_LiteralArray returns;
             Xvr_initLiteralArray(&returns);
@@ -873,11 +875,11 @@ static int nativeReduce(Xvr_Interpreter* interpreter,
             }
             Xvr_LiteralArray arguments;
             Xvr_initLiteralArray(&arguments);
+            Xvr_pushLiteralArray(&arguments, defaultLiteral);
             Xvr_pushLiteralArray(
                 &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].value);
             Xvr_pushLiteralArray(
                 &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].key);
-            Xvr_pushLiteralArray(&arguments, defaultLiteral);
 
             Xvr_LiteralArray returns;
             Xvr_initLiteralArray(&returns);
@@ -979,9 +981,9 @@ static int nativeSome(Xvr_Interpreter* interpreter,
             Xvr_LiteralArray arguments;
             Xvr_initLiteralArray(&arguments);
             Xvr_pushLiteralArray(
-                &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].value);
-            Xvr_pushLiteralArray(
                 &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].key);
+            Xvr_pushLiteralArray(
+                &arguments, XVR_AS_DICTIONARY(selfLiteral)->entries[i].value);
 
             Xvr_LiteralArray returns;
             Xvr_initLiteralArray(&returns);
@@ -1035,8 +1037,8 @@ static void recursiveLiteralQuickSortUtil(Xvr_Interpreter* interpreter,
         Xvr_initLiteralArray(&arguments);
         Xvr_initLiteralArray(&returns);
 
-        Xvr_pushLiteralArray(&arguments, ptr[literalCount - 1]);
         Xvr_pushLiteralArray(&arguments, ptr[checker]);
+        Xvr_pushLiteralArray(&arguments, ptr[literalCount - 1]);
 
         Xvr_callLiteralFn(interpreter, fnCompareLiteral, &arguments, &returns);
 
@@ -1532,9 +1534,9 @@ int Xvr_hookStandard(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
         {"_reduce", nativeReduce},                // array, dictionary
         {"_some", nativeSome},                    // array, dictionary
         {"_sort", nativeSort},                    // array
-        {"_toLower", nativeToLower},               // string
-        {"_toString", nativeToString},             // array, dictionary
-        {"_toUpper", nativeToUpper},               // string
+        {"_toLower", nativeToLower},              // string
+        {"_toString", nativeToString},            // array, dictionary
+        {"_toUpper", nativeToUpper},              // string
         {"_trim", nativeTrim},                    // string
         {"_trimBegin", nativeTrimBegin},          // string
         {"_trimEnd", nativeTrimEnd},              // string
