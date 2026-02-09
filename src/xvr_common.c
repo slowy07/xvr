@@ -43,19 +43,14 @@ STATIC_ASSERT(sizeof(unsigned int) == 4);
 
 Xvr_CommandLine Xvr_commandLine;
 
-void Xvr_initCommandLine(int argc, const char* argv[]) {
+Xvr_CommandLine Xvr_commandLine = {
     // default values
-    Xvr_commandLine.error = false;
-    Xvr_commandLine.help = false;
-    Xvr_commandLine.version = false;
-    Xvr_commandLine.binaryFile = NULL;
-    Xvr_commandLine.sourceFile = NULL;
-    Xvr_commandLine.compileFile = NULL;
-    Xvr_commandLine.outFile = "out.xb";
-    Xvr_commandLine.source = NULL;
-    Xvr_commandLine.enablePrintNewline = true;
-    Xvr_commandLine.verbose = false;
+    .error = false,      .help = false,      .version = false,
+    .binaryFile = NULL,  .sourceFile = NULL, .compileFile = NULL,
+    .outFile = "out.xb", .source = NULL,     .enablePrintNewline = true,
+    .verbose = false};
 
+void Xvr_initCommandLine(int argc, const char* argv[]) {
     for (int i = 1; i < argc; i++) {  // start at 1 to skip the program name
         Xvr_commandLine.error =
             true;  // error state by default, set to false by successful flags
