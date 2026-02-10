@@ -150,7 +150,7 @@ static Xvr_Token makeErrorToken(Xvr_Lexer* lexer, char* msg) {
 #ifndef XVR_EXPORT
     if (Xvr_commandLine.verbose) {
         printf("err:");
-        Xvr_printToken(&token);
+        Xvr_private_printToken(&token);
     }
 #endif
 
@@ -170,7 +170,7 @@ static Xvr_Token makeToken(Xvr_Lexer* lexer, Xvr_TokenType type) {
     // program
     if (Xvr_commandLine.verbose) {
         printf("tok:");
-        Xvr_printToken(&token);
+        Xvr_private_printToken(&token);
     }
 #endif
 
@@ -203,7 +203,7 @@ static Xvr_Token makeIntegerOrFloat(Xvr_Lexer* lexer) {
         } else {
             printf("flt:");
         }
-        Xvr_printToken(&token);
+        Xvr_private_printToken(&token);
     }
 #endif
 
@@ -255,7 +255,7 @@ static Xvr_Token makeString(Xvr_Lexer* lexer, char terminator) {
 #ifndef XVR_EXPORT
     if (Xvr_commandLine.verbose) {
         printf("str:");
-        Xvr_printToken(&token);
+        Xvr_private_printToken(&token);
     }
 #endif
 
@@ -285,7 +285,7 @@ static Xvr_Token makeKeywordOrIdentifier(Xvr_Lexer* lexer) {
 #ifndef XVR_EXPORT
             if (Xvr_commandLine.verbose) {
                 printf("kwd:");
-                Xvr_printToken(&token);
+                Xvr_private_printToken(&token);
             }
 #endif
 
@@ -304,7 +304,7 @@ static Xvr_Token makeKeywordOrIdentifier(Xvr_Lexer* lexer) {
 #ifndef XVR_EXPORT
     if (Xvr_commandLine.verbose) {
         printf("idf:");
-        Xvr_printToken(&token);
+        Xvr_private_printToken(&token);
     }
 #endif
 
@@ -318,7 +318,7 @@ void Xvr_initLexer(Xvr_Lexer* lexer, const char* source) {
     lexer->source = source;
 }
 
-Xvr_Token Xvr_scanLexer(Xvr_Lexer* lexer) {
+Xvr_Token Xvr_private_scanLexer(Xvr_Lexer* lexer) {
     eatWhitespace(lexer);
 
     lexer->start = lexer->current;
@@ -423,7 +423,7 @@ static void trim(char** s, int* l) {  // all this to remove a newline?
     }
 }
 
-void Xvr_printToken(Xvr_Token* token) {
+void Xvr_private_printToken(Xvr_Token* token) {
     if (token->type == XVR_TOKEN_ERROR) {
         printf(XVR_CC_ERROR "Error\t%d\t%.*s\n" XVR_CC_RESET, token->line,
                token->length, token->lexeme);

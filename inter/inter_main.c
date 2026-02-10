@@ -78,7 +78,7 @@ void inter(void) {
 
         if (!error) {
             // get the bytecode dump
-            int size = 0;
+            size_t size = 0;
             unsigned char* tb = Xvr_collateCompiler(&compiler, &size);
 
             // run the bytecode

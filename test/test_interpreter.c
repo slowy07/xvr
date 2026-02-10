@@ -75,7 +75,7 @@ int main(void) {
 
         Xvr_writeCompiler(&compiler, node);
 
-        int size = 0;
+        size_t size = 0;
         const unsigned char* bytecode = Xvr_collateCompiler(&compiler, &size);
         Xvr_setInterpreterPrint(&interpreter, noPrintFn);
         Xvr_setInterpreterAssert(&interpreter, noAssertFn);

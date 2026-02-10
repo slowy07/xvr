@@ -30,6 +30,7 @@ static void assertWrapper(const char* output) {
     fprintf(stderr, XVR_CC_ERROR "Assertion failure: ");
     fprintf(stderr, "%s", output);
     fprintf(stderr, "\n" XVR_CC_RESET);  // default new line
+    fprintf(stderr, XVR_CC_ERROR "Assert fail: %s\n" XVR_CC_RESET, output);
 }
 
 static void errorWrapper(const char* output) {

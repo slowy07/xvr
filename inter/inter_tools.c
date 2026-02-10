@@ -125,7 +125,7 @@ const unsigned char* Xvr_compileString(const char* source, size_t* size) {
     }
 
     // get the bytecode dump
-    const unsigned char* tb = Xvr_collateCompiler(&compiler, (int*)(size));
+    const unsigned char* tb = Xvr_collateCompiler(&compiler, size);
 
     // cleanup
     Xvr_freeCompiler(&compiler);

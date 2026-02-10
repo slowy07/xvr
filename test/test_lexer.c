@@ -9,10 +9,10 @@ int main() {
     Xvr_Lexer lexer;
     Xvr_initLexer(&lexer, source);
 
-    Xvr_Token print = Xvr_scanLexer(&lexer);
-    Xvr_Token null = Xvr_scanLexer(&lexer);
-    Xvr_Token semi = Xvr_scanLexer(&lexer);
-    Xvr_Token eof = Xvr_scanLexer(&lexer);
+    Xvr_Token print = Xvr_private_scanLexer(&lexer);
+    Xvr_Token null = Xvr_private_scanLexer(&lexer);
+    Xvr_Token semi = Xvr_private_scanLexer(&lexer);
+    Xvr_Token eof = Xvr_private_scanLexer(&lexer);
 
     if (strncmp(print.lexeme, "print", print.length)) {
         fprintf(stderr,

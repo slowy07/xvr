@@ -30,7 +30,7 @@ int main(void) {
 
         Xvr_ASTNode* node = Xvr_scanParser(&parser);
 
-        int size = 0;
+        size_t size = 0;
         unsigned char* bytecode = Xvr_collateCompiler(&compiler, &size);
 
         XVR_FREE_ARRAY(unsigned char, bytecode, size);

@@ -112,7 +112,7 @@ XVR_API void Xvr_freeCompiler(Xvr_Compiler* compiler);
  * @note caller owns returned buffer - must `free()` or pass to VM, compiler
  * state is reset
  */
-XVR_API unsigned char* Xvr_collateCompiler(Xvr_Compiler* compiler, int* size);
+XVR_API unsigned char* Xvr_collateCompiler(Xvr_Compiler* compiler, size_t* size);
 
 #ifdef __cplusplus
 }

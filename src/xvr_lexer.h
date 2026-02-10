@@ -105,7 +105,7 @@ XVR_API void Xvr_initLexer(Xvr_Lexer* lexer, const char* source);
  * @note returned token `lexeme` points into original `source` string, token is
  * valid only as long as `source` exists.
  */
-Xvr_Token Xvr_scanLexer(Xvr_Lexer* lexer);
+XVR_API Xvr_Token Xvr_private_scanLexer(Xvr_Lexer* lexer);
 
 /**
  * @brief print token details to stdout for debugging
@@ -115,6 +115,6 @@ Xvr_Token Xvr_scanLexer(Xvr_Lexer* lexer);
  * @note itended for debugging and testing, does not print to interpreter output
  * function.
  */
-void Xvr_printToken(Xvr_Token* token);
+XVR_API void Xvr_private_printToken(Xvr_Token* token);
 
 #endif  // !XVR_LEXER_H

@@ -1178,6 +1178,7 @@ void Xvr_freeCompiler(Xvr_Compiler* compiler) {
     compiler->bytecode = NULL;
     compiler->capacity = 0;
     compiler->count = 0;
+    compiler->panic = false;
 }
 
 static void emitByte(unsigned char** collationPtr, int* capacityPtr,
@@ -1231,7 +1232,7 @@ static void emitFloat(unsigned char** collationPtr, int* capacityPtr,
 
 // return the result
 static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
-                                               int* size, bool embedHeader) {
+                                               size_t* size, bool embedHeader) {
     if (compiler->panic) {
         fprintf(stderr, XVR_CC_ERROR
                 "[internal] Can't collate panicked compiler\n" XVR_CC_RESET);
@@ -1411,7 +1412,7 @@ static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
                     .inner.bytecode;  // store the compiler here for now
 
             // collate the function into bytecode (without header)
-            int size = 0;
+            size_t size = 0;
             unsigned char* bytes = collateCompilerHeaderOpt(
                 (Xvr_Compiler*)fnCompiler, &size, false);
 
@@ -1420,7 +1421,7 @@ static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
                           (unsigned short)size + 1);
 
             // write the fn to the fn collation
-            for (int i = 0; i < size; i++) {
+            for (size_t i = 0; i < size; i++) {
                 emitByte(&fnCollation, &fnCapacity, &fnCount, bytes[i]);
             }
 
@@ -1550,6 +1551,6 @@ static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
     return collation;
 }
 
-unsigned char* Xvr_collateCompiler(Xvr_Compiler* compiler, int* size) {
+unsigned char* Xvr_collateCompiler(Xvr_Compiler* compiler, size_t* size) {
     return collateCompilerHeaderOpt(compiler, size, true);
 }

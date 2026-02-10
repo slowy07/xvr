@@ -35,7 +35,7 @@ static void error(Xvr_Parser* parser, Xvr_Token token, const char* message) {
 
 static void advance(Xvr_Parser* parser) {
     parser->previous = parser->current;
-    parser->current = Xvr_scanLexer(parser->lexer);
+    parser->current = Xvr_private_scanLexer(parser->lexer);
 
     if (parser->current.type == XVR_TOKEN_ERROR) {
         error(parser, parser->current, "Xvr_Lexer error");
