@@ -2525,7 +2525,6 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
             // change the type to normal
             interpreter->literalCache.literals[i] =
                 XVR_TO_FUNCTION_LITERAL(bytes, size);
-            XVR_AS_FUNCTION(interpreter->literalCache.literals[i]).scope = NULL;
         }
     }
 

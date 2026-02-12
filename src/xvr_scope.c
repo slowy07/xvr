@@ -219,6 +219,10 @@ static bool checkType(Xvr_Literal typeLiteral, Xvr_Literal original,
         return false;
     }
 
+    if (XVR_AS_TYPE(typeLiteral).typeOf == XVR_LITERAL_OPAQUE && !XVR_IS_OPAQUE(value)) {
+      return false;
+    }
+
     return true;
 }
 
