@@ -42,6 +42,7 @@ SOFTWARE.
 #define LIB_RUNNER_H
 
 #include "xvr_interpreter.h"
+#include "xvr_common.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -82,7 +83,7 @@ int Xvr_hookRunner(Xvr_Interpreter* interpreter, Xvr_Literal identifier,
  * which is idempotent
  * @arning not thread-safe -> call during single-threaded initialization
  */
-void Xvr_initDriveDictionary(void);
+XVR_API void Xvr_initDriveDictionary(void);
 
 /**
  * @brief free global drive dictionary and registered drives
@@ -93,7 +94,7 @@ void Xvr_initDriveDictionary(void);
  * call
  * @warning not thread-safe - ensure no concurrent access before calling
  */
-void Xvr_freeDriveDictionary(void);
+XVR_API void Xvr_freeDriveDictionary(void);
 
 /**
  * @brief gets poitner to global drive dictionary
@@ -107,7 +108,7 @@ void Xvr_freeDriveDictionary(void);
  * @note returned pointer is valid until `Xvr_freeDriveDictionary()` is called,
  * dictionary is shared across all interpreters - use external synchronization
  */
-Xvr_LiteralDictionary* Xvr_getDriveDictionary(void);
+XVR_API Xvr_LiteralDictionary* Xvr_getDriveDictionary(void);
 
 /**
  * @brief resolve virtual path literal to pyhsical filesystem path
