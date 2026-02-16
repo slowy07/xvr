@@ -1,0 +1,12 @@
+proc fibo(num: int): int {
+  if (num < 2) {
+    return num;
+  }
+
+  return fibo(num - 1) + fibo(num - 2);
+}
+
+for (var i = 0; i < 10; i++) {
+  var result = fibo(i);
+  print(string i + ": " + string result);
+}
