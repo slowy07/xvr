@@ -45,9 +45,11 @@ Xvr_CommandLine Xvr_commandLine;
 
 Xvr_CommandLine Xvr_commandLine = {
     // default values
-    .error = false,      .help = false,      .version = false,
-    .binaryFile = NULL,  .sourceFile = NULL, .compileFile = NULL,
-    .outFile = "out.xb", .source = NULL,     .enablePrintNewline = true,
+    .error = false,      .help = false,
+    .version = false,    .binaryFile = NULL,
+    .sourceFile = NULL,  .compileFile = NULL,
+    .outFile = "out.xb", .source = NULL,
+    .initialfile = NULL, .enablePrintNewline = true,
     .verbose = false};
 
 void Xvr_initCommandLine(int argc, const char* argv[]) {
@@ -105,6 +107,20 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
             continue;
         }
 
+        if ((!strcmp(argv[i], "-t") || !strcmp(argv[i], "--initial")) &&
+            i + 1 < argc) {
+            Xvr_commandLine.initialfile = (char*)argv[i + 1];
+            i++;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
+        if (!strcmp(argv[i], "-n")) {
+            Xvr_commandLine.enablePrintNewline = false;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
         // option without a flag + ending in .tb = binary input
         if (i < argc) {
             if (strncmp(&(argv[i][strlen(argv[i]) - 3]), ".xb", 3) == 0) {
@@ -121,7 +137,8 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
 
 void Xvr_usageCommandLine(int argc, const char* argv[]) {
     printf(
-        "usage: %s [file.xb | -h | -v | [-d][-f file | -i source | -c  file "
+        "usage: %s [file.xb | -h | -v | [-d][-f file | -i source | -c  file | "
+        "-t file.xvr"
         "[-o outfile]]]\n\n",
         argv[0]);
 }
@@ -135,7 +152,7 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
         XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH);
 
     printf("-h\t\t --help\t\tShow this help\n");
-    printf("-v\t\t --verrsion\t\tShow version and information\n");
+    printf("-v\t\t --version\t\tShow version and information\n");
     printf("-d\t\t --debug\t\tBe versbose when operating\n");
 
     printf(
@@ -156,6 +173,10 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
 
     printf(
         "-n\t\t disable the newline char at the end of the print statement\n");
+
+    printf(
+        "-t\t\t --initial filename\tStart the interpreter as noremal, after "
+        "first running given file xvr file\n");
 }
 
 void Xvr_copyrightCommandLine(int argc, const char* argv[]) {

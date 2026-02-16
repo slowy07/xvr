@@ -155,7 +155,8 @@ void Xvr_setLiteralDictionary(Xvr_LiteralDictionary* dictionary,
         return;
     }
 
-    if (XVR_IS_FUNCTION(key) || XVR_IS_FUNCTION_NATIVE(key)) {
+    if (XVR_IS_FUNCTION(key) || XVR_IS_FUNCTION_NATIVE(key) ||
+        XVR_IS_FUNCTION_HOOK(key)) {
         fprintf(stderr, XVR_CC_ERROR
                 "Dictionaries can't have function keys (set)\n" XVR_CC_RESET);
         return;
@@ -185,7 +186,8 @@ Xvr_Literal Xvr_getLiteralDictionary(Xvr_LiteralDictionary* dictionary,
         return XVR_TO_NULL_LITERAL;
     }
 
-    if (XVR_IS_FUNCTION(key) || XVR_IS_FUNCTION_NATIVE(key)) {
+    if (XVR_IS_FUNCTION(key) || XVR_IS_FUNCTION_NATIVE(key) ||
+        XVR_IS_FUNCTION_HOOK(key)) {
         fprintf(stderr, XVR_CC_ERROR
                 "Dictionaries can't have function keys (get)\n" XVR_CC_RESET);
         return XVR_TO_NULL_LITERAL;
@@ -216,7 +218,8 @@ void Xvr_removeLiteralDictionary(Xvr_LiteralDictionary* dictionary,
         return;
     }
 
-    if (XVR_IS_FUNCTION(key) || XVR_IS_FUNCTION_NATIVE(key)) {
+    if (XVR_IS_FUNCTION(key) || XVR_IS_FUNCTION_NATIVE(key) ||
+        XVR_IS_FUNCTION_HOOK(key)) {
         fprintf(
             stderr, XVR_CC_ERROR
             "Dictionaries can't have function keys (remove)\n" XVR_CC_RESET);

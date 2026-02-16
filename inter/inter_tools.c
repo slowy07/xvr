@@ -38,7 +38,7 @@ SOFTWARE.
 #include "xvr_lexer.h"
 #include "xvr_parser.h"
 
-const char* Xvr_readFile(const char* path, size_t* fileSize) {
+const unsigned char* Xvr_readFile(const char* path, size_t* fileSize) {
     FILE* file = fopen(path, "rb");
 
     if (file == NULL) {
@@ -51,7 +51,7 @@ const char* Xvr_readFile(const char* path, size_t* fileSize) {
     *fileSize = ftell(file);
     rewind(file);
 
-    char* buffer = (char*)malloc(*fileSize + 1);
+    unsigned char* buffer = (unsigned char*)malloc(*fileSize + 1);
 
     if (buffer == NULL) {
         fprintf(stderr,
@@ -60,7 +60,7 @@ const char* Xvr_readFile(const char* path, size_t* fileSize) {
         return NULL;
     }
 
-    size_t bytesRead = fread(buffer, sizeof(char), *fileSize, file);
+    size_t bytesRead = fread(buffer, sizeof(unsigned char), *fileSize, file);
 
     buffer[*fileSize] = '\0';  // NOTE: fread doesn't append this
 
@@ -168,7 +168,7 @@ void Xvr_runSource(const char* source) {
 
 void Xvr_runSourceFile(const char* fname) {
     size_t size = 0;
-    const char* source = Xvr_readFile(fname, &size);
+    const char* source = (const char*)Xvr_readFile(fname, &size);
 
     if (!source) {
         return;

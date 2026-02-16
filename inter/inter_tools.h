@@ -65,7 +65,7 @@ extern "C" {
  *   - out of memory
  *   - I/O error during read
  */
-const char* Xvr_readFile(const char* path, size_t* fileSize);
+const unsigned char* Xvr_readFile(const char* path, size_t* fileSize);
 
 /**
  * @brief writes buffer to file

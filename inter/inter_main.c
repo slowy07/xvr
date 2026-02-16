@@ -189,7 +189,8 @@ int main(int argc, const char* argv[]) {
         }
 
         size_t size = 0;
-        const char* source = Xvr_readFile(Xvr_commandLine.compileFile, &size);
+        const char* source =
+            (const char*)Xvr_readFile(Xvr_commandLine.compileFile, &size);
 
         if (!source) {
             return 1;

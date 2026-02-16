@@ -57,7 +57,7 @@ static int nativeLoadScript(Xvr_Interpreter* interpreter,
 
     // load and compile the bytecode
     size_t fileSize = 0;
-    const char* source = Xvr_readFile(filePath, &fileSize);
+    const char* source = (const char*)Xvr_readFile(filePath, &fileSize);
 
     if (!source) {
         interpreter->errorOutput("Failed to load source file\n");

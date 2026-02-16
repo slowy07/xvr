@@ -47,7 +47,7 @@ void runSourceCustom(const char* source) {
 
 void runSourceFileCustom(const char* fname) {
     size_t size = 0;  // not used
-    const char* source = Xvr_readFile(fname, &size);
+    const char* source = (const char*)Xvr_readFile(fname, &size);
     runSourceCustom(source);
     free((void*)source);
 }
