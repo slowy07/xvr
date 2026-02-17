@@ -52,6 +52,11 @@ static char peekNext(Xvr_Lexer* lexer) {
     return lexer->source[lexer->current + 1];
 }
 
+static const char* peekN(Xvr_Lexer* lexer, size_t n) {
+    if (isAtEnd(lexer)) return "";
+    return &lexer->source[lexer->current];
+}
+
 static char advance(Xvr_Lexer* lexer) {
     if (isAtEnd(lexer)) {
         return '\0';
@@ -129,9 +134,16 @@ static bool isAlpha(Xvr_Lexer* lexer) {
            (peek(lexer) >= 'a' && peek(lexer) <= 'z') || peek(lexer) == '_';
 }
 
-static bool match(Xvr_Lexer* lexer, char c) {
-    if (peek(lexer) == c) {
-        advance(lexer);
+static bool match(Xvr_Lexer* lexer, const char* expected, size_t length) {
+    if (isAtEnd(lexer)) {
+        return false;
+    }
+
+    if (strncmp(&lexer->source[lexer->current], expected, length) == 0) {
+        for (size_t i = 0; i < length; i++) {
+            if (isAtEnd(lexer)) return false;
+            advance(lexer);
+        }
         return true;
     }
 
@@ -166,8 +178,6 @@ static Xvr_Token makeToken(Xvr_Lexer* lexer, Xvr_TokenType type) {
     token.line = lexer->line;
 
 #ifndef XVR_EXPORT
-    // BUG: this shows TOKEN_EOF twice due to the overarching structure of
-    // program
     if (Xvr_commandLine.verbose) {
         printf("tok:");
         Xvr_private_printToken(&token);
@@ -345,36 +355,36 @@ Xvr_Token Xvr_private_scanLexer(Xvr_Lexer* lexer) {
         return makeToken(lexer, XVR_TOKEN_BRACKET_RIGHT);
 
     case '+':
-        return makeToken(lexer, match(lexer, '=')   ? XVR_TOKEN_PLUS_ASSIGN
-                                : match(lexer, '+') ? XVR_TOKEN_PLUS_PLUS
-                                                    : XVR_TOKEN_PLUS);
+        return makeToken(lexer, match(lexer, "=", 1)   ? XVR_TOKEN_PLUS_ASSIGN
+                                : match(lexer, "+", 1) ? XVR_TOKEN_PLUS_PLUS
+                                                       : XVR_TOKEN_PLUS);
     case '-':
-        return makeToken(lexer, match(lexer, '=')   ? XVR_TOKEN_MINUS_ASSIGN
-                                : match(lexer, '-') ? XVR_TOKEN_MINUS_MINUS
-                                                    : XVR_TOKEN_MINUS);
+        return makeToken(lexer, match(lexer, "=", 1)   ? XVR_TOKEN_MINUS_ASSIGN
+                                : match(lexer, "-", 1) ? XVR_TOKEN_MINUS_MINUS
+                                                       : XVR_TOKEN_MINUS);
     case '*':
-        return makeToken(lexer, match(lexer, '=') ? XVR_TOKEN_MULTIPLY_ASSIGN
-                                                  : XVR_TOKEN_MULTIPLY);
+        return makeToken(lexer, match(lexer, "=", 1) ? XVR_TOKEN_MULTIPLY_ASSIGN
+                                                     : XVR_TOKEN_MULTIPLY);
     case '/':
-        return makeToken(lexer, match(lexer, '=') ? XVR_TOKEN_DIVIDE_ASSIGN
-                                                  : XVR_TOKEN_DIVIDE);
+        return makeToken(lexer, match(lexer, "=", 1) ? XVR_TOKEN_DIVIDE_ASSIGN
+                                                     : XVR_TOKEN_DIVIDE);
     case '%':
-        return makeToken(lexer, match(lexer, '=') ? XVR_TOKEN_MODULO_ASSIGN
-                                                  : XVR_TOKEN_MODULO);
+        return makeToken(lexer, match(lexer, "=", 1) ? XVR_TOKEN_MODULO_ASSIGN
+                                                     : XVR_TOKEN_MODULO);
 
     case '!':
         return makeToken(
-            lexer, match(lexer, '=') ? XVR_TOKEN_NOT_EQUAL : XVR_TOKEN_NOT);
+            lexer, match(lexer, "=", 1) ? XVR_TOKEN_NOT_EQUAL : XVR_TOKEN_NOT);
     case '=':
         return makeToken(
-            lexer, match(lexer, '=') ? XVR_TOKEN_EQUAL : XVR_TOKEN_ASSIGN);
+            lexer, match(lexer, "=", 1) ? XVR_TOKEN_EQUAL : XVR_TOKEN_ASSIGN);
 
     case '<':
-        return makeToken(
-            lexer, match(lexer, '=') ? XVR_TOKEN_LESS_EQUAL : XVR_TOKEN_LESS);
+        return makeToken(lexer, match(lexer, "=", 1) ? XVR_TOKEN_LESS_EQUAL
+                                                     : XVR_TOKEN_LESS);
     case '>':
-        return makeToken(lexer, match(lexer, '=') ? XVR_TOKEN_GREATER_EQUAL
-                                                  : XVR_TOKEN_GREATER);
+        return makeToken(lexer, match(lexer, "=", 1) ? XVR_TOKEN_GREATER_EQUAL
+                                                     : XVR_TOKEN_GREATER);
 
     case '&':
         if (advance(lexer) != '&') {
@@ -385,7 +395,7 @@ Xvr_Token Xvr_private_scanLexer(Xvr_Lexer* lexer) {
 
     case '|':
         return makeToken(lexer,
-                         match(lexer, '|') ? XVR_TOKEN_OR : XVR_TOKEN_PIPE);
+                         match(lexer, "|", 1) ? XVR_TOKEN_OR : XVR_TOKEN_PIPE);
 
     case '?':
         return makeToken(lexer, XVR_TOKEN_QUESTION);
