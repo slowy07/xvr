@@ -1,6 +1,7 @@
+import standard;
+
 {
   // standard library
-  import standard;
   
   print(clock().length());
   print(clock());
@@ -186,6 +187,6 @@
   }
 
   var data: [int] = [5, 6, 7, 8, 4, 2, 1];
-  assert data.sort(less) == [1, 2, 3, 4, 5, 6, 7, 8], "woilah cik sort(less) gagal loh ya";
-  assert data.sort(greater) == [8, 7, 6, 5, 4, 3, 2, 1], "woilah cik sort(greater) gagal loh ya";
+  assert data.sort(less) == [1, 2, 4, 5, 6, 7, 8], "woilah cik sort(less) gagal loh ya";
+  assert data.sort(greater) == [8, 7, 6, 5, 4, 2, 1], "woilah cik sort(greater) gagal loh ya";
 }

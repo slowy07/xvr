@@ -2641,12 +2641,13 @@ void Xvr_resetInterpreter(Xvr_Interpreter* interpreter) {
 
     interpreter->scope = Xvr_pushScope(NULL);
 
-    Xvr_injectNativeFn(interpreter, "_set", Xvr_private_set);
-    Xvr_injectNativeFn(interpreter, "_get", Xvr_private_get);
-    Xvr_injectNativeFn(interpreter, "_push", Xvr_private_push);
-    Xvr_injectNativeFn(interpreter, "_pop", Xvr_private_pop);
+    Xvr_injectNativeFn(interpreter, "set", Xvr_private_set);
+    Xvr_injectNativeFn(interpreter, "get", Xvr_private_get);
+    Xvr_injectNativeFn(interpreter, "push", Xvr_private_push);
+    Xvr_injectNativeFn(interpreter, "pop", Xvr_private_pop);
+    Xvr_injectNativeFn(interpreter, "length", Xvr_private_length);
     Xvr_injectNativeFn(interpreter, "_length", Xvr_private_length);
-    Xvr_injectNativeFn(interpreter, "_clear", Xvr_private_clear);
+    Xvr_injectNativeFn(interpreter, "clear", Xvr_private_clear);
 }
 
 void Xvr_freeInterpreter(Xvr_Interpreter* interpreter) {

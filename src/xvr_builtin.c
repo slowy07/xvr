@@ -1441,7 +1441,7 @@ int Xvr_private_pop(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments) {
 int Xvr_private_length(Xvr_Interpreter* interpreter,
                        Xvr_LiteralArray* arguments) {
     if (arguments->count != 1) {
-        interpreter->errorOutput("Incorrect number of arguments to _length\n");
+        interpreter->errorOutput("Incorrect number of arguments to length\n");
         return -1;
     }
 
@@ -1476,7 +1476,7 @@ int Xvr_private_length(Xvr_Interpreter* interpreter,
     }
 
     default:
-        interpreter->errorOutput("Incorrect compound type in _length: ");
+        interpreter->errorOutput("Incorrect compound type in length: ");
         Xvr_printLiteralCustom(obj, interpreter->errorOutput);
         interpreter->errorOutput("\n");
         return -1;
