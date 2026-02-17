@@ -50,6 +50,10 @@ static bool match(Xvr_Parser* parser, Xvr_TokenType tokenType) {
     return false;
 }
 
+static void consumeSemicolon(Xvr_Parser* parser) {
+    match(parser, XVR_TOKEN_SEMICOLON);
+}
+
 static void consume(Xvr_Parser* parser, Xvr_TokenType tokenType,
                     const char* msg) {
     if (parser->current.type != tokenType) {
@@ -1366,8 +1370,7 @@ static void printStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     expression(parser, &node);
     Xvr_emitASTNodeUnary(nodeHandle, XVR_OP_PRINT, node);
 
-    consume(parser, XVR_TOKEN_SEMICOLON,
-            "Expected ';' at end of print statement");
+    consumeSemicolon(parser);
 }
 
 static void assertStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
@@ -1381,8 +1384,7 @@ static void assertStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     consume(parser, XVR_TOKEN_COMMA, "Expected ',' in assert statement");
     parsePrecedence(parser, &((*nodeHandle)->binary.right), PREC_TERNARY);
 
-    consume(parser, XVR_TOKEN_SEMICOLON,
-            "Expected ';' at end of assert statement");
+    consumeSemicolon(parser);
 }
 
 static void ifStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
@@ -1472,15 +1474,13 @@ static void forStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 static void breakStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_emitASTNodeBreak(nodeHandle);
 
-    consume(parser, XVR_TOKEN_SEMICOLON,
-            "Expected ';' at end of break statement");
+    consumeSemicolon(parser);
 }
 
 static void continueStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_emitASTNodeContinue(nodeHandle);
 
-    consume(parser, XVR_TOKEN_SEMICOLON,
-            "Expected ';' at end of continue statement");
+    consumeSemicolon(parser);
 }
 
 static void returnStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
@@ -1515,8 +1515,7 @@ static void returnStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
             XVR_FREE(Xvr_ASTNode, node);  // free manually
         } while (match(parser, XVR_TOKEN_COMMA));
 
-        consume(parser, XVR_TOKEN_SEMICOLON,
-                "Expected ';' at end of return statement");
+        consumeSemicolon(parser);
     }
 
     Xvr_emitASTNodeFnReturn(nodeHandle, returnValues);
@@ -1547,8 +1546,7 @@ static void importStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 
     Xvr_emitASTNodeImport(nodeHandle, idn, alias);
 
-    consume(parser, XVR_TOKEN_SEMICOLON,
-            "Expected ';' at end of import statement");
+    consumeSemicolon(parser);
 
     Xvr_freeLiteral(idn);
     Xvr_freeLiteral(alias);
@@ -1568,8 +1566,7 @@ static void expressionStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         *nodeHandle = ptr;
     }
 
-    consume(parser, XVR_TOKEN_SEMICOLON,
-            "Expected ';' at the end of expression statement");
+    consumeSemicolon(parser);
 }
 
 static void statement(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
@@ -1771,8 +1768,7 @@ static void varDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     // declare it
     Xvr_emitASTNodeVarDecl(nodeHandle, identifier, typeLiteral, expressionNode);
 
-    consume(parser, XVR_TOKEN_SEMICOLON,
-            "Expected ';' at end of var declaration");
+    consumeSemicolon(parser);
 }
 
 static void fnDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
