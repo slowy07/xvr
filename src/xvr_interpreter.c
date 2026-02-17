@@ -2534,6 +2534,8 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
 
 // exposed functions
 void Xvr_initInterpreter(Xvr_Interpreter* interpreter) {
+    memset(interpreter, 0, sizeof(Xvr_Interpreter));
+
     interpreter->hooks = XVR_ALLOCATE(Xvr_LiteralDictionary, 1);
     Xvr_initLiteralDictionary(interpreter->hooks);
 
