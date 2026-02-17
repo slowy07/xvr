@@ -18,28 +18,6 @@ int main(void) {
     }
 
     {
-        char* source = "print null;";
-
-        Xvr_Lexer lexer;
-        Xvr_Parser parser;
-        Xvr_Compiler compiler;
-
-        Xvr_initLexer(&lexer, source);
-        Xvr_initParser(&parser, &lexer);
-        Xvr_initCompiler(&compiler);
-
-        Xvr_ASTNode* node = Xvr_scanParser(&parser);
-
-        size_t size = 0;
-        unsigned char* bytecode = Xvr_collateCompiler(&compiler, &size);
-
-        XVR_FREE_ARRAY(unsigned char, bytecode, size);
-        Xvr_freeASTNode(node);
-        Xvr_freeParser(&parser);
-        Xvr_freeCompiler(&compiler);
-    }
-
-    {
         size_t sourceLength = 0;
         const char* source = (const char*)Xvr_readFile(
             "test/xvr_file/compiler.xvr", &sourceLength);

@@ -5,7 +5,7 @@
 #include "xvr_lexer.h"
 
 int main() {
-    char* source = "print null;";
+    char* source = "var null;";
     Xvr_Lexer lexer;
     Xvr_initLexer(&lexer, source);
 
@@ -14,7 +14,7 @@ int main() {
     Xvr_Token semi = Xvr_private_scanLexer(&lexer);
     Xvr_Token eof = Xvr_private_scanLexer(&lexer);
 
-    if (strncmp(print.lexeme, "print", print.length)) {
+    if (strncmp(print.lexeme, "var", print.length)) {
         fprintf(stderr,
                 XVR_CC_ERROR
                 "ERROR: woilah cik print lexeme wrong: %s\n" XVR_CC_RESET,

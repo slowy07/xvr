@@ -60,7 +60,7 @@ int main(void) {
     }
 
     {
-        const char* source = "print null;";
+        const char* source = "print(null);";
         Xvr_Lexer lexer;
         Xvr_Parser parser;
         Xvr_Compiler compiler;

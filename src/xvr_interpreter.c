@@ -2549,13 +2549,17 @@ void Xvr_initInterpreter(Xvr_Interpreter* interpreter) {
 void Xvr_runInterpreter(Xvr_Interpreter* interpreter,
                         const unsigned char* bytecode, int length) {
     // initialize here instead of initInterpreter()
+    if (interpreter->literalCache.literals != NULL) {
+        Xvr_freeLiteralArray(&interpreter->literalCache);
+    }
     Xvr_initLiteralArray(&interpreter->literalCache);
-    interpreter->bytecode = NULL;
-    interpreter->length = 0;
-    interpreter->count = 0;
-    interpreter->codeStart = -1;
 
+    if (interpreter->stack.literals != NULL) {
+        Xvr_freeLiteralArray(&interpreter->stack);
+    }
     Xvr_initLiteralArray(&interpreter->stack);
+
+    interpreter->bytecode = NULL;
 
     interpreter->depth = 0;
     interpreter->panic = false;
@@ -2568,12 +2572,6 @@ void Xvr_runInterpreter(Xvr_Interpreter* interpreter,
     if (!interpreter->bytecode) {
         interpreter->errorOutput("No valid bytecode given\n");
         return;
-    }
-
-    // prep the literal cache
-    if (interpreter->literalCache.count > 0) {
-        Xvr_freeLiteralArray(&interpreter->literalCache);  // automatically
-                                                           // inits
     }
 
     // header section
