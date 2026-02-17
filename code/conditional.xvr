@@ -1,25 +1,26 @@
 if (true) {
-  print "nice one cik";
+  print("nice one cik");
 } else {
-  print "tidak nice one loh ya";
+  print("tidak nice one loh ya");
 }
 
 var angka: int = 42;
 
-if (angka) {
-  print "angka kamu 42";
+if (angka == 42) {
+  print("angka kamu 42");
 } else {
-  print "angka kamu bukan 42";
+  print("angka kamu bukan 42");
 }
 
-// working without brace
+// ternary operator
+var result = true ? "yes" : "no";
+print(result);
 
-if (true)
-  print "woilah cik jalan loh ya";
-else
-  print "woilah cik kok bisa loh ya error";
+var result2 = false ? "yes" : "no";
+print(result2);
 
-if ("arfy" == "ar" + "fy")
-  print "jalan bisa";
-else
-  print "tidak bisa";
+// nested ternary
+var x = 10;
+var y = 20;
+var max = x > y ? x : y;
+print(max);

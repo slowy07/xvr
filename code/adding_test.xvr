@@ -1,6 +1,30 @@
-// aritmethic symbols + - / *
-print 20 * 3;
+// arithmetic symbols + - / *
+print(20 * 3);
 
 print(30_000 * 21);
 print(1_00 / 4);
 print(30_000.20 + 21_000.2);
+
+// More arithmetic tests
+print(10 + 5);
+print(10 - 5);
+print(10 * 5);
+print(10 / 5);
+print(10 % 5);
+
+// Unary operators
+print(-10);
+print(!false);
+
+// Comparison
+print(10 == 10);
+print(10 != 5);
+print(10 < 20);
+print(10 > 5);
+print(10 <= 10);
+print(10 >= 10);
+
+// Logical
+print(true && false);
+print(true || false);
+

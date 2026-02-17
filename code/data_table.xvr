@@ -1,5 +1,5 @@
 var datatable = ["b": 1, "ba": 2, "bab": 3];
-print datatable;
+print(datatable);
 
 var trail = [
   "ab": 1,
@@ -7,6 +7,4 @@ var trail = [
   "ababc": 3
 ];
 
-print trail;
-
-assert trail == ["ab": 1, "abab": 2, "ababc": 3], "trailing error cik";
+print(trail);

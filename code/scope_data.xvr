@@ -5,12 +5,15 @@ hasil = 3 + 3;
 // variable access
 hasil = hasil + 1;
 
-// shadowing
-var hasil = 32;
+print(hasil);
 
-print hasil;
+// shadowing - redefining in same scope should error, using different scope
+{
+  var hasil = 32;
+  print(hasil);
+}
 
 {
   var hasil = 20;
-  print hasil;
+  print(hasil);
 }

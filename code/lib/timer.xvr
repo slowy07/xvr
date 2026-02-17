@@ -83,5 +83,3 @@
   ccmp.destroyTimer();
   dcmp.destroyTimer();
 }
-
-print("woilah cik aman loh ya");

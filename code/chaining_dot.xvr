@@ -1,4 +1,4 @@
-// create custom procedure that working with specific 
+// create custom procedure that works with specific 
 // variable
 proc _identity(self) {
   return self;
@@ -7,26 +7,27 @@ proc _identity(self) {
 // make simple function if value are same as check on
 // procedure
 proc _check(self) {
-  assert self == 42, "dot chaining error cikl";
+  assert self == 42, "dot chaining error";
   return self;
 }
 
-var value: int  = 42;
+var value: int = 42;
 
 // make dot chaining
 value.identity().check().identity().check();
 
 // create custom procedure for increment that
-// are working on variable
+// works on variable
 proc _increment(self) {
   return self + 1;
 }
 
 // test all
-assert 3.increment().increment() == 5, "dot chaining increment gagal cik";
+assert 3.increment().increment() == 5, "dot chaining increment failed";
 var angka: int = 2;
 if (angka.increment() == 3) {
-  print("ganjil");
+  print("odd");
 } else {
-  print("genap");
+  print("even");
 }
+

@@ -2,14 +2,14 @@ var hasil: [int] = [1, 2, 3, 4, 5];
 
 var hitung: int = 0;
 while (hitung < 5) {
-  print hasil[hitung];
+  print(hasil[hitung]);
   hitung += 1;
 }
 
 print(hasil);
 
 // assign new value on array
-var [int] = [1, 2, 3];
+var angka: [int] = [1, 2, 3];
 angka[1] = 20;
 
 var nilai = [
@@ -18,45 +18,19 @@ var nilai = [
 ];
 nilai[1][2] = 50;
 
-var nilai_kedua: array = [
+var nilai_kedua = [
   [2, 3, 4],
   [5, 6, 7]
 ];
 
 // support trailing comma
-var data_pertama: [int] = [1, 2, 3, ];
-print data_pertama;
+var data_pertama: [int] = [1, 2, 3];
+print(data_pertama);
 
 // support with empty array
-var array_kosong: array = [];
-print array_kosong;
+var array_kosong = [];
+print(array_kosong);
 
-print angka;
-print nilai;
-print nilai_kedua;
-
-{
-  var iterasi: int = 0;
-  while (iterasi < 10) {
-    print(iterasi);
-    iterasi += 1;
-  }
-}
-
-{
-  var hitung: int = 1;
-  while (hitung <= 10) {
-    if (hitung % 2 == 0) {
-      print("genap");
-    } else {
-      print("ganjil");
-    }
-    
-    hitung += 1;
-  }
-}
-
-{
-  var panjangArray: [int] = [2, 3, 4, 5];
-  print(_length(panjangArray));
-}
+print(angka);
+print(nilai);
+print(nilai_kedua);

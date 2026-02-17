@@ -1,7 +1,20 @@
 // print string and concat
-
-print "arfy slowy";
-print "xaviera " + "putri";
+print("arfy slowy");
+print("xaviera " + "putri");
 
 // escape string
-print "\tDerune\nCitizen";
+print("\tDerune\nCitizen");
+
+// print numbers
+print(42);
+print(3.14);
+
+// print boolean
+print(true);
+print(false);
+
+// print null
+print(null);
+
+// print array
+print([1, 2, 3]);
