@@ -1365,11 +1365,12 @@ static void blockStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 }
 
 static void printStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
-    // set the node info
+    consume(parser, XVR_TOKEN_PAREN_LEFT, "Expected '(' after 'print'");
     Xvr_ASTNode* node = NULL;
     expression(parser, &node);
     Xvr_emitASTNodeUnary(nodeHandle, XVR_OP_PRINT, node);
 
+    consume(parser, XVR_TOKEN_PAREN_RIGHT, "Expected ')' after expression");
     consumeSemicolon(parser);
 }
 
