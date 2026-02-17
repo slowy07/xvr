@@ -75,14 +75,6 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
             continue;
         }
 
-        if ((!strcmp(argv[i], "-f") || !strcmp(argv[i], "--file")) &&
-            i + 1 < argc) {
-            Xvr_commandLine.sourceFile = (char*)argv[i + 1];
-            i++;
-            Xvr_commandLine.error = false;
-            continue;
-        }
-
         if ((!strcmp(argv[i], "-i") || !strcmp(argv[i], "--input")) &&
             i + 1 < argc) {
             Xvr_commandLine.source = (char*)argv[i + 1];
@@ -121,9 +113,14 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
             continue;
         }
 
-        // option without a flag + ending in .tb = binary input
         if (i < argc) {
-            if (strncmp(&(argv[i][strlen(argv[i]) - 3]), ".xb", 3) == 0) {
+            size_t len = strlen(argv[i]);
+            if (len >= 4 && strcmp(&argv[i][len - 4], ".xvr") == 0) {
+                Xvr_commandLine.sourceFile = (char*)argv[i];
+                Xvr_commandLine.error = false;
+                continue;
+            }
+            if (strncmp(&argv[i][len - 3], ".xb", 3) == 0) {
                 Xvr_commandLine.binaryFile = (char*)argv[i];
                 Xvr_commandLine.error = false;
                 continue;
@@ -137,7 +134,7 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
 
 void Xvr_usageCommandLine(int argc, const char* argv[]) {
     printf(
-        "usage: %s [file.xb | -h | -v | [-d][-f file | -i source | -c  file | "
+        "usage: %s [file.xvr | file.xb | -h | -v | [-d][-i source | -c  file | "
         "-t file.xvr"
         "[-o outfile]]]\n\n",
         argv[0]);
@@ -147,6 +144,8 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
     Xvr_usageCommandLine(argc, argv);
 
     printf(
+        "file.xvr\t\tSource file in xvr format, parse, compile and execute\n");
+    printf(
         "file.xb\t\tBinary input file in xb format, must be version "
         "%d.%d.%d\n\n",
         XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH);
@@ -154,10 +153,6 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
     printf("-h\t\t --help\t\tShow this help\n");
     printf("-v\t\t --version\t\tShow version and information\n");
     printf("-d\t\t --debug\t\tBe versbose when operating\n");
-
-    printf(
-        "-f\t\t --file filename\t\tParse, Compile and execute the source "
-        "file\n");
 
     printf(
         "-i\t\t --input source\t\tParse, compile and execute the given string "
