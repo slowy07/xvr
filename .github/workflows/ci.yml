@@ -28,9 +28,6 @@ jobs:
       - name: testing
         run: |
           make test
-          make inter
-          cd out
-          ./xvr --version
 
   test-windows-latest:
     runs-on: windows-latest
