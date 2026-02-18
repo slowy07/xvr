@@ -1,0 +1,61 @@
+proc angka() {
+  return 30
+}
+
+assert angka() == 30, "proc return fail"
+
+proc identitas(x) {
+  return x
+}
+
+assert identitas("xaviera") == "xaviera", "test proc identitas error"
+
+proc make() {
+  var hitung: int = 0
+
+  proc hitungin() {
+    return ++hitung
+  }
+
+  return hitungin
+}
+
+var increment = make()
+assert increment() == 1 && increment() == 2, "test closur gagal"
+
+proc tangkap_data(hitung: int) {
+  if (hitung > 5) {
+    return hitung
+  }
+
+  return tangkap_data(hitung + 1)
+}
+
+assert tangkap_data(0) == 6, "tangkap data error"
+
+proc paramProc() {
+  return 200
+}
+
+proc outerProc(value) {
+  assert value == 200, "expression as param error"
+}
+
+outerProc(paramProc())
+
+proc more_param(first, second, ...rest) {
+  assert rest == ["three", "four", "five", "six", "seven"], "more param error"
+}
+
+more_param("one", "two", "three", "four", "five", "six", "seven")
+
+proc _contoh(self, a, b, c) {
+  assert a == "a", "underscore error (a)"
+  assert b == "b", "underscore error (b)"
+  assert c == "c", "underscore error (c)"
+  return self
+}
+
+assert "hello cik".contoh("a", "b", "c") == "hello cik", "underscore call error"
+
+print("PROC TEST XVR: aman cik")

@@ -517,13 +517,11 @@ static bool rawLiteral(Xvr_Interpreter* interpreter) {
     }
 
     Xvr_pushLiteralArray(&interpreter->stack, lit);
-    Xvr_freeLiteral(lit);
 
     return true;
 }
 
 static bool execNegate(Xvr_Interpreter* interpreter) {
-    // negate the top literal on the stack (numbers only)
     Xvr_Literal lit = Xvr_popLiteralArray(&interpreter->stack);
 
     Xvr_Literal idn = lit;
@@ -547,13 +545,11 @@ static bool execNegate(Xvr_Interpreter* interpreter) {
     }
 
     Xvr_pushLiteralArray(&interpreter->stack, lit);
-    Xvr_freeLiteral(lit);
 
     return true;
 }
 
 static bool execInvert(Xvr_Interpreter* interpreter) {
-    // negate the top literal on the stack (booleans only)
     Xvr_Literal lit = Xvr_popLiteralArray(&interpreter->stack);
 
     Xvr_Literal idn = lit;
@@ -575,7 +571,6 @@ static bool execInvert(Xvr_Interpreter* interpreter) {
     }
 
     Xvr_pushLiteralArray(&interpreter->stack, lit);
-    Xvr_freeLiteral(lit);
 
     return true;
 }
@@ -618,8 +613,6 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
             Xvr_createRefStringLength(buffer, totalLength));
         Xvr_pushLiteralArray(&interpreter->stack, literal);
 
-        // cleanup
-        Xvr_freeLiteral(literal);
         Xvr_freeLiteral(lhs);
         Xvr_freeLiteral(rhs);
 
@@ -643,6 +636,8 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
             Xvr_pushLiteralArray(&interpreter->stack,
                                  XVR_TO_INTEGER_LITERAL(XVR_AS_INTEGER(lhs) +
                                                         XVR_AS_INTEGER(rhs)));
+            Xvr_freeLiteral(lhs);
+            Xvr_freeLiteral(rhs);
             return true;
 
         case XVR_OP_SUBTRACTION:
@@ -650,6 +645,8 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
             Xvr_pushLiteralArray(&interpreter->stack,
                                  XVR_TO_INTEGER_LITERAL(XVR_AS_INTEGER(lhs) -
                                                         XVR_AS_INTEGER(rhs)));
+            Xvr_freeLiteral(lhs);
+            Xvr_freeLiteral(rhs);
             return true;
 
         case XVR_OP_MULTIPLICATION:
@@ -657,6 +654,8 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
             Xvr_pushLiteralArray(&interpreter->stack,
                                  XVR_TO_INTEGER_LITERAL(XVR_AS_INTEGER(lhs) *
                                                         XVR_AS_INTEGER(rhs)));
+            Xvr_freeLiteral(lhs);
+            Xvr_freeLiteral(rhs);
             return true;
 
         case XVR_OP_DIVISION:
@@ -664,11 +663,15 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
             if (XVR_AS_INTEGER(rhs) == 0) {
                 interpreter->errorHandler.output(
                     "Can't divide by zero (error found in interpreter)\n");
+                Xvr_freeLiteral(lhs);
+                Xvr_freeLiteral(rhs);
                 return false;
             }
             Xvr_pushLiteralArray(&interpreter->stack,
                                  XVR_TO_INTEGER_LITERAL(XVR_AS_INTEGER(lhs) /
                                                         XVR_AS_INTEGER(rhs)));
+            Xvr_freeLiteral(lhs);
+            Xvr_freeLiteral(rhs);
             return true;
 
         case XVR_OP_MODULO:
@@ -676,16 +679,22 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
             if (XVR_AS_INTEGER(rhs) == 0) {
                 interpreter->errorHandler.output(
                     "Can't modulo by zero (error found in interpreter)\n");
+                Xvr_freeLiteral(lhs);
+                Xvr_freeLiteral(rhs);
                 return false;
             }
             Xvr_pushLiteralArray(&interpreter->stack,
                                  XVR_TO_INTEGER_LITERAL(XVR_AS_INTEGER(lhs) %
                                                         XVR_AS_INTEGER(rhs)));
+            Xvr_freeLiteral(lhs);
+            Xvr_freeLiteral(rhs);
             return true;
 
         default:
             interpreter->errorHandler.output(
                 "[internal] bad opcode argument passed to execArithmetic()\n");
+            Xvr_freeLiteral(lhs);
+            Xvr_freeLiteral(rhs);
             return false;
         }
     }
@@ -694,6 +703,8 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
     if (opcode == XVR_OP_MODULO || opcode == XVR_OP_VAR_MODULO_ASSIGN) {
         interpreter->errorHandler.output(
             "Bad arithmetic argument (modulo on floats not allowed)\n");
+        Xvr_freeLiteral(lhs);
+        Xvr_freeLiteral(rhs);
         return false;
     }
 
@@ -704,6 +715,8 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
             Xvr_pushLiteralArray(
                 &interpreter->stack,
                 XVR_TO_FLOAT_LITERAL(XVR_AS_FLOAT(lhs) + XVR_AS_FLOAT(rhs)));
+            Xvr_freeLiteral(lhs);
+            Xvr_freeLiteral(rhs);
             return true;
 
         case XVR_OP_SUBTRACTION:
@@ -711,6 +724,8 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
             Xvr_pushLiteralArray(
                 &interpreter->stack,
                 XVR_TO_FLOAT_LITERAL(XVR_AS_FLOAT(lhs) - XVR_AS_FLOAT(rhs)));
+            Xvr_freeLiteral(lhs);
+            Xvr_freeLiteral(rhs);
             return true;
 
         case XVR_OP_MULTIPLICATION:
@@ -718,6 +733,8 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
             Xvr_pushLiteralArray(
                 &interpreter->stack,
                 XVR_TO_FLOAT_LITERAL(XVR_AS_FLOAT(lhs) * XVR_AS_FLOAT(rhs)));
+            Xvr_freeLiteral(lhs);
+            Xvr_freeLiteral(rhs);
             return true;
 
         case XVR_OP_DIVISION:
@@ -725,16 +742,22 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
             if (XVR_AS_FLOAT(rhs) == 0) {
                 interpreter->errorHandler.output(
                     "Can't divide by zero (error found in interpreter)\n");
+                Xvr_freeLiteral(lhs);
+                Xvr_freeLiteral(rhs);
                 return false;
             }
             Xvr_pushLiteralArray(
                 &interpreter->stack,
                 XVR_TO_FLOAT_LITERAL(XVR_AS_FLOAT(lhs) / XVR_AS_FLOAT(rhs)));
+            Xvr_freeLiteral(lhs);
+            Xvr_freeLiteral(rhs);
             return true;
 
         default:
             interpreter->errorHandler.output(
                 "[internal] bad opcode argument passed to execArithmetic()\n");
+            Xvr_freeLiteral(lhs);
+            Xvr_freeLiteral(rhs);
             return false;
         }
     }
@@ -1078,7 +1101,6 @@ static bool execValCast(Xvr_Interpreter* interpreter) {
     // leave the new value on the stack
     Xvr_pushLiteralArray(&interpreter->stack, result);
 
-    Xvr_freeLiteral(result);
     Xvr_freeLiteral(value);
     Xvr_freeLiteral(type);
 
@@ -1098,7 +1120,6 @@ static bool execTypeOf(Xvr_Interpreter* interpreter) {
     Xvr_pushLiteralArray(&interpreter->stack, type);
 
     Xvr_freeLiteral(rhs);
-    Xvr_freeLiteral(type);
 
     return true;
 }
@@ -1814,7 +1835,6 @@ static bool execFnReturn(Xvr_Interpreter* interpreter) {
     while (returns.count > 0) {
         Xvr_Literal lit = Xvr_popLiteralArray(&returns);
         Xvr_pushLiteralArray(&interpreter->stack, lit);
-        Xvr_freeLiteral(lit);
     }
 
     Xvr_freeLiteralArray(&returns);
@@ -1924,11 +1944,7 @@ static bool execIndex(Xvr_Interpreter* interpreter, bool assignIntermediate) {
         Xvr_printLiteralCustom(compoundIdn, interpreter->errorOutput);
         interpreter->errorHandler.output("\n");
 
-        // clean up
-        Xvr_freeLiteral(third);
-        Xvr_freeLiteral(second);
-        Xvr_freeLiteral(first);
-        Xvr_freeLiteral(compound);
+        // clean up - values pushed to interpreter stack are owned by stack now
         if (freeIdn) {
             Xvr_freeLiteral(compoundIdn);
         }
@@ -1936,11 +1952,7 @@ static bool execIndex(Xvr_Interpreter* interpreter, bool assignIntermediate) {
         return false;
     }
 
-    // clean up
-    Xvr_freeLiteral(third);
-    Xvr_freeLiteral(second);
-    Xvr_freeLiteral(first);
-    Xvr_freeLiteral(compound);
+    // clean up - values pushed to interpreter stack are owned by stack now
     if (freeIdn) {
         Xvr_freeLiteral(compoundIdn);
     }

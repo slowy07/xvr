@@ -86,6 +86,19 @@ int main(void) {
         Xvr_freeInterpreter(&interpreter);
     }
 
+    {
+        const char* filename[] = {
+            "test/xvr_file/procedure.xvr",
+        };
+
+        for (int i = 0; filename[i]; i++) {
+          printf("Test run %s\n", filename[i]);
+          char buffer[128];
+          snprintf(buffer, 128, "%s", filename[i]);
+          runSourceFileCustom(buffer);
+        }
+    }
+
     if (ignoredAssertions > 1) {
         fprintf(stderr, XVR_CC_ERROR "Woilah cik, assert: %d\n" XVR_CC_RESET,
                 ignoredAssertions);
