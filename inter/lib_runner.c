@@ -11,6 +11,7 @@
 #include "xvr_literal_array.h"
 #include "xvr_literal_dictionary.h"
 #include "xvr_memory.h"
+#include "xvr_print_handler.h"
 #include "xvr_refstring.h"
 #include "xvr_scope.h"
 
@@ -76,9 +77,12 @@ static int nativeLoadScript(Xvr_Interpreter* interpreter,
 
     // build the runner object
     Xvr_Runner* runner = XVR_ALLOCATE(Xvr_Runner, 1);
-    Xvr_setInterpreterPrint(&runner->interpreter, interpreter->printOutput);
-    Xvr_setInterpreterAssert(&runner->interpreter, interpreter->assertOutput);
-    Xvr_setInterpreterError(&runner->interpreter, interpreter->errorOutput);
+    Xvr_setInterpreterPrint(&runner->interpreter,
+                            interpreter->printHandler.output);
+    Xvr_setInterpreterAssert(&runner->interpreter,
+                             interpreter->assertHandler.output);
+    Xvr_setInterpreterError(&runner->interpreter,
+                            interpreter->errorHandler.output);
     runner->interpreter.hooks = interpreter->hooks;
     runner->interpreter.scope = NULL;
     Xvr_resetInterpreter(&runner->interpreter);
@@ -192,13 +196,17 @@ static int nativeLoadScriptBytecode(Xvr_Interpreter* interpreter,
     unsigned char* bytecode = (unsigned char*)Xvr_readFile(filePath, &fileSize);
 
     if (!bytecode) {
-        interpreter->errorOutput("Failed to load bytecode file\n");
+        interpreter->errorHandler.output("Failed to load bytecode file\n");
         return -1;
     }
 
     Xvr_Runner* runner = XVR_ALLOCATE(Xvr_Runner, 1);
-    Xvr_setInterpreterPrint(&runner->interpreter, interpreter->printOutput);
-    Xvr_setInterpreterAssert(&runner->interpreter, interpreter->assertOutput);
+    Xvr_setInterpreterPrint(&runner->interpreter,
+                            interpreter->printHandler.output);
+    Xvr_setInterpreterAssert(&runner->interpreter,
+                             interpreter->assertHandler.output);
+    Xvr_setInterpreterError(&runner->interpreter,
+                            interpreter->errorHandler.output);
     Xvr_setInterpreterError(&runner->interpreter, interpreter->errorOutput);
     runner->interpreter.hooks = interpreter->hooks;
     runner->interpreter.scope = NULL;

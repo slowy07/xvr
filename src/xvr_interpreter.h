@@ -50,6 +50,7 @@ SOFTWARE.
 #include "xvr_literal.h"
 #include "xvr_literal_array.h"
 #include "xvr_literal_dictionary.h"
+#include "xvr_print_handler.h"
 #include "xvr_scope.h"
 
 /**
@@ -59,7 +60,7 @@ SOFTWARE.
  * @param[in] message Null-terminated string to output
  *
  * @note default implementation use `printf` / `fprintf(stderr, ...)` but can be
- * overriden for custom loggin
+ * overriden for custom logging
  */
 typedef void (*Xvr_PrintFn)(const char*);
 
@@ -83,9 +84,13 @@ typedef struct Xvr_Interpreter {
 
     Xvr_LiteralDictionary* hooks;  // identifier resolution callbacks (borrowed)
 
-    Xvr_PrintFn printOutput;   // output function for print statement
-    Xvr_PrintFn assertOutput;  // output function for assertion failure
-    Xvr_PrintFn errorOutput;   // output funrcion for runtime errors
+    Xvr_PrintHandler printHandler;   // output handler for print statement
+    Xvr_PrintHandler assertHandler;  // output handler for assertion failure
+    Xvr_PrintHandler errorHandler;   // output handler for runtime errors
+
+    Xvr_PrintFn printOutput;   // @deprecated use printHandler instead
+    Xvr_PrintFn assertOutput;  // @deprecated use assertHandler instead
+    Xvr_PrintFn errorOutput;   // @deprecated use errorHandler instead
 
     int depth;   // current call stack depth (for recursion limits)
     bool panic;  // true if urecoverable erro ocurred
@@ -113,6 +118,13 @@ XVR_API bool Xvr_callFn(Xvr_Interpreter* interpreter, const char* name,
 
 XVR_API bool Xvr_parseIdentifierToValue(Xvr_Interpreter* interpreter,
                                         Xvr_Literal* literalPtr);
+XVR_API void Xvr_setInterpreterPrintHandler(Xvr_Interpreter* interpreter,
+                                            Xvr_PrintHandler printHandler);
+XVR_API void Xvr_setInterpreterAssertHandler(Xvr_Interpreter* interpreter,
+                                             Xvr_PrintHandler assertHandler);
+XVR_API void Xvr_setInterpreterErrorHandler(Xvr_Interpreter* interpreter,
+                                            Xvr_PrintHandler errorHandler);
+
 XVR_API void Xvr_setInterpreterPrint(Xvr_Interpreter* interpreter,
                                      Xvr_PrintFn printOutput);
 XVR_API void Xvr_setInterpreterAssert(Xvr_Interpreter* interpreter,

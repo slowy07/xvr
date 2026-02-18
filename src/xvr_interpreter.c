@@ -14,6 +14,7 @@
 #include "xvr_literal_dictionary.h"
 #include "xvr_memory.h"
 #include "xvr_opcodes.h"
+#include "xvr_print_handler.h"
 #include "xvr_refstring.h"
 #include "xvr_scope.h"
 #include "xvr_token_types.h"
@@ -41,7 +42,8 @@ bool Xvr_injectNativeFn(Xvr_Interpreter* interpreter, const char* name,
                         Xvr_NativeFn func) {
     // reject reserved words
     if (Xvr_findTypeByKeyword(name) != XVR_TOKEN_EOF) {
-        interpreter->errorOutput("Can't override an existing keyword\n");
+        interpreter->errorHandler.output(
+            "Can't override an existing keyword\n");
         return false;
     }
 
@@ -52,7 +54,8 @@ bool Xvr_injectNativeFn(Xvr_Interpreter* interpreter, const char* name,
     // make sure the name isn't taken
     if (Xvr_existsLiteralDictionary(&interpreter->scope->variables,
                                     identifier)) {
-        interpreter->errorOutput("Can't override an existing variable\n");
+        interpreter->errorHandler.output(
+            "Can't override an existing variable\n");
         return false;
     }
 
@@ -72,7 +75,7 @@ bool Xvr_injectNativeHook(Xvr_Interpreter* interpreter, const char* name,
                           Xvr_HookFn hook) {
     // reject reserved words
     if (Xvr_findTypeByKeyword(name) != XVR_TOKEN_EOF) {
-        interpreter->errorOutput(
+        interpreter->errorHandler.output(
             "Can't inject a hook on an existing keyword\n");
         return false;
     }
@@ -83,7 +86,7 @@ bool Xvr_injectNativeHook(Xvr_Interpreter* interpreter, const char* name,
 
     // make sure the name isn't taken
     if (Xvr_existsLiteralDictionary(interpreter->hooks, identifier)) {
-        interpreter->errorOutput("Can't override an existing hook\n");
+        interpreter->errorHandler.output("Can't override an existing hook\n");
         return false;
     }
 
@@ -164,9 +167,9 @@ bool Xvr_parseIdentifierToValue(Xvr_Interpreter* interpreter,
     if (XVR_IS_IDENTIFIER(*literalPtr)) {
         if (!Xvr_getScopeVariable(interpreter->scope, *literalPtr,
                                   literalPtr)) {
-            interpreter->errorOutput("Undeclared variable ");
+            interpreter->errorHandler.output("Undeclared variable ");
             Xvr_printLiteralCustom(*literalPtr, interpreter->errorOutput);
-            interpreter->errorOutput("\n");
+            interpreter->errorHandler.output("\n");
             return false;
         }
     }
@@ -178,20 +181,43 @@ bool Xvr_parseIdentifierToValue(Xvr_Interpreter* interpreter,
     return true;
 }
 
-// utilities for the host program
+// utilities for the host program - new handler-based API
+void Xvr_setInterpreterPrintHandler(Xvr_Interpreter* interpreter,
+                                    Xvr_PrintHandler printHandler) {
+    interpreter->printHandler = printHandler;
+    interpreter->printOutput = printHandler.output;
+}
+
+void Xvr_setInterpreterAssertHandler(Xvr_Interpreter* interpreter,
+                                     Xvr_PrintHandler assertHandler) {
+    interpreter->assertHandler = assertHandler;
+    interpreter->assertOutput = assertHandler.output;
+}
+
+void Xvr_setInterpreterErrorHandler(Xvr_Interpreter* interpreter,
+                                    Xvr_PrintHandler errorHandler) {
+    interpreter->errorHandler = errorHandler;
+    interpreter->errorOutput = errorHandler.output;
+}
+
+// utilities for the host program - legacy API (deprecated)
 void Xvr_setInterpreterPrint(Xvr_Interpreter* interpreter,
                              Xvr_PrintFn printOutput) {
     interpreter->printOutput = printOutput;
+    Xvr_printHandlerInit(&interpreter->printHandler, printOutput,
+                         Xvr_commandLine.enablePrintNewline);
 }
 
 void Xvr_setInterpreterAssert(Xvr_Interpreter* interpreter,
                               Xvr_PrintFn assertOutput) {
     interpreter->assertOutput = assertOutput;
+    Xvr_printHandlerInit(&interpreter->assertHandler, assertOutput, true);
 }
 
 void Xvr_setInterpreterError(Xvr_Interpreter* interpreter,
                              Xvr_PrintFn errorOutput) {
     interpreter->errorOutput = errorOutput;
+    Xvr_printHandlerInit(&interpreter->errorHandler, errorOutput, false);
 }
 
 // utils
@@ -236,7 +262,7 @@ static void consumeByte(Xvr_Interpreter* interpreter, const unsigned char byte,
                  "[internal] Failed to consume the correct byte (expected %u, "
                  "found %u)\n",
                  byte, tb[*count]);
-        interpreter->errorOutput(buffer);
+        interpreter->errorHandler.output(buffer);
     }
     *count += 1;
 }
@@ -249,7 +275,7 @@ static void consumeShort(Xvr_Interpreter* interpreter, unsigned short bytes,
                  "[internal] Failed to consume the correct bytes (expected %u, "
                  "found %u)\n",
                  bytes, *(unsigned short*)(tb + *count));
-        interpreter->errorOutput(buffer);
+        interpreter->errorHandler.output(buffer);
     }
     *count += 2;
 }
@@ -266,11 +292,11 @@ static bool execAssert(Xvr_Interpreter* interpreter) {
     }
 
     if (!XVR_IS_STRING(rhs)) {
-        interpreter->errorOutput(
+        interpreter->errorHandler.output(
             "The assert keyword needs a string as the second argument, "
             "received: ");
         Xvr_printLiteralCustom(rhs, interpreter->errorOutput);
-        interpreter->errorOutput("\n");
+        interpreter->errorHandler.output("\n");
 
         Xvr_freeLiteral(rhs);
         Xvr_freeLiteral(lhs);
@@ -278,7 +304,7 @@ static bool execAssert(Xvr_Interpreter* interpreter) {
     }
 
     if (XVR_IS_NULL(lhs) || !XVR_IS_TRUTHY(lhs)) {
-        (*interpreter->assertOutput)(Xvr_toCString(XVR_AS_STRING(rhs)));
+        (*interpreter->assertHandler.output)(Xvr_toCString(XVR_AS_STRING(rhs)));
         interpreter->panic = true;
 
         Xvr_freeLiteral(rhs);
@@ -302,7 +328,7 @@ static bool execPrint(Xvr_Interpreter* interpreter) {
         Xvr_freeLiteral(idn);
     }
 
-    Xvr_printLiteralCustom(lit, interpreter->printOutput);
+    Xvr_printLiteralCustom(lit, interpreter->printHandler.output);
 
     Xvr_freeLiteral(lit);
 
@@ -357,9 +383,9 @@ static bool execNegate(Xvr_Interpreter* interpreter) {
     } else if (XVR_IS_FLOAT(lit)) {
         lit = XVR_TO_FLOAT_LITERAL(-XVR_AS_FLOAT(lit));
     } else {
-        interpreter->errorOutput("Can't negate that literal: ");
-        Xvr_printLiteralCustom(lit, interpreter->errorOutput);
-        interpreter->errorOutput("\n");
+        interpreter->errorHandler.output("Can't negate that literal: ");
+        Xvr_printLiteralCustom(lit, interpreter->errorHandler.output);
+        interpreter->errorHandler.output("\n");
 
         Xvr_freeLiteral(lit);
 
@@ -385,9 +411,9 @@ static bool execInvert(Xvr_Interpreter* interpreter) {
     if (XVR_IS_BOOLEAN(lit)) {
         lit = XVR_TO_BOOLEAN_LITERAL(!XVR_AS_BOOLEAN(lit));
     } else {
-        interpreter->errorOutput("Can't invert that literal: ");
-        Xvr_printLiteralCustom(lit, interpreter->errorOutput);
-        interpreter->errorOutput("\n");
+        interpreter->errorHandler.output("Can't invert that literal: ");
+        Xvr_printLiteralCustom(lit, interpreter->errorHandler.output);
+        interpreter->errorHandler.output("\n");
 
         Xvr_freeLiteral(lit);
 
@@ -423,7 +449,7 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
         int totalLength =
             XVR_AS_STRING(lhs)->length + XVR_AS_STRING(rhs)->length;
         if (totalLength > XVR_MAX_STRING_LENGTH) {
-            interpreter->errorOutput(
+            interpreter->errorHandler.output(
                 "Can't concatenate these strings, result is too long (error "
                 "found in interpreter)\n");
             return false;
@@ -482,7 +508,7 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
         case XVR_OP_DIVISION:
         case XVR_OP_VAR_DIVISION_ASSIGN:
             if (XVR_AS_INTEGER(rhs) == 0) {
-                interpreter->errorOutput(
+                interpreter->errorHandler.output(
                     "Can't divide by zero (error found in interpreter)\n");
                 return false;
             }
@@ -494,7 +520,7 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
         case XVR_OP_MODULO:
         case XVR_OP_VAR_MODULO_ASSIGN:
             if (XVR_AS_INTEGER(rhs) == 0) {
-                interpreter->errorOutput(
+                interpreter->errorHandler.output(
                     "Can't modulo by zero (error found in interpreter)\n");
                 return false;
             }
@@ -504,7 +530,7 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
             return true;
 
         default:
-            interpreter->errorOutput(
+            interpreter->errorHandler.output(
                 "[internal] bad opcode argument passed to execArithmetic()\n");
             return false;
         }
@@ -512,7 +538,7 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
 
     // catch bad modulo
     if (opcode == XVR_OP_MODULO || opcode == XVR_OP_VAR_MODULO_ASSIGN) {
-        interpreter->errorOutput(
+        interpreter->errorHandler.output(
             "Bad arithmetic argument (modulo on floats not allowed)\n");
         return false;
     }
@@ -543,7 +569,7 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
         case XVR_OP_DIVISION:
         case XVR_OP_VAR_DIVISION_ASSIGN:
             if (XVR_AS_FLOAT(rhs) == 0) {
-                interpreter->errorOutput(
+                interpreter->errorHandler.output(
                     "Can't divide by zero (error found in interpreter)\n");
                 return false;
             }
@@ -553,18 +579,18 @@ static bool execArithmetic(Xvr_Interpreter* interpreter, Xvr_Opcode opcode) {
             return true;
 
         default:
-            interpreter->errorOutput(
+            interpreter->errorHandler.output(
                 "[internal] bad opcode argument passed to execArithmetic()\n");
             return false;
         }
     }
 
     // wrong types
-    interpreter->errorOutput("Bad arithmetic argument ");
+    interpreter->errorHandler.output("Bad arithmetic argument ");
     Xvr_printLiteralCustom(lhs, interpreter->errorOutput);
-    interpreter->errorOutput(" and ");
+    interpreter->errorHandler.output(" and ");
     Xvr_printLiteralCustom(rhs, interpreter->errorOutput);
-    interpreter->errorOutput("\n");
+    interpreter->errorHandler.output("\n");
 
     Xvr_freeLiteral(lhs);
     Xvr_freeLiteral(rhs);
@@ -592,9 +618,9 @@ static Xvr_Literal parseTypeToValue(Xvr_Interpreter* interpreter,
     }
 
     if (!XVR_IS_TYPE(type)) {
-        interpreter->errorOutput("Bad type encountered: ");
+        interpreter->errorHandler.output("Bad type encountered: ");
         Xvr_printLiteralCustom(type, interpreter->errorOutput);
-        interpreter->errorOutput("\n");
+        interpreter->errorHandler.output("\n");
         // TODO: would be better to return an int here...
     }
 
@@ -630,9 +656,9 @@ static bool execVarDecl(Xvr_Interpreter* interpreter, bool lng) {
     type = parseTypeToValue(interpreter, type);
 
     if (!Xvr_declareScopeVariable(interpreter->scope, identifier, type)) {
-        interpreter->errorOutput("Can't redefine the variable \"");
+        interpreter->errorHandler.output("Can't redefine the variable \"");
         Xvr_printLiteralCustom(identifier, interpreter->errorOutput);
-        interpreter->errorOutput("\"\n");
+        interpreter->errorHandler.output("\"\n");
         return false;
     }
 
@@ -654,9 +680,10 @@ static bool execVarDecl(Xvr_Interpreter* interpreter, bool lng) {
 
     if (!XVR_IS_NULL(val) &&
         !Xvr_setScopeVariable(interpreter->scope, identifier, val, false)) {
-        interpreter->errorOutput("Incorrect type assigned to variable \"");
+        interpreter->errorHandler.output(
+            "Incorrect type assigned to variable \"");
         Xvr_printLiteralCustom(identifier, interpreter->errorOutput);
-        interpreter->errorOutput("\"\n");
+        interpreter->errorHandler.output("\"\n");
 
         Xvr_freeLiteral(type);
         Xvr_freeLiteral(val);
@@ -697,17 +724,18 @@ static bool execFnDecl(Xvr_Interpreter* interpreter, bool lng) {
     Xvr_Literal type = XVR_TO_TYPE_LITERAL(XVR_LITERAL_FUNCTION, true);
 
     if (!Xvr_declareScopeVariable(interpreter->scope, identifier, type)) {
-        interpreter->errorOutput("Can't redefine the function \"");
+        interpreter->errorHandler.output("Can't redefine the function \"");
         Xvr_printLiteralCustom(identifier, interpreter->errorOutput);
-        interpreter->errorOutput("\"\n");
+        interpreter->errorHandler.output("\"\n");
         return false;
     }
 
     if (!Xvr_setScopeVariable(interpreter->scope, identifier, function,
                               false)) {  // scope gets copied here
-        interpreter->errorOutput("Incorrect type assigned to variable \"");
+        interpreter->errorHandler.output(
+            "Incorrect type assigned to variable \"");
         Xvr_printLiteralCustom(identifier, interpreter->errorOutput);
-        interpreter->errorOutput("\"\n");
+        interpreter->errorHandler.output("\"\n");
         return false;
     }
 
@@ -734,16 +762,16 @@ static bool execVarAssign(Xvr_Interpreter* interpreter) {
     }
 
     if (!XVR_IS_IDENTIFIER(lhs)) {
-        interpreter->errorOutput("Can't assign to a non-variable \"");
+        interpreter->errorHandler.output("Can't assign to a non-variable \"");
         Xvr_printLiteralCustom(lhs, interpreter->errorOutput);
-        interpreter->errorOutput("\"\n");
+        interpreter->errorHandler.output("\"\n");
         return false;
     }
 
     if (!Xvr_isDeclaredScopeVariable(interpreter->scope, lhs)) {
-        interpreter->errorOutput("Undeclared variable \"");
+        interpreter->errorHandler.output("Undeclared variable \"");
         Xvr_printLiteralCustom(lhs, interpreter->errorOutput);
-        interpreter->errorOutput("\"\n");
+        interpreter->errorHandler.output("\"\n");
 
         Xvr_freeLiteral(lhs);
         Xvr_freeLiteral(rhs);
@@ -756,9 +784,10 @@ static bool execVarAssign(Xvr_Interpreter* interpreter) {
     }
 
     if (!Xvr_setScopeVariable(interpreter->scope, lhs, rhs, true)) {
-        interpreter->errorOutput("Incorrect type assigned to variable \"");
+        interpreter->errorHandler.output(
+            "Incorrect type assigned to variable \"");
         Xvr_printLiteralCustom(lhs, interpreter->errorOutput);
-        interpreter->errorOutput("\"\n");
+        interpreter->errorHandler.output("\"\n");
 
         Xvr_freeLiteral(lhs);
         Xvr_freeLiteral(rhs);
@@ -801,7 +830,7 @@ static bool execValCast(Xvr_Interpreter* interpreter) {
     Xvr_Literal result = XVR_TO_NULL_LITERAL;
 
     if (XVR_IS_NULL(value)) {
-        interpreter->errorOutput("Can't cast a null value\n");
+        interpreter->errorHandler.output("Can't cast a null value\n");
 
         Xvr_freeLiteral(value);
         Xvr_freeLiteral(type);
@@ -886,9 +915,9 @@ static bool execValCast(Xvr_Interpreter* interpreter) {
         break;
 
     default:
-        interpreter->errorOutput("Unknown cast type found: ");
+        interpreter->errorHandler.output("Unknown cast type found: ");
         Xvr_printLiteralCustom(type, interpreter->errorOutput);
-        interpreter->errorOutput("\n");
+        interpreter->errorHandler.output("\n");
         return false;
     }
 
@@ -968,9 +997,10 @@ static bool execCompareLess(Xvr_Interpreter* interpreter, bool invert) {
 
     // not a number, return falure
     if (!(XVR_IS_INTEGER(lhs) || XVR_IS_FLOAT(lhs))) {
-        interpreter->errorOutput("Incorrect type in comparison, value \"");
+        interpreter->errorHandler.output(
+            "Incorrect type in comparison, value \"");
         Xvr_printLiteralCustom(lhs, interpreter->errorOutput);
-        interpreter->errorOutput("\"\n");
+        interpreter->errorHandler.output("\"\n");
 
         Xvr_freeLiteral(lhs);
         Xvr_freeLiteral(rhs);
@@ -978,9 +1008,10 @@ static bool execCompareLess(Xvr_Interpreter* interpreter, bool invert) {
     }
 
     if (!(XVR_IS_INTEGER(rhs) || XVR_IS_FLOAT(rhs))) {
-        interpreter->errorOutput("Incorrect type in comparison, value \"");
+        interpreter->errorHandler.output(
+            "Incorrect type in comparison, value \"");
         Xvr_printLiteralCustom(rhs, interpreter->errorOutput);
-        interpreter->errorOutput("\"\n");
+        interpreter->errorHandler.output("\"\n");
         Xvr_freeLiteral(lhs);
         Xvr_freeLiteral(rhs);
         return false;
@@ -1029,9 +1060,10 @@ static bool execCompareLessEqual(Xvr_Interpreter* interpreter, bool invert) {
 
     // not a number, return falure
     if (!(XVR_IS_INTEGER(lhs) || XVR_IS_FLOAT(lhs))) {
-        interpreter->errorOutput("Incorrect type in comparison, value \"");
+        interpreter->errorHandler.output(
+            "Incorrect type in comparison, value \"");
         Xvr_printLiteralCustom(lhs, interpreter->errorOutput);
-        interpreter->errorOutput("\"\n");
+        interpreter->errorHandler.output("\"\n");
 
         Xvr_freeLiteral(lhs);
         Xvr_freeLiteral(rhs);
@@ -1039,9 +1071,10 @@ static bool execCompareLessEqual(Xvr_Interpreter* interpreter, bool invert) {
     }
 
     if (!(XVR_IS_INTEGER(rhs) || XVR_IS_FLOAT(rhs))) {
-        interpreter->errorOutput("Incorrect type in comparison, value \"");
+        interpreter->errorHandler.output(
+            "Incorrect type in comparison, value \"");
         Xvr_printLiteralCustom(rhs, interpreter->errorOutput);
-        interpreter->errorOutput("\"\n");
+        interpreter->errorHandler.output("\"\n");
 
         Xvr_freeLiteral(lhs);
         Xvr_freeLiteral(rhs);
@@ -1137,7 +1170,7 @@ static bool execJump(Xvr_Interpreter* interpreter) {
     int target = (int)readShort(interpreter->bytecode, &interpreter->count);
 
     if (target + interpreter->codeStart > interpreter->length) {
-        interpreter->errorOutput("[internal] Jump out of range\n");
+        interpreter->errorHandler.output("[internal] Jump out of range\n");
         return false;
     }
 
@@ -1151,7 +1184,8 @@ static bool execFalseJump(Xvr_Interpreter* interpreter) {
     int target = (int)readShort(interpreter->bytecode, &interpreter->count);
 
     if (target + interpreter->codeStart > interpreter->length) {
-        interpreter->errorOutput("[internal] Jump out of range (false jump)\n");
+        interpreter->errorHandler.output(
+            "[internal] Jump out of range (false jump)\n");
         return false;
     }
 
@@ -1165,7 +1199,7 @@ static bool execFalseJump(Xvr_Interpreter* interpreter) {
     }
 
     if (XVR_IS_NULL(lit)) {
-        interpreter->errorOutput("Null detected in comparison\n");
+        interpreter->errorHandler.output("Null detected in comparison\n");
         Xvr_freeLiteral(lit);
         return false;
     }
@@ -1185,7 +1219,8 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter);
 
 static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
     if (interpreter->depth >= 200) {
-        interpreter->errorOutput("Infinite recursion detected - panicking\n");
+        interpreter->errorHandler.output(
+            "Infinite recursion detected - panicking\n");
         interpreter->panic = true;
         return false;
     }
@@ -1221,7 +1256,7 @@ static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
     // let's screw with the fn name, too
     if (looseFirstArgument) {
         if (!XVR_IS_IDENTIFIER(identifier)) {
-            interpreter->errorOutput(
+            interpreter->errorHandler.output(
                 "bad literal passing as procedure identifier\n");
             Xvr_freeLiteral(identifier);
             Xvr_freeLiteral(stackSize);
@@ -1273,9 +1308,9 @@ static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
     }
 
     if (!XVR_IS_FUNCTION(func)) {
-        interpreter->errorOutput("Function not found: ");
+        interpreter->errorHandler.output("Function not found: ");
         Xvr_printLiteralCustom(identifier, interpreter->errorOutput);
-        interpreter->errorOutput("\n");
+        interpreter->errorHandler.output("\n");
 
         Xvr_freeLiteral(identifier);
         Xvr_freeLiteral(stackSize);
@@ -1287,9 +1322,9 @@ static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
         Xvr_callLiteralFn(interpreter, func, &arguments, &interpreter->stack);
 
     if (!ret) {
-        interpreter->errorOutput("Error encountered in function \"");
+        interpreter->errorHandler.output("Error encountered in function \"");
         Xvr_printLiteralCustom(identifier, interpreter->errorOutput);
-        interpreter->errorOutput("\"\n");
+        interpreter->errorHandler.output("\"\n");
     }
 
     Xvr_freeLiteralArray(&arguments);
@@ -1318,7 +1353,8 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
         int returnsCount = XVR_AS_FUNCTION_NATIVE(func)(interpreter, &correct);
 
         if (returnsCount < 0) {
-            interpreter->errorOutput("Unknown error from native function\n");
+            interpreter->errorHandler.output(
+                "Unknown error from native function\n");
             Xvr_freeLiteralArray(&correct);
             return false;
         }
@@ -1348,7 +1384,8 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
 
     // normal Xvr function
     if (!XVR_IS_FUNCTION(func)) {
-        interpreter->errorOutput("Function required in Xvr_callLiteralFn()\n");
+        interpreter->errorHandler.output(
+            "Function required in Xvr_callLiteralFn()\n");
         return false;
     }
 
@@ -1366,9 +1403,9 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
     inner.panic = false;
     Xvr_initLiteralArray(&inner.stack);
     inner.hooks = interpreter->hooks;
-    Xvr_setInterpreterPrint(&inner, interpreter->printOutput);
-    Xvr_setInterpreterAssert(&inner, interpreter->assertOutput);
-    Xvr_setInterpreterError(&inner, interpreter->errorOutput);
+    Xvr_setInterpreterPrint(&inner, interpreter->printHandler.output);
+    Xvr_setInterpreterAssert(&inner, interpreter->assertHandler.output);
+    Xvr_setInterpreterError(&inner, interpreter->errorHandler.output);
 
     // prep the sections
     readInterpreterSections(&inner);
@@ -1391,7 +1428,7 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
     if ((XVR_IS_NULL(restParam) && paramArray->count != arguments->count * 2) ||
         (!XVR_IS_NULL(restParam) &&
          paramArray->count - 2 > arguments->count * 2)) {
-        interpreter->errorOutput(
+        interpreter->errorHandler.output(
             "Incorrect number of arguments passed to a function\n");
 
         // free, and skip out
@@ -1409,7 +1446,7 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
         // declare and define each entry in the scope
         if (!Xvr_declareScopeVariable(inner.scope, paramArray->literals[i],
                                       paramArray->literals[i + 1])) {
-            interpreter->errorOutput(
+            interpreter->errorHandler.output(
                 "[internal] Could not re-declare parameter\n");
 
             // free, and skip out
@@ -1431,7 +1468,7 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
 
         if (!Xvr_setScopeVariable(inner.scope, paramArray->literals[i], arg,
                                   false)) {
-            interpreter->errorOutput(
+            interpreter->errorHandler.output(
                 "[internal] Could not define parameter (bad type?)\n");
 
             // free, and skip out
@@ -1464,7 +1501,7 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
 
         // declare & define the rest parameter
         if (!Xvr_declareScopeVariable(inner.scope, restParam, restType)) {
-            interpreter->errorOutput(
+            interpreter->errorHandler.output(
                 "[internal] Could not declare rest parameter\n");
 
             // free, and skip out
@@ -1480,7 +1517,7 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
 
         Xvr_Literal lit = XVR_TO_ARRAY_LITERAL(&rest);
         if (!Xvr_setScopeVariable(inner.scope, restParam, lit, false)) {
-            interpreter->errorOutput(
+            interpreter->errorHandler.output(
                 "[internal] Could not define rest parameter\n");
 
             // free, and skip out
@@ -1519,7 +1556,7 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
     bool returnValue = true;
 
     if (returnsFromInner.count > 1) {
-        interpreter->errorOutput(
+        interpreter->errorHandler.output(
             "Too many values returned (multiple returns not yet supported)\n");
 
         returnValue = false;
@@ -1531,7 +1568,8 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
         // check the return types
         if (returnArray->count > 0 &&
             XVR_AS_TYPE(returnArray->literals[i]).typeOf != ret.type) {
-            interpreter->errorOutput("Bad type found in return value\n");
+            interpreter->errorHandler.output(
+                "Bad type found in return value\n");
 
             // free, and skip out
             returnValue = false;
@@ -1582,7 +1620,7 @@ bool Xvr_callFn(Xvr_Interpreter* interpreter, const char* name,
     Xvr_Literal val = XVR_TO_NULL_LITERAL;
 
     if (!Xvr_isDeclaredScopeVariable(interpreter->scope, key)) {
-        interpreter->errorOutput("No function with that name\n");
+        interpreter->errorHandler.output("No function with that name\n");
         return false;
     }
 
@@ -1637,10 +1675,11 @@ static bool execImport(Xvr_Interpreter* interpreter) {
 
     // access the hooks
     if (!Xvr_existsLiteralDictionary(interpreter->hooks, identifier)) {
-        interpreter->errorOutput("Unknown library name in import statement: ");
+        interpreter->errorHandler.output(
+            "Unknown library name in import statement: ");
         Xvr_printLiteralCustom(identifier, interpreter->errorOutput);
-        interpreter->errorOutput("\"\n");
-        interpreter->errorOutput("\n");
+        interpreter->errorHandler.output("\"\n");
+        interpreter->errorHandler.output("\n");
 
         Xvr_freeLiteral(alias);
         Xvr_freeLiteral(identifier);
@@ -1650,9 +1689,9 @@ static bool execImport(Xvr_Interpreter* interpreter) {
     Xvr_Literal func = Xvr_getLiteralDictionary(interpreter->hooks, identifier);
 
     if (!XVR_IS_FUNCTION_HOOK(func)) {
-        interpreter->errorOutput("Expected hook function, found: ");
+        interpreter->errorHandler.output("Expected hook function, found: ");
         Xvr_printLiteralCustom(identifier, interpreter->errorOutput);
-        interpreter->errorOutput("\"\n");
+        interpreter->errorHandler.output("\"\n");
 
         Xvr_freeLiteral(func);
         Xvr_freeLiteral(alias);
@@ -1685,7 +1724,7 @@ static bool execIndex(Xvr_Interpreter* interpreter, bool assignIntermediate) {
 
     if (!XVR_IS_ARRAY(compound) && !XVR_IS_DICTIONARY(compound) &&
         !XVR_IS_STRING(compound)) {
-        interpreter->errorOutput(
+        interpreter->errorHandler.output(
             "Unknown compound found in indexing notation: ");
         Xvr_printLiteralCustom(compound, interpreter->errorOutput);
         Xvr_freeLiteral(third);
@@ -1726,10 +1765,10 @@ static bool execIndex(Xvr_Interpreter* interpreter, bool assignIntermediate) {
 
     // call the _index function
     if (Xvr_private_index(interpreter, &arguments) < 0) {
-        interpreter->errorOutput(
+        interpreter->errorHandler.output(
             "Something went wrong while indexing (simple index): ");
         Xvr_printLiteralCustom(compoundIdn, interpreter->errorOutput);
-        interpreter->errorOutput("\n");
+        interpreter->errorHandler.output("\n");
 
         // clean up
         Xvr_freeLiteral(third);
@@ -1780,7 +1819,7 @@ static bool execIndexAssign(Xvr_Interpreter* interpreter) {
 
     if (!XVR_IS_ARRAY(compound) && !XVR_IS_DICTIONARY(compound) &&
         !XVR_IS_STRING(compound)) {
-        interpreter->errorOutput(
+        interpreter->errorHandler.output(
             "Unknown compound found in index assigning notation\n");
         Xvr_freeLiteral(assign);
         Xvr_freeLiteral(third);
@@ -1817,7 +1856,8 @@ static bool execIndexAssign(Xvr_Interpreter* interpreter) {
         break;
 
     default:
-        interpreter->errorOutput("bad opcode in index assigning notation\n");
+        interpreter->errorHandler.output(
+            "bad opcode in index assigning notation\n");
         Xvr_freeLiteral(assign);
         Xvr_freeLiteral(third);
         Xvr_freeLiteral(second);
@@ -1898,10 +1938,10 @@ static bool execIndexAssign(Xvr_Interpreter* interpreter) {
             Xvr_pushLiteralArray(&arguments, op);
 
             if (Xvr_private_index(interpreter, &arguments) < 0) {
-                interpreter->errorOutput(
+                interpreter->errorHandler.output(
                     "Something went wrong while indexing (index assign): ");
                 Xvr_printLiteralCustom(compound, interpreter->errorOutput);
-                interpreter->errorOutput("\n");
+                interpreter->errorHandler.output("\n");
 
                 // clean up
                 Xvr_freeLiteral(assign);
@@ -1928,9 +1968,10 @@ static bool execIndexAssign(Xvr_Interpreter* interpreter) {
 
     if (XVR_IS_IDENTIFIER(compoundIdn) &&
         !Xvr_setScopeVariable(interpreter->scope, compoundIdn, result, true)) {
-        interpreter->errorOutput("Incorrect type assigned to compound member ");
+        interpreter->errorHandler.output(
+            "Incorrect type assigned to compound member ");
         Xvr_printLiteralCustom(compoundIdn, interpreter->errorOutput);
-        interpreter->errorOutput("\n");
+        interpreter->errorHandler.output("\n");
 
         // clean up
         Xvr_freeLiteral(assign);
@@ -2201,7 +2242,8 @@ static void execInterpreter(Xvr_Interpreter* interpreter) {
             break;
 
         default:
-            interpreter->errorOutput("Unknown opcode found, terminating\n");
+            interpreter->errorHandler.output(
+                "Unknown opcode found, terminating\n");
             return;
         }
 
@@ -2516,7 +2558,7 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
 
             // assert that the last memory slot is function end
             if (bytes[size - 1] != XVR_OP_FN_END) {
-                interpreter->errorOutput(
+                interpreter->errorHandler.output(
                     "[internal] Failed to find function end");
                 XVR_FREE_ARRAY(unsigned char, bytes, size);
                 return;
@@ -2572,7 +2614,7 @@ void Xvr_runInterpreter(Xvr_Interpreter* interpreter,
     interpreter->count = 0;
 
     if (!interpreter->bytecode) {
-        interpreter->errorOutput("No valid bytecode given\n");
+        interpreter->errorHandler.output("No valid bytecode given\n");
         return;
     }
 
@@ -2591,7 +2633,7 @@ void Xvr_runInterpreter(Xvr_Interpreter* interpreter,
                  "earlier, given %d.%d.%d)\n",
                  XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH, major,
                  minor, patch);
-        interpreter->errorOutput(buffer);
+        interpreter->errorHandler.output(buffer);
         return;
     }
 

@@ -1212,13 +1212,13 @@ int Xvr_private_set(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments) {
 
             if (XVR_AS_TYPE(keySubtypeLiteral).typeOf != XVR_LITERAL_ANY &&
                 XVR_AS_TYPE(keySubtypeLiteral).typeOf != key.type) {
-                interpreter->printOutput("bad argument type in _set\n");
+                interpreter->printHandler.output("bad argument type in _set\n");
                 return -1;
             }
 
             if (XVR_AS_TYPE(valSubtypeLiteral).typeOf != XVR_LITERAL_ANY &&
                 XVR_AS_TYPE(valSubtypeLiteral).typeOf != val.type) {
-                interpreter->printOutput("bad argument type in _set\n");
+                interpreter->printHandler.output("bad argument type in _set\n");
                 return -1;
             }
         }
