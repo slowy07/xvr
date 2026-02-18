@@ -49,6 +49,22 @@ print("mamads are: " + string age + " years old");
 
 in `xvr` you can use `string` keyword to convert `integer` or `float` data type to string for print it with strings
 
+## Print with Format Specifiers (Recommended)
+
+Instead of using string concatenation, you can use format specifiers:
+
+```
+var age: int = 20;
+var name: string = "arfy";
+
+print("%s is %d years old", name, age);  // arfy is 20 years old
+
+var price: float = 19.99;
+print("Price: $%f", price);              // Price: $19.99
+```
+
+This is cleaner than string concatenation and avoids explicit type conversion.
+
 ## Assign with other data types
 
 you can make some variable names as alias for data types, using `astype`, with specific are `type`
@@ -70,6 +86,3 @@ var my_number: integersNumber = 20;
 
 print("my number are: " + string my_number + " look cool right");
 ```
-
-> [!NOTE]
-> print will support with or without parentheses (round bracket).

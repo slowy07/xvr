@@ -1368,7 +1368,46 @@ static void printStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     consume(parser, XVR_TOKEN_PAREN_LEFT, "Expected '(' after 'print'");
     Xvr_ASTNode* node = NULL;
     expression(parser, &node);
-    Xvr_emitASTNodeUnary(nodeHandle, XVR_OP_PRINT, node);
+
+    if (match(parser, XVR_TOKEN_COMMA)) {
+        Xvr_ASTNode* argsCompound = NULL;
+        Xvr_emitASTNodeCompound(&argsCompound, XVR_LITERAL_ARRAY);
+
+        if (argsCompound->compound.capacity == 0) {
+            argsCompound->compound.capacity = 2;
+            argsCompound->compound.nodes =
+                XVR_ALLOCATE(Xvr_ASTNode, argsCompound->compound.capacity);
+        }
+
+        argsCompound->compound.nodes[argsCompound->compound.count++] = *node;
+        XVR_FREE(Xvr_ASTNode, node);
+
+        do {
+            Xvr_ASTNode* arg = NULL;
+            expression(parser, &arg);
+
+            if (argsCompound->compound.count >=
+                argsCompound->compound.capacity) {
+                int oldCapacity = argsCompound->compound.capacity;
+                argsCompound->compound.capacity =
+                    XVR_GROW_CAPACITY(oldCapacity);
+                argsCompound->compound.nodes = XVR_GROW_ARRAY(
+                    Xvr_ASTNode, argsCompound->compound.nodes, oldCapacity,
+                    argsCompound->compound.capacity);
+            }
+
+            argsCompound->compound.nodes[argsCompound->compound.count++] = *arg;
+            XVR_FREE(Xvr_ASTNode, arg);
+        } while (match(parser, XVR_TOKEN_COMMA));
+
+        *nodeHandle = XVR_ALLOCATE(Xvr_ASTNode, 1);
+        (*nodeHandle)->type = XVR_AST_NODE_BINARY;
+        (*nodeHandle)->binary.opcode = XVR_OP_PRINTF;
+        (*nodeHandle)->binary.left = argsCompound;
+        (*nodeHandle)->binary.right = NULL;
+    } else {
+        Xvr_emitASTNodeUnary(nodeHandle, XVR_OP_PRINT, node);
+    }
 
     consume(parser, XVR_TOKEN_PAREN_RIGHT, "Expected ')' after expression");
     consumeSemicolon(parser);

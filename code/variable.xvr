@@ -20,35 +20,35 @@ var angka_hint_val: int = 90;
 var angka_hint_const: int const = 20;
 
 // print 
-print(penyanyi);
+print("penyanyi = %s", penyanyi);
 
 // Test operators
 var a: int = 1;
 var b: int = 2;
 var c = a + b;
-print(c);
+print("a + b = %d", c);
 
 // Test prefix increment
 var num: int = 42;
-print(num);
+print("num = %d", num);
 ++num;
-print(num);
+print("++num = %d", num);
 --num;
-print(num);
+print("--num = %d", num);
 
 // Test float
 var angka_float: float = 3.14159;
-print(angka_float);
+print("angka_float = %f", angka_float);
 
 var angka_float2: float = 0;
-print(angka_float2);
+print("angka_float2 = %f", angka_float2);
 
 // Test boolean
 var is_true: bool = true;
 var is_false: bool = false;
-print(is_true);
-print(is_false);
+print("is_true = %s", is_true);
+print("is_false = %s", is_false);
 
 // Test array
 var arr = [1, 2, 3];
-print(arr);
+print("arr = %s", arr);

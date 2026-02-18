@@ -1,22 +1,22 @@
 // equality
-print(20 == 20);
-print(30 == 21);
+print("20 == 20 = %s", 20 == 20);
+print("30 == 21 = %s", 30 == 21);
 
 // comparison
-print(2 < 200);
-print(3 > 1);
-print(2 <= 2);
-print(3 >= 3);
+print("2 < 200 = %s", 2 < 200);
+print("3 > 1 = %s", 3 > 1);
+print("2 <= 2 = %s", 2 <= 2);
+print("3 >= 3 = %s", 3 >= 3);
 
 // logical AND
-print(true && true);
-print(true && false);
+print("true && true = %s", true && true);
+print("true && false = %s", true && false);
 
 // logical OR
-print(true || true);
-print(false || true);
-print(false || false);
+print("true || true = %s", true || true);
+print("false || true = %s", false || true);
+print("false || false = %s", false || false);
 
 // logical NOT
-print(!true);
-print(!false);
+print("!true = %s", !true);
+print("!false = %s", !false);

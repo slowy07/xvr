@@ -339,6 +339,24 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
 
     // all infixes come here
     case XVR_AST_NODE_BINARY: {
+        if (node->binary.opcode == XVR_OP_PRINTF) {
+            Xvr_ASTNode* compound = node->binary.left;
+            int totalCount = compound->compound.count;
+            int argCount = totalCount - 1;
+
+            for (int i = totalCount - 1; i >= 0; i--) {
+                Xvr_writeCompilerWithJumps(
+                    compiler, &compound->compound.nodes[i], breakAddressesPtr,
+                    continueAddressesPtr, jumpOffsets, rootNode);
+            }
+
+            compiler->bytecode[compiler->count++] =
+                (unsigned char)XVR_OP_PRINTF;
+            compiler->bytecode[compiler->count++] = (unsigned char)argCount;
+
+            return XVR_OP_EOF;
+        }
+
         // pass to the child nodes, then embed the binary command (math, etc.)
         Xvr_Opcode override = Xvr_writeCompilerWithJumps(
             compiler, node->binary.left, breakAddressesPtr,

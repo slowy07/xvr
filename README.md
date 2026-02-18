@@ -33,6 +33,16 @@ proc say_hello(name: string): string {
 }
 ```
 
+## Print with Format Specifiers
+```xvr
+print("Hello %s", "World");           // Hello World
+print("Number: %d", 42);               // Number: 42
+print("Float: %f", 3.14);             // Float: 3.14
+print("%s is %d years old", "arfy", 25);  // arfy is 25 years old
+```
+
+Supported specifiers: `%s` (string/any), `%d`/`%i` (integer), `%f`/`%g` (float), `%%` (literal %), `\n` (newline)
+
 ## Need Tutorial?
 
 You can check on [tutorial](docs/tutorial) for explore some tutorials.

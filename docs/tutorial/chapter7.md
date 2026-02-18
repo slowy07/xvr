@@ -32,6 +32,3 @@ while (true) {
 ```
 
 If while statement always `true`, the statement inside the loops always will be execute. So, carefully for use it.
-
-> [!NOTE]
-> print will support with or without parentheses (round bracket).

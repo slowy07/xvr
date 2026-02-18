@@ -8,5 +8,5 @@ proc fibo(num: int): int {
 
 for (var i = 0; i < 10; i++) {
   var result = fibo(i);
-  print(string i + ": " + string result);
+  print("%d: %d", i, result);
 }

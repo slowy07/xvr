@@ -33,5 +33,3 @@ data types are categorical value which is describe that value, for example:
 - array value are like `[1, 2, 3]`, `["arfy", "mamads"]`
 - datatable value are like `["key": 12345]`
 
-> [!NOTE]
-> print will support with or without parentheses (round bracket).

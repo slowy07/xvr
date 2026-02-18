@@ -68,6 +68,3 @@ for (var i = 0; i < 20; i++) {
   print(answer);
 }
 ```
-
-> [!NOTE]
-> print will support with or without parentheses (round bracket).

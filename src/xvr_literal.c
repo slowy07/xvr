@@ -789,3 +789,37 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
             literal.type);
     }
 }
+
+static void printToBufferSimple(const char* str) {
+    int len = strlen(str);
+    if (globalPrintCount + len > globalPrintCapacity) {
+        int avail = globalPrintCapacity - globalPrintCount;
+        if (avail > 0) {
+            memcpy(globalPrintBuffer + globalPrintCount, str, avail);
+        }
+        globalPrintCount = globalPrintCapacity;
+        return;
+    }
+    memcpy(globalPrintBuffer + globalPrintCount, str, len);
+    globalPrintCount += len;
+}
+
+void Xvr_printLiteralToBuffer(Xvr_Literal literal, char* buffer, int* bufferPos,
+                              int bufferSize) {
+    char* saveBuffer = globalPrintBuffer;
+    int saveCapacity = globalPrintCapacity;
+    int saveCount = globalPrintCount;
+
+    globalPrintBuffer = buffer;
+    globalPrintCapacity = bufferSize - 1;
+    globalPrintCount = 0;
+
+    Xvr_printLiteralCustom(literal, printToBufferSimple);
+
+    *bufferPos = globalPrintCount;
+    buffer[globalPrintCount] = '\0';
+
+    globalPrintBuffer = saveBuffer;
+    globalPrintCapacity = saveCapacity;
+    globalPrintCount = saveCount;
+}

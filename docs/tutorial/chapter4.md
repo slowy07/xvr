@@ -33,6 +33,3 @@ print(this_number <= other_number);
 print(this_number >= other_number);
 print(this_number != other_number);
 ```
-
-> [!NOTE]
-> print will support with or without parentheses (round bracket).

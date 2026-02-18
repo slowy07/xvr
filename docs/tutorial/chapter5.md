@@ -22,6 +22,3 @@ if (!today_raining) {
 ```
 
 `if` statement are keyword using for conditional are `true`, statement on block inside statement will execute and write to stdout, and if statement are `false`, `else` conditional are execute it.
-
-> [!NOTE]
-> print will support with or without parentheses (round bracket).

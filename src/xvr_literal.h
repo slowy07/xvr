@@ -335,4 +335,15 @@ XVR_API void Xvr_printLiteral(Xvr_Literal literal);
 XVR_API void Xvr_printLiteralCustom(Xvr_Literal literal,
                                     void(printFn)(const char*));
 
+/**
+ * @brief print literal to a buffer
+ *
+ * @param[in] literal literal to print
+ * @param[out] buffer output buffer (must be pre-allocated)
+ * @param[in,out] bufferPos current position in buffer, will be updated
+ * @param[in] bufferSize total size of buffer
+ */
+XVR_API void Xvr_printLiteralToBuffer(Xvr_Literal literal, char* buffer,
+                                      int* bufferPos, int bufferSize);
+
 #endif  // !XVR_LITERAL_H

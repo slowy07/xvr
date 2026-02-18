@@ -57,6 +57,8 @@ typedef enum Xvr_Opcode {
     XVR_OP_ASSERT,  // if `condition` is false, raises runtime error, otherwise
                     // continue
     XVR_OP_PRINT,   // converts `value` to string and outputs to stdout / stderr
+    XVR_OP_PRINTF,  // print with format string: stack [format, arg1, ...,
+                    // argN], operand is uint8_t arg count
 
     // data
     XVR_OP_LITERAL,       // uint8_t index to constant pool (0 - 255), fasters
