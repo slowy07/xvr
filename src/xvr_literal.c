@@ -74,6 +74,11 @@ void Xvr_freeLiteral(Xvr_Literal literal) {
                        XVR_AS_TYPE(literal).capacity);
         return;
     }
+
+    // opaque types are managed externally - no action needed
+    if (XVR_IS_OPAQUE(literal)) {
+        return;
+    }
 }
 
 bool Xvr_private_isTruthy(Xvr_Literal x) {
@@ -196,7 +201,10 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
     }
 
     case XVR_LITERAL_OPAQUE: {
-        return original;  // literally a shallow copy
+        // opaque types have external ownership - runtime does not manage
+        // lifecycle shallow copy is intentional: ptr/tag are borrowed, not
+        // owned by runtime
+        return original;
     }
 
     case XVR_LITERAL_ARRAY_INTERMEDIATE: {
@@ -272,11 +280,11 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
         // ints and floats are compatible
         if ((XVR_IS_INTEGER(lhs) || XVR_IS_FLOAT(lhs)) &&
             (XVR_IS_INTEGER(rhs) || XVR_IS_FLOAT(rhs))) {
-            if (XVR_IS_INTEGER(lhs)) {
-                return XVR_AS_INTEGER(lhs) + XVR_AS_FLOAT(rhs);
-            } else {
-                return XVR_AS_FLOAT(lhs) + XVR_AS_INTEGER(rhs);
-            }
+            float lhsVal = XVR_IS_INTEGER(lhs) ? (float)XVR_AS_INTEGER(lhs)
+                                               : XVR_AS_FLOAT(lhs);
+            float rhsVal = XVR_IS_INTEGER(rhs) ? (float)XVR_AS_INTEGER(rhs)
+                                               : XVR_AS_FLOAT(rhs);
+            return lhsVal == rhsVal;
         }
 
         return false;

@@ -216,6 +216,8 @@ static Xvr_Opcode compound(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
                 error(parser, parser->previous,
                       "Incorrect detection between array and dictionary");
                 Xvr_freeASTNode(array);
+                Xvr_freeASTNode(left);
+                Xvr_freeASTNode(right);
                 return XVR_OP_EOF;
             }
 
@@ -247,6 +249,7 @@ static Xvr_Opcode compound(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
                 error(parser, parser->current,
                       "Incorrect detection between array and dictionary");
                 Xvr_freeASTNode(dictionary);
+                Xvr_freeASTNode(left);
                 return XVR_OP_EOF;
             }
 
@@ -320,7 +323,7 @@ static Xvr_Opcode string(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
                     msg, 256,
                     XVR_CC_ERROR
                     "Unrecognized escape character %c in string" XVR_CC_RESET,
-                    parser->previous.lexeme[++i]);
+                    parser->previous.lexeme[i]);
                 error(parser, parser->previous, msg);
             }
             }

@@ -1454,7 +1454,7 @@ static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
                           (unsigned short)(fnIndex++));
 
             Xvr_freeCompiler((Xvr_Compiler*)fnCompiler);
-            XVR_FREE(compiler, fnCompiler);
+            XVR_FREE(Xvr_Compiler, fnCompiler);
             XVR_FREE_ARRAY(unsigned char, bytes, size);
         } break;
 
