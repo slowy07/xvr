@@ -1,0 +1,30 @@
+var no_semi_a = 10
+var no_semi_b = 20
+var no_semi_result = no_semi_a + no_semi_b
+assert no_semi_result == 30, "no semicolons with newlines failed"
+
+var with_semi_a = 100; var with_semi_b = 200; var with_semi_result = with_semi_a + with_semi_b
+assert with_semi_result == 300, "semicolons as separators failed"
+
+var mixed_a = 1000;
+var mixed_b = 2000;
+var mixed_c = 3000
+var mixed_result = mixed_a + mixed_b + mixed_c;
+assert mixed_result == 6000, "mixed style failed"
+
+{
+  var block_var = 42;
+  assert block_var == 42, "trailing semicolon in block failed"
+}
+
+proc proc_no_semi(x: int) {
+  return x * 2
+}
+assert proc_no_semi(21) == 42, "proc without semicolons failed"
+
+proc proc_with_semi(x: int): int {
+  return x * 3;
+}
+assert proc_with_semi(14) == 42, "proc with semicolons failed";
+
+print("SEMICOLON TEST XVR: all tests passed")

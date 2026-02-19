@@ -89,13 +89,14 @@ int main(void) {
     {
         const char* filename[] = {
             "test/xvr_file/procedure.xvr",
+            "test/xvr_file/semicolon_test.xvr",
         };
 
         for (int i = 0; filename[i]; i++) {
-          printf("Test run %s\n", filename[i]);
-          char buffer[128];
-          snprintf(buffer, 128, "%s", filename[i]);
-          runSourceFileCustom(buffer);
+            printf("Test run %s\n", filename[i]);
+            char buffer[128];
+            snprintf(buffer, 128, "%s", filename[i]);
+            runSourceFileCustom(buffer);
         }
     }
 

@@ -51,7 +51,19 @@ static bool match(Xvr_Parser* parser, Xvr_TokenType tokenType) {
 }
 
 static void consumeSemicolon(Xvr_Parser* parser) {
-    match(parser, XVR_TOKEN_SEMICOLON);
+    if (match(parser, XVR_TOKEN_SEMICOLON)) {
+        return;
+    }
+
+    if (parser->current.type == XVR_TOKEN_BRACE_RIGHT ||
+        parser->current.type == XVR_TOKEN_EOF) {
+        return;
+    }
+
+    if (parser->previous.line == parser->current.line) {
+        error(parser, parser->current,
+              "Expected ';' between statements on same line");
+    }
 }
 
 static void consume(Xvr_Parser* parser, Xvr_TokenType tokenType,

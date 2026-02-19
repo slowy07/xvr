@@ -161,6 +161,57 @@ int main(void) {
     testParse("compound assignment /=", "x /= 1;", XVR_AST_NODE_BINARY);
     testParse("compound assignment %=", "x %= 1;", XVR_AST_NODE_BINARY);
 
+    testParse("var decl NO semicolon at newline", "var x = 1",
+              XVR_AST_NODE_VAR_DECL);
+    testParse("var decl with type NO semi", "var x: int = 1",
+              XVR_AST_NODE_VAR_DECL);
+    testParse("print NO semicolon at newline", "print(\"%d\", 1)",
+              XVR_AST_NODE_BINARY);
+    testParse("return NO semicolon at newline", "return 1",
+              XVR_AST_NODE_FN_RETURN);
+    testParse("break NO semicolon at newline", "break", XVR_AST_NODE_BREAK);
+    testParse("continue NO semicolon at newline", "continue",
+              XVR_AST_NODE_CONTINUE);
+    testParse("expression NO semicolon at newline", "1 + 2",
+              XVR_AST_NODE_LITERAL);
+
+    testParse("var decl WITH semicolon", "var x = 1;", XVR_AST_NODE_VAR_DECL);
+    testParse("print WITH semicolon", "print(\"%d\", 1);", XVR_AST_NODE_BINARY);
+    testParse("return WITH semicolon", "return 1;", XVR_AST_NODE_FN_RETURN);
+
+    testParseMultiple("multi stmt same line WITH semi", "var x = 1; var y = 2",
+                      2);
+    testParseMultiple("multi stmt same line B", "x = 1; y = 2; z = 3", 3);
+    testParseMultiple("multi stmt same line C",
+                      "var a = 1; var b = 2; var c = 3", 3);
+
+    testParseMultiple("stmts on newlines A", "var x = 1\nvar y = 2", 2);
+    testParseMultiple("stmts on newlines B", "var x = 1;\nvar y = 2;", 2);
+    testParseMultiple("stmts on newlines C",
+                      "var x = 1;\nvar y = 2;\nvar z = 3", 3);
+
+    testParse("for with empty clauses", "for (;;) { 1; }", XVR_AST_NODE_FOR);
+    testParse("for with init only", "for (var i = 0;;) { 1; }",
+              XVR_AST_NODE_FOR);
+    testParse("for with condition only", "for (; true;) { 1; }",
+              XVR_AST_NODE_FOR);
+    testParse("for with all clauses", "for (var i = 0; i < 10; i++) { 1; }",
+              XVR_AST_NODE_FOR);
+
+    testParse("block no trailing semi", "{ var x = 1 }", XVR_AST_NODE_BLOCK);
+
+    testParse("if-else NO semi", "if (true) { 1 } else { 2 }", XVR_AST_NODE_IF);
+    testParse("while NO semi", "while (true) { 1 }", XVR_AST_NODE_WHILE);
+
+    // Import without semicolon
+    testParse("import NO semicolon", "import foo", XVR_AST_NODE_IMPORT);
+    testParse("import as NO semi", "import foo as bar", XVR_AST_NODE_IMPORT);
+
+    testParse("proc NO semi body", "proc test() { return 1 }",
+              XVR_AST_NODE_FN_DECL);
+
+    testParse("array NO semicolon", "[1, 2, 3]", XVR_AST_NODE_COMPOUND);
+
     printf("Pass CIK (parser): %d/%d\n", passCount, testCount);
 
     if (passCount != testCount) {
