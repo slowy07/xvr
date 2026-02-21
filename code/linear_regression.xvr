@@ -1,0 +1,51 @@
+proc linear_regression(x_data, y_data) {
+    var n = length(x_data);
+    
+    var sum_x = 0.0;
+    var sum_y = 0.0;
+    var sum_xy = 0.0;
+    var sum_x2 = 0.0;
+    
+    var idx = 0;
+    while (idx < n) {
+        var x_val = x_data[idx];
+        var y_val = y_data[idx];
+        
+        sum_x = sum_x + x_val;
+        sum_y = sum_y + y_val;
+        sum_xy = sum_xy + (x_val * y_val);
+        sum_x2 = sum_x2 + (x_val * x_val);
+        
+        idx = idx + 1;
+    }
+    
+    var n_float = n * 1.0;
+    var numerator = n_float * sum_xy - sum_x * sum_y;
+    var denominator = n_float * sum_x2 - sum_x * sum_x;
+    
+    var slope = numerator / denominator;
+    var intercept = (sum_y - slope * sum_x) / n_float;
+    
+    return [slope, intercept];
+}
+
+proc predict(model, x) {
+    var m = model[0];
+    var b = model[1];
+    return m * x + b;
+}
+
+var x1 = [1, 2, 3, 4, 5];
+var y1 = [5, 7, 9, 11, 13];
+
+var model1 = linear_regression(x1, y1);
+print("Slope:");
+print(model1[0]);
+print("Intercept:");
+print(model1[1]);
+
+print("Predict x=6:");
+print(predict(model1, 6));
+print("Predict x=10:");
+print(predict(model1, 10));
+print("");
