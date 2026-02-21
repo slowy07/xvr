@@ -232,7 +232,8 @@ typedef struct Xvr_NodeIndex {
 } Xvr_NodeIndex;
 
 void Xvr_emitASTNodeVarDecl(Xvr_ASTNode** nodeHandle, Xvr_Literal identifier,
-                            Xvr_Literal typeLiteral, Xvr_ASTNode* expression);
+                            Xvr_Literal typeLiteral, Xvr_ASTNode* expression,
+                            int line);
 
 /**
  * @struct Xvr_NodeVarDecl
@@ -245,6 +246,7 @@ typedef struct Xvr_NodeVarDecl {
     Xvr_Literal identifier;   // variable name (XVR_LITERAL_IDENTIFIER)
     Xvr_Literal typeLiteral;  // type annotation
     Xvr_ASTNode* expression;  // initializer expression
+    int line;                 // line number
 } Xvr_NodeVarDecl;
 
 void Xvr_emitASTNodeFnCollection(Xvr_ASTNode** nodeHandle);
@@ -264,7 +266,7 @@ typedef struct Xvr_NodeFnCollection {
 
 void Xvr_emitASTNodeFnDecl(Xvr_ASTNode** nodeHandle, Xvr_Literal identifier,
                            Xvr_ASTNode* arguments, Xvr_ASTNode* returns,
-                           Xvr_ASTNode* block);
+                           Xvr_ASTNode* block, int line);
 
 /**
  * @struct Xvr_NodeFnDecl
@@ -279,6 +281,7 @@ typedef struct Xvr_NodeFnDecl {
         arguments;  // parameter list (Xvr_NodeCompound or Xvr_NodeVarDecl)
     Xvr_ASTNode* returns;  // return type
     Xvr_ASTNode* block;    // procedure body
+    int line;              // line number
 } Xvr_NodeFnDecl;
 
 void Xvr_emitASTNodeFnCall(Xvr_ASTNode** nodeHandle, Xvr_ASTNode* arguments);

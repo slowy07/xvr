@@ -140,7 +140,6 @@ static void freeASTNodeCustom(Xvr_ASTNode* node, bool freeSelf) {
         break;
     }
 
-
     if (freeSelf) {
         XVR_FREE(Xvr_ASTNode, node);
     }
@@ -243,13 +242,15 @@ void Xvr_emitASTNodeIndex(Xvr_ASTNode** nodeHandle, Xvr_ASTNode* first,
 }
 
 void Xvr_emitASTNodeVarDecl(Xvr_ASTNode** nodeHandle, Xvr_Literal identifier,
-                            Xvr_Literal typeLiteral, Xvr_ASTNode* expression) {
+                            Xvr_Literal typeLiteral, Xvr_ASTNode* expression,
+                            int line) {
     Xvr_ASTNode* tmp = XVR_ALLOCATE(Xvr_ASTNode, 1);
 
     tmp->type = XVR_AST_NODE_VAR_DECL;
     tmp->varDecl.identifier = identifier;
     tmp->varDecl.typeLiteral = typeLiteral;
     tmp->varDecl.expression = expression;
+    tmp->varDecl.line = line;
 
     *nodeHandle = tmp;
 }
@@ -267,7 +268,7 @@ void Xvr_emitASTNodeFnCollection(Xvr_ASTNode** nodeHandle) {
 
 void Xvr_emitASTNodeFnDecl(Xvr_ASTNode** nodeHandle, Xvr_Literal identifier,
                            Xvr_ASTNode* arguments, Xvr_ASTNode* returns,
-                           Xvr_ASTNode* block) {
+                           Xvr_ASTNode* block, int line) {
     Xvr_ASTNode* tmp = XVR_ALLOCATE(Xvr_ASTNode, 1);
 
     tmp->type = XVR_AST_NODE_FN_DECL;
@@ -275,6 +276,7 @@ void Xvr_emitASTNodeFnDecl(Xvr_ASTNode** nodeHandle, Xvr_Literal identifier,
     tmp->fnDecl.arguments = arguments;
     tmp->fnDecl.returns = returns;
     tmp->fnDecl.block = block;
+    tmp->fnDecl.line = line;
 
     *nodeHandle = tmp;
 }
@@ -403,7 +405,7 @@ void Xvr_emitASTNodeImport(Xvr_ASTNode** nodeHandle, Xvr_Literal identifier,
 }
 
 void Xvr_emitASTNodePass(Xvr_ASTNode** nodeHandle) {
-  Xvr_ASTNode* tmp = XVR_ALLOCATE(Xvr_ASTNode, 1);
-  tmp->type = XVR_AST_NODE_PASS;
-  *nodeHandle = tmp;
+    Xvr_ASTNode* tmp = XVR_ALLOCATE(Xvr_ASTNode, 1);
+    tmp->type = XVR_AST_NODE_PASS;
+    *nodeHandle = tmp;
 }

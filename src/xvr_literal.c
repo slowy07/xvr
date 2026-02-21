@@ -588,7 +588,7 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
         // swap the parent-call buffer back into place
         char* printBuffer = globalPrintBuffer;
         int printCapacity = globalPrintCapacity;
-        int printCount = globalPrintCount;
+        (void)globalPrintCount;
 
         globalPrintBuffer = cacheBuffer;
         globalPrintCapacity = cacheCapacity;
@@ -640,7 +640,7 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
         // swap the parent-call buffer back into place
         char* printBuffer = globalPrintBuffer;
         int printCapacity = globalPrintCapacity;
-        int printCount = globalPrintCount;
+        (void)globalPrintCount;
 
         globalPrintBuffer = cacheBuffer;
         globalPrintCapacity = cacheCapacity;
@@ -765,7 +765,7 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
 
         char* printBuffer = globalPrintBuffer;
         int printCapacity = globalPrintCapacity;
-        int printCount = globalPrintCount;
+        (void)globalPrintCount;
 
         globalPrintBuffer = cacheBuffer;
         globalPrintCapacity = cacheCapacity;

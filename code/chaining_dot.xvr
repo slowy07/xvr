@@ -14,7 +14,7 @@ proc _check(self) {
 var value: int = 42;
 
 // make dot chaining
-value.identity().check().identity().check();
+value._identity()._check()._identity()._check();
 
 // create custom procedure for increment that
 // works on variable
@@ -23,9 +23,9 @@ proc _increment(self) {
 }
 
 // test all
-assert 3.increment().increment() == 5, "dot chaining increment failed";
+assert 3._increment()._increment() == 5, "dot chaining increment failed";
 var angka: int = 2;
-if (angka.increment() == 3) {
+if (angka._increment() == 3) {
   print("odd");
 } else {
   print("even");

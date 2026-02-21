@@ -196,5 +196,5 @@ void Xvr_helpCommandLine(int argc, const char* argv[]);
  */
 #define XVR_VERSION_MAJOR 0
 #define XVR_VERSION_MINOR 2
-#define XVR_VERSION_PATCH 5
+#define XVR_VERSION_PATCH 7
 #endif  // !XVR_COMMON_H

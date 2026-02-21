@@ -261,20 +261,6 @@ static void consumeByte(Xvr_Interpreter* interpreter, const unsigned char byte,
     *count += 1;
 }
 
-static void consumeShort(Xvr_Interpreter* interpreter, unsigned short bytes,
-                         const unsigned char* tb, int* count) {
-    if (bytes != *(unsigned short*)(tb + *count)) {
-        char buffer[512];
-        snprintf(buffer, 512,
-                 "[internal] Failed to consume the correct bytes (expected %u, "
-                 "found %u)\n",
-                 bytes, *(unsigned short*)(tb + *count));
-        interpreter->errorHandler.output(buffer);
-    }
-    *count += 2;
-}
-
-// each available statement
 static bool execAssert(Xvr_Interpreter* interpreter) {
     Xvr_Literal rhs = Xvr_popLiteralArray(&interpreter->stack);
     Xvr_Literal lhs = Xvr_popLiteralArray(&interpreter->stack);
@@ -1439,11 +1425,16 @@ static bool execFnCall(Xvr_Interpreter* interpreter, bool looseFirstArgument) {
             return false;
         }
 
-        int length = XVR_AS_IDENTIFIER(identifier)->length + 1;
+        int length;
         char buffer[XVR_MAX_STRING_LENGTH];
-        snprintf(buffer, XVR_MAX_STRING_LENGTH, "_%s",
-                 Xvr_toCString(
-                     XVR_AS_IDENTIFIER(identifier)));  // prepend an underscore
+        const char* name = Xvr_toCString(XVR_AS_IDENTIFIER(identifier));
+        if (name[0] == '_') {
+            length = XVR_AS_IDENTIFIER(identifier)->length;
+            snprintf(buffer, XVR_MAX_STRING_LENGTH, "%s", name);
+        } else {
+            length = XVR_AS_IDENTIFIER(identifier)->length + 1;
+            snprintf(buffer, XVR_MAX_STRING_LENGTH, "_%s", name);
+        }
 
         Xvr_freeLiteral(identifier);
         identifier = XVR_TO_IDENTIFIER_LITERAL(
@@ -2709,12 +2700,10 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
     }
 
     consumeByte(interpreter, XVR_OP_SECTION_END, interpreter->bytecode,
-                &interpreter->count);  // terminate the literal section
+                &interpreter->count);
 
-    // read the function metadata
-    int functionCount = readShort(interpreter->bytecode, &interpreter->count);
-    int functionSize = readShort(interpreter->bytecode,
-                                 &interpreter->count);  // might not be needed
+    (void)readShort(interpreter->bytecode, &interpreter->count);
+    (void)readShort(interpreter->bytecode, &interpreter->count);
 
     // read in the functions
     for (int i = 0; i < interpreter->literalCache.count; i++) {

@@ -37,6 +37,7 @@ SOFTWARE.
 #include "xvr_interpreter.h"
 #include "xvr_lexer.h"
 #include "xvr_parser.h"
+#include "xvr_unused.h"
 
 const unsigned char* Xvr_readFile(const char* path, size_t* fileSize) {
     FILE* file = fopen(path, "rb");
@@ -108,26 +109,63 @@ const unsigned char* Xvr_compileString(const char* source, size_t* size) {
     Xvr_initParser(&parser, &lexer);
     Xvr_initCompiler(&compiler);
 
-    // run the parser until the end of the source
+    Xvr_ASTNode** nodes = NULL;
+    int nodeCount = 0;
+    int nodeCapacity = 0;
+
     Xvr_ASTNode* node = Xvr_scanParser(&parser);
     while (node != NULL) {
-        // pack up and leave
         if (node->type == XVR_AST_NODE_ERROR) {
             Xvr_freeASTNode(node);
+            for (int i = 0; i < nodeCount; i++) {
+                Xvr_freeASTNode(nodes[i]);
+            }
+            free(nodes);
             Xvr_freeCompiler(&compiler);
             Xvr_freeParser(&parser);
             return NULL;
         }
 
-        Xvr_writeCompiler(&compiler, node);
-        Xvr_freeASTNode(node);
+        if (nodeCount >= nodeCapacity) {
+            nodeCapacity = nodeCapacity < 8 ? 8 : nodeCapacity * 2;
+            nodes = realloc(nodes, sizeof(Xvr_ASTNode*) * nodeCapacity);
+        }
+        nodes[nodeCount++] = node;
         node = Xvr_scanParser(&parser);
     }
 
-    // get the bytecode dump
+    bool unusedError = false;
+    Xvr_UnusedChecker checker;
+    Xvr_initUnusedChecker(&checker);
+    Xvr_checkUnusedBegin(&checker);
+
+    for (int i = 0; i < nodeCount; i++) {
+        Xvr_checkUnusedNode(&checker, nodes[i]);
+    }
+
+    if (!Xvr_checkUnusedEnd(&checker)) {
+        unusedError = true;
+    }
+    Xvr_freeUnusedChecker(&checker);
+
+    if (unusedError) {
+        for (int i = 0; i < nodeCount; i++) {
+            Xvr_freeASTNode(nodes[i]);
+        }
+        free(nodes);
+        Xvr_freeCompiler(&compiler);
+        Xvr_freeParser(&parser);
+        return NULL;
+    }
+
+    for (int i = 0; i < nodeCount; i++) {
+        Xvr_writeCompiler(&compiler, nodes[i]);
+        Xvr_freeASTNode(nodes[i]);
+    }
+    free(nodes);
+
     const unsigned char* tb = Xvr_collateCompiler(&compiler, size);
 
-    // cleanup
     Xvr_freeCompiler(&compiler);
     Xvr_freeParser(&parser);
     return tb;

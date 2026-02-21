@@ -44,6 +44,8 @@ proc outerProc(value) {
 outerProc(paramProc())
 
 proc more_param(first, second, ...rest) {
+  assert first == "one", "first param error"
+  assert second == "two", "second param error"
   assert rest == ["three", "four", "five", "six", "seven"], "more param error"
 }
 
@@ -56,6 +58,6 @@ proc _contoh(self, a, b, c) {
   return self
 }
 
-assert "hello cik".contoh("a", "b", "c") == "hello cik", "underscore call error"
+assert "hello cik"._contoh("a", "b", "c") == "hello cik", "underscore call error"
 
 print("PROC TEST XVR: aman cik")

@@ -133,6 +133,7 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
 }
 
 void Xvr_usageCommandLine(int argc, const char* argv[]) {
+    (void)argc;
     printf(
         "usage: %s [file.xvr | file.xb | -h | -v | [-d][-i source | -c  file | "
         "-t file.xvr"
@@ -175,6 +176,8 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
 }
 
 void Xvr_copyrightCommandLine(int argc, const char* argv[]) {
+    (void)argc;
+    (void)argv;
     printf("The Xvr Programming Language\n");
     printf("Interpreter version %d.%d.%d (built date %s)\n\n",
            XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH,

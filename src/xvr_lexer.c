@@ -52,11 +52,6 @@ static char peekNext(Xvr_Lexer* lexer) {
     return lexer->source[lexer->current + 1];
 }
 
-static const char* peekN(Xvr_Lexer* lexer, size_t n) {
-    if (isAtEnd(lexer)) return "";
-    return &lexer->source[lexer->current];
-}
-
 static char advance(Xvr_Lexer* lexer) {
     if (isAtEnd(lexer)) {
         return '\0';

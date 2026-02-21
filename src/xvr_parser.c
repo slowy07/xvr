@@ -1821,7 +1821,8 @@ static void varDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     // TODO: static type checking?
 
     // declare it
-    Xvr_emitASTNodeVarDecl(nodeHandle, identifier, typeLiteral, expressionNode);
+    Xvr_emitASTNodeVarDecl(nodeHandle, identifier, typeLiteral, expressionNode,
+                           identifierToken.line);
 
     consumeSemicolon(parser);
 }
@@ -1895,7 +1896,8 @@ static void fnDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
                 // store the arg in the array
                 Xvr_ASTNode* literalNode = NULL;
                 Xvr_emitASTNodeVarDecl(&literalNode, argIdentifier,
-                                       argTypeLiteral, NULL);
+                                       argTypeLiteral, NULL,
+                                       argIdentifierToken.line);
 
                 argumentNode->fnCollection
                     .nodes[argumentNode->fnCollection.count++] = *literalNode;
@@ -1946,7 +1948,7 @@ static void fnDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
             // store the arg in the array
             Xvr_ASTNode* literalNode = NULL;
             Xvr_emitASTNodeVarDecl(&literalNode, argIdentifier, argTypeLiteral,
-                                   NULL);
+                                   NULL, argIdentifierToken.line);
 
             argumentNode->fnCollection
                 .nodes[argumentNode->fnCollection.count++] = *literalNode;
@@ -1992,7 +1994,7 @@ static void fnDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 
     // declare it
     Xvr_emitASTNodeFnDecl(nodeHandle, identifier, argumentNode, returnNode,
-                          blockNode);
+                          blockNode, identifierToken.line);
 }
 
 static void declaration(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
