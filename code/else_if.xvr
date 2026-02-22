@@ -1,0 +1,29 @@
+var score: int = 85;
+
+if (score >= 90) {
+    print("Grade: A\n");
+} else if (score >= 80) {
+    print("Grade: B\n");
+} else if (score >= 70) {
+    print("Grade: C\n");
+} else if (score >= 60) {
+    print("Grade: D\n");
+} else {
+    print("Grade: F\n");
+}
+
+var day: int = 3;
+
+if (day == 1) {
+    print("Monday\n");
+} else if (day == 2) {
+    print("Tuesday\n");
+} else if (day == 3) {
+    print("Wednesday\n");
+} else if (day == 4) {
+    print("Thursday\n");
+} else if (day == 5) {
+    print("Friday\n");
+} else {
+    print("Weekend\n");
+}

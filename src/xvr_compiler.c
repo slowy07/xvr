@@ -448,7 +448,7 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
 
         // write the then path
         override = Xvr_writeCompilerWithJumps(
-            compiler, node->pathIf.thenPath, breakAddressesPtr,
+            compiler, node->ternary.thenPath, breakAddressesPtr,
             continueAddressesPtr, jumpOffsets, rootNode);
         if (override != XVR_OP_EOF) {  // compensate for indexing & dot notation
                                        // being screwy
@@ -470,7 +470,7 @@ static Xvr_Opcode Xvr_writeCompilerWithJumps(
 
         // write the else path
         Xvr_Opcode override2 = Xvr_writeCompilerWithJumps(
-            compiler, node->pathIf.elsePath, breakAddressesPtr,
+            compiler, node->ternary.elsePath, breakAddressesPtr,
             continueAddressesPtr, jumpOffsets, rootNode);
         if (override2 != XVR_OP_EOF) {  // compensate for indexing & dot
                                         // notation being screwy

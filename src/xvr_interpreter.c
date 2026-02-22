@@ -2770,6 +2770,7 @@ void Xvr_runInterpreter(Xvr_Interpreter* interpreter,
 
     interpreter->depth = 0;
     interpreter->panic = false;
+    interpreter->codeStart = -1;
 
     // prep the bytecode
     interpreter->bytecode = bytecode;

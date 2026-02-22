@@ -34,14 +34,9 @@ first step to learning, we create some xvr files , with extension `.xvr`
 ```
 // hello_world.xvr
 
-print("hello world");
-
-// or using like this
-print "hello world";
+print("hello world")
 ```
 
-> [!NOTE]
->  to write output xvr using `print` builtin function to stdout, `print` support with or without parentheses (round bracket)
 
 ```sh
 # using --file or -f with filename

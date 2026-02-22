@@ -91,6 +91,7 @@ static void synchronize(Xvr_Parser* parser) {
         case XVR_TOKEN_CLASS:
         case XVR_TOKEN_CONTINUE:
         case XVR_TOKEN_DO:
+        case XVR_TOKEN_ELSE:
         case XVR_TOKEN_EXPORT:
         case XVR_TOKEN_FOR:
         case XVR_TOKEN_FOREACH:

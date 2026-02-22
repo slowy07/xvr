@@ -26,8 +26,6 @@ print(200_000_000);
 print(3250_000);
 ```
 
-> [!NOTE]
->  to write output xvr using `print` builtin function to stdout, `print` support with or without parentheses (round bracket)
 
 ## Print with Format Specifiers
 
