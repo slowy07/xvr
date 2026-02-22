@@ -37,9 +37,10 @@ void inter(void) {
 
     for (;;) {
         printf("> ");
+        fflush(stdout);
 
         // handle EOF for exits
-        if (!fgets(input, size, stdin)) {
+        if (!Xvr_readLine(input, size)) {
             break;
         }
 

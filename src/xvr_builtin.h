@@ -37,5 +37,6 @@ int Xvr_private_length(Xvr_Interpreter* interpreter,
                        Xvr_LiteralArray* arguments);
 int Xvr_private_clear(Xvr_Interpreter* interpreter,
                       Xvr_LiteralArray* arguments);
+int Xvr_private_abs(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments);
 
 #endif  // !XVR_BUILTIN_H

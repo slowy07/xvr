@@ -1,0 +1,27 @@
+
+// integer testing
+print("abs(5) = %d\n", abs(5))
+print("abs(-5) = %d\n", abs(-5))
+print("abs(0) = %d\n", abs(0))
+print("abs(100) = %d\n", abs(100))
+print("abs(-100) = %d\n", abs(-100))
+
+// float testing
+print("abs(3.14) = %f\n", abs(3.14))
+print("abs(-3.14) = %f\n", abs(-3.14))
+print("abs(0.0) = %f\n", abs(0.0))
+print("abs(-0.5) = %f\n", abs(-0.5))
+
+// with some variables
+var x: int = -42
+var y: float = -2.718
+print("abs(x) where x = -42: %d\n", abs(x))
+print("abs(y) where y = -2.718: %f\n", abs(y))
+
+var a: int = 10
+var b: int = 25
+print("abs(a - b) where a=10, b=25: %d\n", abs(a - b))
+print("abs(b - a) where a=10, b=25: %d\n", abs(b - a))
+
+print("abs(abs(-5)) = %d\n", abs(abs(-5)))
+print("abs(-abs(-5)) = %d\n", abs(-abs(-5)))

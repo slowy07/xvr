@@ -135,6 +135,17 @@ void Xvr_runSource(const char* source);
  */
 void Xvr_runSourceFile(const char* fname);
 
+/**
+ * @brief read a line of input with line editing support
+ *
+ * @param[out] buffer buffer to store the input line
+ * @param[in] size maximum size of buffer
+ * @return pointer to buffer on success, NULL on EOF
+ *
+ * @note handles arrow keys, backspace, etc. for better REPL experience
+ */
+char* Xvr_readLine(char* buffer, int size);
+
 #ifdef __cplusplus
 }
 #endif  // __cplusplus

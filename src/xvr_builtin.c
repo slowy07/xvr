@@ -1557,3 +1557,53 @@ int Xvr_private_clear(Xvr_Interpreter* interpreter,
     Xvr_freeLiteral(obj);
     return 1;
 }
+
+int Xvr_private_abs(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments) {
+    if (arguments->count != 1) {
+        interpreter->errorOutput("abs() requires exactly 1 argument\n");
+        return -1;
+    }
+
+    Xvr_Literal arg = arguments->literals[0];
+
+    bool freeArg = false;
+    if (XVR_IS_IDENTIFIER(arg)) {
+        Xvr_parseIdentifierToValue(interpreter, &arg);
+        freeArg = true;
+    }
+
+    if (XVR_IS_INTEGER(arg)) {
+        int val = XVR_AS_INTEGER(arg);
+        if (val < 0) {
+            Xvr_Literal result = XVR_TO_INTEGER_LITERAL(-val);
+            Xvr_pushLiteralArray(&interpreter->stack, result);
+            Xvr_freeLiteral(result);
+        } else {
+            Xvr_pushLiteralArray(&interpreter->stack, arg);
+        }
+    } else if (XVR_IS_FLOAT(arg)) {
+        float val = XVR_AS_FLOAT(arg);
+        if (val < 0.0f) {
+            Xvr_Literal result = XVR_TO_FLOAT_LITERAL(-val);
+            Xvr_pushLiteralArray(&interpreter->stack, result);
+            Xvr_freeLiteral(result);
+        } else {
+            Xvr_pushLiteralArray(&interpreter->stack, arg);
+        }
+    } else {
+        interpreter->errorOutput(
+            "abs() requires a numeric argument (integer or float), got: ");
+        Xvr_printLiteralCustom(arg, interpreter->errorOutput);
+        interpreter->errorOutput("\n");
+        if (freeArg) {
+            Xvr_freeLiteral(arg);
+        }
+        return -1;
+    }
+
+    if (freeArg) {
+        Xvr_freeLiteral(arg);
+    }
+
+    return 1;
+}

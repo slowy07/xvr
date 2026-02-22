@@ -2854,6 +2854,7 @@ void Xvr_resetInterpreter(Xvr_Interpreter* interpreter) {
     Xvr_injectNativeFn(interpreter, "length", Xvr_private_length);
     Xvr_injectNativeFn(interpreter, "_length", Xvr_private_length);
     Xvr_injectNativeFn(interpreter, "clear", Xvr_private_clear);
+    Xvr_injectNativeFn(interpreter, "abs", Xvr_private_abs);
 }
 
 void Xvr_freeInterpreter(Xvr_Interpreter* interpreter) {

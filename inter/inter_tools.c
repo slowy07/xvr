@@ -26,6 +26,9 @@ SOFTWARE.
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <termios.h>
+#include <unistd.h>
 
 #include "lib_about.h"
 #include "lib_runner.h"
@@ -214,4 +217,120 @@ void Xvr_runSourceFile(const char* fname) {
 
     Xvr_runSource(source);
     free((void*)source);
+}
+
+static struct termios orig_termios;
+static int termios_saved = 0;
+
+static void enableRawMode(void) {
+    if (!isatty(STDIN_FILENO)) return;
+
+    struct termios raw;
+    tcgetattr(STDIN_FILENO, &orig_termios);
+    termios_saved = 1;
+    raw = orig_termios;
+    raw.c_lflag &= ~(ECHO | ICANON);
+    raw.c_cc[VMIN] = 1;
+    raw.c_cc[VTIME] = 0;
+    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
+}
+
+static void disableRawMode(void) {
+    if (termios_saved) {
+        tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
+        termios_saved = 0;
+    }
+}
+
+char* Xvr_readLine(char* buffer, int size) {
+    if (!isatty(STDIN_FILENO)) {
+        return fgets(buffer, size, stdin);
+    }
+
+    enableRawMode();
+
+    int pos = 0;
+    int len = 0;
+    memset(buffer, 0, size);
+
+    while (1) {
+        char c;
+        if (read(STDIN_FILENO, &c, 1) != 1) {
+            disableRawMode();
+            return NULL;
+        }
+
+        if (c == '\x1b') {
+            char seq[2];
+            if (read(STDIN_FILENO, &seq[0], 1) != 1) continue;
+            if (read(STDIN_FILENO, &seq[1], 1) != 1) continue;
+
+            if (seq[0] == '[') {
+                switch (seq[1]) {
+                case 'A':
+                case 'B':
+                    break;
+                case 'C':
+                    if (pos < len) {
+                        pos++;
+                        write(STDOUT_FILENO, "\x1b[C", 3);
+                    }
+                    break;
+                case 'D':
+                    if (pos > 0) {
+                        pos--;
+                        write(STDOUT_FILENO, "\x1b[D", 3);
+                    }
+                    break;
+                }
+            }
+            continue;
+        }
+
+        if (c == 127 || c == '\b') {
+            if (pos > 0) {
+                memmove(&buffer[pos - 1], &buffer[pos], len - pos);
+                pos--;
+                len--;
+                buffer[len] = '\0';
+
+                char clr[256];
+                int n = snprintf(clr, sizeof(clr), "\r> %s\033[K", buffer);
+                write(STDOUT_FILENO, clr, n);
+                for (int i = len; i > pos; i--) {
+                    write(STDOUT_FILENO, "\b", 1);
+                }
+            }
+            continue;
+        }
+
+        if (c == '\n' || c == '\r') {
+            buffer[len] = '\n';
+            buffer[len + 1] = '\0';
+            write(STDOUT_FILENO, "\n", 1);
+            disableRawMode();
+            return buffer;
+        }
+
+        if (c == 4 && len == 0) {
+            disableRawMode();
+            return NULL;
+        }
+
+        if (c >= 32 && len < size - 2) {
+            if (pos < len) {
+                memmove(&buffer[pos + 1], &buffer[pos], len - pos);
+            }
+            buffer[pos] = c;
+            pos++;
+            len++;
+
+            char clr[256];
+            int n = snprintf(clr, sizeof(clr), "\r> %s\033[K", buffer);
+            write(STDOUT_FILENO, clr, n);
+            for (int i = len; i > pos; i--) {
+                write(STDOUT_FILENO, "\b", 1);
+            }
+        }
+    }
 }
