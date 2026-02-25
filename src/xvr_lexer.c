@@ -194,6 +194,58 @@ static Xvr_Token makeIntegerOrFloat(Xvr_Lexer* lexer) {
         while (isDigit(lexer) || peek(lexer) == '_') advance(lexer);
     }
 
+    // Check for type suffix (e.g., 123i16, 42u8)
+    if (peek(lexer) == 'i' || peek(lexer) == 'u') {
+        char suffix_type = peek(lexer);
+        advance(lexer);
+
+        // Parse bit width (8, 16, 32, 64)
+        int bit_width = 0;
+        while (isDigit(lexer)) {
+            bit_width = bit_width * 10 + (peek(lexer) - '0');
+            advance(lexer);
+        }
+
+        // Validate bit width
+        if (bit_width != 8 && bit_width != 16 && bit_width != 32 &&
+            bit_width != 64) {
+            return makeErrorToken(lexer, "Invalid integer bit width");
+        }
+
+        // Set token type based on suffix
+        if (suffix_type == 'i') {
+            switch (bit_width) {
+            case 8:
+                type = XVR_TOKEN_LITERAL_INT8;
+                break;
+            case 16:
+                type = XVR_TOKEN_LITERAL_INT16;
+                break;
+            case 32:
+                type = XVR_TOKEN_LITERAL_INT32;
+                break;
+            case 64:
+                type = XVR_TOKEN_LITERAL_INT64;
+                break;
+            }
+        } else {
+            switch (bit_width) {
+            case 8:
+                type = XVR_TOKEN_LITERAL_UINT8;
+                break;
+            case 16:
+                type = XVR_TOKEN_LITERAL_UINT16;
+                break;
+            case 32:
+                type = XVR_TOKEN_LITERAL_UINT32;
+                break;
+            case 64:
+                type = XVR_TOKEN_LITERAL_UINT64;
+                break;
+            }
+        }
+    }
+
     Xvr_Token token;
 
     token.type = type;
@@ -206,7 +258,7 @@ static Xvr_Token makeIntegerOrFloat(Xvr_Lexer* lexer) {
         if (type == XVR_TOKEN_LITERAL_INTEGER) {
             printf("int:");
         } else {
-            printf("flt:");
+            printf("int suffix:");
         }
         Xvr_private_printToken(&token);
     }

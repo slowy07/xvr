@@ -366,6 +366,46 @@ static bool execPrintf(Xvr_Interpreter* interpreter, int argCount) {
                                  XVR_AS_INTEGER(arg));
                         argStr = tempBuf;
                         break;
+                    case XVR_LITERAL_INT8:
+                        snprintf(tempBuf, sizeof(tempBuf), "%d",
+                                 XVR_AS_INT8(arg));
+                        argStr = tempBuf;
+                        break;
+                    case XVR_LITERAL_INT16:
+                        snprintf(tempBuf, sizeof(tempBuf), "%d",
+                                 XVR_AS_INT16(arg));
+                        argStr = tempBuf;
+                        break;
+                    case XVR_LITERAL_INT32:
+                        snprintf(tempBuf, sizeof(tempBuf), "%d",
+                                 XVR_AS_INT32(arg));
+                        argStr = tempBuf;
+                        break;
+                    case XVR_LITERAL_INT64:
+                        snprintf(tempBuf, sizeof(tempBuf), "%lld",
+                                 (long long)XVR_AS_INT64(arg));
+                        argStr = tempBuf;
+                        break;
+                    case XVR_LITERAL_UINT8:
+                        snprintf(tempBuf, sizeof(tempBuf), "%u",
+                                 XVR_AS_UINT8(arg));
+                        argStr = tempBuf;
+                        break;
+                    case XVR_LITERAL_UINT16:
+                        snprintf(tempBuf, sizeof(tempBuf), "%u",
+                                 XVR_AS_UINT16(arg));
+                        argStr = tempBuf;
+                        break;
+                    case XVR_LITERAL_UINT32:
+                        snprintf(tempBuf, sizeof(tempBuf), "%u",
+                                 XVR_AS_UINT32(arg));
+                        argStr = tempBuf;
+                        break;
+                    case XVR_LITERAL_UINT64:
+                        snprintf(tempBuf, sizeof(tempBuf), "%llu",
+                                 (unsigned long long)XVR_AS_UINT64(arg));
+                        argStr = tempBuf;
+                        break;
                     case XVR_LITERAL_FLOAT:
                         snprintf(tempBuf, sizeof(tempBuf), "%g",
                                  (double)XVR_AS_FLOAT(arg));
@@ -1731,15 +1771,29 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
     for (int i = 0; i < returnsFromInner.count && returnValue; i++) {
         Xvr_Literal ret = Xvr_popLiteralArray(&returnsFromInner);
 
-        // check the return types
-        if (returnArray->count > 0 &&
-            XVR_AS_TYPE(returnArray->literals[i]).typeOf != ret.type) {
-            interpreter->errorHandler.output(
-                "Bad type found in return value\n");
+        // check the return types - allow numeric type compatibility
+        if (returnArray->count > 0) {
+            Xvr_LiteralType declaredType =
+                XVR_AS_TYPE(returnArray->literals[i]).typeOf;
+            Xvr_LiteralType actualType = ret.type;
 
-            // free, and skip out
-            returnValue = false;
-            break;
+            bool declaredIsNumeric = (declaredType == XVR_LITERAL_INTEGER ||
+                                      declaredType == XVR_LITERAL_FLOAT ||
+                                      Xvr_isFixedSizeInteger(declaredType));
+            bool actualIsNumeric = (actualType == XVR_LITERAL_INTEGER ||
+                                    actualType == XVR_LITERAL_FLOAT ||
+                                    Xvr_isFixedSizeInteger(actualType));
+
+            bool typesCompatible = (declaredIsNumeric && actualIsNumeric) ||
+                                   (declaredType == actualType);
+
+            if (!typesCompatible) {
+                interpreter->errorHandler.output(
+                    "Bad type found in return value\n");
+
+                returnValue = false;
+                break;
+            }
         }
 
         Xvr_pushLiteralArray(returns, ret);  // NOTE: reverses again
@@ -2470,6 +2524,67 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
                 printf("(integer %d)\n", d);
             }
 #endif
+        } break;
+
+        case XVR_LITERAL_INT8: {
+            const char d = readByte(interpreter->bytecode, &interpreter->count);
+            Xvr_Literal literal = XVR_TO_INT8_LITERAL(d);
+            Xvr_pushLiteralArray(&interpreter->literalCache, literal);
+            Xvr_freeLiteral(literal);
+        } break;
+
+        case XVR_LITERAL_INT16: {
+            const short d =
+                readShort(interpreter->bytecode, &interpreter->count);
+            Xvr_Literal literal = XVR_TO_INT16_LITERAL(d);
+            Xvr_pushLiteralArray(&interpreter->literalCache, literal);
+            Xvr_freeLiteral(literal);
+        } break;
+
+        case XVR_LITERAL_INT32: {
+            const int d = readInt(interpreter->bytecode, &interpreter->count);
+            Xvr_Literal literal = XVR_TO_INT32_LITERAL(d);
+            Xvr_pushLiteralArray(&interpreter->literalCache, literal);
+            Xvr_freeLiteral(literal);
+        } break;
+
+        case XVR_LITERAL_INT64: {
+            const int d = readInt(interpreter->bytecode, &interpreter->count);
+            Xvr_Literal literal = XVR_TO_INT64_LITERAL((long long)d);
+            Xvr_pushLiteralArray(&interpreter->literalCache, literal);
+            Xvr_freeLiteral(literal);
+        } break;
+
+        case XVR_LITERAL_UINT8: {
+            const unsigned char d =
+                readByte(interpreter->bytecode, &interpreter->count);
+            Xvr_Literal literal = XVR_TO_UINT8_LITERAL(d);
+            Xvr_pushLiteralArray(&interpreter->literalCache, literal);
+            Xvr_freeLiteral(literal);
+        } break;
+
+        case XVR_LITERAL_UINT16: {
+            const unsigned short d =
+                readShort(interpreter->bytecode, &interpreter->count);
+            Xvr_Literal literal = XVR_TO_UINT16_LITERAL(d);
+            Xvr_pushLiteralArray(&interpreter->literalCache, literal);
+            Xvr_freeLiteral(literal);
+        } break;
+
+        case XVR_LITERAL_UINT32: {
+            const unsigned int d =
+                readInt(interpreter->bytecode, &interpreter->count);
+            Xvr_Literal literal = XVR_TO_UINT32_LITERAL(d);
+            Xvr_pushLiteralArray(&interpreter->literalCache, literal);
+            Xvr_freeLiteral(literal);
+        } break;
+
+        case XVR_LITERAL_UINT64: {
+            const unsigned int d =
+                readInt(interpreter->bytecode, &interpreter->count);
+            Xvr_Literal literal = XVR_TO_UINT64_LITERAL((unsigned long long)d);
+            Xvr_pushLiteralArray(&interpreter->literalCache, literal);
+            Xvr_freeLiteral(literal);
         } break;
 
         case XVR_LITERAL_FLOAT: {

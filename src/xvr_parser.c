@@ -602,6 +602,86 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         return XVR_OP_EOF;
     }
 
+    case XVR_TOKEN_LITERAL_INT8: {
+        int8_t value = 0;
+        const char* lexeme =
+            removeChar(parser->previous.lexeme, parser->previous.length, '_');
+        sscanf(lexeme, "%hhd", &value);
+        XVR_FREE_ARRAY(char, lexeme, parser->previous.length + 1);
+        Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_INT8_LITERAL(value));
+        return XVR_OP_EOF;
+    }
+
+    case XVR_TOKEN_LITERAL_INT16: {
+        int16_t value = 0;
+        const char* lexeme =
+            removeChar(parser->previous.lexeme, parser->previous.length, '_');
+        sscanf(lexeme, "%hd", &value);
+        XVR_FREE_ARRAY(char, lexeme, parser->previous.length + 1);
+        Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_INT16_LITERAL(value));
+        return XVR_OP_EOF;
+    }
+
+    case XVR_TOKEN_LITERAL_INT32: {
+        int32_t value = 0;
+        const char* lexeme =
+            removeChar(parser->previous.lexeme, parser->previous.length, '_');
+        sscanf(lexeme, "%d", &value);
+        XVR_FREE_ARRAY(char, lexeme, parser->previous.length + 1);
+        Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_INT32_LITERAL(value));
+        return XVR_OP_EOF;
+    }
+
+    case XVR_TOKEN_LITERAL_INT64: {
+        int64_t value = 0;
+        const char* lexeme =
+            removeChar(parser->previous.lexeme, parser->previous.length, '_');
+        sscanf(lexeme, "%ld", &value);
+        XVR_FREE_ARRAY(char, lexeme, parser->previous.length + 1);
+        Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_INT64_LITERAL(value));
+        return XVR_OP_EOF;
+    }
+
+    case XVR_TOKEN_LITERAL_UINT8: {
+        uint8_t value = 0;
+        const char* lexeme =
+            removeChar(parser->previous.lexeme, parser->previous.length, '_');
+        sscanf(lexeme, "%hhu", &value);
+        XVR_FREE_ARRAY(char, lexeme, parser->previous.length + 1);
+        Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_UINT8_LITERAL(value));
+        return XVR_OP_EOF;
+    }
+
+    case XVR_TOKEN_LITERAL_UINT16: {
+        uint16_t value = 0;
+        const char* lexeme =
+            removeChar(parser->previous.lexeme, parser->previous.length, '_');
+        sscanf(lexeme, "%hu", &value);
+        XVR_FREE_ARRAY(char, lexeme, parser->previous.length + 1);
+        Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_UINT16_LITERAL(value));
+        return XVR_OP_EOF;
+    }
+
+    case XVR_TOKEN_LITERAL_UINT32: {
+        uint32_t value = 0;
+        const char* lexeme =
+            removeChar(parser->previous.lexeme, parser->previous.length, '_');
+        sscanf(lexeme, "%u", &value);
+        XVR_FREE_ARRAY(char, lexeme, parser->previous.length + 1);
+        Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_UINT32_LITERAL(value));
+        return XVR_OP_EOF;
+    }
+
+    case XVR_TOKEN_LITERAL_UINT64: {
+        uint64_t value = 0;
+        const char* lexeme =
+            removeChar(parser->previous.lexeme, parser->previous.length, '_');
+        sscanf(lexeme, "%lu", &value);
+        XVR_FREE_ARRAY(char, lexeme, parser->previous.length + 1);
+        Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_UINT64_LITERAL(value));
+        return XVR_OP_EOF;
+    }
+
     case XVR_TOKEN_LITERAL_FLOAT: {
         float value = 0;
         const char* lexeme =
@@ -667,6 +747,54 @@ static Xvr_Opcode castingPrefix(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 
     case XVR_TOKEN_INTEGER: {
         Xvr_Literal literal = XVR_TO_TYPE_LITERAL(XVR_LITERAL_INTEGER, false);
+        Xvr_emitASTNodeLiteral(nodeHandle, literal);
+        Xvr_freeLiteral(literal);
+    } break;
+
+    case XVR_TOKEN_INT8: {
+        Xvr_Literal literal = XVR_TO_TYPE_LITERAL(XVR_LITERAL_INT8, false);
+        Xvr_emitASTNodeLiteral(nodeHandle, literal);
+        Xvr_freeLiteral(literal);
+    } break;
+
+    case XVR_TOKEN_INT16: {
+        Xvr_Literal literal = XVR_TO_TYPE_LITERAL(XVR_LITERAL_INT16, false);
+        Xvr_emitASTNodeLiteral(nodeHandle, literal);
+        Xvr_freeLiteral(literal);
+    } break;
+
+    case XVR_TOKEN_INT32: {
+        Xvr_Literal literal = XVR_TO_TYPE_LITERAL(XVR_LITERAL_INT32, false);
+        Xvr_emitASTNodeLiteral(nodeHandle, literal);
+        Xvr_freeLiteral(literal);
+    } break;
+
+    case XVR_TOKEN_INT64: {
+        Xvr_Literal literal = XVR_TO_TYPE_LITERAL(XVR_LITERAL_INT64, false);
+        Xvr_emitASTNodeLiteral(nodeHandle, literal);
+        Xvr_freeLiteral(literal);
+    } break;
+
+    case XVR_TOKEN_UINT8: {
+        Xvr_Literal literal = XVR_TO_TYPE_LITERAL(XVR_LITERAL_UINT8, false);
+        Xvr_emitASTNodeLiteral(nodeHandle, literal);
+        Xvr_freeLiteral(literal);
+    } break;
+
+    case XVR_TOKEN_UINT16: {
+        Xvr_Literal literal = XVR_TO_TYPE_LITERAL(XVR_LITERAL_UINT16, false);
+        Xvr_emitASTNodeLiteral(nodeHandle, literal);
+        Xvr_freeLiteral(literal);
+    } break;
+
+    case XVR_TOKEN_UINT32: {
+        Xvr_Literal literal = XVR_TO_TYPE_LITERAL(XVR_LITERAL_UINT32, false);
+        Xvr_emitASTNodeLiteral(nodeHandle, literal);
+        Xvr_freeLiteral(literal);
+    } break;
+
+    case XVR_TOKEN_UINT64: {
+        Xvr_Literal literal = XVR_TO_TYPE_LITERAL(XVR_LITERAL_UINT64, false);
         Xvr_emitASTNodeLiteral(nodeHandle, literal);
         Xvr_freeLiteral(literal);
     } break;
@@ -951,6 +1079,16 @@ ParseRule parseRules[] = {
     {NULL, NULL, PREC_NONE},           // TOKEN_OPAQUE,
     {NULL, NULL, PREC_NONE},           // TOKEN_ANY,
 
+    // fixed-size integer types
+    {castingPrefix, NULL, PREC_CALL},  // TOKEN_INT8,
+    {castingPrefix, NULL, PREC_CALL},  // TOKEN_INT16,
+    {castingPrefix, NULL, PREC_CALL},  // TOKEN_INT32,
+    {castingPrefix, NULL, PREC_CALL},  // TOKEN_INT64,
+    {castingPrefix, NULL, PREC_CALL},  // TOKEN_UINT8,
+    {castingPrefix, NULL, PREC_CALL},  // TOKEN_UINT16,
+    {castingPrefix, NULL, PREC_CALL},  // TOKEN_UINT32,
+    {castingPrefix, NULL, PREC_CALL},  // TOKEN_UINT64,
+
     // keywords and reserved words
     {NULL, NULL, PREC_NONE},       // TOKEN_AS,
     {NULL, NULL, PREC_NONE},       // TOKEN_ASSERT,
@@ -982,6 +1120,16 @@ ParseRule parseRules[] = {
     {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_INTEGER,
     {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_FLOAT,
     {string, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_STRING,
+
+    // fixed-size integer literals
+    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_INT8,
+    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_INT16,
+    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_INT32,
+    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_INT64,
+    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_UINT8,
+    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_UINT16,
+    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_UINT32,
+    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_UINT64,
 
     // math operators
     {NULL, binary, PREC_TERM},                     // TOKEN_PLUS,
@@ -1707,6 +1855,38 @@ static Xvr_Literal readTypeToLiteral(Xvr_Parser* parser) {
 
     case XVR_TOKEN_INTEGER:
         XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_INTEGER;
+        break;
+
+    case XVR_TOKEN_INT8:
+        XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_INT8;
+        break;
+
+    case XVR_TOKEN_INT16:
+        XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_INT16;
+        break;
+
+    case XVR_TOKEN_INT32:
+        XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_INT32;
+        break;
+
+    case XVR_TOKEN_INT64:
+        XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_INT64;
+        break;
+
+    case XVR_TOKEN_UINT8:
+        XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_UINT8;
+        break;
+
+    case XVR_TOKEN_UINT16:
+        XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_UINT16;
+        break;
+
+    case XVR_TOKEN_UINT32:
+        XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_UINT32;
+        break;
+
+    case XVR_TOKEN_UINT64:
+        XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_UINT64;
         break;
 
     case XVR_TOKEN_FLOAT:

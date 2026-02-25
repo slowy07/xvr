@@ -1317,6 +1317,55 @@ static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
                     XVR_AS_INTEGER(compiler->literalCache.literals[i]));
             break;
 
+        case XVR_LITERAL_INT8:
+            emitByte(&collation, &capacity, &count, XVR_LITERAL_INT8);
+            emitByte(
+                &collation, &capacity, &count,
+                (unsigned char)XVR_AS_INT8(compiler->literalCache.literals[i]));
+            break;
+
+        case XVR_LITERAL_INT16:
+            emitByte(&collation, &capacity, &count, XVR_LITERAL_INT16);
+            emitInt(&collation, &capacity, &count,
+                    (int)XVR_AS_INT16(compiler->literalCache.literals[i]));
+            break;
+
+        case XVR_LITERAL_INT32:
+            emitByte(&collation, &capacity, &count, XVR_LITERAL_INT32);
+            emitInt(&collation, &capacity, &count,
+                    (int)XVR_AS_INT32(compiler->literalCache.literals[i]));
+            break;
+
+        case XVR_LITERAL_INT64:
+            emitByte(&collation, &capacity, &count, XVR_LITERAL_INT64);
+            emitInt(&collation, &capacity, &count,
+                    (int)XVR_AS_INT64(compiler->literalCache.literals[i]));
+            break;
+
+        case XVR_LITERAL_UINT8:
+            emitByte(&collation, &capacity, &count, XVR_LITERAL_UINT8);
+            emitByte(&collation, &capacity, &count,
+                     XVR_AS_UINT8(compiler->literalCache.literals[i]));
+            break;
+
+        case XVR_LITERAL_UINT16:
+            emitByte(&collation, &capacity, &count, XVR_LITERAL_UINT16);
+            emitInt(&collation, &capacity, &count,
+                    (int)XVR_AS_UINT16(compiler->literalCache.literals[i]));
+            break;
+
+        case XVR_LITERAL_UINT32:
+            emitByte(&collation, &capacity, &count, XVR_LITERAL_UINT32);
+            emitInt(&collation, &capacity, &count,
+                    (int)XVR_AS_UINT32(compiler->literalCache.literals[i]));
+            break;
+
+        case XVR_LITERAL_UINT64:
+            emitByte(&collation, &capacity, &count, XVR_LITERAL_UINT64);
+            emitInt(&collation, &capacity, &count,
+                    (int)XVR_AS_UINT64(compiler->literalCache.literals[i]));
+            break;
+
         case XVR_LITERAL_FLOAT:
             emitByte(&collation, &capacity, &count, XVR_LITERAL_FLOAT);
             emitFloat(&collation, &capacity, &count,

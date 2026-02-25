@@ -109,6 +109,15 @@ typedef enum {
     XVR_LITERAL_OPAQUE,
     XVR_LITERAL_ANY,
 
+    XVR_LITERAL_INT8,
+    XVR_LITERAL_INT16,
+    XVR_LITERAL_INT32,
+    XVR_LITERAL_INT64,
+    XVR_LITERAL_UINT8,
+    XVR_LITERAL_UINT16,
+    XVR_LITERAL_UINT32,
+    XVR_LITERAL_UINT64,
+
     XVR_LITERAL_TYPE_INTERMEDIATE,
     XVR_LITERAL_ARRAY_INTERMEDIATE,
     XVR_LITERAL_DICTIONARY_INTERMEDIATE,
@@ -150,6 +159,15 @@ typedef struct Xvr_Literal {
         bool boolean;  // XVR_LITERAL_BOOLEAN
         int integer;   // XVR_LITERAL_INTEGER
         float number;  // XVR_LITERAL_FLOAT
+
+        int8_t int8_value;      // XVR_LITERAL_INT8
+        int16_t int16_value;    // XVR_LITERAL_INT16
+        int32_t int32_value;    // XVR_LITERAL_INT32
+        int64_t int64_value;    // XVR_LITERAL_INT64
+        uint8_t uint8_value;    // XVR_LITERAL_UINT8
+        uint16_t uint16_value;  // XVR_LITERAL_UINT16
+        uint32_t uint32_value;  // XVR_LITERAL_UINT32
+        uint64_t uint64_value;  // XVR_LITERAL_UINT64
 
         // XVR_LITERAL_STRING or XVR_LITERAL_IDENTIFIER
         struct {
@@ -200,7 +218,13 @@ typedef struct Xvr_Literal {
 
 #define XVR_IS_NULL(value) ((value).type == XVR_LITERAL_NULL)
 #define XVR_IS_BOOLEAN(value) ((value).type == XVR_LITERAL_BOOLEAN)
-#define XVR_IS_INTEGER(value) ((value).type == XVR_LITERAL_INTEGER)
+#define XVR_IS_INTEGER(value)                                                  \
+    ((value).type == XVR_LITERAL_INTEGER ||                                    \
+     (value).type == XVR_LITERAL_INT8 || (value).type == XVR_LITERAL_INT16 ||  \
+     (value).type == XVR_LITERAL_INT32 || (value).type == XVR_LITERAL_INT64 || \
+     (value).type == XVR_LITERAL_UINT8 ||                                      \
+     (value).type == XVR_LITERAL_UINT16 ||                                     \
+     (value).type == XVR_LITERAL_UINT32 || (value).type == XVR_LITERAL_UINT64)
 #define XVR_IS_FLOAT(value) ((value).type == XVR_LITERAL_FLOAT)
 #define XVR_IS_STRING(value) ((value).type == XVR_LITERAL_STRING)
 #define XVR_IS_ARRAY(value) ((value).type == XVR_LITERAL_ARRAY)
@@ -213,9 +237,33 @@ typedef struct Xvr_Literal {
 #define XVR_IS_TYPE(value) ((value).type == XVR_LITERAL_TYPE)
 #define XVR_IS_OPAQUE(value) ((value).type == XVR_LITERAL_OPAQUE)
 
+#define XVR_IS_INT8(value) ((value).type == XVR_LITERAL_INT8)
+#define XVR_IS_INT16(value) ((value).type == XVR_LITERAL_INT16)
+#define XVR_IS_INT32(value) ((value).type == XVR_LITERAL_INT32)
+#define XVR_IS_INT64(value) ((value).type == XVR_LITERAL_INT64)
+#define XVR_IS_UINT8(value) ((value).type == XVR_LITERAL_UINT8)
+#define XVR_IS_UINT16(value) ((value).type == XVR_LITERAL_UINT16)
+#define XVR_IS_UINT32(value) ((value).type == XVR_LITERAL_UINT32)
+#define XVR_IS_UINT64(value) ((value).type == XVR_LITERAL_UINT64)
+
+#define XVR_IS_SIGNED_INT(value) \
+    ((value).type >= XVR_LITERAL_INT8 && (value).type <= XVR_LITERAL_INT64)
+#define XVR_IS_UNSIGNED_INT(value) \
+    ((value).type >= XVR_LITERAL_UINT8 && (value).type <= XVR_LITERAL_UINT64)
+#define XVR_IS_FIXED_INT(value) \
+    (XVR_IS_SIGNED_INT(value) || XVR_IS_UNSIGNED_INT(value))
+
 #define XVR_AS_BOOLEAN(value) ((value).as.boolean)
 #define XVR_AS_INTEGER(value) ((value).as.integer)
 #define XVR_AS_FLOAT(value) ((value).as.number)
+#define XVR_AS_INT8(value) ((value).as.int8_value)
+#define XVR_AS_INT16(value) ((value).as.int16_value)
+#define XVR_AS_INT32(value) ((value).as.int32_value)
+#define XVR_AS_INT64(value) ((value).as.int64_value)
+#define XVR_AS_UINT8(value) ((value).as.uint8_value)
+#define XVR_AS_UINT16(value) ((value).as.uint16_value)
+#define XVR_AS_UINT32(value) ((value).as.uint32_value)
+#define XVR_AS_UINT64(value) ((value).as.uint64_value)
 #define XVR_AS_STRING(value) ((value).as.string.ptr)
 #define XVR_AS_ARRAY(value) ((Xvr_LiteralArray*)((value).as.array))
 #define XVR_AS_DICTIONARY(value) \
@@ -264,6 +312,23 @@ typedef struct Xvr_Literal {
     ((Xvr_Literal){{.opaque.ptr = value, .opaque.tag = t}, \
                    XVR_LITERAL_OPAQUE,                     \
                    0})
+
+#define XVR_TO_INT8_LITERAL(value) \
+    ((Xvr_Literal){{.int8_value = value}, XVR_LITERAL_INT8, 0})
+#define XVR_TO_INT16_LITERAL(value) \
+    ((Xvr_Literal){{.int16_value = value}, XVR_LITERAL_INT16, 0})
+#define XVR_TO_INT32_LITERAL(value) \
+    ((Xvr_Literal){{.int32_value = value}, XVR_LITERAL_INT32, 0})
+#define XVR_TO_INT64_LITERAL(value) \
+    ((Xvr_Literal){{.int64_value = value}, XVR_LITERAL_INT64, 0})
+#define XVR_TO_UINT8_LITERAL(value) \
+    ((Xvr_Literal){{.uint8_value = value}, XVR_LITERAL_UINT8, 0})
+#define XVR_TO_UINT16_LITERAL(value) \
+    ((Xvr_Literal){{.uint16_value = value}, XVR_LITERAL_UINT16, 0})
+#define XVR_TO_UINT32_LITERAL(value) \
+    ((Xvr_Literal){{.uint32_value = value}, XVR_LITERAL_UINT32, 0})
+#define XVR_TO_UINT64_LITERAL(value) \
+    ((Xvr_Literal){{.uint64_value = value}, XVR_LITERAL_UINT64, 0})
 
 #define XVR_IS_INDEX_BLANK(value) ((value).type == XVR_LITERAL_INDEX_BLANK)
 #define XVR_TO_INDEX_BLANK_LITERAL \
@@ -345,5 +410,9 @@ XVR_API void Xvr_printLiteralCustom(Xvr_Literal literal,
  */
 XVR_API void Xvr_printLiteralToBuffer(Xvr_Literal literal, char* buffer,
                                       int* bufferPos, int bufferSize);
+
+XVR_API int Xvr_getIntegerBitWidth(Xvr_LiteralType type);
+XVR_API bool Xvr_isIntegerSigned(Xvr_LiteralType type);
+XVR_API bool Xvr_isFixedSizeInteger(Xvr_LiteralType type);
 
 #endif  // !XVR_LITERAL_H

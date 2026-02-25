@@ -32,6 +32,8 @@ struct Xvr_LLVMTypeMapper {
     Xvr_LLVMContext* context;
     LLVMTypeRef void_type;
     LLVMTypeRef int1_type;
+    LLVMTypeRef int8_type;
+    LLVMTypeRef int16_type;
     LLVMTypeRef int32_type;
     LLVMTypeRef int64_type;
     LLVMTypeRef float_type;
@@ -55,6 +57,8 @@ Xvr_LLVMTypeMapper* Xvr_LLVMTypeMapperCreate(Xvr_LLVMContext* ctx) {
 
     mapper->void_type = LLVMVoidTypeInContext(llvm_ctx);
     mapper->int1_type = LLVMInt1TypeInContext(llvm_ctx);
+    mapper->int8_type = LLVMInt8TypeInContext(llvm_ctx);
+    mapper->int16_type = LLVMInt16TypeInContext(llvm_ctx);
     mapper->int32_type = LLVMInt32TypeInContext(llvm_ctx);
     mapper->int64_type = LLVMInt64TypeInContext(llvm_ctx);
     mapper->float_type = LLVMFloatTypeInContext(llvm_ctx);
@@ -85,6 +89,22 @@ LLVMTypeRef Xvr_LLVMTypeMapperGetType(Xvr_LLVMTypeMapper* mapper,
         return mapper->int1_type;
     case XVR_LITERAL_INTEGER:
         return mapper->int32_type;
+    case XVR_LITERAL_INT8:
+        return mapper->int8_type;
+    case XVR_LITERAL_INT16:
+        return mapper->int16_type;
+    case XVR_LITERAL_INT32:
+        return mapper->int32_type;
+    case XVR_LITERAL_INT64:
+        return mapper->int64_type;
+    case XVR_LITERAL_UINT8:
+        return mapper->int8_type;
+    case XVR_LITERAL_UINT16:
+        return mapper->int16_type;
+    case XVR_LITERAL_UINT32:
+        return mapper->int32_type;
+    case XVR_LITERAL_UINT64:
+        return mapper->int64_type;
     case XVR_LITERAL_FLOAT:
         return mapper->float_type;
     case XVR_LITERAL_STRING:
@@ -124,8 +144,17 @@ LLVMTypeRef Xvr_LLVMTypeMapperGetRuntimeType(Xvr_LLVMTypeMapper* mapper) {
 bool Xvr_LLVMTypeMapperIsSigned(Xvr_LiteralType type) {
     switch (type) {
     case XVR_LITERAL_INTEGER:
+    case XVR_LITERAL_INT8:
+    case XVR_LITERAL_INT16:
+    case XVR_LITERAL_INT32:
+    case XVR_LITERAL_INT64:
     case XVR_LITERAL_FLOAT:
         return true;
+    case XVR_LITERAL_UINT8:
+    case XVR_LITERAL_UINT16:
+    case XVR_LITERAL_UINT32:
+    case XVR_LITERAL_UINT64:
+        return false;
     default:
         return false;
     }

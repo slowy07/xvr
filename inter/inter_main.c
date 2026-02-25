@@ -148,16 +148,7 @@ int main(int argc, const char* argv[]) {
 
     // run from stdin
     if (Xvr_commandLine.source) {
-        const char* s = strrchr(Xvr_commandLine.sourceFile, '.');
-        if (!s || strcmp(s, ".xvr")) {
-            fprintf(stderr,
-                    XVR_CC_ERROR
-                    "bad file extension passing to %s (expected `.xvr`, got "
-                    "%s)" XVR_CC_ERROR,
-                    argv[0], s);
-            return -1;
-        }
-
+        // -i flag provides direct source code, no file extension to check
         Xvr_runSource(Xvr_commandLine.source);
 
         // lib cleanup

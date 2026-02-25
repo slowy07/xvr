@@ -1,10 +1,25 @@
 #include "xvr_refstring.h"
 
+#include <stdio.h>
 #include <string.h>
+
+#if defined(XVR_DEBUG) || defined(DEBUG)
+static int g_refstring_count = 0;
+#endif
 
 extern void* Xvr_private_defaultMemoryAllocator(void* pointer, size_t oldSize,
                                                 size_t newSize);
 static Xvr_RefStringAllocatorFn allocate = Xvr_private_defaultMemoryAllocator;
+
+#if defined(XVR_DEBUG) || defined(DEBUG)
+void Xvr_debugPrintRefStringStats(void) {
+    fprintf(stderr, "[RefString] Active strings: %d\n", g_refstring_count);
+}
+
+int Xvr_debugGetRefStringCount(void) { return g_refstring_count; }
+
+void Xvr_debugResetRefStringStats(void) { g_refstring_count = 0; }
+#endif
 
 void Xvr_setRefStringAllocatorFn(Xvr_RefStringAllocatorFn allocator) {
     allocate = allocator;
@@ -30,12 +45,19 @@ Xvr_RefString* Xvr_createRefStringLength(const char* cstring, size_t length) {
 
     refString->data[refString->length] = '\0';
 
+#if defined(XVR_DEBUG) || defined(DEBUG)
+    g_refstring_count++;
+#endif
+
     return refString;
 }
 
 void Xvr_deleteRefString(Xvr_RefString* refString) {
     refString->refCount--;
     if (refString->refCount <= 0) {
+#if defined(XVR_DEBUG) || defined(DEBUG)
+        g_refstring_count--;
+#endif
         allocate(refString,
                  sizeof(size_t) + sizeof(int) +
                      sizeof(char) * (refString->length + 1),

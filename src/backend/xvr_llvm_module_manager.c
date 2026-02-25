@@ -132,7 +132,12 @@ char* Xvr_LLVMModuleManagerPrintIR(Xvr_LLVMModuleManager* mgr,
     }
 
     *out_len = strlen(ir) + 1;
-    return ir;
+    char* result = malloc(*out_len);
+    if (result) {
+        memcpy(result, ir, *out_len);
+    }
+    LLVMDisposeMessage(ir);
+    return result;
 }
 
 bool Xvr_LLVMModuleManagerWriteBitcode(Xvr_LLVMModuleManager* mgr,

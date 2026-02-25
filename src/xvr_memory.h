@@ -69,6 +69,20 @@ SOFTWARE.
 #define XVR_FREE_ARRAY(type, pointer, oldCount) \
     Xvr_reallocate((type*)pointer, sizeof(type) * (oldCount), 0)
 
+#if defined(XVR_DEBUG) || defined(DEBUG)
+#    define XVR_DEBUG_ALLOCATIONS 1
+#else
+#    define XVR_DEBUG_ALLOCATIONS 0
+#endif
+
+#if XVR_DEBUG_ALLOCATIONS
+void Xvr_debugPrintMemoryStats(void);
+size_t Xvr_debugGetAllocCount(void);
+size_t Xvr_debugGetFreeCount(void);
+size_t Xvr_debugGetCurrentMemory(void);
+void Xvr_debugResetMemoryStats(void);
+#endif
+
 void* Xvr_reallocate(void* pointer, size_t oldSize, size_t newSize);
 
 /**

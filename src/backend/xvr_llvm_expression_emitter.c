@@ -115,6 +115,38 @@ static LLVMValueRef emit_literal_value(Xvr_LLVMExpressionEmitter* emitter,
         return LLVMConstInt(LLVMInt32TypeInContext(llvm_ctx),
                             (unsigned long long)literal.as.integer, true);
 
+    case XVR_LITERAL_INT8:
+        return LLVMConstInt(LLVMInt8TypeInContext(llvm_ctx),
+                            (unsigned long long)literal.as.int8_value, true);
+
+    case XVR_LITERAL_INT16:
+        return LLVMConstInt(LLVMInt16TypeInContext(llvm_ctx),
+                            (unsigned long long)literal.as.int16_value, true);
+
+    case XVR_LITERAL_INT32:
+        return LLVMConstInt(LLVMInt32TypeInContext(llvm_ctx),
+                            (unsigned long long)literal.as.int32_value, true);
+
+    case XVR_LITERAL_INT64:
+        return LLVMConstInt(LLVMInt64TypeInContext(llvm_ctx),
+                            (unsigned long long)literal.as.int64_value, true);
+
+    case XVR_LITERAL_UINT8:
+        return LLVMConstInt(LLVMInt8TypeInContext(llvm_ctx),
+                            (unsigned long long)literal.as.uint8_value, false);
+
+    case XVR_LITERAL_UINT16:
+        return LLVMConstInt(LLVMInt16TypeInContext(llvm_ctx),
+                            (unsigned long long)literal.as.uint16_value, false);
+
+    case XVR_LITERAL_UINT32:
+        return LLVMConstInt(LLVMInt32TypeInContext(llvm_ctx),
+                            (unsigned long long)literal.as.uint32_value, false);
+
+    case XVR_LITERAL_UINT64:
+        return LLVMConstInt(LLVMInt64TypeInContext(llvm_ctx),
+                            (unsigned long long)literal.as.uint64_value, false);
+
     case XVR_LITERAL_FLOAT:
         /* Float: 32-bit floating point */
         return LLVMConstReal(LLVMFloatTypeInContext(llvm_ctx),

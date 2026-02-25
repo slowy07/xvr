@@ -16,6 +16,16 @@ Xvr_KeywordType Xvr_keywordTypes[] = {
     {XVR_TOKEN_OPAQUE, "opaque"},
     {XVR_TOKEN_ANY, "any"},
 
+    // fixed-size integer types
+    {XVR_TOKEN_INT8, "int8"},
+    {XVR_TOKEN_INT16, "int16"},
+    {XVR_TOKEN_INT32, "int32"},
+    {XVR_TOKEN_INT64, "int64"},
+    {XVR_TOKEN_UINT8, "uint8"},
+    {XVR_TOKEN_UINT16, "uint16"},
+    {XVR_TOKEN_UINT32, "uint32"},
+    {XVR_TOKEN_UINT64, "uint64"},
+
     // other keywords
     {XVR_TOKEN_AS, "as"},
     {XVR_TOKEN_ASSERT, "assert"},

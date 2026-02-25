@@ -132,6 +132,14 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
     case XVR_LITERAL_BOOLEAN:
     case XVR_LITERAL_INTEGER:
     case XVR_LITERAL_FLOAT:
+    case XVR_LITERAL_INT8:
+    case XVR_LITERAL_INT16:
+    case XVR_LITERAL_INT32:
+    case XVR_LITERAL_INT64:
+    case XVR_LITERAL_UINT8:
+    case XVR_LITERAL_UINT16:
+    case XVR_LITERAL_UINT32:
+    case XVR_LITERAL_UINT64:
         // no copying needed
         return original;
 
@@ -300,6 +308,30 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
     case XVR_LITERAL_INTEGER:
         return XVR_AS_INTEGER(lhs) == XVR_AS_INTEGER(rhs);
 
+    case XVR_LITERAL_INT8:
+        return XVR_AS_INT8(lhs) == XVR_AS_INT8(rhs);
+
+    case XVR_LITERAL_INT16:
+        return XVR_AS_INT16(lhs) == XVR_AS_INT16(rhs);
+
+    case XVR_LITERAL_INT32:
+        return XVR_AS_INT32(lhs) == XVR_AS_INT32(rhs);
+
+    case XVR_LITERAL_INT64:
+        return XVR_AS_INT64(lhs) == XVR_AS_INT64(rhs);
+
+    case XVR_LITERAL_UINT8:
+        return XVR_AS_UINT8(lhs) == XVR_AS_UINT8(rhs);
+
+    case XVR_LITERAL_UINT16:
+        return XVR_AS_UINT16(lhs) == XVR_AS_UINT16(rhs);
+
+    case XVR_LITERAL_UINT32:
+        return XVR_AS_UINT32(lhs) == XVR_AS_UINT32(rhs);
+
+    case XVR_LITERAL_UINT64:
+        return XVR_AS_UINT64(lhs) == XVR_AS_UINT64(rhs);
+
     case XVR_LITERAL_FLOAT:
         return XVR_AS_FLOAT(lhs) == XVR_AS_FLOAT(rhs);
 
@@ -437,6 +469,32 @@ int Xvr_hashLiteral(Xvr_Literal lit) {
     case XVR_LITERAL_INTEGER:
         return hashUInt((unsigned int)XVR_AS_INTEGER(lit));
 
+    case XVR_LITERAL_INT8:
+        return hashUInt((unsigned int)XVR_AS_INT8(lit));
+
+    case XVR_LITERAL_INT16:
+        return hashUInt((unsigned int)XVR_AS_INT16(lit));
+
+    case XVR_LITERAL_INT32:
+        return hashUInt((unsigned int)XVR_AS_INT32(lit));
+
+    case XVR_LITERAL_INT64:
+        return hashUInt(
+            (unsigned int)(XVR_AS_INT64(lit) ^ (XVR_AS_INT64(lit) >> 32)));
+
+    case XVR_LITERAL_UINT8:
+        return hashUInt((unsigned int)XVR_AS_UINT8(lit));
+
+    case XVR_LITERAL_UINT16:
+        return hashUInt((unsigned int)XVR_AS_UINT16(lit));
+
+    case XVR_LITERAL_UINT32:
+        return hashUInt((unsigned int)XVR_AS_UINT32(lit));
+
+    case XVR_LITERAL_UINT64:
+        return hashUInt(
+            (unsigned int)(XVR_AS_UINT64(lit) ^ (XVR_AS_UINT64(lit) >> 32)));
+
     case XVR_LITERAL_FLOAT:
         return hashUInt(*(unsigned int*)(&XVR_AS_FLOAT(lit)));
 
@@ -533,6 +591,55 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
     case XVR_LITERAL_INTEGER: {
         char buffer[256];
         snprintf(buffer, 256, "%d", XVR_AS_INTEGER(literal));
+        printFn(buffer);
+    } break;
+
+    case XVR_LITERAL_INT8: {
+        char buffer[256];
+        snprintf(buffer, 256, "%d", XVR_AS_INT8(literal));
+        printFn(buffer);
+    } break;
+
+    case XVR_LITERAL_INT16: {
+        char buffer[256];
+        snprintf(buffer, 256, "%d", XVR_AS_INT16(literal));
+        printFn(buffer);
+    } break;
+
+    case XVR_LITERAL_INT32: {
+        char buffer[256];
+        snprintf(buffer, 256, "%d", XVR_AS_INT32(literal));
+        printFn(buffer);
+    } break;
+
+    case XVR_LITERAL_INT64: {
+        char buffer[256];
+        snprintf(buffer, 256, "%lld", (long long)XVR_AS_INT64(literal));
+        printFn(buffer);
+    } break;
+
+    case XVR_LITERAL_UINT8: {
+        char buffer[256];
+        snprintf(buffer, 256, "%u", XVR_AS_UINT8(literal));
+        printFn(buffer);
+    } break;
+
+    case XVR_LITERAL_UINT16: {
+        char buffer[256];
+        snprintf(buffer, 256, "%u", XVR_AS_UINT16(literal));
+        printFn(buffer);
+    } break;
+
+    case XVR_LITERAL_UINT32: {
+        char buffer[256];
+        snprintf(buffer, 256, "%u", XVR_AS_UINT32(literal));
+        printFn(buffer);
+    } break;
+
+    case XVR_LITERAL_UINT64: {
+        char buffer[256];
+        snprintf(buffer, 256, "%llu",
+                 (unsigned long long)XVR_AS_UINT64(literal));
         printFn(buffer);
     } break;
 
@@ -689,6 +796,38 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
             printToBuffer("int");
             break;
 
+        case XVR_LITERAL_INT8:
+            printToBuffer("int8");
+            break;
+
+        case XVR_LITERAL_INT16:
+            printToBuffer("int16");
+            break;
+
+        case XVR_LITERAL_INT32:
+            printToBuffer("int32");
+            break;
+
+        case XVR_LITERAL_INT64:
+            printToBuffer("int64");
+            break;
+
+        case XVR_LITERAL_UINT8:
+            printToBuffer("uint8");
+            break;
+
+        case XVR_LITERAL_UINT16:
+            printToBuffer("uint16");
+            break;
+
+        case XVR_LITERAL_UINT32:
+            printToBuffer("uint32");
+            break;
+
+        case XVR_LITERAL_UINT64:
+            printToBuffer("uint64");
+            break;
+
         case XVR_LITERAL_FLOAT:
             printToBuffer("float");
             break;
@@ -830,4 +969,46 @@ void Xvr_printLiteralToBuffer(Xvr_Literal literal, char* buffer, int* bufferPos,
     globalPrintBuffer = saveBuffer;
     globalPrintCapacity = saveCapacity;
     globalPrintCount = saveCount;
+}
+
+int Xvr_getIntegerBitWidth(Xvr_LiteralType type) {
+    switch (type) {
+    case XVR_LITERAL_INT8:
+    case XVR_LITERAL_UINT8:
+        return 8;
+    case XVR_LITERAL_INT16:
+    case XVR_LITERAL_UINT16:
+        return 16;
+    case XVR_LITERAL_INTEGER:
+    case XVR_LITERAL_INT32:
+    case XVR_LITERAL_UINT32:
+        return 32;
+    case XVR_LITERAL_INT64:
+    case XVR_LITERAL_UINT64:
+        return 64;
+    default:
+        return 0;
+    }
+}
+
+bool Xvr_isIntegerSigned(Xvr_LiteralType type) {
+    switch (type) {
+    case XVR_LITERAL_INTEGER:
+    case XVR_LITERAL_INT8:
+    case XVR_LITERAL_INT16:
+    case XVR_LITERAL_INT32:
+    case XVR_LITERAL_INT64:
+        return true;
+    case XVR_LITERAL_UINT8:
+    case XVR_LITERAL_UINT16:
+    case XVR_LITERAL_UINT32:
+    case XVR_LITERAL_UINT64:
+        return false;
+    default:
+        return false;
+    }
+}
+
+bool Xvr_isFixedSizeInteger(Xvr_LiteralType type) {
+    return Xvr_getIntegerBitWidth(type) > 0;
 }

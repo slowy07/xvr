@@ -182,4 +182,10 @@ bool Xvr_equalsRefString(Xvr_RefString* lhs, Xvr_RefString* rhs);
  */
 bool Xvr_equalsRefStringCString(Xvr_RefString* lhs, char* cstring);
 
+#if defined(XVR_DEBUG) || defined(DEBUG)
+void Xvr_debugPrintRefStringStats(void);
+int Xvr_debugGetRefStringCount(void);
+void Xvr_debugResetRefStringStats(void);
+#endif
+
 #endif  // !XVR_REFSTRING_H
