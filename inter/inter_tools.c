@@ -27,20 +27,28 @@ SOFTWARE.
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <termios.h>
 #include <unistd.h>
+
+#if !defined(_WIN32) && !defined(_WIN64)
+#    include <termios.h>
+#endif
 
 #include "lib_about.h"
 #include "lib_runner.h"
 #include "lib_standard.h"
 #include "lib_timer.h"
 #include "xvr_ast_node.h"
+#include "xvr_common.h"
 #include "xvr_compiler.h"
 #include "xvr_console_colors.h"
 #include "xvr_interpreter.h"
 #include "xvr_lexer.h"
 #include "xvr_parser.h"
 #include "xvr_unused.h"
+
+#ifdef XVR_EXPORT_LLVM
+#    include "backend/xvr_llvm_codegen.h"
+#endif
 
 const unsigned char* Xvr_readFile(const char* path, size_t* fileSize) {
     FILE* file = fopen(path, "rb");
@@ -101,6 +109,84 @@ int Xvr_writeFile(const char* path, const unsigned char* bytes, size_t size) {
 
     return 0;
 }
+
+#ifdef XVR_EXPORT_LLVM
+static Xvr_ASTNode** parse_to_ast(const char* source, int* out_count) {
+    Xvr_Lexer lexer;
+    Xvr_Parser parser;
+
+    Xvr_initLexer(&lexer, source);
+    Xvr_initParser(&parser, &lexer);
+
+    Xvr_ASTNode** nodes = NULL;
+    int nodeCount = 0;
+    int nodeCapacity = 0;
+
+    Xvr_ASTNode* node = Xvr_scanParser(&parser);
+    while (node != NULL) {
+        if (node->type == XVR_AST_NODE_ERROR) {
+            Xvr_freeASTNode(node);
+            for (int i = 0; i < nodeCount; i++) {
+                Xvr_freeASTNode(nodes[i]);
+            }
+            free(nodes);
+            Xvr_freeParser(&parser);
+            *out_count = 0;
+            return NULL;
+        }
+
+        if (nodeCount >= nodeCapacity) {
+            nodeCapacity = nodeCapacity < 8 ? 8 : nodeCapacity * 2;
+            nodes = realloc(nodes, sizeof(Xvr_ASTNode*) * nodeCapacity);
+        }
+        nodes[nodeCount++] = node;
+        node = Xvr_scanParser(&parser);
+    }
+
+    Xvr_freeParser(&parser);
+    *out_count = nodeCount;
+    return nodes;
+}
+
+void Xvr_compileToLLVMIR(const char* source) {
+    int nodeCount = 0;
+    Xvr_ASTNode** nodes = parse_to_ast(source, &nodeCount);
+    if (!nodes) {
+        fprintf(stderr, XVR_CC_ERROR "Failed to parse source\n" XVR_CC_RESET);
+        return;
+    }
+
+    Xvr_LLVMCodegen* codegen = Xvr_LLVMCodegenCreate("xvr_module");
+    if (!codegen) {
+        fprintf(stderr, XVR_CC_ERROR "Failed to create codegen\n" XVR_CC_RESET);
+        for (int i = 0; i < nodeCount; i++) {
+            Xvr_freeASTNode(nodes[i]);
+        }
+        free(nodes);
+        return;
+    }
+
+    Xvr_LLVMCodegenSetOptimizationLevel(codegen, XVR_LLVM_OPT_O2);
+
+    for (int i = 0; i < nodeCount; i++) {
+        Xvr_LLVMCodegenEmitAST(codegen, nodes[i]);
+    }
+
+    size_t ir_len = 0;
+    char* ir = Xvr_LLVMCodegenPrintIR(codegen, &ir_len);
+    if (ir) {
+        printf("\nLLVM ir coba: \n%s\n", ir);
+        free(ir);
+    }
+
+    Xvr_LLVMCodegenDestroy(codegen);
+
+    for (int i = 0; i < nodeCount; i++) {
+        Xvr_freeASTNode(nodes[i]);
+    }
+    free(nodes);
+}
+#endif
 
 // repl functions
 const unsigned char* Xvr_compileString(const char* source, size_t* size) {
@@ -198,6 +284,13 @@ void Xvr_runBinaryFile(const char* fname) {
 }
 
 void Xvr_runSource(const char* source) {
+#ifdef XVR_EXPORT_LLVM
+    if (Xvr_commandLine.dumpLLVM) {
+        Xvr_compileToLLVMIR(source);
+        return;
+    }
+#endif
+
     size_t size = 0;
     const unsigned char* tb = Xvr_compileString(source, &size);
     if (!tb) {
@@ -219,6 +312,7 @@ void Xvr_runSourceFile(const char* fname) {
     free((void*)source);
 }
 
+#if !defined(_WIN32) && !defined(_WIN64)
 static struct termios orig_termios;
 static int termios_saved = 0;
 
@@ -241,12 +335,14 @@ static void disableRawMode(void) {
         termios_saved = 0;
     }
 }
+#endif
 
 char* Xvr_readLine(char* buffer, int size) {
     if (!isatty(STDIN_FILENO)) {
         return fgets(buffer, size, stdin);
     }
 
+#if !defined(_WIN32) && !defined(_WIN64)
     enableRawMode();
 
     int pos = 0;
@@ -333,4 +429,7 @@ char* Xvr_readLine(char* buffer, int size) {
             }
         }
     }
+#else
+    return fgets(buffer, size, stdin);
+#endif
 }

@@ -1,0 +1,47 @@
+/**
+MIT License
+
+Copyright (c) 2025 arfy slowy
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+*/
+
+#ifndef XVR_LLVM_TYPE_MAPPER_H
+#define XVR_LLVM_TYPE_MAPPER_H
+
+#include <llvm-c/Core.h>
+#include <stdbool.h>
+
+#include "xvr_literal.h"
+#include "xvr_llvm_context.h"
+
+typedef struct Xvr_LLVMTypeMapper Xvr_LLVMTypeMapper;
+
+Xvr_LLVMTypeMapper* Xvr_LLVMTypeMapperCreate(Xvr_LLVMContext* ctx);
+void Xvr_LLVMTypeMapperDestroy(Xvr_LLVMTypeMapper* mapper);
+
+LLVMTypeRef Xvr_LLVMTypeMapperGetType(Xvr_LLVMTypeMapper* mapper,
+                                      Xvr_LiteralType type);
+LLVMTypeRef Xvr_LLVMTypeMapperGetPointerType(Xvr_LLVMTypeMapper* mapper,
+                                             Xvr_LiteralType type);
+LLVMTypeRef Xvr_LLVMTypeMapperGetRuntimeType(Xvr_LLVMTypeMapper* mapper);
+
+bool Xvr_LLVMTypeMapperIsSigned(Xvr_LiteralType type);
+
+#endif

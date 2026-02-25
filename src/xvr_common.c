@@ -50,7 +50,7 @@ Xvr_CommandLine Xvr_commandLine = {
     .sourceFile = NULL,  .compileFile = NULL,
     .outFile = "out.xb", .source = NULL,
     .initialfile = NULL, .enablePrintNewline = true,
-    .verbose = false};
+    .verbose = false,    .dumpLLVM = false};
 
 void Xvr_initCommandLine(int argc, const char* argv[]) {
     for (int i = 1; i < argc; i++) {  // start at 1 to skip the program name
@@ -71,6 +71,12 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
 
         if (!strcmp(argv[i], "-d") || !strcmp(argv[i], "--debug")) {
             Xvr_commandLine.verbose = true;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
+        if (!strcmp(argv[i], "-l") || !strcmp(argv[i], "--llvm")) {
+            Xvr_commandLine.dumpLLVM = true;
             Xvr_commandLine.error = false;
             continue;
         }
@@ -135,7 +141,8 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
 void Xvr_usageCommandLine(int argc, const char* argv[]) {
     (void)argc;
     printf(
-        "usage: %s [file.xvr | file.xb | -h | -v | [-d][-i source | -c  file | "
+        "usage: %s [file.xvr | file.xb | -h | -v | [-d][-l][-i source | -c  "
+        "file | "
         "-t file.xvr"
         "[-o outfile]]]\n\n",
         argv[0]);
@@ -154,6 +161,7 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
     printf("-h\t\t --help\t\tShow this help\n");
     printf("-v\t\t --version\t\tShow version and information\n");
     printf("-d\t\t --debug\t\tBe versbose when operating\n");
+    printf("-l\t\t --llvm\t\tDump LLVM IR instead of executing\n");
 
     printf(
         "-i\t\t --input source\t\tParse, compile and execute the given string "

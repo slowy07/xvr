@@ -146,6 +146,7 @@ typedef struct {
     char* initialfile;
     bool enablePrintNewline;
     bool verbose;
+    bool dumpLLVM;
 } Xvr_CommandLine;
 
 /**
@@ -195,6 +196,6 @@ void Xvr_helpCommandLine(int argc, const char* argv[]);
  * @brief Embedded bytecode and runtime version metadata
  */
 #define XVR_VERSION_MAJOR 0
-#define XVR_VERSION_MINOR 2
+#define XVR_VERSION_MINOR 4
 #define XVR_VERSION_PATCH 7
 #endif  // !XVR_COMMON_H

@@ -1,50 +1,33 @@
 OUT = ../out
 OBJDIR = obj
 
-# Test sources
-TESTS = $(wildcard test_*.c)
-TEST_BINS = $(TESTS:test_%.c=$(OUT)/test_%)
-
-# Library sources needed for tests
-LIB_SRCS = $(wildcard ../src/*.c)
-LIB_OBJS = $(LIB_SRCS:../src/%.c=$(OBJDIR)/%.o)
-
-# Inter library sources
-INTER_SRCS = $(wildcard ../inter/lib_*.c) ../inter/inter_tools.c
-INTER_OBJS = $(INTER_SRCS:../inter/%.c=$(OBJDIR)/%.o)
-
-# Test objects
-TEST_OBJS = $(TESTS:test_%.c=$(OBJDIR)/test_%.o)
-
-# All objects
-OBJS = $(LIB_OBJS) $(INTER_OBJS) $(TEST_OBJS)
+# LLVM configuration
+LLVM_CFLAGS = $(shell llvm-config --cflags)
+LLVM_LIBS = $(shell llvm-config --libs core bitwriter)
 
 # Compiler flags
-CFLAGS = $(CFLAGS_BASE) -I. -I../src -I../inter
+CFLAGS = $(CFLAGS_BASE) -I. -I../src -I../src/backend -I../inter $(LLVM_CFLAGS)
+LDFLAGS = $(LLVM_LIBS)
 
-all: $(TEST_BINS)
+# Build library first, then test
+all: ../out/libxvr.a ../out/libxvr.so test_llvm
 
-# Build each test executable
-$(OUT)/test_%: $(OBJDIR)/test_%.o $(LIB_OBJS) $(INTER_OBJS)
-	$(CC) -o $@ $^
+../out/libxvr.a ../out/libxvr.so:
+	$(MAKE) -C ..
 
-# Build test object files
-$(OBJDIR)/test_%.o: test_%.c
-	@mkdir -p $(OBJDIR)
-	$(CC) -c $(CFLAGS) -o $@ $<
+test_llvm: $(OUT)/test_llvm_backend
 
-# Build library object files
-$(OBJDIR)/%.o: ../src/%.c
-	@mkdir -p $(OBJDIR)
-	$(CC) -c $(CFLAGS) -o $@ $<
+$(OUT)/test_llvm_backend: $(OBJDIR)/test_llvm_backend.o
+	$(CC) -o $@ $^ ../out/libxvr.a $(LDFLAGS)
 
-# Build inter library object files
-$(OBJDIR)/%.o: ../inter/%.c
+$(OBJDIR)/test_llvm_backend.o: test_llvm_backend.c
 	@mkdir -p $(OBJDIR)
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 clean:
 	rm -rf $(OBJDIR)
-	rm -f $(OUT)/test_*
+	rm -f $(OUT)/test_llvm_backend
 
-.PHONY: all clean
+.PHONY: all test_llvm clean
+
+# make test_llvm && ../out/test_llvm_backend

@@ -1,7 +1,9 @@
-SRCS = $(wildcard *.c)
+SRCS = $(wildcard *.c) $(wildcard backend/*.c)
 OBJS = $(SRCS:.c=.o)
 
-CFLAGS = $(CFLAGS_BASE) -I. -fPIC
+CFLAGS = $(CFLAGS_BASE) -I. -Ibackend -fPIC $(shell llvm-config --cflags)
+
+LDFLAGS = $(shell llvm-config --libs core bitwriter)
 
 OUT = ../$(XVR_OUTDIR)
 
@@ -12,7 +14,7 @@ $(OUT)/libxvr.a: $(OBJS)
 	$(RANLIB) $@
 
 $(OUT)/libxvr.so: $(OBJS)
-	$(CC) -shared -fPIC -o $@ $^
+	$(CC) -shared -fPIC -o $@ $^ $(LDFLAGS)
 
 clean:
 	rm -f $(OBJS) $(OUT)/libxvr.a $(OUT)/libxvr.so
