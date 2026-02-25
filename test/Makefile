@@ -2,8 +2,9 @@ OUT = ../out
 OBJDIR = obj
 
 # LLVM configuration
-LLVM_CFLAGS = $(shell llvm-config --cflags)
-LLVM_LIBS = $(shell llvm-config --libs core bitwriter)
+LLVM_CONFIG := $(shell command -v llvm-config-21 || command -v llvm-config)
+LLVM_CFLAGS = $(shell $(LLVM_CONFIG) --cflags)
+LLVM_LIBS = $(shell $(LLVM_CONFIG) --libs core bitwriter)
 
 # Compiler flags
 CFLAGS = $(CFLAGS_BASE) -I. -I../src -I../src/backend -I../inter $(LLVM_CFLAGS)

@@ -1,9 +1,10 @@
 SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 
-CFLAGS = $(CFLAGS_BASE) -DXVR_IMPORT -DXVR_EXPORT_LLVM -I. -I../src -I../src/backend $(shell llvm-config --cflags)
+LLVM_CONFIG := $(shell command -v llvm-config-21 || command -v llvm-config)
+CFLAGS = $(CFLAGS_BASE) -DXVR_IMPORT -DXVR_EXPORT_LLVM -I. -I../src -I../src/backend $(shell $(LLVM_CONFIG) --cflags)
 
-LDFLAGS = $(shell llvm-config --libs core bitwriter)
+LDFLAGS = $(shell $(LLVM_CONFIG) --libs core bitwriter)
 
 OUT = ../$(XVR_OUTDIR)
 
