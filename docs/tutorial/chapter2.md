@@ -63,9 +63,48 @@ print("%s is %d years old", "arfy", 25);  // arfy is 25 years old
 |-----------|-------------|---------|
 | `%s` | String, boolean, integer, float, null, array | `"Hello %s", "World"` |
 | `%d` or `%i` | Integer | `"Count: %d", 42` |
-| `%f` or `%g` | Float | `"Value: %f", 3.14` |
+| `%f` | Float (default 6 decimal places) | `"Value: %f", 3.14` |
+| `%g` | Compact float (auto-switches to scientific) | `"Value: %g", 3.14159` |
+| `%e` | Scientific notation (lowercase) | `"%e", 1234.56` → `1.234560e+03` |
+| `%E` | Scientific notation (uppercase) | `"%E", 1234.56` → `1.234560E+03` |
 | `%%` | Literal percent | `"100%%"` |
-| `\n` | Newline | `"Line1\nLine2"` |
+
+### Precision Specifiers
+
+You can specify the number of decimal places using `.N` before the specifier:
+
+```precision.xvr
+// %.Nf - precision for floats
+print("%.2f", 3.14159);    // 3.14
+print("%.4f", 3.14159);    // 3.1416
+print("%.0f", 2.5);        // 2
+
+// %.Ne - precision for scientific notation
+print("%.2e", 1234.56);    // 1.23e+03
+print("%.4e", 0.00001234); // 1.2340e-05
+
+// %.Ng - precision for compact format
+print("%.6g", 1234.5678);  // 1234.57
+```
+
+### Float Types
+
+XVR supports different floating-point precision types:
+
+```float_types.xvr
+// Default float (implementation-defined precision)
+print("%f", 3.14159);           // 3.141590
+
+// Float32 - 32-bit floating point
+print("%.4f", 1.234567f32);     // 1.2346
+
+// Float64 - 64-bit floating point  
+print("%.8f", 1.123456789f64);  // 1.12345679
+
+// Using %s with float types
+print("%s", 3.14f32);           // 3.14
+print("%s", 2.718281828f64);    // 2.71828
+```
 
 > [!TIP]
 > You can still use the old style string concatenation with `+`:

@@ -333,6 +333,101 @@ static bool execPrint(Xvr_Interpreter* interpreter) {
     return true;
 }
 
+static double getFloatValue(Xvr_Literal arg) {
+    switch (arg.type) {
+    case XVR_LITERAL_FLOAT:
+        return (double)XVR_AS_FLOAT(arg);
+    case XVR_LITERAL_FLOAT16:
+        return (double)XVR_AS_FLOAT16(arg);
+    case XVR_LITERAL_FLOAT32:
+        return (double)XVR_AS_FLOAT32(arg);
+    case XVR_LITERAL_FLOAT64:
+        return XVR_AS_FLOAT64(arg);
+    default:
+        return 0.0;
+    }
+}
+
+static bool getFloatValueEx(Xvr_Literal arg, double* out) {
+    if (!out) return false;
+    switch (arg.type) {
+    case XVR_LITERAL_FLOAT:
+        *out = (double)XVR_AS_FLOAT(arg);
+        return true;
+    case XVR_LITERAL_FLOAT16:
+        *out = (double)XVR_AS_FLOAT16(arg);
+        return true;
+    case XVR_LITERAL_FLOAT32:
+        *out = (double)XVR_AS_FLOAT32(arg);
+        return true;
+    case XVR_LITERAL_FLOAT64:
+        *out = XVR_AS_FLOAT64(arg);
+        return true;
+    default:
+        return false;
+    }
+}
+
+static const char* formatStringArg(Xvr_Literal arg) {
+    static char tempBuf[128];
+
+    switch (arg.type) {
+    case XVR_LITERAL_NULL:
+        return "null";
+    case XVR_LITERAL_BOOLEAN:
+        return XVR_AS_BOOLEAN(arg) ? "true" : "false";
+    case XVR_LITERAL_INTEGER:
+        snprintf(tempBuf, sizeof(tempBuf), "%d", XVR_AS_INTEGER(arg));
+        return tempBuf;
+    case XVR_LITERAL_INT8:
+        snprintf(tempBuf, sizeof(tempBuf), "%d", XVR_AS_INT8(arg));
+        return tempBuf;
+    case XVR_LITERAL_INT16:
+        snprintf(tempBuf, sizeof(tempBuf), "%d", XVR_AS_INT16(arg));
+        return tempBuf;
+    case XVR_LITERAL_INT32:
+        snprintf(tempBuf, sizeof(tempBuf), "%d", XVR_AS_INT32(arg));
+        return tempBuf;
+    case XVR_LITERAL_INT64:
+        snprintf(tempBuf, sizeof(tempBuf), "%lld",
+                 (long long)XVR_AS_INT64(arg));
+        return tempBuf;
+    case XVR_LITERAL_UINT8:
+        snprintf(tempBuf, sizeof(tempBuf), "%u", XVR_AS_UINT8(arg));
+        return tempBuf;
+    case XVR_LITERAL_UINT16:
+        snprintf(tempBuf, sizeof(tempBuf), "%u", XVR_AS_UINT16(arg));
+        return tempBuf;
+    case XVR_LITERAL_UINT32:
+        snprintf(tempBuf, sizeof(tempBuf), "%u", XVR_AS_UINT32(arg));
+        return tempBuf;
+    case XVR_LITERAL_UINT64:
+        snprintf(tempBuf, sizeof(tempBuf), "%llu",
+                 (unsigned long long)XVR_AS_UINT64(arg));
+        return tempBuf;
+    case XVR_LITERAL_FLOAT:
+        snprintf(tempBuf, sizeof(tempBuf), "%g", (double)XVR_AS_FLOAT(arg));
+        return tempBuf;
+    case XVR_LITERAL_FLOAT16:
+        snprintf(tempBuf, sizeof(tempBuf), "%g", (double)XVR_AS_FLOAT16(arg));
+        return tempBuf;
+    case XVR_LITERAL_FLOAT32:
+        snprintf(tempBuf, sizeof(tempBuf), "%g", (double)XVR_AS_FLOAT32(arg));
+        return tempBuf;
+    case XVR_LITERAL_FLOAT64:
+        snprintf(tempBuf, sizeof(tempBuf), "%g", XVR_AS_FLOAT64(arg));
+        return tempBuf;
+    case XVR_LITERAL_STRING:
+        return Xvr_toCString(XVR_AS_STRING(arg));
+    case XVR_LITERAL_ARRAY:
+        return "[array]";
+    case XVR_LITERAL_DICTIONARY:
+        return "[dictionary]";
+    default:
+        return "?";
+    }
+}
+
 static bool execPrintf(Xvr_Interpreter* interpreter, int argCount) {
     Xvr_Literal* args = NULL;
     if (argCount > 0) {
@@ -362,152 +457,200 @@ static bool execPrintf(Xvr_Interpreter* interpreter, int argCount) {
             if (format[i + 1] == '%') {
                 buffer[bufferPos++] = '%';
                 i++;
-            } else if (format[i + 1] == 's') {
-                if (argCount > 0) {
-                    Xvr_Literal arg = args[0];
-                    const char* argStr = NULL;
-                    char tempBuf[64];
-
-                    switch (arg.type) {
-                    case XVR_LITERAL_NULL:
-                        argStr = "null";
-                        break;
-                    case XVR_LITERAL_BOOLEAN:
-                        argStr = XVR_AS_BOOLEAN(arg) ? "true" : "false";
-                        break;
-                    case XVR_LITERAL_INTEGER:
-                        snprintf(tempBuf, sizeof(tempBuf), "%d",
-                                 XVR_AS_INTEGER(arg));
-                        argStr = tempBuf;
-                        break;
-                    case XVR_LITERAL_INT8:
-                        snprintf(tempBuf, sizeof(tempBuf), "%d",
-                                 XVR_AS_INT8(arg));
-                        argStr = tempBuf;
-                        break;
-                    case XVR_LITERAL_INT16:
-                        snprintf(tempBuf, sizeof(tempBuf), "%d",
-                                 XVR_AS_INT16(arg));
-                        argStr = tempBuf;
-                        break;
-                    case XVR_LITERAL_INT32:
-                        snprintf(tempBuf, sizeof(tempBuf), "%d",
-                                 XVR_AS_INT32(arg));
-                        argStr = tempBuf;
-                        break;
-                    case XVR_LITERAL_INT64:
-                        snprintf(tempBuf, sizeof(tempBuf), "%lld",
-                                 (long long)XVR_AS_INT64(arg));
-                        argStr = tempBuf;
-                        break;
-                    case XVR_LITERAL_UINT8:
-                        snprintf(tempBuf, sizeof(tempBuf), "%u",
-                                 XVR_AS_UINT8(arg));
-                        argStr = tempBuf;
-                        break;
-                    case XVR_LITERAL_UINT16:
-                        snprintf(tempBuf, sizeof(tempBuf), "%u",
-                                 XVR_AS_UINT16(arg));
-                        argStr = tempBuf;
-                        break;
-                    case XVR_LITERAL_UINT32:
-                        snprintf(tempBuf, sizeof(tempBuf), "%u",
-                                 XVR_AS_UINT32(arg));
-                        argStr = tempBuf;
-                        break;
-                    case XVR_LITERAL_UINT64:
-                        snprintf(tempBuf, sizeof(tempBuf), "%llu",
-                                 (unsigned long long)XVR_AS_UINT64(arg));
-                        argStr = tempBuf;
-                        break;
-                    case XVR_LITERAL_FLOAT:
-                        snprintf(tempBuf, sizeof(tempBuf), "%g",
-                                 (double)XVR_AS_FLOAT(arg));
-                        argStr = tempBuf;
-                        break;
-                    case XVR_LITERAL_STRING:
-                        argStr = Xvr_toCString(XVR_AS_STRING(arg));
-                        break;
-                    case XVR_LITERAL_ARRAY:
-                        argStr = "[array]";
-                        break;
-                    case XVR_LITERAL_DICTIONARY:
-                        argStr = "[dictionary]";
-                        break;
-                    default:
-                        argStr = "?";
-                        break;
-                    }
-
-                    if (argStr) {
-                        size_t argLen = strlen(argStr);
-                        if (bufferPos + (int)argLen <
-                            (int)(sizeof(buffer) - 1)) {
-                            memcpy((void*)(buffer + bufferPos), argStr, argLen);
-                            bufferPos += argLen;
-                        }
-                    }
-                    for (int j = 0; j < argCount - 1; j++) {
-                        args[j] = args[j + 1];
-                    }
-                    argCount--;
-                }
-                i++;
-            } else if (format[i + 1] == 'd' || format[i + 1] == 'i') {
-                if (argCount > 0) {
-                    Xvr_Literal arg = args[0];
-                    if (XVR_IS_INTEGER(arg)) {
-                        bufferPos += snprintf(buffer + bufferPos,
-                                              sizeof(buffer) - bufferPos, "%d",
-                                              XVR_AS_INTEGER(arg));
-                    } else if (XVR_IS_FLOAT(arg)) {
-                        bufferPos += snprintf(buffer + bufferPos,
-                                              sizeof(buffer) - bufferPos, "%d",
-                                              (int)XVR_AS_FLOAT(arg));
-                    } else {
-                        buffer[bufferPos++] = '?';
-                    }
-                    for (int j = 0; j < argCount - 1; j++) {
-                        args[j] = args[j + 1];
-                    }
-                    argCount--;
-                }
-                i++;
-            } else if (format[i + 1] == 'f' || format[i + 1] == 'g') {
-                if (argCount > 0) {
-                    Xvr_Literal arg = args[0];
-                    if (XVR_IS_FLOAT(arg)) {
-                        bufferPos += snprintf(buffer + bufferPos,
-                                              sizeof(buffer) - bufferPos, "%g",
-                                              (double)XVR_AS_FLOAT(arg));
-                    } else if (XVR_IS_INTEGER(arg)) {
-                        bufferPos += snprintf(buffer + bufferPos,
-                                              sizeof(buffer) - bufferPos, "%g",
-                                              (double)XVR_AS_INTEGER(arg));
-                    } else {
-                        buffer[bufferPos++] = '?';
-                    }
-                    for (int j = 0; j < argCount - 1; j++) {
-                        args[j] = args[j + 1];
-                    }
-                    argCount--;
-                }
-                i++;
-            } else if (format[i + 1] == 'c') {
-                if (argCount > 0) {
-                    Xvr_Literal arg = args[0];
-                    if (XVR_IS_INTEGER(arg)) {
-                        buffer[bufferPos++] = (char)XVR_AS_INTEGER(arg);
-                    } else {
-                        buffer[bufferPos++] = '?';
-                    }
-                    for (int j = 0; j < argCount - 1; j++) {
-                        args[j] = args[j + 1];
-                    }
-                    argCount--;
-                }
-                i++;
             } else {
+                size_t j = i + 1;
+                int precision = -1;
+
+                if (j < formatLen && format[j] == '.') {
+                    j++;
+                    precision = 0;
+                    while (j < formatLen && j < i + 7 && format[j] >= '0' &&
+                           format[j] <= '9') {
+                        precision = precision * 10 + (format[j] - '0');
+                        j++;
+                    }
+                }
+
+                if (j >= formatLen) {
+                    buffer[bufferPos++] = format[i];
+                    continue;
+                }
+
+                char spec = format[j];
+                bool handled = false;
+
+                if (argCount > 0) {
+                    Xvr_Literal arg = args[0];
+                    char tempBuf[128];
+                    const char* argStr = NULL;
+
+                    switch (spec) {
+                    case 's':
+                        argStr = formatStringArg(arg);
+                        if (argStr) {
+                            size_t argLen = strlen(argStr);
+                            if (bufferPos + (int)argLen <
+                                (int)(sizeof(buffer) - 1)) {
+                                memcpy(buffer + bufferPos, argStr, argLen);
+                                bufferPos += argLen;
+                            }
+                        }
+                        handled = true;
+                        break;
+
+                    case 'd':
+                    case 'i':
+                        if (XVR_IS_INTEGER(arg)) {
+                            bufferPos += snprintf(
+                                buffer + bufferPos, sizeof(buffer) - bufferPos,
+                                "%d", (int)XVR_AS_INTEGER(arg));
+                        } else if (XVR_IS_FLOAT(arg)) {
+                            bufferPos += snprintf(
+                                buffer + bufferPos, sizeof(buffer) - bufferPos,
+                                "%d", (int)getFloatValue(arg));
+                        } else {
+                            buffer[bufferPos++] = '?';
+                        }
+                        handled = true;
+                        break;
+
+                    case 'f':
+                    case 'g': {
+                        double val = 0.0;
+                        bool valid = getFloatValueEx(arg, &val);
+                        if (valid) {
+                            if (precision >= 0) {
+                                if (spec == 'f') {
+                                    bufferPos +=
+                                        snprintf(buffer + bufferPos,
+                                                 sizeof(buffer) - bufferPos,
+                                                 "%.*f", precision, val);
+                                } else {
+                                    bufferPos +=
+                                        snprintf(buffer + bufferPos,
+                                                 sizeof(buffer) - bufferPos,
+                                                 "%.*g", precision, val);
+                                }
+                            } else {
+                                bufferPos += snprintf(
+                                    buffer + bufferPos,
+                                    sizeof(buffer) - bufferPos, "%g", val);
+                            }
+                        } else if (XVR_IS_INTEGER(arg)) {
+                            val = (double)XVR_AS_INTEGER(arg);
+                            if (precision >= 0) {
+                                if (spec == 'f') {
+                                    bufferPos +=
+                                        snprintf(buffer + bufferPos,
+                                                 sizeof(buffer) - bufferPos,
+                                                 "%.*f", precision, val);
+                                } else {
+                                    bufferPos +=
+                                        snprintf(buffer + bufferPos,
+                                                 sizeof(buffer) - bufferPos,
+                                                 "%.*g", precision, val);
+                                }
+                            } else {
+                                bufferPos += snprintf(
+                                    buffer + bufferPos,
+                                    sizeof(buffer) - bufferPos, "%g", val);
+                            }
+                        } else {
+                            buffer[bufferPos++] = '?';
+                        }
+                        handled = true;
+                        break;
+                    }
+
+                    case 'e': {
+                        double val = 0.0;
+                        bool valid = getFloatValueEx(arg, &val);
+                        if (valid) {
+                            if (precision >= 0) {
+                                bufferPos +=
+                                    snprintf(buffer + bufferPos,
+                                             sizeof(buffer) - bufferPos, "%.*e",
+                                             precision, val);
+                            } else {
+                                bufferPos += snprintf(
+                                    buffer + bufferPos,
+                                    sizeof(buffer) - bufferPos, "%e", val);
+                            }
+                        } else if (XVR_IS_INTEGER(arg)) {
+                            val = (double)XVR_AS_INTEGER(arg);
+                            if (precision >= 0) {
+                                bufferPos +=
+                                    snprintf(buffer + bufferPos,
+                                             sizeof(buffer) - bufferPos, "%.*e",
+                                             precision, val);
+                            } else {
+                                bufferPos += snprintf(
+                                    buffer + bufferPos,
+                                    sizeof(buffer) - bufferPos, "%e", val);
+                            }
+                        } else {
+                            buffer[bufferPos++] = '?';
+                        }
+                        handled = true;
+                        break;
+                    }
+
+                    case 'E': {
+                        double val = 0.0;
+                        bool valid = getFloatValueEx(arg, &val);
+                        if (valid) {
+                            if (precision >= 0) {
+                                bufferPos +=
+                                    snprintf(buffer + bufferPos,
+                                             sizeof(buffer) - bufferPos, "%.*E",
+                                             precision, val);
+                            } else {
+                                bufferPos += snprintf(
+                                    buffer + bufferPos,
+                                    sizeof(buffer) - bufferPos, "%E", val);
+                            }
+                        } else if (XVR_IS_INTEGER(arg)) {
+                            val = (double)XVR_AS_INTEGER(arg);
+                            if (precision >= 0) {
+                                bufferPos +=
+                                    snprintf(buffer + bufferPos,
+                                             sizeof(buffer) - bufferPos, "%.*E",
+                                             precision, val);
+                            } else {
+                                bufferPos += snprintf(
+                                    buffer + bufferPos,
+                                    sizeof(buffer) - bufferPos, "%E", val);
+                            }
+                        } else {
+                            buffer[bufferPos++] = '?';
+                        }
+                        handled = true;
+                        break;
+                    }
+
+                    case 'c':
+                        if (XVR_IS_INTEGER(arg)) {
+                            buffer[bufferPos++] = (char)XVR_AS_INTEGER(arg);
+                        } else {
+                            buffer[bufferPos++] = '?';
+                        }
+                        handled = true;
+                        break;
+
+                    default:
+                        break;
+                    }
+
+                    if (handled) {
+                        for (int k = 0; k < argCount - 1; k++) {
+                            args[k] = args[k + 1];
+                        }
+                        argCount--;
+                        i = j;
+                        continue;
+                    }
+                }
+
                 buffer[bufferPos++] = format[i];
             }
         } else {
