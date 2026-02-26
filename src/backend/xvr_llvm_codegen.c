@@ -236,6 +236,54 @@ static void set_error(Xvr_LLVMCodegen* codegen, const char* message) {
     codegen->has_error = (codegen->error_message != NULL);
 }
 
+static bool emit_main_function(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* stmt);
+static bool ensure_main_function(Xvr_LLVMCodegen* codegen);
+static void finalize_main_function(Xvr_LLVMCodegen* codegen);
+
+static bool ensure_main_function(Xvr_LLVMCodegen* codegen) {
+    static bool main_created = false;
+    if (main_created) {
+        return true;
+    }
+
+    LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(codegen->context);
+    LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(codegen->module);
+    LLVMBuilderRef builder = Xvr_LLVMIRBuilderGetLLVMBuilder(codegen->builder);
+
+    LLVMTypeRef int32_type = LLVMInt32TypeInContext(llvm_ctx);
+    LLVMTypeRef main_fn_type = LLVMFunctionType(int32_type, NULL, 0, false);
+    LLVMAddFunction(module, "main", main_fn_type);
+
+    LLVMValueRef main_fn = LLVMGetNamedFunction(module, "main");
+    LLVMBasicBlockRef entry = LLVMAppendBasicBlock(main_fn, "entry");
+    LLVMPositionBuilderAtEnd(builder, entry);
+
+    main_created = true;
+    return true;
+}
+
+static void finalize_main_function(Xvr_LLVMCodegen* codegen) {
+    static bool finalized = false;
+    if (finalized) {
+        return;
+    }
+
+    LLVMBuilderRef builder = Xvr_LLVMIRBuilderGetLLVMBuilder(codegen->builder);
+    LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(codegen->context);
+    LLVMTypeRef int32_type = LLVMInt32TypeInContext(llvm_ctx);
+
+    LLVMBuildRet(builder, LLVMConstInt(int32_type, 0, false));
+    finalized = true;
+}
+
+static bool emit_main_function(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* stmt) {
+    ensure_main_function(codegen);
+
+    Xvr_LLVMExpressionEmitterEmit(codegen->expr_emitter, stmt);
+
+    return true;
+}
+
 bool Xvr_LLVMCodegenEmitAST(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* ast) {
     if (!codegen || !ast) {
         return false;
@@ -254,13 +302,14 @@ bool Xvr_LLVMCodegenEmitAST(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* ast) {
         return Xvr_LLVMFunctionEmitterEmit(codegen->fn_emitter, ast);
     }
 
-    return false;
+    return emit_main_function(codegen, ast);
 }
 
 char* Xvr_LLVMCodegenPrintIR(Xvr_LLVMCodegen* codegen, size_t* out_len) {
     if (!codegen || !out_len) {
         return NULL;
     }
+    finalize_main_function(codegen);
     return Xvr_LLVMModuleManagerPrintIR(codegen->module, out_len);
 }
 
