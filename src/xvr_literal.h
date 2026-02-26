@@ -118,6 +118,11 @@ typedef enum {
     XVR_LITERAL_UINT32,
     XVR_LITERAL_UINT64,
 
+    // fixed-size float literals (IEEE 754)
+    XVR_LITERAL_FLOAT16,
+    XVR_LITERAL_FLOAT32,
+    XVR_LITERAL_FLOAT64,
+
     XVR_LITERAL_TYPE_INTERMEDIATE,
     XVR_LITERAL_ARRAY_INTERMEDIATE,
     XVR_LITERAL_DICTIONARY_INTERMEDIATE,
@@ -168,6 +173,11 @@ typedef struct Xvr_Literal {
         uint16_t uint16_value;  // XVR_LITERAL_UINT16
         uint32_t uint32_value;  // XVR_LITERAL_UINT32
         uint64_t uint64_value;  // XVR_LITERAL_UINT64
+
+        // fixed-size floats (IEEE 754)
+        uint16_t float16_bits;  // XVR_LITERAL_FLOAT16 (stored as bits)
+        float float32_value;    // XVR_LITERAL_FLOAT32
+        double float64_value;   // XVR_LITERAL_FLOAT64
 
         // XVR_LITERAL_STRING or XVR_LITERAL_IDENTIFIER
         struct {
@@ -225,7 +235,15 @@ typedef struct Xvr_Literal {
      (value).type == XVR_LITERAL_UINT8 ||                                      \
      (value).type == XVR_LITERAL_UINT16 ||                                     \
      (value).type == XVR_LITERAL_UINT32 || (value).type == XVR_LITERAL_UINT64)
-#define XVR_IS_FLOAT(value) ((value).type == XVR_LITERAL_FLOAT)
+#define XVR_IS_FLOAT(value)                 \
+    ((value).type == XVR_LITERAL_FLOAT ||   \
+     (value).type == XVR_LITERAL_FLOAT16 || \
+     (value).type == XVR_LITERAL_FLOAT32 || \
+     (value).type == XVR_LITERAL_FLOAT64)
+#define XVR_IS_FIXED_FLOAT(value)           \
+    ((value).type == XVR_LITERAL_FLOAT16 || \
+     (value).type == XVR_LITERAL_FLOAT32 || \
+     (value).type == XVR_LITERAL_FLOAT64)
 #define XVR_IS_STRING(value) ((value).type == XVR_LITERAL_STRING)
 #define XVR_IS_ARRAY(value) ((value).type == XVR_LITERAL_ARRAY)
 #define XVR_IS_DICTIONARY(value) ((value).type == XVR_LITERAL_DICTIONARY)
@@ -264,6 +282,9 @@ typedef struct Xvr_Literal {
 #define XVR_AS_UINT16(value) ((value).as.uint16_value)
 #define XVR_AS_UINT32(value) ((value).as.uint32_value)
 #define XVR_AS_UINT64(value) ((value).as.uint64_value)
+#define XVR_AS_FLOAT16(value) ((value).as.float16_bits)
+#define XVR_AS_FLOAT32(value) ((value).as.float32_value)
+#define XVR_AS_FLOAT64(value) ((value).as.float64_value)
 #define XVR_AS_STRING(value) ((value).as.string.ptr)
 #define XVR_AS_ARRAY(value) ((Xvr_LiteralArray*)((value).as.array))
 #define XVR_AS_DICTIONARY(value) \
@@ -329,6 +350,13 @@ typedef struct Xvr_Literal {
     ((Xvr_Literal){{.uint32_value = value}, XVR_LITERAL_UINT32, 0})
 #define XVR_TO_UINT64_LITERAL(value) \
     ((Xvr_Literal){{.uint64_value = value}, XVR_LITERAL_UINT64, 0})
+
+#define XVR_TO_FLOAT16_LITERAL(value) \
+    ((Xvr_Literal){{.float16_bits = value}, XVR_LITERAL_FLOAT16, 0})
+#define XVR_TO_FLOAT32_LITERAL(value) \
+    ((Xvr_Literal){{.float32_value = value}, XVR_LITERAL_FLOAT32, 0})
+#define XVR_TO_FLOAT64_LITERAL(value) \
+    ((Xvr_Literal){{.float64_value = value}, XVR_LITERAL_FLOAT64, 0})
 
 #define XVR_IS_INDEX_BLANK(value) ((value).type == XVR_LITERAL_INDEX_BLANK)
 #define XVR_TO_INDEX_BLANK_LITERAL \
@@ -414,5 +442,8 @@ XVR_API void Xvr_printLiteralToBuffer(Xvr_Literal literal, char* buffer,
 XVR_API int Xvr_getIntegerBitWidth(Xvr_LiteralType type);
 XVR_API bool Xvr_isIntegerSigned(Xvr_LiteralType type);
 XVR_API bool Xvr_isFixedSizeInteger(Xvr_LiteralType type);
+
+XVR_API int Xvr_getFloatBitWidth(Xvr_LiteralType type);
+XVR_API bool Xvr_isFixedSizeFloat(Xvr_LiteralType type);
 
 #endif  // !XVR_LITERAL_H

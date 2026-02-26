@@ -71,6 +71,11 @@ typedef enum Xvr_TokenType {
     XVR_TOKEN_UINT32,
     XVR_TOKEN_UINT64,
 
+    // fixed-size float types
+    XVR_TOKEN_FLOAT16,
+    XVR_TOKEN_FLOAT32,
+    XVR_TOKEN_FLOAT64,
+
     // keywords and reserved words
     XVR_TOKEN_AS,
     XVR_TOKEN_ASSERT,
@@ -112,6 +117,11 @@ typedef enum Xvr_TokenType {
     XVR_TOKEN_LITERAL_UINT16,
     XVR_TOKEN_LITERAL_UINT32,
     XVR_TOKEN_LITERAL_UINT64,
+
+    // fixed-size float literals (IEEE 754)
+    XVR_TOKEN_LITERAL_FLOAT16,
+    XVR_TOKEN_LITERAL_FLOAT32,
+    XVR_TOKEN_LITERAL_FLOAT64,
 
     // math operators
     XVR_TOKEN_PLUS,

@@ -48,4 +48,13 @@ bool Xvr_LLVMFunctionEmitterEmit(Xvr_LLVMFunctionEmitter* emitter,
 bool Xvr_LLVMFunctionEmitterEmitCollection(Xvr_LLVMFunctionEmitter* emitter,
                                            Xvr_ASTNode* fn_collection);
 
+/**
+ * @brief Looks up a local variable by name
+ * @param emitter Function emitter
+ * @param name Variable name
+ * @return LLVM value (the alloca or parameter), or NULL if not found
+ */
+LLVMValueRef Xvr_LLVMFunctionEmitterLookupVar(Xvr_LLVMFunctionEmitter* emitter,
+                                              const char* name);
+
 #endif

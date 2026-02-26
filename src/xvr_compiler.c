@@ -1248,6 +1248,25 @@ static void emitFloat(unsigned char** collationPtr, int* capacityPtr,
     emitByte(collationPtr, capacityPtr, countPtr, *ptr);
 }
 
+static void emitDouble(unsigned char** collationPtr, int* capacityPtr,
+                       int* countPtr, double bytes) {
+    char* ptr = (char*)&bytes;
+
+    for (int i = 0; i < 8; i++) {
+        emitByte(collationPtr, capacityPtr, countPtr, *ptr);
+        ptr++;
+    }
+}
+
+static void emitHalf(unsigned char** collationPtr, int* capacityPtr,
+                     int* countPtr, uint16_t bytes) {
+    char* ptr = (char*)&bytes;
+
+    emitByte(collationPtr, capacityPtr, countPtr, *ptr);
+    ptr++;
+    emitByte(collationPtr, capacityPtr, countPtr, *ptr);
+}
+
 // return the result
 static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
                                                size_t* size, bool embedHeader) {
@@ -1370,6 +1389,24 @@ static unsigned char* collateCompilerHeaderOpt(Xvr_Compiler* compiler,
             emitByte(&collation, &capacity, &count, XVR_LITERAL_FLOAT);
             emitFloat(&collation, &capacity, &count,
                       XVR_AS_FLOAT(compiler->literalCache.literals[i]));
+            break;
+
+        case XVR_LITERAL_FLOAT16:
+            emitByte(&collation, &capacity, &count, XVR_LITERAL_FLOAT16);
+            emitHalf(&collation, &capacity, &count,
+                     XVR_AS_FLOAT16(compiler->literalCache.literals[i]));
+            break;
+
+        case XVR_LITERAL_FLOAT32:
+            emitByte(&collation, &capacity, &count, XVR_LITERAL_FLOAT32);
+            emitFloat(&collation, &capacity, &count,
+                      XVR_AS_FLOAT32(compiler->literalCache.literals[i]));
+            break;
+
+        case XVR_LITERAL_FLOAT64:
+            emitByte(&collation, &capacity, &count, XVR_LITERAL_FLOAT64);
+            emitDouble(&collation, &capacity, &count,
+                       XVR_AS_FLOAT64(compiler->literalCache.literals[i]));
             break;
 
         case XVR_LITERAL_STRING: {

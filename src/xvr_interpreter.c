@@ -242,6 +242,20 @@ static float readFloat(const unsigned char* tb, int* count) {
     return ret;
 }
 
+static double readDouble(const unsigned char* tb, int* count) {
+    double ret = 0;
+    memcpy(&ret, tb + *count, 8);
+    *count += 8;
+    return ret;
+}
+
+static uint16_t readHalf(const unsigned char* tb, int* count) {
+    uint16_t ret = 0;
+    memcpy(&ret, tb + *count, 2);
+    *count += 2;
+    return ret;
+}
+
 static const char* readString(const unsigned char* tb, int* count) {
     const unsigned char* ret = tb + *count;
     *count += strlen((char*)ret) + 1;  //+1 for null character
@@ -1779,10 +1793,12 @@ bool Xvr_callLiteralFn(Xvr_Interpreter* interpreter, Xvr_Literal func,
 
             bool declaredIsNumeric = (declaredType == XVR_LITERAL_INTEGER ||
                                       declaredType == XVR_LITERAL_FLOAT ||
-                                      Xvr_isFixedSizeInteger(declaredType));
+                                      Xvr_isFixedSizeInteger(declaredType) ||
+                                      Xvr_isFixedSizeFloat(declaredType));
             bool actualIsNumeric = (actualType == XVR_LITERAL_INTEGER ||
                                     actualType == XVR_LITERAL_FLOAT ||
-                                    Xvr_isFixedSizeInteger(actualType));
+                                    Xvr_isFixedSizeInteger(actualType) ||
+                                    Xvr_isFixedSizeFloat(actualType));
 
             bool typesCompatible = (declaredIsNumeric && actualIsNumeric) ||
                                    (declaredType == actualType);
@@ -2597,6 +2613,48 @@ static void readInterpreterSections(Xvr_Interpreter* interpreter) {
 #ifndef XVR_EXPORT
             if (Xvr_commandLine.verbose) {
                 printf("(float %f)\n", f);
+            }
+#endif
+        } break;
+
+        case XVR_LITERAL_FLOAT16: {
+            const uint16_t h =
+                readHalf(interpreter->bytecode, &interpreter->count);
+            Xvr_Literal literal = XVR_TO_FLOAT16_LITERAL(h);
+            Xvr_pushLiteralArray(&interpreter->literalCache, literal);
+            Xvr_freeLiteral(literal);
+
+#ifndef XVR_EXPORT
+            if (Xvr_commandLine.verbose) {
+                printf("(float16 %hu)\n", h);
+            }
+#endif
+        } break;
+
+        case XVR_LITERAL_FLOAT32: {
+            const float f =
+                readFloat(interpreter->bytecode, &interpreter->count);
+            Xvr_Literal literal = XVR_TO_FLOAT32_LITERAL(f);
+            Xvr_pushLiteralArray(&interpreter->literalCache, literal);
+            Xvr_freeLiteral(literal);
+
+#ifndef XVR_EXPORT
+            if (Xvr_commandLine.verbose) {
+                printf("(float32 %f)\n", f);
+            }
+#endif
+        } break;
+
+        case XVR_LITERAL_FLOAT64: {
+            const double d =
+                readDouble(interpreter->bytecode, &interpreter->count);
+            Xvr_Literal literal = XVR_TO_FLOAT64_LITERAL(d);
+            Xvr_pushLiteralArray(&interpreter->literalCache, literal);
+            Xvr_freeLiteral(literal);
+
+#ifndef XVR_EXPORT
+            if (Xvr_commandLine.verbose) {
+                printf("(float64 %lf)\n", d);
             }
 #endif
         } break;

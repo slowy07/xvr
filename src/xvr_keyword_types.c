@@ -25,6 +25,9 @@ Xvr_KeywordType Xvr_keywordTypes[] = {
     {XVR_TOKEN_UINT16, "uint16"},
     {XVR_TOKEN_UINT32, "uint32"},
     {XVR_TOKEN_UINT64, "uint64"},
+    {XVR_TOKEN_FLOAT16, "float16"},
+    {XVR_TOKEN_FLOAT32, "float32"},
+    {XVR_TOKEN_FLOAT64, "float64"},
 
     // other keywords
     {XVR_TOKEN_AS, "as"},

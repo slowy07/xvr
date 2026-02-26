@@ -107,6 +107,12 @@ LLVMTypeRef Xvr_LLVMTypeMapperGetType(Xvr_LLVMTypeMapper* mapper,
         return mapper->int64_type;
     case XVR_LITERAL_FLOAT:
         return mapper->float_type;
+    case XVR_LITERAL_FLOAT16:
+        return mapper->int16_type;
+    case XVR_LITERAL_FLOAT32:
+        return mapper->float_type;
+    case XVR_LITERAL_FLOAT64:
+        return mapper->double_type;
     case XVR_LITERAL_STRING:
         return mapper->int8_ptr_type;
     case XVR_LITERAL_ARRAY:
@@ -149,6 +155,9 @@ bool Xvr_LLVMTypeMapperIsSigned(Xvr_LiteralType type) {
     case XVR_LITERAL_INT32:
     case XVR_LITERAL_INT64:
     case XVR_LITERAL_FLOAT:
+    case XVR_LITERAL_FLOAT16:
+    case XVR_LITERAL_FLOAT32:
+    case XVR_LITERAL_FLOAT64:
         return true;
     case XVR_LITERAL_UINT8:
     case XVR_LITERAL_UINT16:

@@ -24,12 +24,14 @@ SOFTWARE.
 
 #include "xvr_llvm_expression_emitter.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include "xvr_ast_node.h"
 #include "xvr_literal.h"
 #include "xvr_llvm_context.h"
+#include "xvr_llvm_function_emitter.h"
 #include "xvr_llvm_ir_builder.h"
 #include "xvr_llvm_module_manager.h"
 #include "xvr_llvm_type_mapper.h"
@@ -47,6 +49,7 @@ struct Xvr_LLVMExpressionEmitter {
     Xvr_LLVMModuleManager* module;   /**< Module manager */
     Xvr_LLVMIRBuilder* builder;      /**< IR builder */
     Xvr_LLVMTypeMapper* type_mapper; /**< Type mapper */
+    void* fn_emitter;                /**< Function emitter for var lookup */
 };
 
 Xvr_LLVMExpressionEmitter* Xvr_LLVMExpressionEmitterCreate(
@@ -69,8 +72,17 @@ Xvr_LLVMExpressionEmitter* Xvr_LLVMExpressionEmitterCreate(
     emitter->module = module;
     emitter->builder = builder;
     emitter->type_mapper = type_mapper;
+    emitter->fn_emitter = NULL;
 
     return emitter;
+}
+
+void Xvr_LLVMExpressionEmitterSetFnEmitter(Xvr_LLVMExpressionEmitter* emitter,
+                                           void* fn_emitter) {
+    if (!emitter) {
+        return;
+    }
+    emitter->fn_emitter = fn_emitter;
 }
 
 void Xvr_LLVMExpressionEmitterDestroy(Xvr_LLVMExpressionEmitter* emitter) {
@@ -152,6 +164,21 @@ static LLVMValueRef emit_literal_value(Xvr_LLVMExpressionEmitter* emitter,
         return LLVMConstReal(LLVMFloatTypeInContext(llvm_ctx),
                              literal.as.number);
 
+    case XVR_LITERAL_FLOAT16:
+        /* Float16: 16-bit floating point (stored as bits) */
+        return LLVMConstInt(LLVMInt16TypeInContext(llvm_ctx),
+                            literal.as.float16_bits, false);
+
+    case XVR_LITERAL_FLOAT32:
+        /* Float32: 32-bit floating point */
+        return LLVMConstReal(LLVMFloatTypeInContext(llvm_ctx),
+                             literal.as.float32_value);
+
+    case XVR_LITERAL_FLOAT64:
+        /* Float64: 64-bit floating point (double) */
+        return LLVMConstReal(LLVMDoubleTypeInContext(llvm_ctx),
+                             literal.as.float64_value);
+
     case XVR_LITERAL_STRING: {
         /* String: create global string constant */
         const char* str_data = "";
@@ -160,6 +187,10 @@ static LLVMValueRef emit_literal_value(Xvr_LLVMExpressionEmitter* emitter,
         }
         return LLVMBuildGlobalStringPtr(builder, str_data, "str_literal");
     }
+
+    case XVR_LITERAL_IDENTIFIER:
+        /* Identifier: look up variable */
+        return Xvr_LLVMExpressionEmitterEmitIdentifier(emitter, literal);
 
     default:
         /* Unknown type: return null pointer */
@@ -191,23 +222,46 @@ static LLVMValueRef emit_binary_op(Xvr_LLVMExpressionEmitter* emitter,
                                    Xvr_Opcode opcode, LLVMValueRef lhs,
                                    LLVMValueRef rhs) {
     Xvr_LLVMIRBuilder* builder = emitter->builder;
+    LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+
+    // Check if operands are floats
+    LLVMTypeKind lhsKind = LLVMGetTypeKind(LLVMTypeOf(lhs));
+    LLVMTypeKind rhsKind = LLVMGetTypeKind(LLVMTypeOf(rhs));
+    bool isFloat =
+        (lhsKind == LLVMFloatTypeKind || lhsKind == LLVMDoubleTypeKind ||
+         rhsKind == LLVMFloatTypeKind || rhsKind == LLVMDoubleTypeKind);
 
     switch (opcode) {
     /* Arithmetic operations */
     case XVR_OP_ADDITION:
-        return Xvr_LLVMIRBuilderCreateAdd(builder, lhs, rhs, "add");
+        if (isFloat) {
+            return LLVMBuildFAdd(llvm_builder, lhs, rhs, "fadd");
+        }
+        return Xvr_LLVMIRBuilderCreateAdd(emitter->builder, lhs, rhs, "add");
 
     case XVR_OP_SUBTRACTION:
-        return Xvr_LLVMIRBuilderCreateSub(builder, lhs, rhs, "sub");
+        if (isFloat) {
+            return LLVMBuildFSub(llvm_builder, lhs, rhs, "fsub");
+        }
+        return Xvr_LLVMIRBuilderCreateSub(emitter->builder, lhs, rhs, "sub");
 
     case XVR_OP_MULTIPLICATION:
-        return Xvr_LLVMIRBuilderCreateMul(builder, lhs, rhs, "mul");
+        if (isFloat) {
+            return LLVMBuildFMul(llvm_builder, lhs, rhs, "fmul");
+        }
+        return Xvr_LLVMIRBuilderCreateMul(emitter->builder, lhs, rhs, "mul");
 
     case XVR_OP_DIVISION:
-        return Xvr_LLVMIRBuilderCreateSDiv(builder, lhs, rhs, "sdiv");
+        if (isFloat) {
+            return LLVMBuildFDiv(llvm_builder, lhs, rhs, "fdiv");
+        }
+        return Xvr_LLVMIRBuilderCreateSDiv(emitter->builder, lhs, rhs, "sdiv");
 
     case XVR_OP_MODULO:
-        return Xvr_LLVMIRBuilderCreateSDiv(builder, lhs, rhs, "srem");
+        if (isFloat) {
+            return LLVMBuildFRem(llvm_builder, lhs, rhs, "frem");
+        }
+        return Xvr_LLVMIRBuilderCreateSDiv(emitter->builder, lhs, rhs, "srem");
 
     /* Comparison operations (signed) */
     case XVR_OP_COMPARE_LESS:
@@ -284,6 +338,10 @@ static LLVMValueRef emit_unary_op(Xvr_LLVMExpressionEmitter* emitter,
         return Xvr_LLVMIRBuilderCreateSub(builder, zero, operand, "neg");
     }
 
+    case XVR_OP_PRINT:
+        /* For print statements, just emit the operand (side effect) */
+        return operand;
+
     default:
         return NULL;
     }
@@ -305,12 +363,38 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitUnary(
     return emit_unary_op(emitter, unary->opcode, operand);
 }
 
+static LLVMValueRef lookup_var(Xvr_LLVMExpressionEmitter* emitter,
+                               const char* name) {
+    if (!emitter || !emitter->fn_emitter) {
+        return NULL;
+    }
+    Xvr_LLVMFunctionEmitter* fn_emitter =
+        (Xvr_LLVMFunctionEmitter*)emitter->fn_emitter;
+    return Xvr_LLVMFunctionEmitterLookupVar(fn_emitter, name);
+}
+
 LLVMValueRef Xvr_LLVMExpressionEmitterEmitIdentifier(
     Xvr_LLVMExpressionEmitter* emitter, Xvr_Literal identifier) {
-    (void)emitter;
-    (void)identifier;
-    /* TODO: Implement variable lookup from symbol table */
-    return NULL;
+    if (!emitter || identifier.type != XVR_LITERAL_IDENTIFIER) {
+        return NULL;
+    }
+
+    const char* var_name = NULL;
+    if (identifier.as.string.ptr) {
+        var_name = (const char*)identifier.as.string.ptr->data;
+    }
+
+    if (!var_name) {
+        return NULL;
+    }
+
+    LLVMValueRef var_ptr = lookup_var(emitter, var_name);
+    if (!var_ptr) {
+        return NULL;
+    }
+
+    LLVMBuilderRef builder = Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    return LLVMBuildLoad2(builder, LLVMTypeOf(var_ptr), var_ptr, var_name);
 }
 
 LLVMValueRef Xvr_LLVMExpressionEmitterEmitFnCall(
@@ -319,11 +403,9 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitFnCall(
         return NULL;
     }
 
-    /* TODO: Implement function call emission */
-    /* This requires:
-     * 1. Looking up the function in the module
-     * 2. Emitting all arguments
-     * 3. Creating the call instruction
+    /* TODO: Implement proper function call emission
+     * For now, just return NULL to not break the build
+     * The function body will need to be emitted as a call to runtime
      */
     (void)fn_call;
     return NULL;

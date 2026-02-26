@@ -60,6 +60,14 @@ Xvr_LLVMExpressionEmitter* Xvr_LLVMExpressionEmitterCreate(
 void Xvr_LLVMExpressionEmitterDestroy(Xvr_LLVMExpressionEmitter* emitter);
 
 /**
+ * @brief Sets the function emitter reference for variable lookup
+ * @param emitter Expression emitter
+ * @param fn_emitter Function emitter
+ */
+void Xvr_LLVMExpressionEmitterSetFnEmitter(Xvr_LLVMExpressionEmitter* emitter,
+                                           void* fn_emitter);
+
+/**
  * @brief Emits IR for any AST node that is an expression
  * @param emitter Expression emitter
  * @param node AST node to emit

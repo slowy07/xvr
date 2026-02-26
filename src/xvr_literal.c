@@ -11,6 +11,35 @@
 #include "xvr_refstring.h"
 #include "xvr_scope.h"
 
+static float halfToFloat(uint16_t half) {
+    int sign = (half >> 15) & 1;
+    int exp = (half >> 10) & 0x1F;
+    int mantissa = half & 0x3FF;
+
+    if (exp == 0) {
+        if (mantissa == 0) {
+            return sign ? -0.0f : 0.0f;
+        }
+        int e = -1;
+        do {
+            e++;
+            mantissa <<= 1;
+        } while ((mantissa & 0x400) == 0);
+        mantissa &= 0x3FF;
+        exp = e + 1 - 15;
+        exp = exp < -126 ? -126 : exp;
+    } else if (exp == 0x1F) {
+        return sign ? __builtin_huge_valf() : __builtin_huge_valf();
+    } else {
+        exp = exp - 15;
+    }
+
+    int float_bits = (sign << 31) | ((exp + 127) << 23) | (mantissa << 13);
+    float result;
+    memcpy(&result, &float_bits, sizeof(float));
+    return result;
+}
+
 static unsigned int hashString(const char* string, int length) {
     unsigned int hash = 2166136261u;
 
@@ -270,6 +299,9 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
     case XVR_LITERAL_FUNCTION_NATIVE:
     case XVR_LITERAL_FUNCTION_HOOK:
     case XVR_LITERAL_INDEX_BLANK:
+    case XVR_LITERAL_FLOAT16:
+    case XVR_LITERAL_FLOAT32:
+    case XVR_LITERAL_FLOAT64:
         // no copying possible
         return original;
 
@@ -334,6 +366,15 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
 
     case XVR_LITERAL_FLOAT:
         return XVR_AS_FLOAT(lhs) == XVR_AS_FLOAT(rhs);
+
+    case XVR_LITERAL_FLOAT16:
+        return XVR_AS_FLOAT16(lhs) == XVR_AS_FLOAT16(rhs);
+
+    case XVR_LITERAL_FLOAT32:
+        return XVR_AS_FLOAT32(lhs) == XVR_AS_FLOAT32(rhs);
+
+    case XVR_LITERAL_FLOAT64:
+        return XVR_AS_FLOAT64(lhs) == XVR_AS_FLOAT64(rhs);
 
     case XVR_LITERAL_STRING:
         return Xvr_equalsRefString(XVR_AS_STRING(lhs), XVR_AS_STRING(rhs));
@@ -498,6 +539,18 @@ int Xvr_hashLiteral(Xvr_Literal lit) {
     case XVR_LITERAL_FLOAT:
         return hashUInt(*(unsigned int*)(&XVR_AS_FLOAT(lit)));
 
+    case XVR_LITERAL_FLOAT16:
+        return hashUInt((unsigned int)XVR_AS_FLOAT16(lit));
+
+    case XVR_LITERAL_FLOAT32:
+        return hashUInt(*(unsigned int*)(&XVR_AS_FLOAT32(lit)));
+
+    case XVR_LITERAL_FLOAT64: {
+        uint64_t bits;
+        memcpy(&bits, &(XVR_AS_FLOAT64(lit)), sizeof(double));
+        return hashUInt((unsigned int)(bits ^ (bits >> 32)));
+    }
+
     case XVR_LITERAL_STRING:
         return hashString(Xvr_toCString(XVR_AS_STRING(lit)),
                           Xvr_lengthRefString(XVR_AS_STRING(lit)));
@@ -652,6 +705,39 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
             snprintf(buffer, 256, "%.1f", XVR_AS_FLOAT(literal));
         }
 
+        printFn(buffer);
+    } break;
+
+    case XVR_LITERAL_FLOAT16: {
+        char buffer[256];
+        uint16_t bits = XVR_AS_FLOAT16(literal);
+        float f = halfToFloat(bits);
+        if (f - (int)f) {
+            snprintf(buffer, 256, "%g", f);
+        } else {
+            snprintf(buffer, 256, "%.1f", f);
+        }
+        printFn(buffer);
+    } break;
+
+    case XVR_LITERAL_FLOAT32: {
+        char buffer[256];
+        if (XVR_AS_FLOAT32(literal) - (int)XVR_AS_FLOAT32(literal)) {
+            snprintf(buffer, 256, "%g", XVR_AS_FLOAT32(literal));
+        } else {
+            snprintf(buffer, 256, "%.1f", XVR_AS_FLOAT32(literal));
+        }
+        printFn(buffer);
+    } break;
+
+    case XVR_LITERAL_FLOAT64: {
+        char buffer[256];
+        double d = XVR_AS_FLOAT64(literal);
+        if (d - (int)d) {
+            snprintf(buffer, 256, "%lg", d);
+        } else {
+            snprintf(buffer, 256, "%.1lf", d);
+        }
         printFn(buffer);
     } break;
 
@@ -1011,4 +1097,21 @@ bool Xvr_isIntegerSigned(Xvr_LiteralType type) {
 
 bool Xvr_isFixedSizeInteger(Xvr_LiteralType type) {
     return Xvr_getIntegerBitWidth(type) > 0;
+}
+
+int Xvr_getFloatBitWidth(Xvr_LiteralType type) {
+    switch (type) {
+    case XVR_LITERAL_FLOAT16:
+        return 16;
+    case XVR_LITERAL_FLOAT32:
+        return 32;
+    case XVR_LITERAL_FLOAT64:
+        return 64;
+    default:
+        return 0;
+    }
+}
+
+bool Xvr_isFixedSizeFloat(Xvr_LiteralType type) {
+    return Xvr_getFloatBitWidth(type) > 0;
 }

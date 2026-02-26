@@ -1,5 +1,6 @@
 #include "xvr_parser.h"
 
+#include <math.h>
 #include <stdio.h>
 
 #include "xvr_ast_node.h"
@@ -692,6 +693,56 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         return XVR_OP_EOF;
     }
 
+    case XVR_TOKEN_LITERAL_FLOAT16: {
+        double dval = 0;
+        const char* lexeme =
+            removeChar(parser->previous.lexeme, parser->previous.length, '_');
+        sscanf(lexeme, "%lf", &dval);
+        XVR_FREE_ARRAY(char, lexeme, parser->previous.length + 1);
+        float f = (float)dval;
+        uint16_t bits = 0;
+        int sign = (f < 0) ? 1 : 0;
+        int exp, mantissa;
+        if (f == 0) {
+            exp = 0;
+            mantissa = 0;
+        } else if (isinf(f)) {
+            exp = 31;
+            mantissa = 0;
+        } else if (isnan(f)) {
+            exp = 31;
+            mantissa = 512;
+        } else {
+            int e;
+            float m = frexp(f, &e);
+            exp = e + 15;
+            mantissa = (int)((fabs(m) - 0.5) * 2048);
+        }
+        bits = (sign << 15) | (exp << 10) | mantissa;
+        Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_FLOAT16_LITERAL(bits));
+        return XVR_OP_EOF;
+    }
+
+    case XVR_TOKEN_LITERAL_FLOAT32: {
+        float value = 0;
+        const char* lexeme =
+            removeChar(parser->previous.lexeme, parser->previous.length, '_');
+        sscanf(lexeme, "%f", &value);
+        XVR_FREE_ARRAY(char, lexeme, parser->previous.length + 1);
+        Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_FLOAT32_LITERAL(value));
+        return XVR_OP_EOF;
+    }
+
+    case XVR_TOKEN_LITERAL_FLOAT64: {
+        double value = 0;
+        const char* lexeme =
+            removeChar(parser->previous.lexeme, parser->previous.length, '_');
+        sscanf(lexeme, "%lf", &value);
+        XVR_FREE_ARRAY(char, lexeme, parser->previous.length + 1);
+        Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_FLOAT64_LITERAL(value));
+        return XVR_OP_EOF;
+    }
+
     case XVR_TOKEN_TYPE: {
         if (match(parser, XVR_TOKEN_CONST)) {
             Xvr_emitASTNodeLiteral(nodeHandle,
@@ -801,6 +852,24 @@ static Xvr_Opcode castingPrefix(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 
     case XVR_TOKEN_FLOAT: {
         Xvr_Literal literal = XVR_TO_TYPE_LITERAL(XVR_LITERAL_FLOAT, false);
+        Xvr_emitASTNodeLiteral(nodeHandle, literal);
+        Xvr_freeLiteral(literal);
+    } break;
+
+    case XVR_TOKEN_FLOAT16: {
+        Xvr_Literal literal = XVR_TO_TYPE_LITERAL(XVR_LITERAL_FLOAT16, false);
+        Xvr_emitASTNodeLiteral(nodeHandle, literal);
+        Xvr_freeLiteral(literal);
+    } break;
+
+    case XVR_TOKEN_FLOAT32: {
+        Xvr_Literal literal = XVR_TO_TYPE_LITERAL(XVR_LITERAL_FLOAT32, false);
+        Xvr_emitASTNodeLiteral(nodeHandle, literal);
+        Xvr_freeLiteral(literal);
+    } break;
+
+    case XVR_TOKEN_FLOAT64: {
+        Xvr_Literal literal = XVR_TO_TYPE_LITERAL(XVR_LITERAL_FLOAT64, false);
         Xvr_emitASTNodeLiteral(nodeHandle, literal);
         Xvr_freeLiteral(literal);
     } break;
@@ -1088,6 +1157,9 @@ ParseRule parseRules[] = {
     {castingPrefix, NULL, PREC_CALL},  // TOKEN_UINT16,
     {castingPrefix, NULL, PREC_CALL},  // TOKEN_UINT32,
     {castingPrefix, NULL, PREC_CALL},  // TOKEN_UINT64,
+    {castingPrefix, NULL, PREC_CALL},  // TOKEN_FLOAT16,
+    {castingPrefix, NULL, PREC_CALL},  // TOKEN_FLOAT32,
+    {castingPrefix, NULL, PREC_CALL},  // TOKEN_FLOAT64,
 
     // keywords and reserved words
     {NULL, NULL, PREC_NONE},       // TOKEN_AS,
@@ -1130,6 +1202,9 @@ ParseRule parseRules[] = {
     {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_UINT16,
     {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_UINT32,
     {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_UINT64,
+    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_FLOAT16,
+    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_FLOAT32,
+    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_FLOAT64,
 
     // math operators
     {NULL, binary, PREC_TERM},                     // TOKEN_PLUS,
@@ -1891,6 +1966,18 @@ static Xvr_Literal readTypeToLiteral(Xvr_Parser* parser) {
 
     case XVR_TOKEN_FLOAT:
         XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_FLOAT;
+        break;
+
+    case XVR_TOKEN_FLOAT16:
+        XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_FLOAT16;
+        break;
+
+    case XVR_TOKEN_FLOAT32:
+        XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_FLOAT32;
+        break;
+
+    case XVR_TOKEN_FLOAT64:
+        XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_FLOAT64;
         break;
 
     case XVR_TOKEN_STRING:

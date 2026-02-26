@@ -111,6 +111,11 @@ static LLVMValueRef lookup_local_var(Xvr_LLVMFunctionEmitter* emitter,
     return NULL;
 }
 
+LLVMValueRef Xvr_LLVMFunctionEmitterLookupVar(Xvr_LLVMFunctionEmitter* emitter,
+                                              const char* name) {
+    return lookup_local_var(emitter, name);
+}
+
 static Xvr_LiteralType get_var_type(Xvr_LLVMFunctionEmitter* emitter,
                                     const char* name) {
     for (int i = 0; i < emitter->local_var_count; i++) {
@@ -224,8 +229,17 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
         if (stmt->type == XVR_AST_NODE_FN_RETURN) {
             Xvr_NodeFnReturn* ret = &stmt->returns;
             if (ret->returns) {
-                return_value =
-                    Xvr_LLVMExpressionEmitterEmit(expr_emitter, ret->returns);
+                // Handle FN_COLLECTION - get first element
+                if (ret->returns->type == XVR_AST_NODE_FN_COLLECTION) {
+                    Xvr_NodeFnCollection* coll = &ret->returns->fnCollection;
+                    if (coll->count > 0) {
+                        return_value = Xvr_LLVMExpressionEmitterEmit(
+                            expr_emitter, &coll->nodes[0]);
+                    }
+                } else {
+                    return_value = Xvr_LLVMExpressionEmitterEmit(expr_emitter,
+                                                                 ret->returns);
+                }
             }
         } else if (stmt->type == XVR_AST_NODE_VAR_DECL) {
             Xvr_NodeVarDecl* varDecl = &stmt->varDecl;
@@ -256,7 +270,15 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
     }
 
     if (!return_value) {
-        return_value = LLVMConstInt(return_type, 0, false);
+        if (LLVMGetTypeKind(return_type) == LLVMFloatTypeKind) {
+            return_value = LLVMConstReal(return_type, 0.0);
+        } else if (LLVMGetTypeKind(return_type) == LLVMDoubleTypeKind) {
+            return_value = LLVMConstReal(return_type, 0.0);
+        } else if (LLVMGetTypeKind(return_type) == LLVMIntegerTypeKind) {
+            return_value = LLVMConstInt(return_type, 0, false);
+        } else {
+            return_value = LLVMConstInt(return_type, 0, false);
+        }
     }
     LLVMBuildRet(Xvr_LLVMIRBuilderGetLLVMBuilder(builder), return_value);
 

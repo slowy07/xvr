@@ -131,6 +131,9 @@ Xvr_LLVMCodegen* Xvr_LLVMCodegenCreate(const char* module_name) {
         return NULL;
     }
 
+    Xvr_LLVMExpressionEmitterSetFnEmitter(codegen->expr_emitter,
+                                          codegen->fn_emitter);
+
     codegen->control_flow = Xvr_LLVMControlFlowCreate(
         codegen->context, codegen->module, codegen->builder,
         codegen->type_mapper, codegen->expr_emitter);

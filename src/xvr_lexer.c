@@ -187,16 +187,25 @@ static Xvr_Token makeIntegerOrFloat(Xvr_Lexer* lexer) {
 
     while (isDigit(lexer) || peek(lexer) == '_') advance(lexer);
 
+    bool is_float = false;
     if (peek(lexer) == '.' &&
         (peekNext(lexer) >= '0' && peekNext(lexer) <= '9')) {
         type = XVR_TOKEN_LITERAL_FLOAT;
+        is_float = true;
         advance(lexer);
         while (isDigit(lexer) || peek(lexer) == '_') advance(lexer);
     }
 
-    // Check for type suffix (e.g., 123i16, 42u8)
-    if (peek(lexer) == 'i' || peek(lexer) == 'u') {
+    // Check for type suffix (e.g., 123i16, 42u8, 1.5f32)
+    if (peek(lexer) == 'i' || peek(lexer) == 'u' || peek(lexer) == 'f') {
         char suffix_type = peek(lexer);
+
+        // For float suffix, we must have a decimal point
+        if (suffix_type == 'f' && !is_float) {
+            return makeErrorToken(lexer,
+                                  "Invalid float suffix without decimal");
+        }
+
         advance(lexer);
 
         // Parse bit width (8, 16, 32, 64)
@@ -209,6 +218,9 @@ static Xvr_Token makeIntegerOrFloat(Xvr_Lexer* lexer) {
         // Validate bit width
         if (bit_width != 8 && bit_width != 16 && bit_width != 32 &&
             bit_width != 64) {
+            if (suffix_type == 'f') {
+                return makeErrorToken(lexer, "Invalid float bit width");
+            }
             return makeErrorToken(lexer, "Invalid integer bit width");
         }
 
@@ -228,7 +240,7 @@ static Xvr_Token makeIntegerOrFloat(Xvr_Lexer* lexer) {
                 type = XVR_TOKEN_LITERAL_INT64;
                 break;
             }
-        } else {
+        } else if (suffix_type == 'u') {
             switch (bit_width) {
             case 8:
                 type = XVR_TOKEN_LITERAL_UINT8;
@@ -242,6 +254,22 @@ static Xvr_Token makeIntegerOrFloat(Xvr_Lexer* lexer) {
             case 64:
                 type = XVR_TOKEN_LITERAL_UINT64;
                 break;
+            }
+        } else {  // suffix_type == 'f'
+            switch (bit_width) {
+            case 16:
+                type = XVR_TOKEN_LITERAL_FLOAT16;
+                break;
+            case 32:
+                type = XVR_TOKEN_LITERAL_FLOAT32;
+                break;
+            case 64:
+                type = XVR_TOKEN_LITERAL_FLOAT64;
+                break;
+            default:
+                return makeErrorToken(
+                    lexer,
+                    "Invalid float bit width (only 16, 32, 64 supported)");
             }
         }
     }
