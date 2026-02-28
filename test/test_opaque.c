@@ -52,7 +52,7 @@ static int consume(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments) {
     return -1;
 }
 
-int main(void) {
+int run_opaque_tests(void) {
     {
         size_t size = 0;
         const char* source =

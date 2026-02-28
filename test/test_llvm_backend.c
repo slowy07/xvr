@@ -236,7 +236,7 @@ static void test_llvm_codegen_bitcode(void) {
     printf(XVR_CC_NOTICE "PASS: test_llvm_codegen_bitcode\n" XVR_CC_RESET);
 }
 
-int main(void) {
+int run_llvm_backend_tests(void) {
     printf("Testing Context...\n");
     test_llvm_context_create_destroy();
 

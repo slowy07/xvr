@@ -14,7 +14,7 @@
         exit(1);                                                         \
     }
 
-int main(void) {
+int run_ast_node_tests(void) {
     {
         char* str = "foobar";
         Xvr_Literal literal = XVR_TO_STRING_LITERAL(Xvr_createRefString(str));

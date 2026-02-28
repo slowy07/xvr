@@ -4,7 +4,7 @@
 #include "xvr_literal.h"
 #include "xvr_refstring.h"
 
-int main(void) {
+int run_literal_tests(void) {
     {
         Xvr_Literal literal = XVR_TO_NULL_LITERAL;
 

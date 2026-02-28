@@ -4,7 +4,7 @@
 #include "xvr_console_colors.h"
 #include "xvr_lexer.h"
 
-int main(void) {
+int run_lexer_tests(void) {
     int testCount = 0;
     int passCount = 0;
 

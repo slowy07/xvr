@@ -52,7 +52,7 @@ void runSourceFileCustom(const char* fname) {
     free((void*)source);
 }
 
-int main(void) {
+int run_interpreter_tests(void) {
     {
         Xvr_Interpreter interpreter;
         Xvr_initInterpreter(&interpreter);

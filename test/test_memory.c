@@ -49,7 +49,7 @@ void testMemoryAllocation(void) {
     }
 }
 
-int main(void) {
+int run_memory_tests(void) {
     testMemoryAllocation();
     Xvr_setMemoryAllocator(allocator);
     testMemoryAllocation();
@@ -64,4 +64,5 @@ int main(void) {
     }
 
     printf(XVR_CC_NOTICE "TEST MEMORY: jalan loh ya cik\n" XVR_CC_RESET);
+    return 0;
 }

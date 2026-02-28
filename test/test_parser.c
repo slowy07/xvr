@@ -72,7 +72,7 @@ static void testParseMultiple(const char* name, const char* source,
     Xvr_freeParser(&parser);
 }
 
-int main(void) {
+int run_parser_tests(void) {
     printf("INFO: TEST PARSERNY CIK\n");
     testParse("integer literal", "42;", XVR_AST_NODE_LITERAL);
     testParse("float literal", "3.14;", XVR_AST_NODE_LITERAL);

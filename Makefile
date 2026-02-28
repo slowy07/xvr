@@ -92,7 +92,7 @@ test: clean out-dirs
 	$(MAKE) -C test
 	@echo ""
 	@failed=0; \
-	for f in $(XVR_OUTDIR)/test_ast_node $(XVR_OUTDIR)/test_compiler $(XVR_OUTDIR)/test_lexer $(XVR_OUTDIR)/test_literal $(XVR_OUTDIR)/test_memory $(XVR_OUTDIR)/test_opaque $(XVR_OUTDIR)/test_parser $(XVR_OUTDIR)/test_scope; do \
+	for f in $(XVR_OUTDIR)/test_ast_node $(XVR_OUTDIR)/test_compiler $(XVR_OUTDIR)/test_lexer $(XVR_OUTDIR)/test_literal $(XVR_OUTDIR)/test_memory $(XVR_OUTDIR)/test_opaque $(XVR_OUTDIR)/test_parser $(XVR_OUTDIR)/test_scope $(XVR_OUTDIR)/test_llvm_backend; do \
 		if [ -x "$$f" ] && [ -f "$$f" ]; then \
 			echo ""; \
 			echo "Running: $$f"; \
@@ -111,6 +111,32 @@ test: clean out-dirs
 		echo "tests failed!"; \
 		exit 1; \
 	fi
+
+test-all: clean out-dirs
+	$(MAKE) -C test
+	@echo ""
+	@failed=0; \
+	for f in $(XVR_OUTDIR)/test_ast_node $(XVR_OUTDIR)/test_compiler $(XVR_OUTDIR)/test_lexer $(XVR_OUTDIR)/test_literal $(XVR_OUTDIR)/test_memory $(XVR_OUTDIR)/test_opaque $(XVR_OUTDIR)/test_parser $(XVR_OUTDIR)/test_scope $(XVR_OUTDIR)/test_llvm_backend $(XVR_OUTDIR)/test_all; do \
+		if [ -x "$$f" ] && [ -f "$$f" ]; then \
+			echo ""; \
+			echo "Running: $$f"; \
+			if "$$f"; then \
+				echo "PASS: $$f"; \
+			else \
+				echo "FAIL: $$f (exit code: $$?)"; \
+				failed=1; \
+			fi; \
+		fi; \
+	done; \
+	echo ""; \
+	if [ $$failed -eq 0 ]; then \
+		echo "ALL TESTS PASSED!"; \
+	else \
+		echo "SOME TESTS FAILED!"; \
+		exit 1;
+	fi
+
+test-verbose: test-all
 
 install: install-libs install-bin
 	@echo "Installation complete"

@@ -10,7 +10,7 @@
 #include "xvr_memory.h"
 #include "xvr_parser.h"
 
-int main(void) {
+int run_compiler_tests(void) {
     {
         Xvr_Compiler compiler;
         Xvr_initCompiler(&compiler);
@@ -42,7 +42,6 @@ int main(void) {
             Xvr_freeASTNode(node);
 
             node = Xvr_scanParser(&parser);
-
         }
 
         size_t size = 0;

@@ -5,7 +5,7 @@
 #include "xvr_memory.h"
 #include "xvr_scope.h"
 
-int main(void) {
+int run_scope_tests(void) {
     {
         Xvr_Scope* scope = Xvr_pushScope(NULL);
         scope = Xvr_popScope(scope);
