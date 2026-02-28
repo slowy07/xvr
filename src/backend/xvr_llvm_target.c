@@ -24,6 +24,8 @@ SOFTWARE.
 
 #include "xvr_llvm_target.h"
 
+#include <llvm-c/Target.h>
+#include <llvm-c/TargetMachine.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -100,7 +102,8 @@ bool Xvr_LLVMTargetConfigSetCodeModel(Xvr_LLVMTargetConfig* config,
 
 struct Xvr_LLVMTargetMachine {
     Xvr_LLVMTargetConfig* config;
-    void* target_machine;
+    LLVMTargetMachineRef target_machine;
+    LLVMTargetRef target;
 };
 
 Xvr_LLVMTargetMachine* Xvr_LLVMTargetMachineCreate(
@@ -109,18 +112,87 @@ Xvr_LLVMTargetMachine* Xvr_LLVMTargetMachineCreate(
         return NULL;
     }
 
-    Xvr_LLVMTargetMachine* tm = calloc(1, sizeof(Xvr_LLVMTargetMachine));
+    LLVMTargetRef target;
+    char* error = NULL;
+
+    if (!config->triple) {
+        LLVMInitializeAllTargetInfos();
+        LLVMInitializeAllTargets();
+        LLVMInitializeAllTargetMCs();
+        LLVMInitializeAllAsmPrinters();
+
+        if (!LLVMGetTargetFromTriple(LLVMGetDefaultTargetTriple(), &target,
+                                     &error)) {
+            free(error);
+            error = NULL;
+            if (!LLVMGetTargetFromTriple("x86_64-pc-linux-gnu", &target,
+                                         &error)) {
+                free(error);
+                return NULL;
+            }
+        }
+    } else {
+        LLVMInitializeAllTargetInfos();
+        LLVMInitializeAllTargets();
+        LLVMInitializeAllTargetMCs();
+        LLVMInitializeAllAsmPrinters();
+
+        if (!LLVMGetTargetFromTriple(config->triple, &target, &error)) {
+            free(error);
+            return NULL;
+        }
+    }
+
+    const char* cpu = config->cpu ? config->cpu : "generic";
+    const char* features = config->features ? config->features : "";
+    const char* reloc = config->reloc ? config->reloc : "default";
+    const char* model = config->code_model ? config->code_model : "jitdefault";
+
+    LLVMRelocMode reloc_mode = LLVMRelocDefault;
+    if (strcmp(reloc, "PIC") == 0) {
+        reloc_mode = LLVMRelocPIC;
+    } else if (strcmp(reloc, "Static") == 0) {
+        reloc_mode = LLVMRelocStatic;
+    }
+
+    LLVMCodeModel code_model = LLVMCodeModelJITDefault;
+    if (strcmp(model, "small") == 0) {
+        code_model = LLVMCodeModelSmall;
+    } else if (strcmp(model, "kernel") == 0) {
+        code_model = LLVMCodeModelKernel;
+    } else if (strcmp(model, "medium") == 0) {
+        code_model = LLVMCodeModelMedium;
+    } else if (strcmp(model, "large") == 0) {
+        code_model = LLVMCodeModelLarge;
+    }
+
+    LLVMTargetMachineRef tm = LLVMCreateTargetMachine(
+        target, config->triple ? config->triple : "x86_64-pc-linux-gnu", cpu,
+        features, LLVMCodeGenLevelDefault, reloc_mode, code_model);
+
     if (!tm) {
         return NULL;
     }
 
-    tm->config = config;
-    return tm;
+    Xvr_LLVMTargetMachine* result = calloc(1, sizeof(Xvr_LLVMTargetMachine));
+    if (!result) {
+        LLVMDisposeTargetMachine(tm);
+        return NULL;
+    }
+
+    result->config = config;
+    result->target_machine = tm;
+    result->target = target;
+
+    return result;
 }
 
 void Xvr_LLVMTargetMachineDestroy(Xvr_LLVMTargetMachine* tm) {
     if (!tm) {
         return;
+    }
+    if (tm->target_machine) {
+        LLVMDisposeTargetMachine(tm->target_machine);
     }
     Xvr_LLVMTargetConfigDestroy(tm->config);
     free(tm);
@@ -129,20 +201,72 @@ void Xvr_LLVMTargetMachineDestroy(Xvr_LLVMTargetMachine* tm) {
 bool Xvr_LLVMTargetMachineEmitToFile(Xvr_LLVMTargetMachine* tm,
                                      Xvr_LLVMModuleManager* module,
                                      const char* filename, int filetype) {
-    (void)tm;
-    (void)module;
-    (void)filename;
-    (void)filetype;
-    return false;
+    if (!tm || !module || !filename) {
+        return false;
+    }
+
+    LLVMModuleRef mod = Xvr_LLVMModuleManagerGetModule(module);
+    if (!mod) {
+        return false;
+    }
+
+    LLVMTargetRef target = tm->target;
+    LLVMTargetMachineRef machine = tm->target_machine;
+
+    char* error = NULL;
+    LLVMCodeGenFileType file_type = LLVMObjectFile;
+
+    if (filetype == 1) {
+        file_type = LLVMAssemblyFile;
+    }
+
+    bool success =
+        LLVMTargetMachineEmitToFile(machine, mod, filename, file_type, &error);
+
+    if (error) {
+        free(error);
+    }
+
+    return success;
 }
 
 void* Xvr_LLVMTargetMachineEmitToMemory(Xvr_LLVMTargetMachine* tm,
                                         Xvr_LLVMModuleManager* module,
                                         size_t* out_size) {
-    (void)tm;
-    (void)module;
-    (void)out_size;
-    return NULL;
+    if (!tm || !module || !out_size) {
+        return NULL;
+    }
+
+    LLVMModuleRef mod = Xvr_LLVMModuleManagerGetModule(module);
+    if (!mod) {
+        return NULL;
+    }
+
+    LLVMTargetMachineRef machine = tm->target_machine;
+
+    char* error = NULL;
+    LLVMMemoryBufferRef buffer = NULL;
+
+    bool success = LLVMTargetMachineEmitToMemoryBuffer(
+        machine, mod, LLVMObjectFile, &error, &buffer);
+
+    if (error) {
+        free(error);
+    }
+
+    if (!success || !buffer) {
+        return NULL;
+    }
+
+    *out_size = LLVMGetBufferSize(buffer);
+    void* data = malloc(*out_size);
+    if (data) {
+        memcpy(data, LLVMGetBufferStart(buffer), *out_size);
+    }
+
+    LLVMDisposeMemoryBuffer(buffer);
+
+    return data;
 }
 
 const char* Xvr_LLVMTargetMachineGetDefaultTargetTriple(void) {
