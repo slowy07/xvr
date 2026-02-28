@@ -33,6 +33,8 @@ SOFTWARE.
 #include "xvr_llvm_module_manager.h"
 #include "xvr_llvm_type_mapper.h"
 
+typedef struct Xvr_LLVMControlFlow Xvr_LLVMControlFlow;
+
 /**
  * @brief Opaque structure for expression emitter
  *
@@ -68,56 +70,22 @@ void Xvr_LLVMExpressionEmitterSetFnEmitter(Xvr_LLVMExpressionEmitter* emitter,
                                            void* fn_emitter);
 
 /**
- * @brief Emits IR for any AST node that is an expression
+ * @brief Sets the control flow emitter reference
  * @param emitter Expression emitter
- * @param node AST node to emit
- * @return LLVM value, or NULL on failure
+ * @param control_flow Control flow emitter
  */
+void Xvr_LLVMExpressionEmitterSetControlFlow(Xvr_LLVMExpressionEmitter* emitter,
+                                             Xvr_LLVMControlFlow* cf);
+
+LLVMValueRef Xvr_LLVMExpressionEmitterGetCurrentFunction(
+    Xvr_LLVMExpressionEmitter* emitter);
+
 LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
                                            Xvr_ASTNode* node);
 
-/**
- * @brief Emits IR for a literal node
- * @param emitter Expression emitter
- * @param literal Literal node
- * @return LLVM value, or NULL on failure
- */
 LLVMValueRef Xvr_LLVMExpressionEmitterEmitLiteral(
     Xvr_LLVMExpressionEmitter* emitter, Xvr_NodeLiteral* literal);
 
-/**
- * @brief Emits IR for a binary expression
- * @param emitter Expression emitter
- * @param binary Binary node
- * @return LLVM value, or NULL on failure
- */
-LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
-    Xvr_LLVMExpressionEmitter* emitter, Xvr_NodeBinary* binary);
-
-/**
- * @brief Emits IR for a unary expression
- * @param emitter Expression emitter
- * @param unary Unary node
- * @return LLVM value, or NULL on failure
- */
-LLVMValueRef Xvr_LLVMExpressionEmitterEmitUnary(
-    Xvr_LLVMExpressionEmitter* emitter, Xvr_NodeUnary* unary);
-
-/**
- * @brief Emits IR for a function call
- * @param emitter Expression emitter
- * @param fn_call Function call node
- * @return LLVM value, or NULL on failure
- */
-LLVMValueRef Xvr_LLVMExpressionEmitterEmitFnCall(
-    Xvr_LLVMExpressionEmitter* emitter, Xvr_NodeFnCall* fn_call);
-
-/**
- * @brief Emits IR for an identifier (variable lookup)
- * @param emitter Expression emitter
- * @param identifier Identifier literal
- * @return LLVM value, or NULL on failure
- */
 LLVMValueRef Xvr_LLVMExpressionEmitterEmitIdentifier(
     Xvr_LLVMExpressionEmitter* emitter, Xvr_Literal identifier);
 

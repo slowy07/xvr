@@ -31,6 +31,7 @@ SOFTWARE.
 #include "xvr_ast_node.h"
 #include "xvr_literal.h"
 #include "xvr_llvm_context.h"
+#include "xvr_llvm_control_flow.h"
 #include "xvr_llvm_function_emitter.h"
 #include "xvr_llvm_ir_builder.h"
 #include "xvr_llvm_module_manager.h"
@@ -45,11 +46,12 @@ SOFTWARE.
  * Does not own the referenced objects.
  */
 struct Xvr_LLVMExpressionEmitter {
-    Xvr_LLVMContext* context;        /**< LLVM context */
-    Xvr_LLVMModuleManager* module;   /**< Module manager */
-    Xvr_LLVMIRBuilder* builder;      /**< IR builder */
-    Xvr_LLVMTypeMapper* type_mapper; /**< Type mapper */
-    void* fn_emitter;                /**< Function emitter for var lookup */
+    Xvr_LLVMContext* context;
+    Xvr_LLVMModuleManager* module;
+    Xvr_LLVMIRBuilder* builder;
+    Xvr_LLVMTypeMapper* type_mapper;
+    Xvr_LLVMControlFlow* control_flow;
+    void* fn_emitter;
 };
 
 Xvr_LLVMExpressionEmitter* Xvr_LLVMExpressionEmitterCreate(
@@ -83,6 +85,24 @@ void Xvr_LLVMExpressionEmitterSetFnEmitter(Xvr_LLVMExpressionEmitter* emitter,
         return;
     }
     emitter->fn_emitter = fn_emitter;
+}
+
+void Xvr_LLVMExpressionEmitterSetControlFlow(Xvr_LLVMExpressionEmitter* emitter,
+                                             Xvr_LLVMControlFlow* cf) {
+    if (!emitter) {
+        return;
+    }
+    emitter->control_flow = cf;
+}
+
+LLVMValueRef Xvr_LLVMExpressionEmitterGetCurrentFunction(
+    Xvr_LLVMExpressionEmitter* emitter) {
+    if (!emitter || !emitter->fn_emitter) {
+        return NULL;
+    }
+    Xvr_LLVMFunctionEmitter* fn_emitter =
+        (Xvr_LLVMFunctionEmitter*)emitter->fn_emitter;
+    return Xvr_LLVMFunctionEmitterGetCurrentFunction(fn_emitter);
 }
 
 void Xvr_LLVMExpressionEmitterDestroy(Xvr_LLVMExpressionEmitter* emitter) {
@@ -338,9 +358,22 @@ static LLVMValueRef emit_unary_op(Xvr_LLVMExpressionEmitter* emitter,
         return Xvr_LLVMIRBuilderCreateSub(builder, zero, operand, "neg");
     }
 
-    case XVR_OP_PRINT:
-        /* For print statements, just emit the operand (side effect) */
-        return operand;
+    case XVR_OP_PRINT: {
+        /* For print statements, emit a call to the print function */
+        LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(emitter->module);
+        LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+        LLVMValueRef callee = LLVMGetNamedFunction(module, "print");
+        LLVMTypeRef printf_type =
+            LLVMFunctionType(LLVMInt32TypeInContext(llvm_ctx),
+                             (LLVMTypeRef[]){LLVMPointerType(
+                                 LLVMInt8TypeInContext(llvm_ctx), 0)},
+                             1, true);
+        if (!callee) {
+            callee = LLVMAddFunction(module, "print", printf_type);
+        }
+        return LLVMBuildCall2(llvm_builder, printf_type, callee, &operand, 1,
+                              "print_call");
+    }
 
     default:
         return NULL;
@@ -444,23 +477,57 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
     case XVR_AST_NODE_FN_CALL:
         return Xvr_LLVMExpressionEmitterEmitFnCall(emitter, &node->fnCall);
 
+    case XVR_AST_NODE_IF:
+        if (emitter->control_flow) {
+            Xvr_LLVMControlFlowEmitIf(emitter->control_flow, &node->pathIf);
+        }
+        return NULL;
+
+    case XVR_AST_NODE_WHILE:
+        if (emitter->control_flow) {
+            Xvr_LLVMControlFlowEmitWhile(emitter->control_flow,
+                                         &node->pathWhile);
+        }
+        return NULL;
+
+    case XVR_AST_NODE_FOR:
+        if (emitter->control_flow) {
+            Xvr_LLVMControlFlowEmitFor(emitter->control_flow, &node->pathFor);
+        }
+        return NULL;
+
+    case XVR_AST_NODE_BREAK:
+        if (emitter->control_flow) {
+            Xvr_LLVMControlFlowEmitBreak(emitter->control_flow);
+        }
+        return NULL;
+
+    case XVR_AST_NODE_CONTINUE:
+        if (emitter->control_flow) {
+            Xvr_LLVMControlFlowEmitContinue(emitter->control_flow);
+        }
+        return NULL;
+
+    case XVR_AST_NODE_BLOCK:
+        if (emitter->control_flow && node->block.nodes &&
+            node->block.count > 0) {
+            for (int i = 0; i < node->block.count; i++) {
+                Xvr_LLVMExpressionEmitterEmit(emitter, &node->block.nodes[i]);
+            }
+        }
+        return NULL;
+
     /* Unsupported expression types */
     case XVR_AST_NODE_VAR_DECL:
     case XVR_AST_NODE_GROUPING:
     case XVR_AST_NODE_INDEX:
     case XVR_AST_NODE_ERROR:
-    case XVR_AST_NODE_BLOCK:
     case XVR_AST_NODE_COMPOUND:
     case XVR_AST_NODE_PAIR:
     case XVR_AST_NODE_TERNARY:
     case XVR_AST_NODE_FN_DECL:
     case XVR_AST_NODE_FN_COLLECTION:
     case XVR_AST_NODE_FN_RETURN:
-    case XVR_AST_NODE_IF:
-    case XVR_AST_NODE_WHILE:
-    case XVR_AST_NODE_FOR:
-    case XVR_AST_NODE_BREAK:
-    case XVR_AST_NODE_CONTINUE:
     case XVR_AST_NODE_PREFIX_INCREMENT:
     case XVR_AST_NODE_POSTFIX_INCREMENT:
     case XVR_AST_NODE_PREFIX_DECREMENT:

@@ -116,6 +116,22 @@ LLVMValueRef Xvr_LLVMFunctionEmitterLookupVar(Xvr_LLVMFunctionEmitter* emitter,
     return lookup_local_var(emitter, name);
 }
 
+LLVMValueRef Xvr_LLVMFunctionEmitterGetCurrentFunction(
+    Xvr_LLVMFunctionEmitter* emitter) {
+    if (!emitter) {
+        return NULL;
+    }
+    return emitter->current_function;
+}
+
+void Xvr_LLVMFunctionEmitterSetCurrentFunction(Xvr_LLVMFunctionEmitter* emitter,
+                                               LLVMValueRef function) {
+    if (!emitter) {
+        return;
+    }
+    emitter->current_function = function;
+}
+
 static Xvr_LiteralType get_var_type(Xvr_LLVMFunctionEmitter* emitter,
                                     const char* name) {
     for (int i = 0; i < emitter->local_var_count; i++) {

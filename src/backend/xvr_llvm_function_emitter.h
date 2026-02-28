@@ -57,4 +57,20 @@ bool Xvr_LLVMFunctionEmitterEmitCollection(Xvr_LLVMFunctionEmitter* emitter,
 LLVMValueRef Xvr_LLVMFunctionEmitterLookupVar(Xvr_LLVMFunctionEmitter* emitter,
                                               const char* name);
 
+/**
+ * @brief Gets the current function being emitted
+ * @param emitter Function emitter
+ * @return Current LLVM function, or NULL if none
+ */
+LLVMValueRef Xvr_LLVMFunctionEmitterGetCurrentFunction(
+    Xvr_LLVMFunctionEmitter* emitter);
+
+/**
+ * @brief Sets the current function being emitted
+ * @param emitter Function emitter
+ * @param function LLVM function to set as current
+ */
+void Xvr_LLVMFunctionEmitterSetCurrentFunction(Xvr_LLVMFunctionEmitter* emitter,
+                                               LLVMValueRef function);
+
 #endif

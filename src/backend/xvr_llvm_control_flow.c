@@ -24,6 +24,7 @@ SOFTWARE.
 
 #include "xvr_llvm_control_flow.h"
 
+#include <stdio.h>
 #include <stdlib.h>
 
 #include "xvr_ast_node.h"
@@ -73,6 +74,12 @@ bool Xvr_LLVMControlFlowEmitIf(Xvr_LLVMControlFlow* cf, Xvr_NodeIf* if_node) {
     Xvr_LLVMIRBuilder* builder = cf->builder;
     Xvr_LLVMExpressionEmitter* expr_emitter = cf->expr_emitter;
 
+    LLVMValueRef current_fn =
+        Xvr_LLVMExpressionEmitterGetCurrentFunction(expr_emitter);
+    if (!current_fn) {
+        return false;
+    }
+
     LLVMValueRef condition =
         Xvr_LLVMExpressionEmitterEmit(expr_emitter, if_node->condition);
     if (!condition) {
@@ -80,21 +87,23 @@ bool Xvr_LLVMControlFlowEmitIf(Xvr_LLVMControlFlow* cf, Xvr_NodeIf* if_node) {
     }
 
     LLVMBasicBlockRef then_block =
-        Xvr_LLVMIRBuilderCreateBlock(builder, "then");
+        Xvr_LLVMIRBuilderCreateBlockInFunction(builder, current_fn, "then");
     LLVMBasicBlockRef else_block =
-        Xvr_LLVMIRBuilderCreateBlock(builder, "else");
+        Xvr_LLVMIRBuilderCreateBlockInFunction(builder, current_fn, "else");
     LLVMBasicBlockRef merge_block =
-        Xvr_LLVMIRBuilderCreateBlock(builder, "ifcont");
+        Xvr_LLVMIRBuilderCreateBlockInFunction(builder, current_fn, "ifcont");
 
     Xvr_LLVMIRBuilderCreateCondBr(builder, condition, then_block, else_block);
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, then_block);
     if (if_node->thenPath) {
+        Xvr_LLVMExpressionEmitterEmit(expr_emitter, if_node->thenPath);
     }
     Xvr_LLVMIRBuilderCreateBr(builder, merge_block);
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, else_block);
     if (if_node->elsePath) {
+        Xvr_LLVMExpressionEmitterEmit(expr_emitter, if_node->elsePath);
     }
     Xvr_LLVMIRBuilderCreateBr(builder, merge_block);
 
@@ -112,12 +121,18 @@ bool Xvr_LLVMControlFlowEmitWhile(Xvr_LLVMControlFlow* cf,
     Xvr_LLVMIRBuilder* builder = cf->builder;
     Xvr_LLVMExpressionEmitter* expr_emitter = cf->expr_emitter;
 
-    LLVMBasicBlockRef cond_block =
-        Xvr_LLVMIRBuilderCreateBlock(builder, "while_cond");
-    LLVMBasicBlockRef body_block =
-        Xvr_LLVMIRBuilderCreateBlock(builder, "while_body");
-    LLVMBasicBlockRef end_block =
-        Xvr_LLVMIRBuilderCreateBlock(builder, "while_end");
+    LLVMValueRef current_fn =
+        Xvr_LLVMExpressionEmitterGetCurrentFunction(expr_emitter);
+    if (!current_fn) {
+        return false;
+    }
+
+    LLVMBasicBlockRef cond_block = Xvr_LLVMIRBuilderCreateBlockInFunction(
+        builder, current_fn, "while_cond");
+    LLVMBasicBlockRef body_block = Xvr_LLVMIRBuilderCreateBlockInFunction(
+        builder, current_fn, "while_body");
+    LLVMBasicBlockRef end_block = Xvr_LLVMIRBuilderCreateBlockInFunction(
+        builder, current_fn, "while_end");
 
     Xvr_LLVMIRBuilderCreateBr(builder, cond_block);
 
@@ -131,6 +146,7 @@ bool Xvr_LLVMControlFlowEmitWhile(Xvr_LLVMControlFlow* cf,
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, body_block);
     if (while_node->thenPath) {
+        Xvr_LLVMExpressionEmitterEmit(expr_emitter, while_node->thenPath);
     }
     Xvr_LLVMIRBuilderCreateBr(builder, cond_block);
 
@@ -148,17 +164,23 @@ bool Xvr_LLVMControlFlowEmitFor(Xvr_LLVMControlFlow* cf,
     Xvr_LLVMIRBuilder* builder = cf->builder;
     Xvr_LLVMExpressionEmitter* expr_emitter = cf->expr_emitter;
 
+    LLVMValueRef current_fn =
+        Xvr_LLVMExpressionEmitterGetCurrentFunction(expr_emitter);
+    if (!current_fn) {
+        return false;
+    }
+
     if (for_node->preClause) {
     }
 
     LLVMBasicBlockRef cond_block =
-        Xvr_LLVMIRBuilderCreateBlock(builder, "for_cond");
+        Xvr_LLVMIRBuilderCreateBlockInFunction(builder, current_fn, "for_cond");
     LLVMBasicBlockRef body_block =
-        Xvr_LLVMIRBuilderCreateBlock(builder, "for_body");
+        Xvr_LLVMIRBuilderCreateBlockInFunction(builder, current_fn, "for_body");
     LLVMBasicBlockRef inc_block =
-        Xvr_LLVMIRBuilderCreateBlock(builder, "for_inc");
+        Xvr_LLVMIRBuilderCreateBlockInFunction(builder, current_fn, "for_inc");
     LLVMBasicBlockRef end_block =
-        Xvr_LLVMIRBuilderCreateBlock(builder, "for_end");
+        Xvr_LLVMIRBuilderCreateBlockInFunction(builder, current_fn, "for_end");
 
     Xvr_LLVMIRBuilderCreateBr(builder, cond_block);
 
@@ -175,6 +197,7 @@ bool Xvr_LLVMControlFlowEmitFor(Xvr_LLVMControlFlow* cf,
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, body_block);
     if (for_node->thenPath) {
+        Xvr_LLVMExpressionEmitterEmit(expr_emitter, for_node->thenPath);
     }
     Xvr_LLVMIRBuilderCreateBr(builder, inc_block);
 

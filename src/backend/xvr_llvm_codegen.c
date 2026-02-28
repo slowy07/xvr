@@ -148,6 +148,9 @@ Xvr_LLVMCodegen* Xvr_LLVMCodegenCreate(const char* module_name) {
         return NULL;
     }
 
+    Xvr_LLVMExpressionEmitterSetControlFlow(codegen->expr_emitter,
+                                            codegen->control_flow);
+
     codegen->optimizer = Xvr_LLVMOptimizerCreate();
     if (!codegen->optimizer) {
         Xvr_LLVMControlFlowDestroy(codegen->control_flow);
@@ -257,6 +260,8 @@ static bool ensure_main_function(Xvr_LLVMCodegen* codegen) {
     LLVMValueRef main_fn = LLVMGetNamedFunction(module, "main");
     LLVMBasicBlockRef entry = LLVMAppendBasicBlock(main_fn, "entry");
     LLVMPositionBuilderAtEnd(builder, entry);
+
+    Xvr_LLVMFunctionEmitterSetCurrentFunction(codegen->fn_emitter, main_fn);
 
     main_created = true;
     return true;
