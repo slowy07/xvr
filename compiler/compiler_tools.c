@@ -22,7 +22,7 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#include "inter_tools.h"
+#include "compiler_tools.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -111,7 +111,7 @@ int Xvr_writeFile(const char* path, const unsigned char* bytes, size_t size) {
 }
 
 #ifdef XVR_EXPORT_LLVM
-static Xvr_ASTNode** parse_to_ast(const char* source, int* out_count) {
+Xvr_ASTNode** parse_to_ast(const char* source, int* out_count) {
     Xvr_Lexer lexer;
     Xvr_Parser parser;
 
@@ -175,7 +175,7 @@ void Xvr_compileToLLVMIR(const char* source) {
     size_t ir_len = 0;
     char* ir = Xvr_LLVMCodegenPrintIR(codegen, &ir_len);
     if (ir) {
-        printf("\nLLVM ir coba: \n%s\n", ir);
+        printf("%s\n", ir);
         free(ir);
     }
 
@@ -289,6 +289,55 @@ void Xvr_runSource(const char* source) {
         Xvr_compileToLLVMIR(source);
         return;
     }
+
+    int nodeCount = 0;
+    Xvr_ASTNode** nodes = parse_to_ast(source, &nodeCount);
+    if (!nodes) {
+        fprintf(stderr, XVR_CC_ERROR "Failed to parse source\n" XVR_CC_RESET);
+        return;
+    }
+
+    Xvr_LLVMCodegen* codegen = Xvr_LLVMCodegenCreate("xvr_module");
+    if (!codegen) {
+        fprintf(stderr, XVR_CC_ERROR "Failed to create codegen\n" XVR_CC_RESET);
+        for (int i = 0; i < nodeCount; i++) {
+            Xvr_freeASTNode(nodes[i]);
+        }
+        free(nodes);
+        return;
+    }
+
+    Xvr_LLVMCodegenSetOptimizationLevel(codegen, XVR_LLVM_OPT_O2);
+
+    for (int i = 0; i < nodeCount; i++) {
+        Xvr_LLVMCodegenEmitAST(codegen, nodes[i]);
+    }
+
+    if (Xvr_LLVMCodegenHasError(codegen)) {
+        fprintf(stderr, XVR_CC_ERROR "%s\n" XVR_CC_RESET,
+                Xvr_LLVMCodegenGetError(codegen));
+        Xvr_LLVMCodegenDestroy(codegen);
+        for (int i = 0; i < nodeCount; i++) {
+            Xvr_freeASTNode(nodes[i]);
+        }
+        free(nodes);
+        return;
+    }
+
+    if (Xvr_LLVMCodegenExecuteJIT(codegen)) {
+        Xvr_LLVMCodegenDestroy(codegen);
+        for (int i = 0; i < nodeCount; i++) {
+            Xvr_freeASTNode(nodes[i]);
+        }
+        free(nodes);
+        return;
+    }
+
+    Xvr_LLVMCodegenDestroy(codegen);
+    for (int i = 0; i < nodeCount; i++) {
+        Xvr_freeASTNode(nodes[i]);
+    }
+    free(nodes);
 #endif
 
     size_t size = 0;

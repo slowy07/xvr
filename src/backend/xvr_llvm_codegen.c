@@ -24,6 +24,9 @@ SOFTWARE.
 
 #include "xvr_llvm_codegen.h"
 
+#include <dlfcn.h>
+#include <llvm-c/Target.h>
+#include <llvm-c/TargetMachine.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -165,6 +168,37 @@ Xvr_LLVMCodegen* Xvr_LLVMCodegenCreate(const char* module_name) {
     }
 
     Xvr_LLVMOptimizerSetLevel(codegen->optimizer, XVR_LLVM_OPT_O2);
+
+    Xvr_LLVMTargetConfig* target_config = Xvr_LLVMTargetConfigCreate();
+    if (!target_config) {
+        Xvr_LLVMOptimizerDestroy(codegen->optimizer);
+        Xvr_LLVMControlFlowDestroy(codegen->control_flow);
+        Xvr_LLVMFunctionEmitterDestroy(codegen->fn_emitter);
+        Xvr_LLVMExpressionEmitterDestroy(codegen->expr_emitter);
+        Xvr_LLVMTypeMapperDestroy(codegen->type_mapper);
+        Xvr_LLVMIRBuilderDestroy(codegen->builder);
+        Xvr_LLVMModuleManagerDestroy(codegen->module);
+        Xvr_LLVMContextDestroy(codegen->context);
+        free(codegen);
+        return NULL;
+    }
+    Xvr_LLVMTargetConfigSetReloc(target_config, "PIC");
+    Xvr_LLVMTargetConfigSetCodeModel(target_config, "jitdefault");
+
+    codegen->target_machine = Xvr_LLVMTargetMachineCreate(target_config);
+    if (!codegen->target_machine) {
+        Xvr_LLVMTargetConfigDestroy(target_config);
+        Xvr_LLVMOptimizerDestroy(codegen->optimizer);
+        Xvr_LLVMControlFlowDestroy(codegen->control_flow);
+        Xvr_LLVMFunctionEmitterDestroy(codegen->fn_emitter);
+        Xvr_LLVMExpressionEmitterDestroy(codegen->expr_emitter);
+        Xvr_LLVMTypeMapperDestroy(codegen->type_mapper);
+        Xvr_LLVMIRBuilderDestroy(codegen->builder);
+        Xvr_LLVMModuleManagerDestroy(codegen->module);
+        Xvr_LLVMContextDestroy(codegen->context);
+        free(codegen);
+        return NULL;
+    }
 
     codegen->has_error = false;
     codegen->error_message = NULL;
@@ -328,13 +362,27 @@ bool Xvr_LLVMCodegenWriteBitcode(Xvr_LLVMCodegen* codegen,
 
 bool Xvr_LLVMCodegenWriteObjectFile(Xvr_LLVMCodegen* codegen,
                                     const char* filepath) {
-    (void)codegen;
-    (void)filepath;
-    return false;
+    if (!codegen || !filepath) {
+        return false;
+    }
+    if (!codegen->target_machine) {
+        return false;
+    }
+    finalize_main_function(codegen);
+    return Xvr_LLVMTargetMachineEmitToFile(codegen->target_machine,
+                                           codegen->module, filepath, 0);
 }
 
 bool Xvr_LLVMCodegenExecuteJIT(Xvr_LLVMCodegen* codegen) {
-    (void)codegen;
+    if (!codegen) {
+        return false;
+    }
+
+    LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(codegen->module);
+    if (!module) {
+        return false;
+    }
+
     return false;
 }
 

@@ -4,7 +4,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "inter_tools.h"
+#include "compiler_tools.h"
 #include "xvr_common.h"
 #include "xvr_interpreter.h"
 #include "xvr_literal.h"

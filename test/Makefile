@@ -25,9 +25,9 @@ TEST_OBJECTS = $(OBJDIR)/test_all.o \
                $(OBJDIR)/test_llvm_backend.o \
                $(OBJDIR)/test_interpreter.o
 
-# Inter library object files (excluding inter_main.o which has main)
-INTER_OBJS = ../inter/inter_tools.o ../inter/lib_about.o \
-             ../inter/lib_runner.o ../inter/lib_standard.o ../inter/lib_timer.o
+# compilere library object files (excluding main_compiler.o which has main)
+COMPILER_OBJS = ../compiler/compiler_tools.o ../compiler/lib_about.o \
+             ../compiler/lib_runner.o ../compiler/lib_standard.o ../compiler/lib_timer.o
 
 # Individual test executables
 ALL_TESTS = $(OUT)/test_all
@@ -41,8 +41,8 @@ all: ../out/libxvr.a ../out/libxvr.so test_all
 # Combined test_all
 test_all: $(OUT)/test_all
 
-$(OUT)/test_all: $(TEST_OBJECTS) $(INTER_OBJS) ../out/libxvr.a
-	$(CC) -o $@ $(TEST_OBJECTS) $(INTER_OBJS) ../out/libxvr.a $(LDFLAGS)
+$(OUT)/test_all: $(TEST_OBJECTS) $(COMPILER_OBJS) ../out/libxvr.a
+	$(CC) -o $@ $(TEST_OBJECTS) $(COMPILER_OBJS) ../out/libxvr.a $(LDFLAGS)
 
 $(OBJDIR)/test_all.o: test_all.c
 	@mkdir -p $(OBJDIR)

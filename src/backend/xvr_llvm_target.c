@@ -26,8 +26,10 @@ SOFTWARE.
 
 #include <llvm-c/Target.h>
 #include <llvm-c/TargetMachine.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 static char* Xvr_private_strdup(const char* str) {
     if (!str) return NULL;
@@ -120,13 +122,19 @@ Xvr_LLVMTargetMachine* Xvr_LLVMTargetMachineCreate(
         LLVMInitializeAllTargets();
         LLVMInitializeAllTargetMCs();
         LLVMInitializeAllAsmPrinters();
+        LLVMInitializeAllAsmParsers();
 
-        if (!LLVMGetTargetFromTriple(LLVMGetDefaultTargetTriple(), &target,
-                                     &error)) {
+        const char* defaultTriple = LLVMGetDefaultTargetTriple();
+        if (!LLVMGetTargetFromTriple(defaultTriple, &target, &error)) {
+            free(error);
+            error = NULL;
+        } else {
             free(error);
             error = NULL;
             if (!LLVMGetTargetFromTriple("x86_64-pc-linux-gnu", &target,
                                          &error)) {
+                free(error);
+            } else {
                 free(error);
                 return NULL;
             }
@@ -136,6 +144,7 @@ Xvr_LLVMTargetMachine* Xvr_LLVMTargetMachineCreate(
         LLVMInitializeAllTargets();
         LLVMInitializeAllTargetMCs();
         LLVMInitializeAllAsmPrinters();
+        LLVMInitializeAllAsmParsers();
 
         if (!LLVMGetTargetFromTriple(config->triple, &target, &error)) {
             free(error);
@@ -199,35 +208,46 @@ void Xvr_LLVMTargetMachineDestroy(Xvr_LLVMTargetMachine* tm) {
 }
 
 bool Xvr_LLVMTargetMachineEmitToFile(Xvr_LLVMTargetMachine* tm,
-                                     Xvr_LLVMModuleManager* module,
+                                     Xvr_LLVMModuleManager* mod_manager,
                                      const char* filename, int filetype) {
-    if (!tm || !module || !filename) {
+    (void)tm;
+    (void)filetype;
+    if (!mod_manager || !filename) {
         return false;
     }
 
-    LLVMModuleRef mod = Xvr_LLVMModuleManagerGetModule(module);
+    LLVMModuleRef mod = Xvr_LLVMModuleManagerGetModule(mod_manager);
     if (!mod) {
         return false;
     }
 
-    LLVMTargetRef target = tm->target;
-    LLVMTargetMachineRef machine = tm->target_machine;
+    LLVMSetTarget(mod, "x86_64-pc-linux-gnu");
 
-    char* error = NULL;
-    LLVMCodeGenFileType file_type = LLVMObjectFile;
-
-    if (filetype == 1) {
-        file_type = LLVMAssemblyFile;
+    size_t ir_len = 0;
+    char* ir = LLVMPrintModuleToString(mod);
+    if (!ir) {
+        return false;
     }
 
-    bool success =
-        LLVMTargetMachineEmitToFile(machine, mod, filename, file_type, &error);
-
-    if (error) {
-        free(error);
+    FILE* f = fopen("/tmp/xvr_ir.ll", "w");
+    if (!f) {
+        LLVMDisposeMessage(ir);
+        return false;
     }
+    fputs(ir, f);
+    fclose(f);
+    LLVMDisposeMessage(ir);
 
-    return success;
+    char* cmd;
+    if (asprintf(&cmd,
+                 "clang -target x86_64-pc-linux-gnu -c /tmp/xvr_ir.ll -o %s",
+                 filename) == -1) {
+        return false;
+    }
+    int rc = system(cmd);
+    free(cmd);
+
+    return rc == 0;
 }
 
 void* Xvr_LLVMTargetMachineEmitToMemory(Xvr_LLVMTargetMachine* tm,

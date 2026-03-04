@@ -45,12 +45,13 @@ Xvr_CommandLine Xvr_commandLine;
 
 Xvr_CommandLine Xvr_commandLine = {
     // default values
-    .error = false,      .help = false,
-    .version = false,    .binaryFile = NULL,
-    .sourceFile = NULL,  .compileFile = NULL,
-    .outFile = "out.xb", .source = NULL,
-    .initialfile = NULL, .enablePrintNewline = true,
-    .verbose = false,    .dumpLLVM = false};
+    .error = false,       .help = false,
+    .version = false,     .binaryFile = NULL,
+    .sourceFile = NULL,   .compileFile = NULL,
+    .outFile = NULL,      .source = NULL,
+    .initialfile = NULL,  .enablePrintNewline = true,
+    .verbose = false,     .dumpLLVM = false,
+    .compileOnly = false, .emitType = NULL};
 
 void Xvr_initCommandLine(int argc, const char* argv[]) {
     for (int i = 1; i < argc; i++) {  // start at 1 to skip the program name
@@ -89,10 +90,14 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
             continue;
         }
 
-        if ((!strcmp(argv[i], "-c") || !strcmp(argv[i], "--compile")) &&
-            i + 1 < argc) {
-            Xvr_commandLine.compileFile = (char*)argv[i + 1];
-            i++;
+        if (!strcmp(argv[i], "-c")) {
+            Xvr_commandLine.compileOnly = true;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
+        if (!strcmp(argv[i], "-r")) {
+            Xvr_commandLine.compileAndRun = true;
             Xvr_commandLine.error = false;
             continue;
         }
@@ -115,6 +120,26 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
 
         if (!strcmp(argv[i], "-n")) {
             Xvr_commandLine.enablePrintNewline = false;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
+        if ((!strcmp(argv[i], "-e") || !strcmp(argv[i], "--emit")) &&
+            i + 1 < argc) {
+            Xvr_commandLine.emitType = (char*)argv[i + 1];
+            i++;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
+        if (!strcmp(argv[i], "-S")) {
+            Xvr_commandLine.dumpLLVM = true;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
+        if (!strcmp(argv[i], "-c")) {
+            Xvr_commandLine.compileOnly = true;
             Xvr_commandLine.error = false;
             continue;
         }

@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "inter_tools.h"
+#include "../compiler/compiler_tools.h"
 #include "xvr_compiler.h"
 #include "xvr_console_colors.h"
 #include "xvr_interpreter.h"

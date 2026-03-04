@@ -45,9 +45,10 @@ SOFTWARE.
  * caller file paths subjects to OS security restrictions.
  */
 
-#ifndef INTER_TOOLS_H
-#define INTER_TOOLS_H
+#ifndef COMPILER_TOOLS_H
+#define COMPILER_TOOLS_H
 
+#include "xvr_ast_node.h"
 #include "xvr_common.h"
 
 #ifdef __cplusplus
@@ -146,8 +147,12 @@ void Xvr_runSourceFile(const char* fname);
  */
 char* Xvr_readLine(char* buffer, int size);
 
+#ifdef XVR_EXPORT_LLVM
+Xvr_ASTNode** parse_to_ast(const char* source, int* out_count);
+#endif
+
 #ifdef __cplusplus
 }
 #endif  // __cplusplus
 
-#endif  // !INTER_TOOLS_H
+#endif  // !COMPILER_TOOLS_H

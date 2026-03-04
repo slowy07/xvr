@@ -147,6 +147,9 @@ typedef struct {
     bool enablePrintNewline;
     bool verbose;
     bool dumpLLVM;
+    bool compileOnly;
+    bool compileAndRun;
+    char* emitType;
 } Xvr_CommandLine;
 
 /**

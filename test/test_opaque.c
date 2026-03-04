@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "inter_tools.h"
+#include "../compiler/compiler_tools.h"
 #include "xvr_console_colors.h"
 #include "xvr_interpreter.h"
 #include "xvr_literal.h"

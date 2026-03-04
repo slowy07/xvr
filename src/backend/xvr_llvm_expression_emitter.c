@@ -283,6 +283,17 @@ static LLVMValueRef emit_binary_op(Xvr_LLVMExpressionEmitter* emitter,
         }
         return Xvr_LLVMIRBuilderCreateSDiv(emitter->builder, lhs, rhs, "srem");
 
+    /* Logical operations */
+    case XVR_OP_AND: {
+        LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+        return LLVMBuildAnd(llvm_builder, lhs, rhs, "and");
+    }
+
+    case XVR_OP_OR: {
+        LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+        return LLVMBuildOr(llvm_builder, lhs, rhs, "or");
+    }
+
     /* Comparison operations (signed) */
     case XVR_OP_COMPARE_LESS:
         return Xvr_LLVMIRBuilderCreateICmpSLT(builder, lhs, rhs, "lt");
@@ -307,10 +318,81 @@ static LLVMValueRef emit_binary_op(Xvr_LLVMExpressionEmitter* emitter,
     }
 }
 
+static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
+                                Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    Xvr_LLVMIRBuilder* builder = emitter->builder;
+    LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+    LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(emitter->module);
+    LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+
+    /* Get or create printf function */
+    LLVMValueRef printf_fn = LLVMGetNamedFunction(module, "printf");
+    if (!printf_fn) {
+        LLVMTypeRef printf_type =
+            LLVMFunctionType(LLVMInt32TypeInContext(llvm_ctx),
+                             (LLVMTypeRef[]){LLVMPointerType(
+                                 LLVMInt8TypeInContext(llvm_ctx), 0)},
+                             1, true);
+        printf_fn = LLVMAddFunction(module, "printf", printf_type);
+    }
+
+    /* Count arguments */
+    int arg_count = 0;
+    if (args->type == XVR_AST_NODE_COMPOUND) {
+        arg_count = args->compound.count;
+    }
+
+    if (arg_count == 0) {
+        return NULL;
+    }
+
+    /* Emit format string (first arg) */
+    LLVMValueRef format_str =
+        Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    if (!format_str) {
+        return NULL;
+    }
+
+    LLVMValueRef* call_args = NULL;
+    int num_extra_args = arg_count - 1;
+    if (num_extra_args > 0) {
+        call_args = malloc(sizeof(LLVMValueRef) * (arg_count));
+        call_args[0] = format_str;
+        for (int i = 1; i < arg_count; i++) {
+            call_args[i] = Xvr_LLVMExpressionEmitterEmit(
+                emitter, &args->compound.nodes[i]);
+        }
+    }
+
+    LLVMTypeRef printf_type = LLVMFunctionType(
+        LLVMInt32TypeInContext(llvm_ctx),
+        (LLVMTypeRef[]){LLVMPointerType(LLVMInt8TypeInContext(llvm_ctx), 0)}, 1,
+        true);
+
+    LLVMValueRef result =
+        LLVMBuildCall2(llvm_builder, printf_type, printf_fn, call_args,
+                       num_extra_args > 0 ? arg_count : 0, "printf_call");
+
+    if (call_args) {
+        free(call_args);
+    }
+
+    return result;
+}
+
 LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
     Xvr_LLVMExpressionEmitter* emitter, Xvr_NodeBinary* binary) {
     if (!emitter || !binary) {
         return NULL;
+    }
+
+    /* Handle PRINTF specially - it's a variadic function call */
+    if (binary->opcode == XVR_OP_PRINTF) {
+        return emit_printf(emitter, binary->left);
     }
 
     /* Recursively emit left operand */
@@ -359,17 +441,17 @@ static LLVMValueRef emit_unary_op(Xvr_LLVMExpressionEmitter* emitter,
     }
 
     case XVR_OP_PRINT: {
-        /* For print statements, emit a call to the print function */
+        /* For print statements, emit a call to printf function */
         LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(emitter->module);
         LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
-        LLVMValueRef callee = LLVMGetNamedFunction(module, "print");
+        LLVMValueRef callee = LLVMGetNamedFunction(module, "printf");
         LLVMTypeRef printf_type =
             LLVMFunctionType(LLVMInt32TypeInContext(llvm_ctx),
                              (LLVMTypeRef[]){LLVMPointerType(
                                  LLVMInt8TypeInContext(llvm_ctx), 0)},
                              1, true);
         if (!callee) {
-            callee = LLVMAddFunction(module, "print", printf_type);
+            callee = LLVMAddFunction(module, "printf", printf_type);
         }
         return LLVMBuildCall2(llvm_builder, printf_type, callee, &operand, 1,
                               "print_call");
@@ -426,8 +508,9 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitIdentifier(
         return NULL;
     }
 
+    LLVMTypeRef var_type = LLVMGetElementType(LLVMTypeOf(var_ptr));
     LLVMBuilderRef builder = Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
-    return LLVMBuildLoad2(builder, LLVMTypeOf(var_ptr), var_ptr, var_name);
+    return LLVMBuildLoad2(builder, var_type, var_ptr, var_name);
 }
 
 LLVMValueRef Xvr_LLVMExpressionEmitterEmitFnCall(
