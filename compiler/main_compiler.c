@@ -248,6 +248,13 @@ int main(int argc, const char* argv[]) {
                 "    int result = vprintf(fmt, args);\n"
                 "    va_end(args);\n"
                 "    return result;\n"
+                "}\n"
+                "int printf(const char* fmt, ...) {\n"
+                "    va_list args;\n"
+                "    va_start(args, fmt);\n"
+                "    int result = vprintf(fmt, args);\n"
+                "    va_end(args);\n"
+                "    return result;\n"
                 "}\n";
 
             FILE* rf = fopen(runtime_src, "w");

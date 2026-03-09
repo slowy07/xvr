@@ -132,6 +132,15 @@ void Xvr_LLVMFunctionEmitterSetCurrentFunction(Xvr_LLVMFunctionEmitter* emitter,
     emitter->current_function = function;
 }
 
+void Xvr_LLVMFunctionEmitterAddLocalVar(Xvr_LLVMFunctionEmitter* emitter,
+                                        const char* name, LLVMValueRef alloca,
+                                        Xvr_LiteralType type) {
+    if (!emitter || !name || !alloca) {
+        return;
+    }
+    add_local_var(emitter, name, alloca, type);
+}
+
 static Xvr_LiteralType get_var_type(Xvr_LLVMFunctionEmitter* emitter,
                                     const char* name) {
     for (int i = 0; i < emitter->local_var_count; i++) {

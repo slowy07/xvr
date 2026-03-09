@@ -318,6 +318,40 @@ static void finalize_main_function(Xvr_LLVMCodegen* codegen) {
 static bool emit_main_function(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* stmt) {
     ensure_main_function(codegen);
 
+    if (stmt->type == XVR_AST_NODE_VAR_DECL) {
+        Xvr_NodeVarDecl* varDecl = &stmt->varDecl;
+        const char* var_name = NULL;
+        if (varDecl->identifier.type == XVR_LITERAL_IDENTIFIER &&
+            varDecl->identifier.as.string.ptr) {
+            var_name = (const char*)varDecl->identifier.as.string.ptr->data;
+        }
+
+        if (var_name && varDecl->expression) {
+            Xvr_LLVMExpressionEmitter* expr_emitter = codegen->expr_emitter;
+            LLVMValueRef init_value = Xvr_LLVMExpressionEmitterEmit(
+                expr_emitter, varDecl->expression);
+            if (init_value) {
+                LLVMTypeRef var_type = LLVMTypeOf(init_value);
+                fprintf(stderr,
+                        "DEBUG codegen: init_value = %p, var_type = %p, type "
+                        "kind = %d\n",
+                        (void*)init_value, (void*)var_type,
+                        LLVMGetTypeKind(var_type));
+                LLVMValueRef alloca = Xvr_LLVMIRBuilderCreateAlloca(
+                    codegen->builder, var_type, var_name);
+                Xvr_LLVMIRBuilderCreateStore(codegen->builder, init_value,
+                                             alloca);
+                Xvr_LiteralType varType = XVR_LITERAL_INTEGER;
+                if (varDecl->typeLiteral.type == XVR_LITERAL_TYPE) {
+                    varType = XVR_AS_TYPE(varDecl->typeLiteral).typeOf;
+                }
+                Xvr_LLVMFunctionEmitterAddLocalVar(codegen->fn_emitter,
+                                                   var_name, alloca, varType);
+            }
+        }
+        return true;
+    }
+
     Xvr_LLVMExpressionEmitterEmit(codegen->expr_emitter, stmt);
 
     return true;

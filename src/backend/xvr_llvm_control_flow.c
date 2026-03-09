@@ -134,13 +134,18 @@ bool Xvr_LLVMControlFlowEmitWhile(Xvr_LLVMControlFlow* cf,
     LLVMBasicBlockRef end_block = Xvr_LLVMIRBuilderCreateBlockInFunction(
         builder, current_fn, "while_end");
 
+    LLVMBasicBlockRef after_block = Xvr_LLVMIRBuilderCreateBlockInFunction(
+        builder, current_fn, "while_after");
+
     Xvr_LLVMIRBuilderCreateBr(builder, cond_block);
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, cond_block);
     LLVMValueRef condition =
         Xvr_LLVMExpressionEmitterEmit(expr_emitter, while_node->condition);
+
+    LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(cf->context);
     if (!condition) {
-        return false;
+        condition = LLVMConstInt(LLVMInt1TypeInContext(llvm_ctx), 0, false);
     }
     Xvr_LLVMIRBuilderCreateCondBr(builder, condition, body_block, end_block);
 
@@ -151,6 +156,9 @@ bool Xvr_LLVMControlFlowEmitWhile(Xvr_LLVMControlFlow* cf,
     Xvr_LLVMIRBuilderCreateBr(builder, cond_block);
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, end_block);
+    Xvr_LLVMIRBuilderCreateBr(builder, after_block);
+
+    Xvr_LLVMIRBuilderSetInsertPoint(builder, after_block);
 
     return true;
 }

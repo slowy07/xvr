@@ -2,7 +2,8 @@
 
 ## Feature
 
-- intermediate bytecode interpretation
+- AOT (Ahead-of-Time) compilation using LLVM IR
+- Compiles .xvr source files to native executables
 
 > [!NOTE]
 > For more information about project you can check the [docs](docs) for documentation about xvr, and you can check the sample code from [code](code) directory
@@ -12,25 +13,30 @@
 > [!NOTE]
 > For Windows using (mingw32 & Cygwin), For linux or Unix already support compiler
 
-Build interpreter
+Build the compiler:
 ```sh
-# make the interpreter
-make inter
-# the compilation output
-# can check on the /out directory
-# including external library
+# Build the xvr compiler (default target)
+make
+
+# The compiler output is in ./out/xvr
 ```
 
-```
-make tests-cases
-make inter
+## Usage
+
+```sh
+# Compile and run a .xvr file (default)
+./out/xvr source.xvr
+
+# Compile to object file only
+./out/xvr -c source.xvr -o output.o
+
+# Dump LLVM IR
+./out/xvr -S source.xvr
 ```
 
-## Say wello with Xvr
+## Say hello with Xvr
 ```xvr
-proc say_hello(name: string): string {
-    return "wello " + name;
-}
+print("Hello, World!");
 ```
 
 ## Print with Format Specifiers

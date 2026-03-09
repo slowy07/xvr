@@ -73,4 +73,15 @@ LLVMValueRef Xvr_LLVMFunctionEmitterGetCurrentFunction(
 void Xvr_LLVMFunctionEmitterSetCurrentFunction(Xvr_LLVMFunctionEmitter* emitter,
                                                LLVMValueRef function);
 
+/**
+ * @brief Adds a local variable to the function's symbol table
+ * @param emitter Function emitter
+ * @param name Variable name
+ * @param alloca LLVM alloca for the variable
+ * @param type XVR literal type
+ */
+void Xvr_LLVMFunctionEmitterAddLocalVar(Xvr_LLVMFunctionEmitter* emitter,
+                                        const char* name, LLVMValueRef alloca,
+                                        Xvr_LiteralType type);
+
 #endif

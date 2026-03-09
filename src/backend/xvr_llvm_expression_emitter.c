@@ -54,6 +54,10 @@ struct Xvr_LLVMExpressionEmitter {
     void* fn_emitter;
 };
 
+/* Forward declaration */
+static LLVMValueRef lookup_var(Xvr_LLVMExpressionEmitter* emitter,
+                               const char* name);
+
 Xvr_LLVMExpressionEmitter* Xvr_LLVMExpressionEmitterCreate(
     Xvr_LLVMContext* ctx, Xvr_LLVMModuleManager* module,
     Xvr_LLVMIRBuilder* builder, Xvr_LLVMTypeMapper* type_mapper) {
@@ -395,6 +399,76 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
         return emit_printf(emitter, binary->left);
     }
 
+    /* Handle variable assignment: x = expr, x += expr, etc. */
+    if (binary->opcode == XVR_OP_VAR_ASSIGN ||
+        binary->opcode == XVR_OP_VAR_ADDITION_ASSIGN ||
+        binary->opcode == XVR_OP_VAR_SUBTRACTION_ASSIGN ||
+        binary->opcode == XVR_OP_VAR_MULTIPLICATION_ASSIGN ||
+        binary->opcode == XVR_OP_VAR_DIVISION_ASSIGN ||
+        binary->opcode == XVR_OP_VAR_MODULO_ASSIGN) {
+        /* Get the variable pointer for the left side */
+        if (binary->left && binary->left->type == XVR_AST_NODE_LITERAL &&
+            binary->left->atomic.literal.type == XVR_LITERAL_IDENTIFIER) {
+            const char* var_name =
+                (const char*)binary->left->atomic.literal.as.string.ptr->data;
+
+            /* Look up the variable */
+            LLVMValueRef var_ptr = lookup_var(emitter, var_name);
+            if (!var_ptr) {
+                return NULL;
+            }
+
+            /* Evaluate the right side */
+            LLVMValueRef rhs =
+                Xvr_LLVMExpressionEmitterEmit(emitter, binary->right);
+            if (!rhs) {
+                return NULL;
+            }
+
+            /* Handle compound assignments (+=, -=, etc.) */
+            LLVMValueRef value_to_store = rhs;
+            if (binary->opcode != XVR_OP_VAR_ASSIGN) {
+                /* Load current value and compute with rhs */
+                LLVMTypeRef var_type = LLVMGetElementType(LLVMTypeOf(var_ptr));
+                LLVMBuilderRef llvm_builder =
+                    Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+                LLVMValueRef current =
+                    LLVMBuildLoad2(llvm_builder, var_type, var_ptr, var_name);
+
+                switch (binary->opcode) {
+                case XVR_OP_VAR_ADDITION_ASSIGN:
+                    value_to_store = Xvr_LLVMIRBuilderCreateAdd(
+                        emitter->builder, current, rhs, "add");
+                    break;
+                case XVR_OP_VAR_SUBTRACTION_ASSIGN:
+                    value_to_store = Xvr_LLVMIRBuilderCreateSub(
+                        emitter->builder, current, rhs, "sub");
+                    break;
+                case XVR_OP_VAR_MULTIPLICATION_ASSIGN:
+                    value_to_store = Xvr_LLVMIRBuilderCreateMul(
+                        emitter->builder, current, rhs, "mul");
+                    break;
+                case XVR_OP_VAR_DIVISION_ASSIGN:
+                    value_to_store = Xvr_LLVMIRBuilderCreateSDiv(
+                        emitter->builder, current, rhs, "sdiv");
+                    break;
+                case XVR_OP_VAR_MODULO_ASSIGN:
+                    value_to_store = Xvr_LLVMIRBuilderCreateSDiv(
+                        emitter->builder, current, rhs, "srem");
+                    break;
+                default:
+                    break;
+                }
+            }
+
+            /* Store the value */
+            Xvr_LLVMIRBuilderCreateStore(emitter->builder, value_to_store,
+                                         var_ptr);
+            return value_to_store;
+        }
+        return NULL;
+    }
+
     /* Recursively emit left operand */
     LLVMValueRef lhs = Xvr_LLVMExpressionEmitterEmit(emitter, binary->left);
     if (!lhs) {
@@ -441,9 +515,17 @@ static LLVMValueRef emit_unary_op(Xvr_LLVMExpressionEmitter* emitter,
     }
 
     case XVR_OP_PRINT: {
-        /* For print statements, emit a call to printf function */
+        /* For print statements, emit a call to printf function with format
+         * string */
+        if (!operand) {
+            return NULL;
+        }
         LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(emitter->module);
         LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+        LLVMContextRef llvm_ctx =
+            Xvr_LLVMContextGetLLVMContext(emitter->context);
+
+        /* Get or create printf function */
         LLVMValueRef callee = LLVMGetNamedFunction(module, "printf");
         LLVMTypeRef printf_type =
             LLVMFunctionType(LLVMInt32TypeInContext(llvm_ctx),
@@ -453,7 +535,43 @@ static LLVMValueRef emit_unary_op(Xvr_LLVMExpressionEmitter* emitter,
         if (!callee) {
             callee = LLVMAddFunction(module, "printf", printf_type);
         }
-        return LLVMBuildCall2(llvm_builder, printf_type, callee, &operand, 1,
+
+        /* Create format string based on operand type */
+        LLVMTypeRef operand_type = LLVMTypeOf(operand);
+        const char* format_str;
+        LLVMTypeKind type_kind = LLVMGetTypeKind(operand_type);
+
+        if (type_kind == LLVMIntegerTypeKind) {
+            format_str = "%d";
+        } else if (type_kind == LLVMFloatTypeKind) {
+            format_str = "%f";
+        } else if (type_kind == LLVMDoubleTypeKind) {
+            format_str = "%lf";
+        } else if (type_kind == LLVMPointerTypeKind) {
+            LLVMTypeRef elem_type = LLVMGetElementType(operand_type);
+            if (!elem_type) {
+                format_str = "%s";
+            } else if (LLVMGetTypeKind(elem_type) == LLVMIntegerTypeKind) {
+                unsigned elem_bits = LLVMGetIntTypeWidth(elem_type);
+                if (elem_bits == 8) {
+                    format_str = "%s";
+                } else {
+                    format_str = "%p";
+                }
+            } else {
+                format_str = "%p";
+            }
+        } else {
+            format_str = "%p";
+        }
+
+        /* Create global string for format */
+        LLVMValueRef format_global =
+            LLVMBuildGlobalStringPtr(llvm_builder, format_str, "print_fmt");
+
+        /* Call printf with format string and operand */
+        LLVMValueRef args[] = {format_global, operand};
+        return LLVMBuildCall2(llvm_builder, printf_type, callee, args, 2,
                               "print_call");
     }
 
@@ -509,6 +627,11 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitIdentifier(
     }
 
     LLVMTypeRef var_type = LLVMGetElementType(LLVMTypeOf(var_ptr));
+    if (!var_type) {
+        var_type = LLVMInt32TypeInContext(
+            Xvr_LLVMContextGetLLVMContext(emitter->context));
+    }
+
     LLVMBuilderRef builder = Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
     return LLVMBuildLoad2(builder, var_type, var_ptr, var_name);
 }
