@@ -102,7 +102,9 @@ static void add_local_var(Xvr_LLVMFunctionEmitter* emitter, const char* name,
 
 static LLVMValueRef lookup_local_var(Xvr_LLVMFunctionEmitter* emitter,
                                      const char* name) {
-    for (int i = 0; i < emitter->local_var_count; i++) {
+    /* Search backwards to find the most recent variable with this name (handles
+     * shadowing) */
+    for (int i = emitter->local_var_count - 1; i >= 0; i--) {
         if (emitter->local_vars[i].name &&
             strcmp(emitter->local_vars[i].name, name) == 0) {
             return emitter->local_vars[i].value;
@@ -114,6 +116,23 @@ static LLVMValueRef lookup_local_var(Xvr_LLVMFunctionEmitter* emitter,
 LLVMValueRef Xvr_LLVMFunctionEmitterLookupVar(Xvr_LLVMFunctionEmitter* emitter,
                                               const char* name) {
     return lookup_local_var(emitter, name);
+}
+
+LLVMValueRef Xvr_LLVMFunctionEmitterLookupVarWithType(
+    Xvr_LLVMFunctionEmitter* emitter, const char* name,
+    Xvr_LiteralType* out_type) {
+    if (!emitter || !name || !out_type) {
+        return NULL;
+    }
+
+    for (int i = emitter->local_var_count - 1; i >= 0; i--) {
+        if (emitter->local_vars[i].name &&
+            strcmp(emitter->local_vars[i].name, name) == 0) {
+            *out_type = emitter->local_vars[i].type;
+            return emitter->local_vars[i].value;
+        }
+    }
+    return NULL;
 }
 
 LLVMValueRef Xvr_LLVMFunctionEmitterGetCurrentFunction(

@@ -332,18 +332,39 @@ static bool emit_main_function(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* stmt) {
                 expr_emitter, varDecl->expression);
             if (init_value) {
                 LLVMTypeRef var_type = LLVMTypeOf(init_value);
-                fprintf(stderr,
-                        "DEBUG codegen: init_value = %p, var_type = %p, type "
-                        "kind = %d\n",
-                        (void*)init_value, (void*)var_type,
-                        LLVMGetTypeKind(var_type));
                 LLVMValueRef alloca = Xvr_LLVMIRBuilderCreateAlloca(
                     codegen->builder, var_type, var_name);
                 Xvr_LLVMIRBuilderCreateStore(codegen->builder, init_value,
                                              alloca);
                 Xvr_LiteralType varType = XVR_LITERAL_INTEGER;
-                if (varDecl->typeLiteral.type == XVR_LITERAL_TYPE) {
+                if (varDecl->typeLiteral.type == XVR_LITERAL_TYPE &&
+                    XVR_AS_TYPE(varDecl->typeLiteral).typeOf !=
+                        XVR_LITERAL_TYPE &&
+                    XVR_AS_TYPE(varDecl->typeLiteral).typeOf !=
+                        XVR_LITERAL_ANY) {
                     varType = XVR_AS_TYPE(varDecl->typeLiteral).typeOf;
+                } else {
+                    LLVMTypeKind kind = LLVMGetTypeKind(var_type);
+                    if (kind == LLVMPointerTypeKind) {
+                        varType = XVR_LITERAL_STRING;
+                    } else if (kind == LLVMFloatTypeKind) {
+                        varType = XVR_LITERAL_FLOAT;
+                    } else if (kind == LLVMDoubleTypeKind) {
+                        varType = XVR_LITERAL_FLOAT64;
+                    } else if (kind == LLVMIntegerTypeKind) {
+                        unsigned int bits = LLVMGetIntTypeWidth(var_type);
+                        if (bits == 1) {
+                            varType = XVR_LITERAL_BOOLEAN;
+                        } else if (bits == 8) {
+                            varType = XVR_LITERAL_INT8;
+                        } else if (bits == 16) {
+                            varType = XVR_LITERAL_INT16;
+                        } else if (bits == 32) {
+                            varType = XVR_LITERAL_INTEGER;
+                        } else if (bits == 64) {
+                            varType = XVR_LITERAL_INT64;
+                        }
+                    }
                 }
                 Xvr_LLVMFunctionEmitterAddLocalVar(codegen->fn_emitter,
                                                    var_name, alloca, varType);

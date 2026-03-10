@@ -68,6 +68,9 @@ LLVMValueRef Xvr_LLVMIRBuilderCreateMul(Xvr_LLVMIRBuilder* builder,
 LLVMValueRef Xvr_LLVMIRBuilderCreateSDiv(Xvr_LLVMIRBuilder* builder,
                                          LLVMValueRef lhs, LLVMValueRef rhs,
                                          const char* name);
+LLVMValueRef Xvr_LLVMIRBuilderCreateSRem(Xvr_LLVMIRBuilder* builder,
+                                         LLVMValueRef lhs, LLVMValueRef rhs,
+                                         const char* name);
 LLVMValueRef Xvr_LLVMIRBuilderCreateUDiv(Xvr_LLVMIRBuilder* builder,
                                          LLVMValueRef lhs, LLVMValueRef rhs,
                                          const char* name);

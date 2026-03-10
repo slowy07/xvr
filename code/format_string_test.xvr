@@ -1,0 +1,9 @@
+// Test string interpolation
+var name = "world";
+print("Hello, {}!", name);
+
+var num = 42;
+print("The answer is {}", num);
+
+var pi = 3.14;
+print("Pi is {}", pi);

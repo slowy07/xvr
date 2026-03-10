@@ -165,56 +165,40 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
 
 void Xvr_usageCommandLine(int argc, const char* argv[]) {
     (void)argc;
-    printf(
-        "usage: %s [file.xvr | file.xb | -h | -v | [-d][-l][-i source | -c  "
-        "file | "
-        "-t file.xvr"
-        "[-o outfile]]]\n\n",
-        argv[0]);
+    printf("usage: %s [file.xvr] [-h] [-v] [-o outfile] [-l] [-c out.o]\n\n",
+           argv[0]);
 }
 
 void Xvr_helpCommandLine(int argc, const char* argv[]) {
     Xvr_usageCommandLine(argc, argv);
 
-    printf(
-        "file.xvr\t\tSource file in xvr format, parse, compile and execute\n");
-    printf(
-        "file.xb\t\tBinary input file in xb format, must be version "
-        "%d.%d.%d\n\n",
-        XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH);
+    printf("XVR AOT Compiler - Compile .xvr files to native executables\n\n");
 
-    printf("-h\t\t --help\t\tShow this help\n");
-    printf("-v\t\t --version\t\tShow version and information\n");
-    printf("-d\t\t --debug\t\tBe versbose when operating\n");
-    printf("-l\t\t --llvm\t\tDump LLVM IR instead of executing\n");
-
+    printf("Usage:\n");
+    printf("  xvr file.xvr              Compile and run the program\n");
     printf(
-        "-i\t\t --input source\t\tParse, compile and execute the given string "
-        "of source code\n");
+        "  xvr file.xvr -o out      Compile to executable (default: a.out)\n");
+    printf("  xvr file.xvr -l          Dump LLVM IR to stdout\n");
+    printf("  xvr file.xvr -c out.o    Compile to object file only\n");
+    printf("  xvr -h                   Show this help\n");
+    printf("  xvr -v                   Show version\n\n");
 
+    printf("Options:\n");
+    printf("  -h, --help         Show this help\n");
+    printf("  -v, --version      Show version and exit\n");
+    printf("  -o, --output FILE  Output file name\n");
+    printf("  -l, --llvm         Dump LLVM IR (implies -c)\n");
     printf(
-        "-c\t\t --compile filename\t\tParse and compile the specified source "
-        "file into output file\n");
-
-    printf(
-        "-o\t\t --output outfile\t\tName of the output file built with "
-        "--compile (default output.xb)\n");
-
-    printf(
-        "-n\t\t disable the newline char at the end of the print statement\n");
-
-    printf(
-        "-t\t\t --initial filename\tStart the interpreter as noremal, after "
-        "first running given file xvr file\n");
+        "  -c, --compile      Compile to object file (don't link/execute)\n");
+    printf("  -n                 Disable trailing newline in print\n");
 }
 
 void Xvr_copyrightCommandLine(int argc, const char* argv[]) {
     (void)argc;
     (void)argv;
     printf("The Xvr Programming Language\n");
-    printf("Interpreter version %d.%d.%d (built date %s)\n\n",
-           XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH,
-           XVR_VERSION_BUILD);
+    printf("Compiler version %d.%d.%d (built date %s)\n\n", XVR_VERSION_MAJOR,
+           XVR_VERSION_MINOR, XVR_VERSION_PATCH, XVR_VERSION_BUILD);
     printf("Copyright (c) Arfy Slowy - MIT License\n");
 }
 

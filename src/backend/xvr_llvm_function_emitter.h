@@ -58,6 +58,17 @@ LLVMValueRef Xvr_LLVMFunctionEmitterLookupVar(Xvr_LLVMFunctionEmitter* emitter,
                                               const char* name);
 
 /**
+ * @brief Looks up a local variable by name and returns its type
+ * @param emitter Function emitter
+ * @param name Variable name
+ * @param out_type Output parameter for the variable's XVR type
+ * @return LLVM value (the alloca or parameter), or NULL if not found
+ */
+LLVMValueRef Xvr_LLVMFunctionEmitterLookupVarWithType(
+    Xvr_LLVMFunctionEmitter* emitter, const char* name,
+    Xvr_LiteralType* out_type);
+
+/**
  * @brief Gets the current function being emitted
  * @param emitter Function emitter
  * @return Current LLVM function, or NULL if none
