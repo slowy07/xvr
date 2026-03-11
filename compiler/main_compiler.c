@@ -45,11 +45,18 @@ int main(int argc, const char* argv[]) {
         return 0;
     }
 
-    const char* src = strrchr(Xvr_commandLine.sourceFile, '.');
-    if (!src || strcmp(src, ".xvr")) {
+    const char* srcExt = strrchr(Xvr_commandLine.sourceFile, '.');
+    if (!srcExt || strcmp(srcExt, ".xvr")) {
         fprintf(stderr, XVR_CC_ERROR "Input must be .xvr file\n" XVR_CC_RESET);
         return -1;
     }
+
+    const char* srcBase = strrchr(Xvr_commandLine.sourceFile, '/');
+    srcBase = srcBase ? srcBase + 1 : Xvr_commandLine.sourceFile;
+    char module_name[256];
+    snprintf(module_name, sizeof(module_name), "%s", srcBase);
+    char* dot = strrchr(module_name, '.');
+    if (dot) *dot = '\0';
 
     size_t size = 0;
     const char* source =
@@ -66,7 +73,7 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
-    Xvr_LLVMCodegen* codegen = Xvr_LLVMCodegenCreate("xvr_module");
+    Xvr_LLVMCodegen* codegen = Xvr_LLVMCodegenCreate(module_name);
     if (!codegen) {
         fprintf(stderr, XVR_CC_ERROR "Failed to create codegen\n" XVR_CC_RESET);
         for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
