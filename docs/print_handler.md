@@ -1,118 +1,85 @@
-# Print Handler API
+# Print Handler
 
-The print handler provides a flexible abstraction for output operations in the XVR interpreter.
+In the XVR AOT compiler, `print()` is implemented as a simple wrapper around C's `printf`.
 
-## Overview
+## Print Statement
 
-The `Xvr_PrintHandler` struct encapsulates both:
-1. **Output destination** - where output goes (stdout, stderr, file, custom)
-2. **Formatting** - newline behavior
-
-## Usage
-
-### Basic Setup
-
-```c
-#include "xvr_print_handler.h"
-
-// Create a handler for stdout with newlines
-Xvr_PrintHandler handler;
-Xvr_printHandlerInit(&handler, Xvr_printHandlerStdout, true);
-
-// Use with interpreter
-Xvr_setInterpreterPrintHandler(&interpreter, handler);
+```xvr
+print("Hello, world!");
+print("Value: {}", 42);
+print("Name: {}, Age: {}", name, age);
 ```
 
-### Runtime Configuration
+## String Interpolation
 
-Change newline behavior at runtime:
+XVR uses `{}` placeholders:
+
+```xvr
+var x = 10;
+var y = 20;
+print("{} + {} = {}", x, y, x + y);  // 10 + 20 = 30
+```
+
+### Type Inference
+
+The format string parser automatically detects argument types:
+
+| Type | Example | printf format |
+|------|---------|---------------|
+| string | `"hello"` | `%s` |
+| integer | `42` | `%d` |
+| float | `3.14` | `%lf` |
+| boolean | `true` | `%s` |
+
+### Security
+
+Only **literal strings** are parsed as format strings:
+
+```xvr
+var userInput = getInput();
+print(userInput);  // Passed directly to printf (safe)
+print("{}", userInput);  // Also safe - uses %s for strings
+```
+
+## Implementation
+
+The compiler generates code like:
 
 ```c
-// Enable/disable newlines based on command-line flag
-if (Xvr_commandLine.enablePrintNewline == false) {
-    Xvr_printHandlerSetNewline(&handler, false);
+// Runtime (linked automatically)
+#include <stdio.h>
+#include <stdarg.h>
+int printf(const char *fmt, ...) {
+    va_list args;
+    va_start(args, fmt);
+    int result = vprintf(fmt, args);
+    va_end(args);
+    return result;
 }
 ```
 
-Redirect output to a file:
+## LLVM IR Generation
 
-```c
-FILE* logFile = fopen("output.log", "w");
-Xvr_printHandlerSetOutput(&handler, (Xvr_PrintOutputFn)fprintf, logFile);
+```xvr
+var name = "world";
+print("Hello, {}!", name);
 ```
 
-### Custom Output Function
+Generates:
 
-Create a custom output function:
+```llvm
+@fmt_str = private unnamed_addr constant [11 x i8] c"Hello, %s!\00", align 1
 
-```c
-void myLogFunction(const char* message) {
-    // Write to log file, network, GUI, etc.
-    logToFile("app.log", message);
+define i32 @main() {
+entry:
+  %name = alloca ptr, align 8
+  store ptr @str_literal, ptr %name, align 8
+  %name1 = load ptr, ptr %name, align 8
+  %printf_call = call i32 (ptr, ...) @printf(ptr @fmt_str, ptr %name1)
+  ret i32 0
 }
-
-Xvr_PrintHandler handler;
-Xvr_printHandlerInit(&handler, myLogFunction, true);
 ```
 
-## API Reference
+## Command Line
 
-### Types
-
-```c
-typedef void (*Xvr_PrintOutputFn)(const char*);
-
-typedef struct {
-    Xvr_PrintOutputFn output;    // Function pointer for output
-    bool enableNewline;          // Whether to append newline
-} Xvr_PrintHandler;
-```
-
-### Functions
-
-| Function | Description |
-|----------|-------------|
-| `Xvr_printHandlerInit` | Initialize handler with output function and newline setting |
-| `Xvr_printHandlerSetOutput` | Change output function |
-| `Xvr_printHandlerSetNewline` | Change newline behavior |
-| `Xvr_printHandlerPrint` | Output a message through the handler |
-
-### Predefined Output Functions
-
-| Function | Description |
-|----------|-------------|
-| `Xvr_printHandlerStdout` | Output to stdout |
-| `Xvr_printHandlerStderr` | Output to stderr |
-
-## Integration with Interpreter
-
-The interpreter contains three handlers:
-
-```c
-typedef struct Xvr_Interpreter {
-    // ... other fields ...
-    Xvr_PrintHandler printHandler;   // print statement output
-    Xvr_PrintHandler assertHandler; // assertion failure messages
-    Xvr_PrintHandler errorHandler;  // runtime error messages
-    // ... other fields ...
-} Xvr_Interpreter;
-```
-
-Set handlers independently:
-
-```c
-Xvr_setInterpreterPrintHandler(&interpreter, printHandler);
-Xvr_setInterpreterAssertHandler(&interpreter, assertHandler);
-Xvr_setInterpreterErrorHandler(&interpreter, errorHandler);
-```
-
-## Legacy API
-
-For backward compatibility, the old function pointer API still works:
-
-```c
-// Deprecated but supported
-Xvr_setInterpreterPrint(&interpreter, myPrintFn);
-```
-
-This automatically creates a handler with the provided function.
+The `-n` flag disables trailing newlines (if supported by runtime).
