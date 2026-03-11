@@ -95,4 +95,16 @@ void Xvr_LLVMFunctionEmitterAddLocalVar(Xvr_LLVMFunctionEmitter* emitter,
                                         const char* name, LLVMValueRef alloca,
                                         Xvr_LiteralType type);
 
+/**
+ * @brief Enter a new scope (saves current variable count)
+ * @param emitter Function emitter
+ */
+void Xvr_LLVMFunctionEmitterEnterScope(Xvr_LLVMFunctionEmitter* emitter);
+
+/**
+ * @brief Exit current scope (removes variables added in this scope)
+ * @param emitter Function emitter
+ */
+void Xvr_LLVMFunctionEmitterExitScope(Xvr_LLVMFunctionEmitter* emitter);
+
 #endif

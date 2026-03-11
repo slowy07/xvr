@@ -559,7 +559,6 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
             /* Look up the variable */
             LLVMValueRef var_ptr = lookup_var(emitter, var_name);
             if (!var_ptr) {
-                fprintf(stderr, "DEBUG: var_ptr not found\n");
                 return NULL;
             }
 
@@ -567,7 +566,6 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
             LLVMValueRef rhs =
                 Xvr_LLVMExpressionEmitterEmit(emitter, binary->right);
             if (!rhs) {
-                fprintf(stderr, "DEBUG: rhs not found\n");
                 return NULL;
             }
 
@@ -608,7 +606,6 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
                         emitter->builder, current, rhs, "srem");
                     break;
                 default:
-                    fprintf(stderr, "DEBUG: Unknown compound opcode\n");
                     break;
                 }
             }
@@ -892,8 +889,16 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
     case XVR_AST_NODE_BLOCK:
         if (emitter->control_flow && node->block.nodes &&
             node->block.count > 0) {
+            Xvr_LLVMFunctionEmitter* fn_emitter =
+                (Xvr_LLVMFunctionEmitter*)emitter->fn_emitter;
+            if (fn_emitter) {
+                Xvr_LLVMFunctionEmitterEnterScope(fn_emitter);
+            }
             for (int i = 0; i < node->block.count; i++) {
                 Xvr_LLVMExpressionEmitterEmit(emitter, &node->block.nodes[i]);
+            }
+            if (fn_emitter) {
+                Xvr_LLVMFunctionEmitterExitScope(fn_emitter);
             }
         }
         return NULL;

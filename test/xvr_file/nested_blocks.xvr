@@ -1,0 +1,35 @@
+// Nested block variable shadowing test
+var x = 10;
+print("outer x: {}", x);
+
+{
+    var x = 20;
+    print("inner x: {}", x);
+    
+    {
+        var x = 30;
+        print("deep inner x: {}", x);
+    }
+    
+    print("back to inner x: {}", x);
+}
+
+print("back to outer x: {}", x);
+
+// Multiple variables in nested blocks
+var a = 1;
+var b = 2;
+print("a={}, b={}", a, b);
+
+{
+    var a = 10;
+    var b = 20;
+    print("nested a={}, b={}", a, b);
+    
+    a += b;
+    print("a+=b: {}", a);
+}
+
+print("outer a={}, b={}", a, b);
+
+print("TEST PASSED: nested blocks");

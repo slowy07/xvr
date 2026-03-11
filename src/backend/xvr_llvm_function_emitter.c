@@ -53,6 +53,8 @@ struct Xvr_LLVMFunctionEmitter {
 
     Xvr_LLVMVariable local_vars[MAX_LOCAL_VARS];
     int local_var_count;
+    int scope_stack[32];  // Track var count at each scope level
+    int scope_depth;
     LLVMValueRef current_function;
 };
 
@@ -158,6 +160,20 @@ void Xvr_LLVMFunctionEmitterAddLocalVar(Xvr_LLVMFunctionEmitter* emitter,
         return;
     }
     add_local_var(emitter, name, alloca, type);
+}
+
+void Xvr_LLVMFunctionEmitterEnterScope(Xvr_LLVMFunctionEmitter* emitter) {
+    if (!emitter) return;
+    if (emitter->scope_depth < 32) {
+        emitter->scope_stack[emitter->scope_depth] = emitter->local_var_count;
+        emitter->scope_depth++;
+    }
+}
+
+void Xvr_LLVMFunctionEmitterExitScope(Xvr_LLVMFunctionEmitter* emitter) {
+    if (!emitter || emitter->scope_depth <= 0) return;
+    emitter->scope_depth--;
+    emitter->local_var_count = emitter->scope_stack[emitter->scope_depth];
 }
 
 static Xvr_LiteralType get_var_type(Xvr_LLVMFunctionEmitter* emitter,

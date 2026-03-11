@@ -1,2 +1,0 @@
-var data: opaque = produce();
-consume(data);

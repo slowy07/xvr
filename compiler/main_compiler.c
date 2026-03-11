@@ -14,6 +14,50 @@
 #include "xvr_parser.h"
 #include "xvr_refstring.h"
 
+static void print_error(const char* filename, int line, const char* error_type,
+                        const char* message) {
+    if (filename) {
+        fprintf(stderr,
+                XVR_CC_ERROR "%s:%d: " XVR_CC_FONT_RED "%s: " XVR_CC_RESET
+                             "%s\n",
+                filename, line, error_type, message);
+    } else {
+        fprintf(stderr, XVR_CC_ERROR "%s: " XVR_CC_RESET "%s\n", error_type,
+                message);
+    }
+}
+
+static void print_note(const char* filename, int line, const char* message) {
+    if (filename && line > 0) {
+        fprintf(stderr, XVR_CC_NOTICE "  --> " XVR_CC_RESET "%s:%d\n", filename,
+                line);
+        fprintf(stderr, XVR_CC_NOTICE "   |\n" XVR_CC_RESET);
+    }
+}
+
+static void print_compiler_error(const char* filename, int line,
+                                 const char* error_type, const char* message,
+                                 const char* hint) {
+    fprintf(stderr, "\n");
+    fprintf(stderr, XVR_CC_FONT_RED "error" XVR_CC_RESET ": %s\n", message);
+    if (filename && line > 0) {
+        fprintf(stderr, "  --> %s:%d\n", filename, line);
+    }
+    if (hint) {
+        fprintf(stderr, XVR_CC_NOTICE "help: " XVR_CC_RESET "%s\n", hint);
+    }
+    fprintf(stderr, "\n");
+}
+#include "compiler_tools.h"
+#include "xvr_ast_node.h"
+#include "xvr_common.h"
+#include "xvr_compiler.h"
+#include "xvr_console_colors.h"
+#include "xvr_lexer.h"
+#include "xvr_literal.h"
+#include "xvr_parser.h"
+#include "xvr_refstring.h"
+
 int main(int argc, const char* argv[]) {
     Xvr_initCommandLine(argc, argv);
 
@@ -47,7 +91,9 @@ int main(int argc, const char* argv[]) {
 
     const char* srcExt = strrchr(Xvr_commandLine.sourceFile, '.');
     if (!srcExt || strcmp(srcExt, ".xvr")) {
-        fprintf(stderr, XVR_CC_ERROR "Input must be .xvr file\n" XVR_CC_RESET);
+        print_compiler_error(Xvr_commandLine.sourceFile, 0, "error",
+                             "input file must have .xvr extension",
+                             "Example: xvr program.xvr");
         return -1;
     }
 
@@ -62,20 +108,26 @@ int main(int argc, const char* argv[]) {
     const char* source =
         (const char*)Xvr_readFile(Xvr_commandLine.sourceFile, &size);
     if (!source) {
-        fprintf(stderr, XVR_CC_ERROR "Could not open file\n" XVR_CC_RESET);
+        print_compiler_error(
+            Xvr_commandLine.sourceFile, 0, "error",
+            "could not read source file",
+            "Check that the file exists and you have read permissions");
         return 1;
     }
 
     int nodeCount = 0;
     Xvr_ASTNode** nodes = parse_to_ast(source, &nodeCount);
     if (!nodes) {
-        fprintf(stderr, XVR_CC_ERROR "Failed to parse source\n" XVR_CC_RESET);
+        print_compiler_error(Xvr_commandLine.sourceFile, 0, "error",
+                             "parsing failed - check syntax", NULL);
         return 1;
     }
 
     Xvr_LLVMCodegen* codegen = Xvr_LLVMCodegenCreate(module_name);
     if (!codegen) {
-        fprintf(stderr, XVR_CC_ERROR "Failed to create codegen\n" XVR_CC_RESET);
+        print_compiler_error(Xvr_commandLine.sourceFile, 0, "error",
+                             "failed to initialize code generator",
+                             "This may indicate an out-of-memory condition");
         for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
         free(nodes);
         return 1;
@@ -86,8 +138,11 @@ int main(int argc, const char* argv[]) {
     }
 
     if (Xvr_LLVMCodegenHasError(codegen)) {
-        fprintf(stderr, XVR_CC_ERROR "%s\n" XVR_CC_RESET,
-                Xvr_LLVMCodegenGetError(codegen));
+        const char* err = Xvr_LLVMCodegenGetError(codegen);
+        print_compiler_error(
+            Xvr_commandLine.sourceFile, 0, "error",
+            err ? err : "unknown compilation error",
+            "Check your code for type errors or unsupported features");
         Xvr_LLVMCodegenDestroy(codegen);
         for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
         free(nodes);
@@ -113,8 +168,10 @@ int main(int argc, const char* argv[]) {
         }
     } else {
         if (!Xvr_LLVMCodegenWriteObjectFile(codegen, outFile)) {
-            fprintf(stderr,
-                    XVR_CC_ERROR "Failed to write object file\n" XVR_CC_RESET);
+            print_compiler_error(
+                Xvr_commandLine.sourceFile, 0, "error",
+                "failed to write object file",
+                "Check write permissions in the output directory");
             Xvr_LLVMCodegenDestroy(codegen);
             for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
             free(nodes);
