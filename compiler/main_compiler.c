@@ -13,6 +13,7 @@
 #include "xvr_literal.h"
 #include "xvr_parser.h"
 #include "xvr_refstring.h"
+#include "xvr_unused.h"
 
 static void print_error(const char* filename, int line, const char* error_type,
                         const char* message) {
@@ -122,6 +123,24 @@ int main(int argc, const char* argv[]) {
                              "parsing failed - check syntax", NULL);
         return 1;
     }
+
+    Xvr_UnusedChecker checker;
+    Xvr_initUnusedChecker(&checker);
+    Xvr_checkUnusedBegin(&checker);
+
+    for (int i = 0; i < nodeCount; i++) {
+        Xvr_checkUnusedNode(&checker, nodes[i]);
+    }
+
+    if (!Xvr_checkUnusedEnd(&checker)) {
+        Xvr_freeUnusedChecker(&checker);
+        for (int i = 0; i < nodeCount; i++) {
+            Xvr_freeASTNode(nodes[i]);
+        }
+        free(nodes);
+        return 1;
+    }
+    Xvr_freeUnusedChecker(&checker);
 
     Xvr_LLVMCodegen* codegen = Xvr_LLVMCodegenCreate(module_name);
     if (!codegen) {
