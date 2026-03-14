@@ -1544,6 +1544,20 @@ static void parsePrecedence(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle,
             continue;
         }
 
+        if (opcode == XVR_OP_INDEX) {
+            Xvr_ASTNode* lhs = *nodeHandle;
+            Xvr_ASTNode* indexNode = rhsNode;
+            if (indexNode && indexNode->type == XVR_AST_NODE_INDEX) {
+                Xvr_ASTNode* firstElem = indexNode->index.first;
+                Xvr_ASTNode* secondElem = indexNode->index.second;
+                indexNode->index.first = lhs;
+                indexNode->index.second = firstElem;
+                indexNode->index.third = secondElem;
+            }
+            *nodeHandle = indexNode;
+            continue;
+        }
+
         Xvr_emitASTNodeBinary(nodeHandle, rhsNode, opcode);
 
         // optimise away the constants

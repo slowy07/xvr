@@ -69,6 +69,15 @@ LLVMValueRef Xvr_LLVMFunctionEmitterLookupVarWithType(
     Xvr_LiteralType* out_type);
 
 /**
+ * @brief Looks up a local variable by name and returns array count
+ * @param emitter Function emitter
+ * @param name Variable name
+ * @return Array element count, or 0 if not an array or not found
+ */
+int Xvr_LLVMFunctionEmitterLookupVarArrayCount(Xvr_LLVMFunctionEmitter* emitter,
+                                               const char* name);
+
+/**
  * @brief Gets the current function being emitted
  * @param emitter Function emitter
  * @return Current LLVM function, or NULL if none
@@ -85,15 +94,16 @@ void Xvr_LLVMFunctionEmitterSetCurrentFunction(Xvr_LLVMFunctionEmitter* emitter,
                                                LLVMValueRef function);
 
 /**
- * @brief Adds a local variable to the function's symbol table
+ * @brief Add a local variable to the function emitter
  * @param emitter Function emitter
  * @param name Variable name
  * @param alloca LLVM alloca for the variable
  * @param type XVR literal type
+ * @param array_count Number of elements if array, 0 otherwise
  */
 void Xvr_LLVMFunctionEmitterAddLocalVar(Xvr_LLVMFunctionEmitter* emitter,
                                         const char* name, LLVMValueRef alloca,
-                                        Xvr_LiteralType type);
+                                        Xvr_LiteralType type, int array_count);
 
 /**
  * @brief Enter a new scope (saves current variable count)

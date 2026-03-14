@@ -292,7 +292,8 @@ static bool ensure_main_function(Xvr_LLVMCodegen* codegen) {
     LLVMAddFunction(module, "main", main_fn_type);
 
     LLVMValueRef main_fn = LLVMGetNamedFunction(module, "main");
-    LLVMBasicBlockRef entry = LLVMAppendBasicBlock(main_fn, "entry");
+    LLVMBasicBlockRef entry =
+        LLVMAppendBasicBlockInContext(llvm_ctx, main_fn, "entry");
     LLVMPositionBuilderAtEnd(builder, entry);
 
     Xvr_LLVMFunctionEmitterSetCurrentFunction(codegen->fn_emitter, main_fn);
@@ -351,6 +352,8 @@ static bool emit_main_function(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* stmt) {
                         varType = XVR_LITERAL_FLOAT;
                     } else if (kind == LLVMDoubleTypeKind) {
                         varType = XVR_LITERAL_FLOAT64;
+                    } else if (kind == LLVMArrayTypeKind) {
+                        varType = XVR_LITERAL_ARRAY;
                     } else if (kind == LLVMIntegerTypeKind) {
                         unsigned int bits = LLVMGetIntTypeWidth(var_type);
                         if (bits == 1) {
@@ -366,8 +369,8 @@ static bool emit_main_function(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* stmt) {
                         }
                     }
                 }
-                Xvr_LLVMFunctionEmitterAddLocalVar(codegen->fn_emitter,
-                                                   var_name, alloca, varType);
+                Xvr_LLVMFunctionEmitterAddLocalVar(
+                    codegen->fn_emitter, var_name, alloca, varType, 0);
             }
         }
         return true;

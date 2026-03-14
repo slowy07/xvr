@@ -90,6 +90,42 @@ x /= 4;  // x = 6
 x %= 5;  // x = 1
 ```
 
+### Static Arrays
+
+XVR supports static arrays with compile-time known sizes:
+
+```xvr
+var arr = [1, 2, 3, 4, 5];
+print(arr[0]);  // prints 1
+print(arr[2]);  // prints 3
+
+// Array assignment
+arr[1] = 20;
+print(arr[1]);  // prints 20
+
+// Array indexing with variables
+var i = 0;
+while (i < 5) {
+    print(arr[i]);
+    i += 1;
+}
+```
+
+**Features:**
+- Array literals: `[val1, val2, ...]`
+- Array indexing: `arr[index]` (zero-based)
+- Array assignment: `arr[index] = value`
+- Works with variable indices in loops
+
+**Implementation:**
+- Stored as `[N x i32]` in LLVM IR (stack-allocated)
+- Uses GEP (GetElementPtr) for indexing
+- Bounds checking not yet implemented
+
+**Limitations:**
+- Printing arrays directly (`print(arr)`) shows pointer address
+- Nested arrays (`[[1,2], [3,4]]`) not yet supported
+
 ## Architecture
 
 ```
@@ -98,7 +134,7 @@ src/backend/
 ├── xvr_llvm_type_mapper.h/.c    # Type mapping (xvr → LLVM)
 ├── xvr_llvm_module_manager.h/.c # Module management
 ├── xvr_llvm_ir_builder.h/.c    # IR building abstraction
-├── xvr_llvm_expression_emitter.h/.c # Expression to IR
+├── xvr_llvm_expression_emitter.h/.c # Expression to IR (includes arrays)
 ├── xvr_llvm_function_emitter.h/.c  # Function emission
 ├── xvr_llvm_control_flow.h/.c   # If/while/for generation
 ├── xvr_llvm_optimizer.h/.c     # Optimization pipeline
@@ -107,6 +143,10 @@ src/backend/
 ├── xvr_format_string.h/.c      # Format string parser
 └── xvr_llvm_ir_builder.c        # CreateSRem for modulo
 ```
+
+**Key files for array implementation:**
+- `xvr_llvm_codegen.c` - Array literal handling in VAR_DECL
+- `xvr_llvm_expression_emitter.c` - Array indexing & assignment
 
 ## Format String Parser
 
@@ -202,7 +242,6 @@ test.o: ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), not stripped
 
 ## Future Enhancements
 
-- More type support (arrays, dictionaries)
 - Function declarations
 - Struct types
 - Better optimization passes
