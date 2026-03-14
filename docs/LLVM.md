@@ -109,22 +109,34 @@ while (i < 5) {
     print(arr[i]);
     i += 1;
 }
+
+// Direct array printing
+print(arr);  // prints: 1 2 3 4 5
+
+// 2D arrays
+var matrix = [
+    [1, 2, 3],
+    [4, 5, 6]
+];
+matrix[1][2] = 50;
 ```
 
 **Features:**
 - Array literals: `[val1, val2, ...]`
 - Array indexing: `arr[index]` (zero-based)
 - Array assignment: `arr[index] = value`
-- Works with variable indices in loops
+- Direct printing: `print(arr)` shows all elements
+- Variable indices in loops
+- 2D array literals
 
 **Implementation:**
 - Stored as `[N x i32]` in LLVM IR (stack-allocated)
 - Uses GEP (GetElementPtr) for indexing
-- Bounds checking not yet implemented
+- Array print loops through elements
 
 **Limitations:**
-- Printing arrays directly (`print(arr)`) shows pointer address
-- Nested arrays (`[[1,2], [3,4]]`) not yet supported
+- Empty arrays (`[]`) not yet fully supported
+- 2D array printing shows only first dimension elements
 
 ## Architecture
 
@@ -145,8 +157,8 @@ src/backend/
 ```
 
 **Key files for array implementation:**
-- `xvr_llvm_codegen.c` - Array literal handling in VAR_DECL
-- `xvr_llvm_expression_emitter.c` - Array indexing & assignment
+- `xvr_llvm_codegen.c` - Array literal handling in VAR_DECL, array type detection
+- `xvr_llvm_expression_emitter.c` - Array indexing, assignment, and printing
 
 ## Format String Parser
 
@@ -239,6 +251,24 @@ test.o: ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), not stripped
 - **No `.xb` files**: Binary bytecode support removed
 - **Format strings**: Uses `{}` instead of printf `%` syntax
 - **Variables**: Use `var` keyword (not `let`)
+
+## Error Handling
+
+### Unused Variables
+
+XVR detects unused variables at compile time:
+
+```xvr
+var x = 1;  // error: unused variable 'x'
+```
+
+Output:
+```
+[error]: unused variable 'x'
+  --> line 1
+[help]: variable 'x' is declared but never used
+[help]: remove the unused variable or use it in an expression
+```
 
 ## Future Enhancements
 

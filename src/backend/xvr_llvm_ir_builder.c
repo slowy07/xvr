@@ -329,5 +329,7 @@ LLVMBasicBlockRef Xvr_LLVMIRBuilderCreateBlockInFunction(
     if (!builder || !function) {
         return NULL;
     }
-    return LLVMAppendBasicBlock(function, name ? name : "block");
+    LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(builder->context);
+    return LLVMAppendBasicBlockInContext(llvm_ctx, function,
+                                         name ? name : "block");
 }

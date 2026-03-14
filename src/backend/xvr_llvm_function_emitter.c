@@ -297,7 +297,8 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
         add_local_var(emitter, param_names[i], param, param_types_xvr[i], 0);
     }
 
-    LLVMBasicBlockRef entry_block = LLVMAppendBasicBlock(function, "entry");
+    LLVMBasicBlockRef entry_block =
+        LLVMAppendBasicBlockInContext(llvm_ctx, function, "entry");
     Xvr_LLVMIRBuilderSetInsertPoint(builder, entry_block);
 
     LLVMValueRef return_value = NULL;

@@ -810,11 +810,6 @@ static LLVMValueRef emit_unary_op(Xvr_LLVMExpressionEmitter* emitter,
         LLVMTypeRef operand_type = LLVMTypeOf(operand);
         const char* format_str;
         LLVMTypeKind type_kind = LLVMGetTypeKind(operand_type);
-        fprintf(stderr,
-                "DEBUG: operand type_kind=%d, ARRAY=%d, operand=%p, "
-                "operand_type=%p\n",
-                type_kind, LLVMArrayTypeKind, (void*)operand,
-                (void*)operand_type);
 
         if (type_kind == LLVMIntegerTypeKind) {
             format_str = "%d";
