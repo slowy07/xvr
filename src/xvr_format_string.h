@@ -23,6 +23,7 @@ typedef enum {
     XVR_FORMAT_ARG_STRING,
     XVR_FORMAT_ARG_POINTER,
     XVR_FORMAT_ARG_BOOL,
+    XVR_FORMAT_ARG_ARRAY,
 } XvrFormatArgType;
 
 /* A single format placeholder */

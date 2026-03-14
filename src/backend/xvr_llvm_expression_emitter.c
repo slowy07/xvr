@@ -324,6 +324,10 @@ static LLVMValueRef emit_binary_op(Xvr_LLVMExpressionEmitter* emitter,
     }
 }
 
+/* Forward declaration for emit_array_print */
+static LLVMValueRef emit_array_print(Xvr_LLVMExpressionEmitter* emitter,
+                                     LLVMValueRef array_ptr, int array_count);
+
 static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
                                 Xvr_ASTNode* args) {
     if (!emitter || !args) {
@@ -483,6 +487,9 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
                 } else {
                     arg_types[i] = XVR_FORMAT_ARG_INT;
                 }
+            } else if (kind == LLVMArrayTypeKind) {
+                /* For arrays in format strings, use %p (fallback) */
+                arg_types[i] = XVR_FORMAT_ARG_POINTER;
             } else {
                 arg_types[i] = XVR_FORMAT_ARG_INT;
             }
@@ -828,7 +835,6 @@ static LLVMValueRef emit_unary_op(Xvr_LLVMExpressionEmitter* emitter,
                 if (operand_val_type &&
                     LLVMGetTypeKind(operand_val_type) == LLVMArrayTypeKind) {
                     int array_count = LLVMGetArrayLength(operand_val_type);
-                    return emit_array_print(emitter, operand, array_count);
                     return emit_array_print(emitter, operand, array_count);
                 }
                 format_str = "%s";

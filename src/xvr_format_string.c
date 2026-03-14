@@ -24,6 +24,8 @@ static const char* format_type_to_printf(XvrFormatArgType type) {
         return "%p";
     case XVR_FORMAT_ARG_BOOL:
         return "%s";
+    case XVR_FORMAT_ARG_ARRAY:
+        return ""; /* Arrays handled separately */
     default:
         return "%p";
     }

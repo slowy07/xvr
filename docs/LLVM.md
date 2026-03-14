@@ -41,24 +41,28 @@ var name = "hello";
 var pi = 3.14;
 ```
 
-### Print with String Interpolation
+### Print with Format Strings
 
-XVR uses `{}` placeholders:
+XVR uses `{}` placeholders
 
 ```xvr
 var name = "world";
 var num = 42;
-var pi = 3.14;
 
 print("Hello, {}!", name);      // Hello, world!
-print("Value: {}", num);        // Value: 42
-print("Pi: {}", pi);            // Pi: 3.140000
+print("Value: {}", num);         // Value: 42
+print("{} + {} = {}", 1, 2, 3); // 1 + 2 = 3
+
+// Direct array printing
+var arr = [1, 2, 3];
+print(arr);                      // prints: 1 2 3
 ```
 
-Type inference is automatic:
-- `string` → `%s`
-- `integer` → `%d`
-- `float` → `%lf`
+**Type inference:**
+- `{}` with integer → `%d`
+- `{}` with float → `%lf`
+- `{}` with string → `%s`
+- `{:p}` → pointer address
 
 ### Security
 
@@ -134,7 +138,7 @@ matrix[1][2] = 50;
 - Uses GEP (GetElementPtr) for indexing
 - Array print loops through elements
 
-**Limitations:**
+**Limitations:*
 - Empty arrays (`[]`) not yet fully supported
 - 2D array printing shows only first dimension elements
 
