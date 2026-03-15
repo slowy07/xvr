@@ -1,6 +1,33 @@
 # XVR AOT Compiler
 
-The XVR language now uses an AOT (Ahead-of-Time) compiler that generates native executables via LLVM IR.
+The XVR language uses an AOT (Ahead-of-Time) compiler that generates native executables via LLVM IR.
+
+## Compilation Pipeline
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  .xvr File  │───▶│    Lexer    │───▶│   Parser    │───▶│  AST Nodes  │───▶│    LLVM     │
+│  (Source)   │    │  (Tokens)   │    │  (Errors)   │    │   (Tree)    │    │     IR      │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                                                                                    │
+                                                                                    ▼
+                                                                           ┌─────────────────┐
+                                                                           │  LLVM Optimizer │
+                                                                           │   (Optional)    │
+                                                                           └─────────────────┘
+                                                                                    │
+                                                                                    ▼
+      ┌──────────────────────────────────────────────────────────────────────────────────┐
+      │                                                                                  │
+      ▼                                                                                  ▼
+┌─────────────┐                                                          ┌─────────────────┐
+│  Executable │◀─── Link ───┐                                   ┌───────▶│    Object File  │
+│   (a.out)   │             │                                   │        │    (.o/.obj)    │
+└─────────────┘             │        ┌─────────────────┐        │        └─────────────────┘
+                            └───────▶│    LLVM MCJIT   │────────┘
+                                     │   or JIT (dev)  │
+                                     └─────────────────┘
+```
 
 ## Overview
 
@@ -8,6 +35,103 @@ The XVR compiler translates `.xvr` source files into:
 - Native executables (via LLVM IR → object file → linked binary)
 - LLVM IR (for debugging/inspection)
 - Object files (for custom linking)
+
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    XVR Compiler                                         │
+├─────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                         │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────────────────────────────┐  │
+│  │   Lexer     │───▶│   Parser    │───▶│              LLVM Backend                   │  │
+│  │ xvr_lexer.c │    │xvr_parser.c │    │                                             │  │
+│  └─────────────┘    └─────────────┘    │  ┌─────────────────────────────────────────┐│  │
+│                                        │  │         xvr_llvm_codegen.c              ││  │
+│                                        │  │              (Coordinator)              ││  │
+│                                        │  └──────────────────┬──────────────────────┘│  │
+│                                        │                     │                       │  │
+│                                        │    ┌────────────────┼────────────────────┐  │  │
+│                                        │    │                │                    │  │  │
+│                                        │    ▼                ▼                    |  ▼  │  
+│                                        │  ┌──────────┐ ┌──────────┐ ┌──────────────┐ │  │
+│                                        │  │Context   │ │Type      │ │Module        │ │  │
+│                                        │  │Manager   │ │Mapper    │ │Manager       │ │  │
+│                                        │  │.c        │ │.c        │ │.c            │ │  │
+│                                        │  └──────────┘ └──────────┘ └──────────────┘ │  │
+│                                        │  ┌──────────┐ ┌──────────┐ ┌──────────────┐ │  │
+│                                        │  │IR        │ │Expression │ │Function     │ │  │
+│                                        │  │Builder   │ │Emitter   │ │Emitter       │ │  │
+│                                        │  │.c        │ │.c        │ │.c            │ │  │
+│                                        │  └──────────┘ └──────────┘ └──────────────┘ │  │
+│                                        │  ┌──────────┐ ┌──────────┐ ┌──────────────┐ │  │
+│                                        │  │Control   │ │Optimizer │ │Target        │ │  │
+│                                        │  │Flow      │ │.c        │ │.c            │ │  │
+│                                        │  │.c        │ │          │ │              │ │  │
+│                                        │  └──────────┘ └──────────┘ └──────────────┘ │  │
+│                                        │                                             │  │
+│                                        └─────────────────────────────────────────────┘  │
+│                                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Backend Module Flow
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                           LLVM Backend Data Flow                                       │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+
+  AST Node              Codegen Stage           LLVM IR               Output
+  ────────              ─────────────           ───────               ──────
+  
+  ┌──────────┐         ┌──────────────┐       ┌───────────┐
+  │ VAR_DECL │────────▶│ xvr_llvm_    │──────▶│ %x =      │
+  │ var x=42 │         │ codegen.c    │       │ alloca i32│
+  └──────────┘         └──────────────┘       └───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────┐
+                         │ xvr_llvm_type_   │
+                         │ mapper.c         │────────▶ i32, i8*, float, etc.
+                         └──────────────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────┐
+                         │ xvr_llvm_ir_     │
+                         │ builder.c        │────────▶ LLVMBuildAlloca, LLVMBuildStore
+                         └──────────────────┘
+
+  ┌──────────┐         ┌──────────────┐       ┌───────────┐
+  │  BINARY   │────────▶│ xvr_llvm_    │──────▶│ %add =    │
+  │ x + y     │         │ expression   │       │ add i32   │
+  └──────────┘         │ emitter.c    │       │ %x, %y    │
+                       └──────────────┘       └───────────┘
+
+  ┌──────────┐         ┌──────────────┐       ┌───────────┐
+  │  IF/     │────────▶│ xvr_llvm_    │──────▶│ br i1 %   │
+  │  WHILE   │         │ control_flow │       │ cond,     │
+  │          │         │ .c           │       │ label,    │
+  └──────────┘         └──────────────┘       │ label     │
+                                              └───────────┘
+```
+
+## Source File Organization
+
+```
+src/backend/
+├── xvr_llvm_codegen.h/.c         # Main coordinator, entry points
+├── xvr_llvm_context.h/.c         # LLVM context management
+├── xvr_llvm_type_mapper.h/.c    # Type mapping (XVR → LLVM types)
+├── xvr_llvm_module_manager.h/.c # Module creation & IR printing
+├── xvr_llvm_ir_builder.h/.c    # IR building (alloca, store, load, etc.)
+├── xvr_llvm_expression_emitter.h/.c # Expressions, arrays, indexing
+├── xvr_llvm_function_emitter.h/.c   # Function definitions
+├── xvr_llvm_control_flow.h/.c      # If/while/for generation
+├── xvr_llvm_optimizer.h/.c       # Optimization passes
+├── xvr_llvm_target.h/.c          # Target machine configuration
+└── xvr_format_string.h/.c        # Format string {} parser
+```
 
 ## Usage
 
@@ -43,7 +167,7 @@ var pi = 3.14;
 
 ### Print with Format Strings
 
-XVR uses `{}` placeholders
+XVR uses `{}` placeholders:
 
 ```xvr
 var name = "world";
@@ -58,21 +182,6 @@ var arr = [1, 2, 3];
 print(arr);                      // prints: 1 2 3
 ```
 
-**Type inference:**
-- `{}` with integer → `%d`
-- `{}` with float → `%lf`
-- `{}` with string → `%s`
-- `{:p}` → pointer address
-
-### Security
-
-Only **literal strings** are parsed as format strings. User-controlled strings are passed directly to printf:
-
-```xvr
-var userInput = getInput();
-print(userInput);  // Passed as-is, not interpreted as format
-```
-
 ### While Loops
 
 ```xvr
@@ -83,140 +192,55 @@ while (i < 10) {
 }
 ```
 
-### Compound Assignment
-
-```xvr
-var x = 10;
-x += 5;  // x = 15
-x -= 3;  // x = 12
-x *= 2;  // x = 24
-x /= 4;  // x = 6
-x %= 5;  // x = 1
-```
-
 ### Static Arrays
-
-XVR supports static arrays with compile-time known sizes:
 
 ```xvr
 var arr = [1, 2, 3, 4, 5];
 print(arr[0]);  // prints 1
-print(arr[2]);  // prints 3
 
 // Array assignment
 arr[1] = 20;
 print(arr[1]);  // prints 20
-
-// Array indexing with variables
-var i = 0;
-while (i < 5) {
-    print(arr[i]);
-    i += 1;
-}
-
-// Direct array printing
-print(arr);  // prints: 1 2 3 4 5
-
-// 2D arrays
-var matrix = [
-    [1, 2, 3],
-    [4, 5, 6]
-];
-matrix[1][2] = 50;
 ```
-
-**Features:**
-- Array literals: `[val1, val2, ...]`
-- Array indexing: `arr[index]` (zero-based)
-- Array assignment: `arr[index] = value`
-- Direct printing: `print(arr)` shows all elements
-- Variable indices in loops
-- 2D array literals
-
-**Implementation:**
-- Stored as `[N x i32]` in LLVM IR (stack-allocated)
-- Uses GEP (GetElementPtr) for indexing
-- Array print loops through elements
-
-**Limitations:*
-- Empty arrays (`[]`) not yet fully supported
-- 2D array printing shows only first dimension elements
-
-## Architecture
-
-```
-src/backend/
-├── xvr_llvm_context.h/.c         # LLVM context management
-├── xvr_llvm_type_mapper.h/.c    # Type mapping (xvr → LLVM)
-├── xvr_llvm_module_manager.h/.c # Module management
-├── xvr_llvm_ir_builder.h/.c    # IR building abstraction
-├── xvr_llvm_expression_emitter.h/.c # Expression to IR (includes arrays)
-├── xvr_llvm_function_emitter.h/.c  # Function emission
-├── xvr_llvm_control_flow.h/.c   # If/while/for generation
-├── xvr_llvm_optimizer.h/.c     # Optimization pipeline
-├── xvr_llvm_target.h/.c        # Target configuration
-├── xvr_llvm_codegen.h/.c       # Main coordinator
-├── xvr_format_string.h/.c      # Format string parser
-└── xvr_llvm_ir_builder.c        # CreateSRem for modulo
-```
-
-**Key files for array implementation:**
-- `xvr_llvm_codegen.c` - Array literal handling in VAR_DECL, array type detection
-- `xvr_llvm_expression_emitter.c` - Array indexing, assignment, and printing
 
 ## Format String Parser
 
 The `xvr_format_string.c` module handles `{}` interpolation:
 
-1. Parse format string for `{}` placeholders
-2. Emit arguments and infer their types from LLVM values
-3. Build printf format string with correct specifiers
+```
+Format String Parsing Flow:
+┌─────────────────┐
+│  "Hello {}!"    │  (input)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  Parse for {} placeholders          │
+│  Count arguments                    │
+└────────┬────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  Infer types from LLVM values       │
+│  integer → %d                       │
+│  float   → %lf                      │
+│  string  → %s                       │
+└────────┬────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│  "Hello %s!"    │  (printf format)
+└─────────────────┘
+```
 
 ### Type Mapping
 
-| XVR Type | LLVM Type | printf |
-|-----------|-----------|--------|
-| `string` | `i8*` | `%s` |
-| `integer` | `i32` | `%d` |
-| `float` | `float` → `double` | `%lf` |
-| `boolean` | `i1` | `%s` |
-
-## Building
-
-### Requirements
-
-- LLVM 21+ (with C API headers)
-- C compiler with C18 support
-
-### Build
-
-```bash
-make
-```
-
-Output: `out/xvr`
-
-### Linking
-
-Object files can be linked with a simple runtime:
-
-```c
-// runtime.c
-#include <stdio.h>
-#include <stdarg.h>
-int printf(const char *fmt, ...) {
-    va_list args;
-    va_start(args, fmt);
-    int result = vprintf(fmt, args);
-    va_end(args);
-    return result;
-}
-```
-
-```bash
-gcc -c runtime.c -o runtime.o
-gcc program.o runtime.o -o program
-```
+| XVR Type   | LLVM Type        | printf  |
+|------------|------------------|---------|
+| `string`   | `i8*`            | `%s`    |
+| `integer`  | `i32`            | `%d`    |
+| `float`    | `float` → `double` | `%lf` |
+| `boolean` | `i1`             | `%s`    |
 
 ## Output Examples
 
@@ -249,34 +273,11 @@ $ file test.o
 test.o: ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), not stripped
 ```
 
-## Differences from Interpreter
-
-- **AOT only**: No interpreter, no REPL
-- **No `.xb` files**: Binary bytecode support removed
-- **Format strings**: Uses `{}` instead of printf `%` syntax
-- **Variables**: Use `var` keyword (not `let`)
-
 ## Error Handling
-
-### Unused Variables
-
-XVR detects unused variables at compile time:
-
-```xvr
-var x = 1;  // error: unused variable 'x'
-```
-
-Output:
-```
-[31merror[0m: unused variable 'x'
-  --> line 1
-[38;2;140;207;126mhelp[0m: variable 'x' is declared but never used
-[38;2;140;207;126mhelp[0m: remove the unused variable or use it in an expression
-```
 
 ### Type Mismatch
 
-XVR validates that explicit type annotations match the inferred type from the value:
+XVR validates explicit type annotations:
 
 ```xvr
 var x: int = 1.5;    // error: type mismatch: cannot convert from 'float' to 'int'
@@ -287,18 +288,29 @@ var x: bool = 1;    // error: type mismatch: cannot convert from 'int' to 'bool'
 Output:
 ```
 [31merror[0m: type mismatch: cannot convert from 'float' to 'int'
-[38;2;140;207;126mhelp[0m: Check your code for type errors or unsupported features
 ```
 
-**Allowed implicit conversions:**
-- Integer types to float/float64 (e.g., `var x: float = 42;`)
-- Between different integer sizes (e.g., `var x: int64 = 42;`)
-- Exact type matches
+## Building
 
-**Not allowed:**
-- Float to integer
-- String to/from numeric types
-- Integer to boolean
+### Requirements
+
+- LLVM 21+ (with C API headers)
+- C compiler with C18 support
+
+### Build
+
+```bash
+make
+```
+
+Output: `out/xvr`
+
+## Differences from Interpreter
+
+- **AOT only**: No interpreter, no REPL
+- **Format strings**: Uses `{}` instead of printf `%` syntax
+- **Variables**: Use `var` keyword (not `let`)
+- **Semicolons**: Optional (like Rust/C++)
 
 ## Future Enhancements
 
