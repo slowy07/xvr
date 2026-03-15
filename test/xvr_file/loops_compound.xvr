@@ -1,0 +1,26 @@
+// While loop tests
+var i = 0;
+while (i < 5) {
+    print("while: {}", i);
+    i = i + 1;
+}
+
+// Compound assignment
+var x = 10;
+x += 5;
+print("x += 5: {}", x);
+
+x -= 3;
+print("x -= 3: {}", x);
+
+x *= 2;
+print("x *= 2: {}", x);
+
+x /= 4;
+print("x /= 4: {}", x);
+
+x = 10;
+x %= 3;
+print("x %= 3: {}", x);
+
+print("TEST PASSED: loops and compound");

@@ -2,10 +2,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "inter_tools.h"
-#include "xvr_ast_node.h"
-#include "xvr_console_colors.h"
-#include "xvr_parser.h"
+#include "../src/xvr_ast_node.h"
+#include "../src/xvr_console_colors.h"
+#include "../src/xvr_parser.h"
 
 static int testCount = 0;
 static int passCount = 0;
@@ -138,7 +137,7 @@ int run_parser_tests(void) {
 
     testParse("array compound", "[1, 2, 3];", XVR_AST_NODE_COMPOUND);
 
-    testParse("index access", "arr[0];", XVR_AST_NODE_BINARY);
+    testParse("index access", "arr[0];", XVR_AST_NODE_INDEX);
     testParse("index assignment", "arr[0] = 1;", XVR_AST_NODE_BINARY);
 
     testParse("ternary operator", "true ? 1 : 2;", XVR_AST_NODE_TERNARY);

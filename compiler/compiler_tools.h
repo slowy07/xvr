@@ -22,21 +22,24 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-#ifndef XVR_BUILTIN_H
-#define XVR_BUILTIN_H
+#ifndef COMPILER_TOOLS_H
+#define COMPILER_TOOLS_H
 
-#include "xvr_interpreter.h"
+#include "xvr_ast_node.h"
+#include "xvr_common.h"
 
-int Xvr_private_index(Xvr_Interpreter* interpreter,
-                      Xvr_LiteralArray* arguments);
-int Xvr_private_set(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments);
-int Xvr_private_get(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments);
-int Xvr_private_push(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments);
-int Xvr_private_pop(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments);
-int Xvr_private_length(Xvr_Interpreter* interpreter,
-                       Xvr_LiteralArray* arguments);
-int Xvr_private_clear(Xvr_Interpreter* interpreter,
-                      Xvr_LiteralArray* arguments);
-int Xvr_private_abs(Xvr_Interpreter* interpreter, Xvr_LiteralArray* arguments);
+#ifdef __cplusplus
+extern "C" {
+#endif
 
-#endif  // !XVR_BUILTIN_H
+const unsigned char* Xvr_readFile(const char* path, size_t* fileSize);
+
+#ifdef XVR_EXPORT_LLVM
+Xvr_ASTNode** parse_to_ast(const char* source, int* out_count);
+#endif
+
+#ifdef __cplusplus
+}
+#endif
+
+#endif

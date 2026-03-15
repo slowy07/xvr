@@ -57,4 +57,64 @@ bool Xvr_LLVMFunctionEmitterEmitCollection(Xvr_LLVMFunctionEmitter* emitter,
 LLVMValueRef Xvr_LLVMFunctionEmitterLookupVar(Xvr_LLVMFunctionEmitter* emitter,
                                               const char* name);
 
+/**
+ * @brief Looks up a local variable by name and returns its type
+ * @param emitter Function emitter
+ * @param name Variable name
+ * @param out_type Output parameter for the variable's XVR type
+ * @return LLVM value (the alloca or parameter), or NULL if not found
+ */
+LLVMValueRef Xvr_LLVMFunctionEmitterLookupVarWithType(
+    Xvr_LLVMFunctionEmitter* emitter, const char* name,
+    Xvr_LiteralType* out_type);
+
+/**
+ * @brief Looks up a local variable by name and returns array count
+ * @param emitter Function emitter
+ * @param name Variable name
+ * @return Array element count, or 0 if not an array or not found
+ */
+int Xvr_LLVMFunctionEmitterLookupVarArrayCount(Xvr_LLVMFunctionEmitter* emitter,
+                                               const char* name);
+
+/**
+ * @brief Gets the current function being emitted
+ * @param emitter Function emitter
+ * @return Current LLVM function, or NULL if none
+ */
+LLVMValueRef Xvr_LLVMFunctionEmitterGetCurrentFunction(
+    Xvr_LLVMFunctionEmitter* emitter);
+
+/**
+ * @brief Sets the current function being emitted
+ * @param emitter Function emitter
+ * @param function LLVM function to set as current
+ */
+void Xvr_LLVMFunctionEmitterSetCurrentFunction(Xvr_LLVMFunctionEmitter* emitter,
+                                               LLVMValueRef function);
+
+/**
+ * @brief Add a local variable to the function emitter
+ * @param emitter Function emitter
+ * @param name Variable name
+ * @param alloca LLVM alloca for the variable
+ * @param type XVR literal type
+ * @param array_count Number of elements if array, 0 otherwise
+ */
+void Xvr_LLVMFunctionEmitterAddLocalVar(Xvr_LLVMFunctionEmitter* emitter,
+                                        const char* name, LLVMValueRef alloca,
+                                        Xvr_LiteralType type, int array_count);
+
+/**
+ * @brief Enter a new scope (saves current variable count)
+ * @param emitter Function emitter
+ */
+void Xvr_LLVMFunctionEmitterEnterScope(Xvr_LLVMFunctionEmitter* emitter);
+
+/**
+ * @brief Exit current scope (removes variables added in this scope)
+ * @param emitter Function emitter
+ */
+void Xvr_LLVMFunctionEmitterExitScope(Xvr_LLVMFunctionEmitter* emitter);
+
 #endif

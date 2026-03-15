@@ -24,19 +24,74 @@ SOFTWARE.
 
 #include "xvr_llvm_codegen.h"
 
+#include <dlfcn.h>
+#include <llvm-c/Target.h>
+#include <llvm-c/TargetMachine.h>
 #include <stdio.h>
+#include <string.h>
+
+static const char* literal_type_name(Xvr_LiteralType type) {
+    switch (type) {
+    case XVR_LITERAL_BOOLEAN:
+        return "bool";
+    case XVR_LITERAL_INTEGER:
+        return "int";
+    case XVR_LITERAL_FLOAT:
+        return "float";
+    case XVR_LITERAL_FLOAT64:
+        return "float64";
+    case XVR_LITERAL_STRING:
+        return "string";
+    case XVR_LITERAL_ARRAY:
+        return "array";
+    case XVR_LITERAL_DICTIONARY:
+        return "dict";
+    case XVR_LITERAL_FUNCTION:
+        return "function";
+    case XVR_LITERAL_IDENTIFIER:
+        return "identifier";
+    case XVR_LITERAL_TYPE:
+        return "type";
+    case XVR_LITERAL_NULL:
+        return "null";
+    case XVR_LITERAL_INT8:
+        return "int8";
+    case XVR_LITERAL_INT16:
+        return "int16";
+    case XVR_LITERAL_INT32:
+        return "int32";
+    case XVR_LITERAL_INT64:
+        return "int64";
+    case XVR_LITERAL_UINT8:
+        return "uint8";
+    case XVR_LITERAL_UINT16:
+        return "uint16";
+    case XVR_LITERAL_UINT32:
+        return "uint32";
+    case XVR_LITERAL_UINT64:
+        return "uint64";
+    case XVR_LITERAL_FLOAT16:
+        return "float16";
+    case XVR_LITERAL_FLOAT32:
+        return "float32";
+    default:
+        return "unknown";
+    }
+}
+
+static bool is_integer_type(Xvr_LiteralType type) {
+    return type == XVR_LITERAL_INTEGER || type == XVR_LITERAL_INT8 ||
+           type == XVR_LITERAL_INT16 || type == XVR_LITERAL_INT32 ||
+           type == XVR_LITERAL_INT64 || type == XVR_LITERAL_UINT8 ||
+           type == XVR_LITERAL_UINT16 || type == XVR_LITERAL_UINT32 ||
+           type == XVR_LITERAL_UINT64;
+}
 #include <stdlib.h>
 #include <string.h>
 
-static char* Xvr_private_strdup(const char* str) {
-    if (!str) return NULL;
-    size_t len = strlen(str) + 1;
-    char* dup = malloc(len);
-    if (dup) {
-        memcpy(dup, str, len);
-    }
-    return dup;
-}
+#include "xvr_common.h"
+
+static char* Xvr_private_strdup(const char* str) { return Xvr_strdup(str); }
 
 #include "xvr_ast_node.h"
 #include "xvr_llvm_context.h"
@@ -62,6 +117,7 @@ struct Xvr_LLVMCodegen {
 
     bool has_error;
     char* error_message;
+    bool main_created;
 };
 
 Xvr_LLVMCodegen* Xvr_LLVMCodegenCreate(const char* module_name) {
@@ -148,6 +204,9 @@ Xvr_LLVMCodegen* Xvr_LLVMCodegenCreate(const char* module_name) {
         return NULL;
     }
 
+    Xvr_LLVMExpressionEmitterSetControlFlow(codegen->expr_emitter,
+                                            codegen->control_flow);
+
     codegen->optimizer = Xvr_LLVMOptimizerCreate();
     if (!codegen->optimizer) {
         Xvr_LLVMControlFlowDestroy(codegen->control_flow);
@@ -162,6 +221,37 @@ Xvr_LLVMCodegen* Xvr_LLVMCodegenCreate(const char* module_name) {
     }
 
     Xvr_LLVMOptimizerSetLevel(codegen->optimizer, XVR_LLVM_OPT_O2);
+
+    Xvr_LLVMTargetConfig* target_config = Xvr_LLVMTargetConfigCreate();
+    if (!target_config) {
+        Xvr_LLVMOptimizerDestroy(codegen->optimizer);
+        Xvr_LLVMControlFlowDestroy(codegen->control_flow);
+        Xvr_LLVMFunctionEmitterDestroy(codegen->fn_emitter);
+        Xvr_LLVMExpressionEmitterDestroy(codegen->expr_emitter);
+        Xvr_LLVMTypeMapperDestroy(codegen->type_mapper);
+        Xvr_LLVMIRBuilderDestroy(codegen->builder);
+        Xvr_LLVMModuleManagerDestroy(codegen->module);
+        Xvr_LLVMContextDestroy(codegen->context);
+        free(codegen);
+        return NULL;
+    }
+    Xvr_LLVMTargetConfigSetReloc(target_config, "PIC");
+    Xvr_LLVMTargetConfigSetCodeModel(target_config, "jitdefault");
+
+    codegen->target_machine = Xvr_LLVMTargetMachineCreate(target_config);
+    if (!codegen->target_machine) {
+        Xvr_LLVMTargetConfigDestroy(target_config);
+        Xvr_LLVMOptimizerDestroy(codegen->optimizer);
+        Xvr_LLVMControlFlowDestroy(codegen->control_flow);
+        Xvr_LLVMFunctionEmitterDestroy(codegen->fn_emitter);
+        Xvr_LLVMExpressionEmitterDestroy(codegen->expr_emitter);
+        Xvr_LLVMTypeMapperDestroy(codegen->type_mapper);
+        Xvr_LLVMIRBuilderDestroy(codegen->builder);
+        Xvr_LLVMModuleManagerDestroy(codegen->module);
+        Xvr_LLVMContextDestroy(codegen->context);
+        free(codegen);
+        return NULL;
+    }
 
     codegen->has_error = false;
     codegen->error_message = NULL;
@@ -241,8 +331,7 @@ static bool ensure_main_function(Xvr_LLVMCodegen* codegen);
 static void finalize_main_function(Xvr_LLVMCodegen* codegen);
 
 static bool ensure_main_function(Xvr_LLVMCodegen* codegen) {
-    static bool main_created = false;
-    if (main_created) {
+    if (codegen->main_created) {
         return true;
     }
 
@@ -255,16 +344,18 @@ static bool ensure_main_function(Xvr_LLVMCodegen* codegen) {
     LLVMAddFunction(module, "main", main_fn_type);
 
     LLVMValueRef main_fn = LLVMGetNamedFunction(module, "main");
-    LLVMBasicBlockRef entry = LLVMAppendBasicBlock(main_fn, "entry");
+    LLVMBasicBlockRef entry =
+        LLVMAppendBasicBlockInContext(llvm_ctx, main_fn, "entry");
     LLVMPositionBuilderAtEnd(builder, entry);
 
-    main_created = true;
+    Xvr_LLVMFunctionEmitterSetCurrentFunction(codegen->fn_emitter, main_fn);
+
+    codegen->main_created = true;
     return true;
 }
 
 static void finalize_main_function(Xvr_LLVMCodegen* codegen) {
-    static bool finalized = false;
-    if (finalized) {
+    if (!codegen->main_created) {
         return;
     }
 
@@ -273,11 +364,97 @@ static void finalize_main_function(Xvr_LLVMCodegen* codegen) {
     LLVMTypeRef int32_type = LLVMInt32TypeInContext(llvm_ctx);
 
     LLVMBuildRet(builder, LLVMConstInt(int32_type, 0, false));
-    finalized = true;
 }
 
 static bool emit_main_function(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* stmt) {
     ensure_main_function(codegen);
+
+    if (stmt->type == XVR_AST_NODE_VAR_DECL) {
+        Xvr_NodeVarDecl* varDecl = &stmt->varDecl;
+        const char* var_name = NULL;
+        if (varDecl->identifier.type == XVR_LITERAL_IDENTIFIER &&
+            varDecl->identifier.as.string.ptr) {
+            var_name = (const char*)varDecl->identifier.as.string.ptr->data;
+        }
+
+        if (var_name && varDecl->expression) {
+            Xvr_LLVMExpressionEmitter* expr_emitter = codegen->expr_emitter;
+            LLVMValueRef init_value = Xvr_LLVMExpressionEmitterEmit(
+                expr_emitter, varDecl->expression);
+            if (init_value) {
+                LLVMTypeRef var_type = LLVMTypeOf(init_value);
+                LLVMValueRef alloca = Xvr_LLVMIRBuilderCreateAlloca(
+                    codegen->builder, var_type, var_name);
+                Xvr_LLVMIRBuilderCreateStore(codegen->builder, init_value,
+                                             alloca);
+                Xvr_LiteralType inferredType = XVR_LITERAL_INTEGER;
+                LLVMTypeKind kind = LLVMGetTypeKind(var_type);
+                if (kind == LLVMPointerTypeKind) {
+                    inferredType = XVR_LITERAL_STRING;
+                } else if (kind == LLVMFloatTypeKind) {
+                    inferredType = XVR_LITERAL_FLOAT;
+                } else if (kind == LLVMDoubleTypeKind) {
+                    inferredType = XVR_LITERAL_FLOAT64;
+                } else if (kind == LLVMArrayTypeKind) {
+                    inferredType = XVR_LITERAL_ARRAY;
+                } else if (kind == LLVMIntegerTypeKind) {
+                    unsigned int bits = LLVMGetIntTypeWidth(var_type);
+                    if (bits == 1) {
+                        inferredType = XVR_LITERAL_BOOLEAN;
+                    } else if (bits == 8) {
+                        inferredType = XVR_LITERAL_INT8;
+                    } else if (bits == 16) {
+                        inferredType = XVR_LITERAL_INT16;
+                    } else if (bits == 32) {
+                        inferredType = XVR_LITERAL_INTEGER;
+                    } else if (bits == 64) {
+                        inferredType = XVR_LITERAL_INT64;
+                    }
+                }
+                Xvr_LiteralType varType = inferredType;
+                if (varDecl->typeLiteral.type == XVR_LITERAL_TYPE &&
+                    XVR_AS_TYPE(varDecl->typeLiteral).typeOf !=
+                        XVR_LITERAL_TYPE &&
+                    XVR_AS_TYPE(varDecl->typeLiteral).typeOf !=
+                        XVR_LITERAL_ANY) {
+                    Xvr_LiteralType declaredType =
+                        XVR_AS_TYPE(varDecl->typeLiteral).typeOf;
+                    bool typesMatch = false;
+                    if (declaredType == inferredType) {
+                        typesMatch = true;
+                    } else if (declaredType == XVR_LITERAL_FLOAT &&
+                               (inferredType == XVR_LITERAL_FLOAT64 ||
+                                inferredType == XVR_LITERAL_INTEGER)) {
+                        typesMatch = true;
+                    } else if (declaredType == XVR_LITERAL_FLOAT64 &&
+                               (inferredType == XVR_LITERAL_FLOAT ||
+                                inferredType == XVR_LITERAL_INTEGER)) {
+                        typesMatch = true;
+                    } else if (is_integer_type(declaredType) &&
+                               is_integer_type(inferredType)) {
+                        typesMatch = true;
+                    }
+                    if (!typesMatch) {
+                        char error_msg[256];
+                        const char* declaredName =
+                            literal_type_name(declaredType);
+                        const char* inferredName =
+                            literal_type_name(inferredType);
+                        snprintf(
+                            error_msg, sizeof(error_msg),
+                            "type mismatch: cannot convert from '%s' to '%s'",
+                            inferredName, declaredName);
+                        set_error(codegen, error_msg);
+                        return false;
+                    }
+                    varType = declaredType;
+                }
+                Xvr_LLVMFunctionEmitterAddLocalVar(
+                    codegen->fn_emitter, var_name, alloca, varType, 0);
+            }
+        }
+        return true;
+    }
 
     Xvr_LLVMExpressionEmitterEmit(codegen->expr_emitter, stmt);
 
@@ -323,13 +500,27 @@ bool Xvr_LLVMCodegenWriteBitcode(Xvr_LLVMCodegen* codegen,
 
 bool Xvr_LLVMCodegenWriteObjectFile(Xvr_LLVMCodegen* codegen,
                                     const char* filepath) {
-    (void)codegen;
-    (void)filepath;
-    return false;
+    if (!codegen || !filepath) {
+        return false;
+    }
+    if (!codegen->target_machine) {
+        return false;
+    }
+    finalize_main_function(codegen);
+    return Xvr_LLVMTargetMachineEmitToFile(codegen->target_machine,
+                                           codegen->module, filepath, 0);
 }
 
 bool Xvr_LLVMCodegenExecuteJIT(Xvr_LLVMCodegen* codegen) {
-    (void)codegen;
+    if (!codegen) {
+        return false;
+    }
+
+    LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(codegen->module);
+    if (!module) {
+        return false;
+    }
+
     return false;
 }
 

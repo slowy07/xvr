@@ -30,12 +30,12 @@ SOFTWARE.
 
 #include "xvr_ast_node.h"
 #include "xvr_llvm_context.h"
-#include "xvr_llvm_expression_emitter.h"
 #include "xvr_llvm_ir_builder.h"
 #include "xvr_llvm_module_manager.h"
 #include "xvr_llvm_type_mapper.h"
 
 typedef struct Xvr_LLVMControlFlow Xvr_LLVMControlFlow;
+typedef struct Xvr_LLVMExpressionEmitter Xvr_LLVMExpressionEmitter;
 
 Xvr_LLVMControlFlow* Xvr_LLVMControlFlowCreate(
     Xvr_LLVMContext* ctx, Xvr_LLVMModuleManager* module,
@@ -49,5 +49,10 @@ bool Xvr_LLVMControlFlowEmitWhile(Xvr_LLVMControlFlow* cf,
 bool Xvr_LLVMControlFlowEmitFor(Xvr_LLVMControlFlow* cf, Xvr_NodeFor* for_node);
 bool Xvr_LLVMControlFlowEmitBreak(Xvr_LLVMControlFlow* cf);
 bool Xvr_LLVMControlFlowEmitContinue(Xvr_LLVMControlFlow* cf);
+
+void Xvr_LLVMControlFlowPushLoopTarget(Xvr_LLVMControlFlow* cf,
+                                       LLVMBasicBlockRef break_block,
+                                       LLVMBasicBlockRef continue_block);
+void Xvr_LLVMControlFlowPopLoopTarget(Xvr_LLVMControlFlow* cf);
 
 #endif

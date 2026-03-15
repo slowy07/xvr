@@ -42,6 +42,7 @@ typedef struct {
     const char* name;
     LLVMValueRef value;
     Xvr_LiteralType type;
+    int array_count;  // 0 if not an array
 } Xvr_LLVMVariable;
 
 struct Xvr_LLVMFunctionEmitter {
@@ -53,6 +54,8 @@ struct Xvr_LLVMFunctionEmitter {
 
     Xvr_LLVMVariable local_vars[MAX_LOCAL_VARS];
     int local_var_count;
+    int scope_stack[32];  // Track var count at each scope level
+    int scope_depth;
     LLVMValueRef current_function;
 };
 
@@ -90,19 +93,23 @@ static void clear_local_vars(Xvr_LLVMFunctionEmitter* emitter) {
 }
 
 static void add_local_var(Xvr_LLVMFunctionEmitter* emitter, const char* name,
-                          LLVMValueRef value, Xvr_LiteralType type) {
+                          LLVMValueRef value, Xvr_LiteralType type,
+                          int array_count) {
     if (emitter->local_var_count >= MAX_LOCAL_VARS) {
         return;
     }
     emitter->local_vars[emitter->local_var_count].name = name;
     emitter->local_vars[emitter->local_var_count].value = value;
     emitter->local_vars[emitter->local_var_count].type = type;
+    emitter->local_vars[emitter->local_var_count].array_count = array_count;
     emitter->local_var_count++;
 }
 
 static LLVMValueRef lookup_local_var(Xvr_LLVMFunctionEmitter* emitter,
                                      const char* name) {
-    for (int i = 0; i < emitter->local_var_count; i++) {
+    /* Search backwards to find the most recent variable with this name (handles
+     * shadowing) */
+    for (int i = emitter->local_var_count - 1; i >= 0; i--) {
         if (emitter->local_vars[i].name &&
             strcmp(emitter->local_vars[i].name, name) == 0) {
             return emitter->local_vars[i].value;
@@ -114,6 +121,77 @@ static LLVMValueRef lookup_local_var(Xvr_LLVMFunctionEmitter* emitter,
 LLVMValueRef Xvr_LLVMFunctionEmitterLookupVar(Xvr_LLVMFunctionEmitter* emitter,
                                               const char* name) {
     return lookup_local_var(emitter, name);
+}
+
+LLVMValueRef Xvr_LLVMFunctionEmitterLookupVarWithType(
+    Xvr_LLVMFunctionEmitter* emitter, const char* name,
+    Xvr_LiteralType* out_type) {
+    if (!emitter || !name || !out_type) {
+        return NULL;
+    }
+
+    for (int i = emitter->local_var_count - 1; i >= 0; i--) {
+        if (emitter->local_vars[i].name &&
+            strcmp(emitter->local_vars[i].name, name) == 0) {
+            *out_type = emitter->local_vars[i].type;
+            return emitter->local_vars[i].value;
+        }
+    }
+    return NULL;
+}
+
+int Xvr_LLVMFunctionEmitterLookupVarArrayCount(Xvr_LLVMFunctionEmitter* emitter,
+                                               const char* name) {
+    if (!emitter || !name) {
+        return 0;
+    }
+
+    for (int i = emitter->local_var_count - 1; i >= 0; i--) {
+        if (emitter->local_vars[i].name &&
+            strcmp(emitter->local_vars[i].name, name) == 0) {
+            return emitter->local_vars[i].array_count;
+        }
+    }
+    return 0;
+}
+
+LLVMValueRef Xvr_LLVMFunctionEmitterGetCurrentFunction(
+    Xvr_LLVMFunctionEmitter* emitter) {
+    if (!emitter) {
+        return NULL;
+    }
+    return emitter->current_function;
+}
+
+void Xvr_LLVMFunctionEmitterSetCurrentFunction(Xvr_LLVMFunctionEmitter* emitter,
+                                               LLVMValueRef function) {
+    if (!emitter) {
+        return;
+    }
+    emitter->current_function = function;
+}
+
+void Xvr_LLVMFunctionEmitterAddLocalVar(Xvr_LLVMFunctionEmitter* emitter,
+                                        const char* name, LLVMValueRef alloca,
+                                        Xvr_LiteralType type, int array_count) {
+    if (!emitter || !name || !alloca) {
+        return;
+    }
+    add_local_var(emitter, name, alloca, type, array_count);
+}
+
+void Xvr_LLVMFunctionEmitterEnterScope(Xvr_LLVMFunctionEmitter* emitter) {
+    if (!emitter) return;
+    if (emitter->scope_depth < 32) {
+        emitter->scope_stack[emitter->scope_depth] = emitter->local_var_count;
+        emitter->scope_depth++;
+    }
+}
+
+void Xvr_LLVMFunctionEmitterExitScope(Xvr_LLVMFunctionEmitter* emitter) {
+    if (!emitter || emitter->scope_depth <= 0) return;
+    emitter->scope_depth--;
+    emitter->local_var_count = emitter->scope_stack[emitter->scope_depth];
 }
 
 static Xvr_LiteralType get_var_type(Xvr_LLVMFunctionEmitter* emitter,
@@ -216,10 +294,11 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
     for (int i = 0; i < param_count; i++) {
         LLVMValueRef param = LLVMGetParam(function, i);
         LLVMSetValueName(param, param_names[i]);
-        add_local_var(emitter, param_names[i], param, param_types_xvr[i]);
+        add_local_var(emitter, param_names[i], param, param_types_xvr[i], 0);
     }
 
-    LLVMBasicBlockRef entry_block = LLVMAppendBasicBlock(function, "entry");
+    LLVMBasicBlockRef entry_block =
+        LLVMAppendBasicBlockInContext(llvm_ctx, function, "entry");
     Xvr_LLVMIRBuilderSetInsertPoint(builder, entry_block);
 
     LLVMValueRef return_value = NULL;
@@ -239,29 +318,6 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
                 } else {
                     return_value = Xvr_LLVMExpressionEmitterEmit(expr_emitter,
                                                                  ret->returns);
-                }
-            }
-        } else if (stmt->type == XVR_AST_NODE_VAR_DECL) {
-            Xvr_NodeVarDecl* varDecl = &stmt->varDecl;
-            const char* var_name = NULL;
-            if (varDecl->identifier.type == XVR_LITERAL_IDENTIFIER &&
-                varDecl->identifier.as.string.ptr) {
-                var_name = (const char*)varDecl->identifier.as.string.ptr->data;
-            }
-
-            if (var_name && varDecl->expression) {
-                LLVMValueRef init_value = Xvr_LLVMExpressionEmitterEmit(
-                    expr_emitter, varDecl->expression);
-                if (init_value) {
-                    LLVMTypeRef var_type = LLVMTypeOf(init_value);
-                    LLVMValueRef alloca = Xvr_LLVMIRBuilderCreateAlloca(
-                        builder, var_type, var_name);
-                    Xvr_LLVMIRBuilderCreateStore(builder, init_value, alloca);
-                    Xvr_LiteralType varType = XVR_LITERAL_INTEGER;
-                    if (varDecl->typeLiteral.type == XVR_LITERAL_TYPE) {
-                        varType = XVR_AS_TYPE(varDecl->typeLiteral).typeOf;
-                    }
-                    add_local_var(emitter, var_name, alloca, varType);
                 }
             }
         } else {

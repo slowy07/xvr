@@ -1,113 +1,84 @@
-# Chapter 2
+# Chapter 2 - Variables and Literals
 
-## Playing With Literals
+## Variables
 
-And now we playing with literals, literals are constant value which is defining that value and write to stdout.
+Use `var` to declare variables:
 
-```literals.xvr
+```xvr
+var x = 42;
+var name = "hello";
+var pi = 3.14;
+var isActive = true;
+```
 
-// literal integers
+## Literals
+
+### Integers
+
+```xvr
 print(3);
+print(42);
+print(200_000_000);  // Underscores for readability
+```
 
-// literal floating numbers
-// using dot character not comma
+### Floats
+
+```xvr
+print(3.14);
 print(25.3);
-
-// literal string
-print("wello Xvr, how are you today?");
-
-// literal boolean
-// true or false
-print(true)
-print(false)
-
-// or you can using separator for readable
-print(200_000_000);
-print(3250_000);
 ```
 
+### Strings
 
-## Print with Format Specifiers
-
-The `print` function supports format specifiers for formatted output:
-
-```format.xvr
-
-// %s - string, boolean, or any value
-print("Hello %s", "World");           // Hello World
-print("Bool: %s", true);               // Bool: true
-print("Num: %s", 42);                 // Num: 42
-
-// %d or %i - integers
-print("Number: %d", 42);              // Number: 42
-print("Calc: %d", 10 + 5);            // Calc: 15
-
-// %f or %g - floats
-print("Float: %f", 3.14);             // Float: 3.14
-print("Pi: %g", 3.14159);             // Pi: 3.14159
-
-// %% - literal percent sign
-print("100%% complete");              // 100% complete
-
-// Escape sequences
-print("Line1\nLine2");                // Line1
-                                        // Line2
-
-// Multiple specifiers
-print("%s is %d years old", "arfy", 25);  // arfy is 25 years old
+```xvr
+print("Hello, XVR!");
 ```
 
-### Format Specifiers
+### Booleans
 
-| Specifier | Description | Example |
-|-----------|-------------|---------|
-| `%s` | String, boolean, integer, float, null, array | `"Hello %s", "World"` |
-| `%d` or `%i` | Integer | `"Count: %d", 42` |
-| `%f` | Float (default 6 decimal places) | `"Value: %f", 3.14` |
-| `%g` | Compact float (auto-switches to scientific) | `"Value: %g", 3.14159` |
-| `%e` | Scientific notation (lowercase) | `"%e", 1234.56` → `1.234560e+03` |
-| `%E` | Scientific notation (uppercase) | `"%E", 1234.56` → `1.234560E+03` |
-| `%%` | Literal percent | `"100%%"` |
-
-### Precision Specifiers
-
-You can specify the number of decimal places using `.N` before the specifier:
-
-```precision.xvr
-// %.Nf - precision for floats
-print("%.2f", 3.14159);    // 3.14
-print("%.4f", 3.14159);    // 3.1416
-print("%.0f", 2.5);        // 2
-
-// %.Ne - precision for scientific notation
-print("%.2e", 1234.56);    // 1.23e+03
-print("%.4e", 0.00001234); // 1.2340e-05
-
-// %.Ng - precision for compact format
-print("%.6g", 1234.5678);  // 1234.57
+```xvr
+print(true);
+print(false);
 ```
 
-### Float Types
+## Print with String Interpolation
 
-XVR supports different floating-point precision types:
+XVR uses `{}` placeholders:
 
-```float_types.xvr
-// Default float (implementation-defined precision)
-print("%f", 3.14159);           // 3.141590
+```xvr
+var name = "World";
+var age = 25;
+var pi = 3.14159;
 
-// Float32 - 32-bit floating point
-print("%.4f", 1.234567f32);     // 1.2346
-
-// Float64 - 64-bit floating point  
-print("%.8f", 1.123456789f64);  // 1.12345679
-
-// Using %s with float types
-print("%s", 3.14f32);           // 3.14
-print("%s", 2.718281828f64);    // 2.71828
+print("Hello, {}!", name);              // Hello, World!
+print("Age: {}", age);                  // Age: 25
+print("Pi: {:.2f}", pi);                // Pi: 3.14
+print("{} is {} years old", name, age); // World is 25 years old
 ```
 
-> [!TIP]
-> You can still use the old style string concatenation with `+`:
-> ```xvr
-> print("Hello " + "World");
-> ```
+### Type Inference
+
+The format string automatically detects types:
+
+| Value | Type | Format |
+|-------|------|--------|
+| `"hello"` | string | `%s` |
+| `42` | integer | `%d` |
+| `3.14` | float | `%lf` |
+| `true` | boolean | `%s` |
+
+### Escaping Braces
+
+Use `{{` and `}}` for literal braces:
+
+```xvr
+print("{{hello}}");  // {hello}
+```
+
+## Multiple Values
+
+```xvr
+var a = 10;
+var b = 20;
+print("{} + {} = {}", a, b, a + b);  // 10 + 20 = 30
+```

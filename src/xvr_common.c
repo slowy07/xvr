@@ -26,7 +26,18 @@ SOFTWARE.
 
 #include <assert.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+char* Xvr_strdup(const char* str) {
+    if (!str) return NULL;
+    size_t len = strlen(str) + 1;
+    char* dup = malloc(len);
+    if (dup) {
+        memcpy(dup, str, len);
+    }
+    return dup;
+}
 
 #define STATIC_ASSERT(test_for_true) \
     static_assert((test_for_true), "(" #test_for_true ") failed")
@@ -45,12 +56,13 @@ Xvr_CommandLine Xvr_commandLine;
 
 Xvr_CommandLine Xvr_commandLine = {
     // default values
-    .error = false,      .help = false,
-    .version = false,    .binaryFile = NULL,
-    .sourceFile = NULL,  .compileFile = NULL,
-    .outFile = "out.xb", .source = NULL,
-    .initialfile = NULL, .enablePrintNewline = true,
-    .verbose = false,    .dumpLLVM = false};
+    .error = false,       .help = false,
+    .version = false,     .binaryFile = NULL,
+    .sourceFile = NULL,   .compileFile = NULL,
+    .outFile = NULL,      .source = NULL,
+    .initialfile = NULL,  .enablePrintNewline = true,
+    .verbose = false,     .dumpLLVM = false,
+    .compileOnly = false, .emitType = NULL};
 
 void Xvr_initCommandLine(int argc, const char* argv[]) {
     for (int i = 1; i < argc; i++) {  // start at 1 to skip the program name
@@ -89,10 +101,14 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
             continue;
         }
 
-        if ((!strcmp(argv[i], "-c") || !strcmp(argv[i], "--compile")) &&
-            i + 1 < argc) {
-            Xvr_commandLine.compileFile = (char*)argv[i + 1];
-            i++;
+        if (!strcmp(argv[i], "-c")) {
+            Xvr_commandLine.compileOnly = true;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
+        if (!strcmp(argv[i], "-r")) {
+            Xvr_commandLine.compileAndRun = true;
             Xvr_commandLine.error = false;
             continue;
         }
@@ -119,6 +135,26 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
             continue;
         }
 
+        if ((!strcmp(argv[i], "-e") || !strcmp(argv[i], "--emit")) &&
+            i + 1 < argc) {
+            Xvr_commandLine.emitType = (char*)argv[i + 1];
+            i++;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
+        if (!strcmp(argv[i], "-S")) {
+            Xvr_commandLine.dumpLLVM = true;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
+        if (!strcmp(argv[i], "-c")) {
+            Xvr_commandLine.compileOnly = true;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
         if (i < argc) {
             size_t len = strlen(argv[i]);
             if (len >= 4 && strcmp(&argv[i][len - 4], ".xvr") == 0) {
@@ -140,56 +176,40 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
 
 void Xvr_usageCommandLine(int argc, const char* argv[]) {
     (void)argc;
-    printf(
-        "usage: %s [file.xvr | file.xb | -h | -v | [-d][-l][-i source | -c  "
-        "file | "
-        "-t file.xvr"
-        "[-o outfile]]]\n\n",
-        argv[0]);
+    printf("usage: %s [file.xvr] [-h] [-v] [-o outfile] [-l] [-c out.o]\n\n",
+           argv[0]);
 }
 
 void Xvr_helpCommandLine(int argc, const char* argv[]) {
     Xvr_usageCommandLine(argc, argv);
 
-    printf(
-        "file.xvr\t\tSource file in xvr format, parse, compile and execute\n");
-    printf(
-        "file.xb\t\tBinary input file in xb format, must be version "
-        "%d.%d.%d\n\n",
-        XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH);
+    printf("XVR AOT Compiler - Compile .xvr files to native executables\n\n");
 
-    printf("-h\t\t --help\t\tShow this help\n");
-    printf("-v\t\t --version\t\tShow version and information\n");
-    printf("-d\t\t --debug\t\tBe versbose when operating\n");
-    printf("-l\t\t --llvm\t\tDump LLVM IR instead of executing\n");
-
+    printf("Usage:\n");
+    printf("  xvr file.xvr              Compile and run the program\n");
     printf(
-        "-i\t\t --input source\t\tParse, compile and execute the given string "
-        "of source code\n");
+        "  xvr file.xvr -o out      Compile to executable (default: a.out)\n");
+    printf("  xvr file.xvr -l          Dump LLVM IR to stdout\n");
+    printf("  xvr file.xvr -c out.o    Compile to object file only\n");
+    printf("  xvr -h                   Show this help\n");
+    printf("  xvr -v                   Show version\n\n");
 
+    printf("Options:\n");
+    printf("  -h, --help         Show this help\n");
+    printf("  -v, --version      Show version and exit\n");
+    printf("  -o, --output FILE  Output file name\n");
+    printf("  -l, --llvm         Dump LLVM IR (implies -c)\n");
     printf(
-        "-c\t\t --compile filename\t\tParse and compile the specified source "
-        "file into output file\n");
-
-    printf(
-        "-o\t\t --output outfile\t\tName of the output file built with "
-        "--compile (default output.xb)\n");
-
-    printf(
-        "-n\t\t disable the newline char at the end of the print statement\n");
-
-    printf(
-        "-t\t\t --initial filename\tStart the interpreter as noremal, after "
-        "first running given file xvr file\n");
+        "  -c, --compile      Compile to object file (don't link/execute)\n");
+    printf("  -n                 Disable trailing newline in print\n");
 }
 
 void Xvr_copyrightCommandLine(int argc, const char* argv[]) {
     (void)argc;
     (void)argv;
     printf("The Xvr Programming Language\n");
-    printf("Interpreter version %d.%d.%d (built date %s)\n\n",
-           XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH,
-           XVR_VERSION_BUILD);
+    printf("Compiler version %d.%d.%d (built date %s)\n\n", XVR_VERSION_MAJOR,
+           XVR_VERSION_MINOR, XVR_VERSION_PATCH, XVR_VERSION_BUILD);
     printf("Copyright (c) Arfy Slowy - MIT License\n");
 }
 

@@ -1,6 +1,6 @@
 /**
- * XVR Combined Test Suite
- * Runs all test modules in a single executable
+ * XVR Combined Test Suite - LLVM AOT Only
+ * Runs all test modules in a single executable with verbose output
  */
 
 #include <setjmp.h>
@@ -12,6 +12,8 @@
 
 static jmp_buf jump_buffer;
 static volatile sig_atomic_t crashOccurred = 0;
+static int totalPassed = 0;
+static int totalFailed = 0;
 
 static void segfault_handler(int sig) {
     crashOccurred = 1;
@@ -24,21 +26,48 @@ int run_scope_tests(void);
 int run_compiler_tests(void);
 int run_literal_tests(void);
 int run_memory_tests(void);
-int run_opaque_tests(void);
 int run_ast_node_tests(void);
 int run_llvm_backend_tests(void);
-int run_interpreter_tests(void);
 
-int run_test_with_crash_protection(const char* name, int (*test_func)(void)) {
+void print_header(const char* title) {
+    printf("\n" XVR_CC_NOTICE "========================================\n");
+    printf("  %s\n", title);
+    printf("========================================\n" XVR_CC_RESET);
+}
+
+void print_test_start(const char* test_name) {
+    printf(XVR_CC_NOTICE "  [RUN ] %s...\n" XVR_CC_RESET, test_name);
+}
+
+void print_test_pass(const char* test_name) {
+    printf(XVR_CC_NOTICE "  [PASS] %s\n" XVR_CC_RESET, test_name);
+    totalPassed++;
+}
+
+void print_test_fail(const char* test_name, const char* reason) {
+    printf(XVR_CC_ERROR "  [FAIL] %s - %s\n" XVR_CC_RESET, test_name,
+           reason ? reason : "unknown error");
+    totalFailed++;
+}
+
+int run_test_with_crash_protection(const char* name, int (*test_func)(void),
+                                   const char* description) {
     crashOccurred = 0;
     signal(SIGSEGV, segfault_handler);
+
+    printf(XVR_CC_NOTICE "\n[RUN ] %s\n" XVR_CC_RESET, description);
 
     int result;
     if (setjmp(jump_buffer) == 0) {
         result = test_func();
+        if (result == 0) {
+            print_test_pass(name);
+        } else {
+            print_test_fail(name, "test returned non-zero");
+        }
     } else {
-        printf(XVR_CC_ERROR "CRASHED: %s\n" XVR_CC_RESET, name);
-        return -1;
+        print_test_fail(name, "SEGFAULT");
+        result = -1;
     }
 
     signal(SIGSEGV, SIG_DFL);
@@ -46,114 +75,63 @@ int run_test_with_crash_protection(const char* name, int (*test_func)(void)) {
 }
 
 int main(void) {
-    int totalFailed = 0;
-    int totalPassed = 0;
+    print_header("XVR LLVM AOT COMPILER TEST SUITE");
+    printf("\n" XVR_CC_NOTICE "Testing Version: %d.%d.%d\n" XVR_CC_RESET, 0, 4,
+           7);
+    printf(XVR_CC_NOTICE "Build: " __DATE__ " " __TIME__ "\n\n" XVR_CC_RESET);
 
-    printf(XVR_CC_NOTICE "   XVR TEST SUITE\n");
+    /* AST Node Tests */
+    print_header("AST Node Tests");
+    run_test_with_crash_protection("ast_node_create", run_ast_node_tests,
+                                   "AST Node Creation and Management");
 
-    printf(XVR_CC_NOTICE "Running AST Node tests...\n");
-    if (run_test_with_crash_protection("ast_node", run_ast_node_tests) != 0) {
-        totalFailed++;
-        printf(XVR_CC_ERROR "FAILED: ast_node tests\n" XVR_CC_RESET);
-    } else {
-        totalPassed++;
-        printf(XVR_CC_NOTICE "PASSED: ast_node tests\n" XVR_CC_RESET);
-    }
+    /* Lexer Tests */
+    print_header("Lexer Tests");
+    run_test_with_crash_protection("lexer_basic", run_lexer_tests,
+                                   "Lexer Tokenization");
+
+    /* Parser Tests */
+    print_header("Parser Tests");
+    run_test_with_crash_protection("parser_basic", run_parser_tests,
+                                   "Parser AST Generation");
+
+    /* Scope Tests */
+    print_header("Scope Tests");
+    run_test_with_crash_protection("scope_basic", run_scope_tests,
+                                   "Scope Management");
+
+    /* Literal Tests */
+    print_header("Literal Tests");
+    run_test_with_crash_protection("literal_basic", run_literal_tests,
+                                   "Literal Values");
+
+    /* Memory Tests */
+    print_header("Memory Tests");
+    run_test_with_crash_protection("memory_basic", run_memory_tests,
+                                   "Memory Management");
+
+    /* Compiler Tests */
+    print_header("Compiler Tests");
+    run_test_with_crash_protection("compiler_basic", run_compiler_tests,
+                                   "Code Compilation");
+
+    /* LLVM Backend Tests */
+    print_header("LLVM Backend Tests");
+    run_test_with_crash_protection("llvm_backend", run_llvm_backend_tests,
+                                   "LLVM Backend Infrastructure");
+
+    /* Summary */
+    print_header("TEST SUMMARY");
+    printf("\n");
+    printf(XVR_CC_NOTICE "  Total Passed: %d\n" XVR_CC_RESET, totalPassed);
+    printf(XVR_CC_ERROR "  Total Failed: %d\n" XVR_CC_RESET, totalFailed);
     printf("\n");
 
-    printf(XVR_CC_NOTICE "Running Lexer tests...\n");
-    if (run_test_with_crash_protection("lexer", run_lexer_tests) != 0) {
-        totalFailed++;
-        printf(XVR_CC_ERROR "FAILED: lexer tests\n" XVR_CC_RESET);
+    if (totalFailed == 0) {
+        printf(XVR_CC_NOTICE "  ALL TESTS PASSED!\n\n" XVR_CC_RESET);
+        return 0;
     } else {
-        totalPassed++;
-        printf(XVR_CC_NOTICE "PASSED: lexer tests\n" XVR_CC_RESET);
+        printf(XVR_CC_ERROR "  SOME TESTS FAILED!\n\n" XVR_CC_RESET);
+        return 1;
     }
-    printf("\n");
-
-    printf(XVR_CC_NOTICE "Running Parser tests...\n");
-    if (run_test_with_crash_protection("parser", run_parser_tests) != 0) {
-        totalFailed++;
-        printf(XVR_CC_ERROR "FAILED: parser tests\n" XVR_CC_RESET);
-    } else {
-        totalPassed++;
-        printf(XVR_CC_NOTICE "PASSED: parser tests\n" XVR_CC_RESET);
-    }
-    printf("\n");
-
-    printf(XVR_CC_NOTICE "Running Compiler tests...\n");
-    if (run_test_with_crash_protection("compiler", run_compiler_tests) != 0) {
-        totalFailed++;
-        printf(XVR_CC_ERROR "FAILED: compiler tests\n" XVR_CC_RESET);
-    } else {
-        totalPassed++;
-        printf(XVR_CC_NOTICE "PASSED: compiler tests\n" XVR_CC_RESET);
-    }
-    printf("\n");
-
-    printf(XVR_CC_NOTICE "Running Literal tests...\n");
-    if (run_test_with_crash_protection("literal", run_literal_tests) != 0) {
-        totalFailed++;
-        printf(XVR_CC_ERROR "FAILED: literal tests\n" XVR_CC_RESET);
-    } else {
-        totalPassed++;
-        printf(XVR_CC_NOTICE "PASSED: literal tests\n" XVR_CC_RESET);
-    }
-    printf("\n");
-
-    printf(XVR_CC_NOTICE "Running Memory tests...\n");
-    if (run_test_with_crash_protection("memory", run_memory_tests) != 0) {
-        totalFailed++;
-        printf(XVR_CC_ERROR "FAILED: memory tests\n" XVR_CC_RESET);
-    } else {
-        totalPassed++;
-        printf(XVR_CC_NOTICE "PASSED: memory tests\n" XVR_CC_RESET);
-    }
-    printf("\n");
-
-    printf(XVR_CC_NOTICE "Running Opaque tests...\n");
-    if (run_test_with_crash_protection("opaque", run_opaque_tests) != 0) {
-        totalFailed++;
-        printf(XVR_CC_ERROR "FAILED: opaque tests\n" XVR_CC_RESET);
-    } else {
-        totalPassed++;
-        printf(XVR_CC_NOTICE "PASSED: opaque tests\n" XVR_CC_RESET);
-    }
-    printf("\n");
-
-    printf(XVR_CC_NOTICE "Running Scope tests...\n");
-    if (run_test_with_crash_protection("scope", run_scope_tests) != 0) {
-        totalFailed++;
-        printf(XVR_CC_ERROR "FAILED: scope tests\n" XVR_CC_RESET);
-    } else {
-        totalPassed++;
-        printf(XVR_CC_NOTICE "PASSED: scope tests\n" XVR_CC_RESET);
-    }
-    printf("\n");
-
-    printf(XVR_CC_NOTICE "Running LLVM Backend tests...\n");
-    if (run_test_with_crash_protection("llvm_backend",
-                                       run_llvm_backend_tests) != 0) {
-        totalFailed++;
-        printf(XVR_CC_ERROR "FAILED: llvm_backend tests\n" XVR_CC_RESET);
-    } else {
-        totalPassed++;
-        printf(XVR_CC_NOTICE "PASSED: llvm_backend tests\n" XVR_CC_RESET);
-    }
-    printf("\n");
-
-    printf(XVR_CC_NOTICE "Running Interpreter tests...\n");
-    if (run_test_with_crash_protection("interpreter", run_interpreter_tests) !=
-        0) {
-        totalFailed++;
-        printf(XVR_CC_ERROR "FAILED: interpreter tests\n" XVR_CC_RESET);
-    } else {
-        totalPassed++;
-        printf(XVR_CC_NOTICE "PASSED: interpreter tests\n" XVR_CC_RESET);
-    }
-    printf("\n");
-
-    printf(XVR_CC_NOTICE "   SUMMARY: %d passed, %d failed\n", totalPassed,
-           totalFailed);
-    return totalFailed > 0 ? 1 : 0;
 }

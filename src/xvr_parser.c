@@ -14,22 +14,22 @@
 #include "xvr_token_types.h"
 
 static void error(Xvr_Parser* parser, Xvr_Token token, const char* message) {
-    // keep going while panicing
     if (parser->panic) return;
 
-    fprintf(stderr, XVR_CC_ERROR "[Line %d] Error", token.line);
+    fprintf(stderr, "\n");
+    fprintf(stderr, XVR_CC_FONT_RED "error" XVR_CC_RESET ": %s\n", message);
+    fprintf(stderr, "  --> line %d\n", token.line);
 
-    // check type
     if (token.type == XVR_TOKEN_EOF) {
-        fprintf(stderr, " at end");
+        fprintf(stderr,
+                XVR_CC_NOTICE "help" XVR_CC_RESET ": unexpected end of file\n");
+    } else {
+        fprintf(stderr,
+                XVR_CC_NOTICE "help" XVR_CC_RESET ": unexpected token '%.*s'\n",
+                token.length, token.lexeme);
     }
+    fprintf(stderr, "\n");
 
-    else {
-        fprintf(stderr, " at '%.*s'", token.length, token.lexeme);
-    }
-
-    // finally
-    fprintf(stderr, ": %s\n" XVR_CC_RESET, message);
     parser->error = true;
     parser->panic = true;
 }
@@ -61,10 +61,7 @@ static void consumeSemicolon(Xvr_Parser* parser) {
         return;
     }
 
-    if (parser->previous.line == parser->current.line) {
-        error(parser, parser->current,
-              "Expected ';' between statements on same line");
-    }
+    error(parser, parser->current, "Expected ';'");
 }
 
 static void consume(Xvr_Parser* parser, Xvr_TokenType tokenType,
@@ -1552,6 +1549,20 @@ static void parsePrecedence(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle,
             continue;
         }
 
+        if (opcode == XVR_OP_INDEX) {
+            Xvr_ASTNode* lhs = *nodeHandle;
+            Xvr_ASTNode* indexNode = rhsNode;
+            if (indexNode && indexNode->type == XVR_AST_NODE_INDEX) {
+                Xvr_ASTNode* firstElem = indexNode->index.first;
+                Xvr_ASTNode* secondElem = indexNode->index.second;
+                indexNode->index.first = lhs;
+                indexNode->index.second = firstElem;
+                indexNode->index.third = secondElem;
+            }
+            *nodeHandle = indexNode;
+            continue;
+        }
+
         Xvr_emitASTNodeBinary(nodeHandle, rhsNode, opcode);
 
         // optimise away the constants
@@ -2085,8 +2096,6 @@ static void varDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         // values are null by default
         Xvr_emitASTNodeLiteral(&expressionNode, XVR_TO_NULL_LITERAL);
     }
-
-    // TODO: static type checking?
 
     // declare it
     Xvr_emitASTNodeVarDecl(nodeHandle, identifier, typeLiteral, expressionNode,

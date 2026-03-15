@@ -1,50 +1,97 @@
-# Chapter 1
+# Chapter 1 - Getting Started
 
 ## Installation
 
-Currently Xvr can be installation from release zip and manual installation or latest interpreter can be clone on github by
+### Linux/macOS
 
-**requirements**
-- Operating System: `Linux`, `Windows` or `MacOS`
-- Tools
-    - `Linux`, `MacOS`: `gcc` compiler, you can worry about that, its Currently available.
+Build XVR from source:
 
 ```sh
 git clone https://github.com/slowy07/xvr
-# go to directory
 cd xvr
-# make interpreter
-make interpreter
-
-# the interpreter application was installed on `out` folder with shared library xvr
-
-# for install access to globally you can do by
-# installed on bin/
-sudo make install
+make
 ```
 
-## Installing the syntax highlighting
+The compiler is in `out/xvr`.
 
-Your code does not look cool?, you can using syntax highlighter which is available for [vscode](https://github.com/WargaSlowy/xvrlang-vscode) and [neovim](https://github.com/WargaSlowy/xvrlang-treesitter)
+### Windows
 
-## Hello world
+#### Prerequisites
 
-first step to learning, we create some xvr files , with extension `.xvr` 
+1. **Install LLVM**
+   - Download LLVM from https://github.com/llvm/llvm-project/releases
+   - Choose the latest stable version (e.g., LLVM-22.x.x)
+   - During installation, select "Add LLVM to the system PATH"
 
+2. **Install MSYS2** (recommended)
+   - Download from https://www.msys2.org/
+   - Install MSYS2 and open "MSYS2 MINGW64" terminal
+
+
+#### Build XVR
+
+```bash
+# Clone the repository
+git clone https://github.com/slowy07/xvr
+cd xvr
+
+# Build using MinGW
+mingw32-make
 ```
-// hello_world.xvr
 
-print("hello world")
+Or using PowerShell:
+
+```powershell
+# Using PowerShell
+# Install LLVM first via winget or download
+winget install LLVM.LLVM
+
+# Clone and build
+git clone https://github.com/slowy07/xvr
+cd xvr
+mingw32-make
 ```
 
+#### Troubleshooting Windows Build
+
+| Error | Solution |
+|-------|----------|
+| `clang: command not found` | Add LLVM `bin` folder to PATH |
+| `undefined reference to LLVM*` | Ensure LLVM libraries are in PATH |
+| `make: *** No rule to make target` | Use `mingw32-make` on Windows |
+
+#### Verify Installation
+
+```cmd
+out\xvr.exe --version
+```
+
+## Hello World
+
+Create a file `hello.xvr`:
+
+```xvr
+print("Hello, World!");
+```
+
+## Running
 
 ```sh
-# using --file or -f with filename
-# xvr -f | --file [filename.xvr]
-xvr --file hello_world.xvr
-```
-```
-hello world
+# Compile and run
+./out/xvr hello.xvr
 ```
 
-and congratulations, you are programmer
+Output:
+```
+Hello, World!
+```
+
+## Options
+
+```sh
+./out/xvr -h          # Show help
+./out/xvr -v          # Show version
+./out/xvr hello.xvr -l    # Dump LLVM IR
+./out/xvr hello.xvr -o prog  # Compile to executable
+./out/xvr hello.xvr -c -o hello.o  # Compile to object file
+```

@@ -69,11 +69,11 @@ export XVR_SHLIB_EXT XVR_STATIC_EXT XVR_EXE_EXT
 export CFLAGS_BASE XVR_BUILD_TYPE XVR_STRIP
 .PHONY: all release clean test install uninstall rebuild
 
-all: out-dirs lib shlib inter
+all: out-dirs lib shlib compiler
 	@echo "Build complete: $(XVR_EXE_NAME), $(XVR_SHLIB_NAME), $(XVR_STATIC_NAME)"
 
 release: XVR_BUILD_TYPE = release
-release: out-dirs lib shlib inter
+release: out-dirs lib shlib compiler
 	@echo "Release build complete"
 
 out-dirs:
@@ -85,8 +85,8 @@ lib: out-dirs
 shlib: out-dirs
 	$(MAKE) -C src
 
-inter: lib
-	$(MAKE) -C inter
+compiler: lib
+	$(MAKE) -C compiler
 
 test: clean out-dirs
 	$(MAKE) -C test
@@ -146,7 +146,7 @@ install-libs: lib shlib
 	install -m 755 $(XVR_OUTDIR)/$(XVR_SHLIB_NAME) $(DESTDIR)$(LIBDIR)/
 	install -m 644 $(XVR_OUTDIR)/$(XVR_STATIC_NAME) $(DESTDIR)$(LIBDIR)/
 
-install-bin: inter
+install-bin: compiler
 	install -d $(DESTDIR)$(BINDIR)
 	install -m 755 $(XVR_OUTDIR)/$(XVR_EXE_NAME) $(DESTDIR)$(BINDIR)/
 
@@ -158,7 +158,7 @@ uninstall:
 clean:
 	rm -rf $(XVR_OUTDIR)
 	$(MAKE) -C src clean
-	$(MAKE) -C inter clean
+	$(MAKE) -C compiler clean
 	$(MAKE) -C test clean
 
 rebuild: clean all

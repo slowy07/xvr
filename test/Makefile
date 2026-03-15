@@ -1,4 +1,4 @@
-# Test Makefile
+# Test Makefile - LLVM AOT Only
 
 OUT = ../out
 OBJDIR = obj
@@ -9,10 +9,10 @@ LLVM_CFLAGS = $(shell $(LLVM_CONFIG) --cflags)
 LLVM_LIBS = $(shell $(LLVM_CONFIG) --libs core bitwriter)
 
 # Compiler flags
-CFLAGS = -std=c18 -pedantic -Werror -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable -Wstrict-prototypes -g -I. -I../src -I../src/backend -I../inter $(LLVM_CFLAGS)
+CFLAGS = -std=c18 -pedantic -Werror -Wall -Wextra -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable -Wstrict-prototypes -g -I. -I../src -I../src/backend $(LLVM_CFLAGS) -DXVR_EXPORT_LLVM
 LDFLAGS = $(LLVM_LIBS)
 
-# All test object files for test_all
+# Test object files
 TEST_OBJECTS = $(OBJDIR)/test_all.o \
                $(OBJDIR)/test_ast_node.o \
                $(OBJDIR)/test_lexer.o \
@@ -20,29 +20,24 @@ TEST_OBJECTS = $(OBJDIR)/test_all.o \
                $(OBJDIR)/test_compiler.o \
                $(OBJDIR)/test_literal.o \
                $(OBJDIR)/test_memory.o \
-               $(OBJDIR)/test_opaque.o \
                $(OBJDIR)/test_scope.o \
-               $(OBJDIR)/test_llvm_backend.o \
-               $(OBJDIR)/test_interpreter.o
+               $(OBJDIR)/test_llvm_backend.o
 
-# Inter library object files (excluding inter_main.o which has main)
-INTER_OBJS = ../inter/inter_tools.o ../inter/lib_about.o \
-             ../inter/lib_runner.o ../inter/lib_standard.o ../inter/lib_timer.o
+# Compiler tools
+COMPILER_OBJS = ../compiler/compiler_tools.o
 
-# Individual test executables
+# Test executable
 ALL_TESTS = $(OUT)/test_all
 
-# Build library first
-all: ../out/libxvr.a ../out/libxvr.so test_all
+all: $(OUT)/libxvr.a $(OUT)/libxvr.so test_all
 
-../out/libxvr.a ../out/libxvr.so:
+$(OUT)/libxvr.a $(OUT)/libxvr.so:
 	$(MAKE) -C ..
 
-# Combined test_all
 test_all: $(OUT)/test_all
 
-$(OUT)/test_all: $(TEST_OBJECTS) $(INTER_OBJS) ../out/libxvr.a
-	$(CC) -o $@ $(TEST_OBJECTS) $(INTER_OBJS) ../out/libxvr.a $(LDFLAGS)
+$(OUT)/test_all: $(TEST_OBJECTS) $(COMPILER_OBJS) $(OUT)/libxvr.a
+	$(CC) -o $@ $(TEST_OBJECTS) $(COMPILER_OBJS) $(OUT)/libxvr.a $(LDFLAGS)
 
 $(OBJDIR)/test_all.o: test_all.c
 	@mkdir -p $(OBJDIR)
@@ -72,19 +67,11 @@ $(OBJDIR)/test_memory.o: test_memory.c
 	@mkdir -p $(OBJDIR)
 	$(CC) -c $(CFLAGS) -o $@ $<
 
-$(OBJDIR)/test_opaque.o: test_opaque.c
-	@mkdir -p $(OBJDIR)
-	$(CC) -c $(CFLAGS) -o $@ $<
-
 $(OBJDIR)/test_scope.o: test_scope.c
 	@mkdir -p $(OBJDIR)
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 $(OBJDIR)/test_llvm_backend.o: test_llvm_backend.c
-	@mkdir -p $(OBJDIR)
-	$(CC) -c $(CFLAGS) -o $@ $<
-
-$(OBJDIR)/test_interpreter.o: test_interpreter.c
 	@mkdir -p $(OBJDIR)
 	$(CC) -c $(CFLAGS) -o $@ $<
 

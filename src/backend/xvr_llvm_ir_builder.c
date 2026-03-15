@@ -157,6 +157,15 @@ LLVMValueRef Xvr_LLVMIRBuilderCreateSDiv(Xvr_LLVMIRBuilder* builder,
     return LLVMBuildSDiv(builder->builder, lhs, rhs, name ? name : "sdiv_tmp");
 }
 
+LLVMValueRef Xvr_LLVMIRBuilderCreateSRem(Xvr_LLVMIRBuilder* builder,
+                                         LLVMValueRef lhs, LLVMValueRef rhs,
+                                         const char* name) {
+    if (!builder || !lhs || !rhs) {
+        return NULL;
+    }
+    return LLVMBuildSRem(builder->builder, lhs, rhs, name ? name : "srem_tmp");
+}
+
 LLVMValueRef Xvr_LLVMIRBuilderCreateUDiv(Xvr_LLVMIRBuilder* builder,
                                          LLVMValueRef lhs, LLVMValueRef rhs,
                                          const char* name) {
@@ -320,5 +329,7 @@ LLVMBasicBlockRef Xvr_LLVMIRBuilderCreateBlockInFunction(
     if (!builder || !function) {
         return NULL;
     }
-    return LLVMAppendBasicBlock(function, name ? name : "block");
+    LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(builder->context);
+    return LLVMAppendBasicBlockInContext(llvm_ctx, function,
+                                         name ? name : "block");
 }

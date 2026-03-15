@@ -1,183 +1,296 @@
-# LLVM IR Backend Implementation
+# XVR AOT Compiler
 
-The xvr language now supports compilation to LLVM IR (Intermediate Representation), enabling native code generation, JIT compilation, and various optimization capabilities.
+The XVR language uses an AOT (Ahead-of-Time) compiler that generates native executables via LLVM IR.
+
+## Compilation Pipeline
+
+```
+┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐    ┌─────────────┐
+│  .xvr File  │───▶│    Lexer    │───▶│   Parser    │───▶│  AST Nodes  │───▶│    LLVM     │
+│  (Source)   │    │  (Tokens)   │    │  (Errors)   │    │   (Tree)    │    │     IR      │
+└─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
+                                                                                    │
+                                                                                    ▼
+                                                                           ┌─────────────────┐
+                                                                           │  LLVM Optimizer │
+                                                                           │   (Optional)    │
+                                                                           └─────────────────┘
+                                                                                    │
+                                                                                    ▼
+      ┌──────────────────────────────────────────────────────────────────────────────────┐
+      │                                                                                  │
+      ▼                                                                                  ▼
+┌─────────────┐                                                          ┌─────────────────┐
+│  Executable │◀─── Link ───┐                                   ┌───────▶│    Object File  │
+│   (a.out)   │             │                                   │        │    (.o/.obj)    │
+└─────────────┘             │        ┌─────────────────┐        │        └─────────────────┘
+                            └───────▶│    LLVM MCJIT   │────────┘
+                                     │   or JIT (dev)  │
+                                     └─────────────────┘
+```
 
 ## Overview
 
-The LLVM backend translates xvr's AST (Abstract Syntax Tree) into LLVM IR, which can then be:
-- Compiled to native machine code
-- JIT-compiled for immediate execution
-- Optimized using LLVM's optimization passes
-- Written to bitcode files for later use
+The XVR compiler translates `.xvr` source files into:
+- Native executables (via LLVM IR → object file → linked binary)
+- LLVM IR (for debugging/inspection)
+- Object files (for custom linking)
 
 ## Architecture
 
-The backend is implemented as a set of modular components in `src/backend/`:
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    XVR Compiler                                         │
+├─────────────────────────────────────────────────────────────────────────────────────────┤
+│                                                                                         │
+│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────────────────────────────┐  │
+│  │   Lexer     │───▶│   Parser    │───▶│              LLVM Backend                   │  │
+│  │ xvr_lexer.c │    │xvr_parser.c │    │                                             │  │
+│  └─────────────┘    └─────────────┘    │  ┌─────────────────────────────────────────┐│  │
+│                                        │  │         xvr_llvm_codegen.c              ││  │
+│                                        │  │              (Coordinator)              ││  │
+│                                        │  └──────────────────┬──────────────────────┘│  │
+│                                        │                     │                       │  │
+│                                        │    ┌────────────────┼────────────────────┐  │  │
+│                                        │    │                │                    │  │  │
+│                                        │    ▼                ▼                    |  ▼  │  
+│                                        │  ┌──────────┐ ┌──────────┐ ┌──────────────┐ │  │
+│                                        │  │Context   │ │Type      │ │Module        │ │  │
+│                                        │  │Manager   │ │Mapper    │ │Manager       │ │  │
+│                                        │  │.c        │ │.c        │ │.c            │ │  │
+│                                        │  └──────────┘ └──────────┘ └──────────────┘ │  │
+│                                        │  ┌──────────┐ ┌──────────┐ ┌──────────────┐ │  │
+│                                        │  │IR        │ │Expression │ │Function     │ │  │
+│                                        │  │Builder   │ │Emitter   │ │Emitter       │ │  │
+│                                        │  │.c        │ │.c        │ │.c            │ │  │
+│                                        │  └──────────┘ └──────────┘ └──────────────┘ │  │
+│                                        │  ┌──────────┐ ┌──────────┐ ┌──────────────┐ │  │
+│                                        │  │Control   │ │Optimizer │ │Target        │ │  │
+│                                        │  │Flow      │ │.c        │ │.c            │ │  │
+│                                        │  │.c        │ │          │ │              │ │  │
+│                                        │  └──────────┘ └──────────┘ └──────────────┘ │  │
+│                                        │                                             │  │
+│                                        └─────────────────────────────────────────────┘  │
+│                                                                                         │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+```
+
+## Backend Module Flow
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                           LLVM Backend Data Flow                                       │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+
+  AST Node              Codegen Stage           LLVM IR               Output
+  ────────              ─────────────           ───────               ──────
+  
+  ┌──────────┐         ┌──────────────┐       ┌───────────┐
+  │ VAR_DECL │────────▶│ xvr_llvm_    │──────▶│ %x =      │
+  │ var x=42 │         │ codegen.c    │       │ alloca i32│
+  └──────────┘         └──────────────┘       └───────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────┐
+                         │ xvr_llvm_type_   │
+                         │ mapper.c         │────────▶ i32, i8*, float, etc.
+                         └──────────────────┘
+                                    │
+                                    ▼
+                         ┌──────────────────┐
+                         │ xvr_llvm_ir_     │
+                         │ builder.c        │────────▶ LLVMBuildAlloca, LLVMBuildStore
+                         └──────────────────┘
+
+  ┌──────────┐         ┌──────────────┐       ┌───────────┐
+  │  BINARY   │────────▶│ xvr_llvm_    │──────▶│ %add =    │
+  │ x + y     │         │ expression   │       │ add i32   │
+  └──────────┘         │ emitter.c    │       │ %x, %y    │
+                       └──────────────┘       └───────────┘
+
+  ┌──────────┐         ┌──────────────┐       ┌───────────┐
+  │  IF/     │────────▶│ xvr_llvm_    │──────▶│ br i1 %   │
+  │  WHILE   │         │ control_flow │       │ cond,     │
+  │          │         │ .c           │       │ label,    │
+  └──────────┘         └──────────────┘       │ label     │
+                                              └───────────┘
+```
+
+## Source File Organization
 
 ```
 src/backend/
+├── xvr_llvm_codegen.h/.c         # Main coordinator, entry points
 ├── xvr_llvm_context.h/.c         # LLVM context management
-├── xvr_llvm_type_mapper.h/.c      # Type mapping (xvr → LLVM)
-├── xvr_llvm_module_manager.h/.c   # Module management
-├── xvr_llvm_ir_builder.h/.c       # IR building abstraction
-├── xvr_llvm_expression_emitter.h/.c # Expression to IR
-├── xvr_llvm_function_emitter.h/.c  # Function emission
+├── xvr_llvm_type_mapper.h/.c    # Type mapping (XVR → LLVM types)
+├── xvr_llvm_module_manager.h/.c # Module creation & IR printing
+├── xvr_llvm_ir_builder.h/.c    # IR building (alloca, store, load, etc.)
+├── xvr_llvm_expression_emitter.h/.c # Expressions, arrays, indexing
+├── xvr_llvm_function_emitter.h/.c   # Function definitions
 ├── xvr_llvm_control_flow.h/.c      # If/while/for generation
-├── xvr_llvm_optimizer.h/.c         # Optimization pipeline
-├── xvr_llvm_target.h/.c            # Target configuration
-└── xvr_llvm_codegen.h/.c          # Main coordinator
+├── xvr_llvm_optimizer.h/.c       # Optimization passes
+├── xvr_llvm_target.h/.c          # Target machine configuration
+└── xvr_format_string.h/.c        # Format string {} parser
 ```
 
-## Components
-
-### 1. Context Manager (`xvr_llvm_context`)
-
-Manages the LLVM context, which is the container for all LLVM types and values.
-
-```c
-Xvr_LLVMContext* ctx = Xvr_LLVMContextCreate();
-// Use context for type creation, etc.
-Xvr_LLVMContextDestroy(ctx);
-```
-
-### 2. Type Mapper (`xvr_llvm_type_mapper`)
-
-Maps xvr's runtime types to LLVM types:
-
-| xvr Type | LLVM Type |
-|----------|-----------|
-| `null` | `i8*` (pointer) |
-| `boolean` | `i1` |
-| `integer` | `i64` |
-| `float` | `float` (32-bit) |
-| `string` | `i8*` (C string) |
-| `array` | `i8*` (opaque pointer) |
-| `dictionary` | `i8*` (opaque pointer) |
-| `function` | `i8*` (function pointer) |
-
-```c
-Xvr_LLVMTypeMapper* mapper = Xvr_LLVMTypeMapperCreate(ctx);
-LLVMTypeRef int_type = Xvr_LLVMTypeMapperGetIntType(mapper);
-LLVMTypeRef float_type = Xvr_LLVMTypeMapperGetFloatType(mapper);
-```
-
-### 3. Module Manager (`xvr_llvm_module_manager`)
-
-Creates and manages LLVM modules, which contain functions and global variables.
-
-```c
-Xvr_LLVMModuleManager* mgr = Xvr_LLVMModuleManagerCreate(ctx, "my_module");
-LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(mgr);
-```
-
-### 4. IR Builder (`xvr_llvm_ir_builder`)
-
-Provides a high-level API for building LLVM IR instructions:
-
-```c
-Xvr_LLVMIRBuilder* builder = Xvr_LLVMIRBuilderCreate(ctx, module);
-
-// Create basic block
-LLVMBasicBlockRef block = Xvr_LLVMIRBuilderCreateBlockInFunction(builder, fn, "entry");
-Xvr_LLVMIRBuilderSetInsertPoint(builder, block);
-
-// Build instructions
-Xvr_LLVMIRBuilderCreateRet(builder, return_value);
-Xvr_LLVMIRBuilderCreateAdd(builder, lhs, rhs, "add_tmp");
-```
-
-### 5. Expression Emitter (`xvr_llvm_expression_emitter`)
-
-Translates xvr expressions into LLVM IR:
-
-- **Literals**: `null`, `boolean`, `integer`, `float`, `string`
-- **Binary operations**: `+`, `-`, `*`, `/`, `%`, `<`, `>`, `<=`, `>=`, `==`, `!=`, `&&`, `||`
-- **Unary operations**: `-` (negate), `!` (invert)
-- **Function calls**
-
-```c
-LLVMValueRef value = Xvr_LLVMExpressionEmitterEmit(emitter, expr_node);
-```
-
-### 6. Function Emitter (`xvr_llvm_function_emitter`)
-
-Emits LLVM functions from xvr function declarations:
-
-```c
-bool success = Xvr_LLVMFunctionEmitterEmit(emitter, fn_decl_node);
-```
-
-### 7. Control Flow Generator (`xvr_llvm_control_flow`)
-
-Handles control flow structures:
-
-- **If/Else**: Conditional branches
-- **While loops**: Loop with condition check
-- **For loops**: Init → condition → update pattern
-
-### 8. Optimizer (`xvr_llvm_optimizer`)
-
-Applies LLVM optimization passes:
-
-```c
-Xvr_LLVMOptimizer* opt = Xvr_LLVMOptimizerCreate();
-Xvr_LLVMOptimizerSetLevel(opt, XVR_LLVM_OPT_O2);
-Xvr_LLVMOptimizerAddStandardPasses(opt);
-Xvr_LLVMOptimizerOptimize(opt, module);
-```
-
-Optimization levels:
-- `XVR_LLVM_OPT_NONE` - No optimization
-- `XVR_LLVM_OPT_O1` - Basic optimization
-- `XVR_LLVM_OPT_O2` - Standard optimization
-- `XVR_LLVM_OPT_O3` - Aggressive optimization
-
-### 9. Target Configuration (`xvr_llvm_target`)
-
-Configures target architecture:
-
-```c
-Xvr_LLVMTargetConfig* config = Xvr_LLVMTargetConfigCreate();
-Xvr_LLVMTargetConfigSetTriple(config, "x86_64-pc-linux-gnu");
-Xvr_LLVMTargetConfigSetCPU(config, "generic");
-Xvr_LLVMTargetConfigSetFeatures(config, "+sse,+sse2");
-```
-
-### 10. Codegen Coordinator (`xvr_llvm_codegen`)
-
-Main entry point that coordinates all components:
-
-```c
-Xvr_LLVMCodegen* codegen = Xvr_LLVMCodegenCreate("my_module");
-
-// Configure
-Xvr_LLVMCodegenSetOptimizationLevel(codegen, XVR_LLVM_OPT_O2);
-Xvr_LLVMCodegenSetTargetTriple(codegen, "x86_64-pc-linux-gnu");
-
-// Emit IR from AST
-Xvr_LLVMCodegenEmitAST(codegen, ast);
-
-// Get output
-char* ir = Xvr_LLVMCodegenPrintIR(codegen, &len);
-
-// Write bitcode
-Xvr_LLVMCodegenWriteBitcode(codegen, "output.bc");
-
-Xvr_LLVMCodegenDestroy(codegen);
-```
-
-## CLI Integration
-
-The `-l` or `--llvm` flag dumps LLVM IR instead of executing:
+## Usage
 
 ```bash
-./xvr -l script.xvr    # Dump LLVM IR
-./xvr script.xvr       # Execute normally
-./xvr -i "println(1)"  # Execute inline code
-./xvr -l -i "1+1"      # Dump IR for inline code
+# Compile and run
+xvr script.xvr
+
+# Compile to executable (default: a.out)
+xvr script.xvr -o myprogram
+
+# Compile to object file
+xvr script.xvr -c -o program.o
+
+# Dump LLVM IR
+xvr script.xvr -l
+
+# Show help
+xvr -h
+
+# Show version
+xvr -v
 ```
 
-## Building with LLVM
+## Language Features
+
+### Variables
+
+```xvr
+var x = 42;
+var name = "hello";
+var pi = 3.14;
+```
+
+### Print with Format Strings
+
+XVR uses `{}` placeholders:
+
+```xvr
+var name = "world";
+var num = 42;
+
+print("Hello, {}!", name);      // Hello, world!
+print("Value: {}", num);         // Value: 42
+print("{} + {} = {}", 1, 2, 3); // 1 + 2 = 3
+
+// Direct array printing
+var arr = [1, 2, 3];
+print(arr);                      // prints: 1 2 3
+```
+
+### While Loops
+
+```xvr
+var i = 0;
+while (i < 10) {
+    print("{}", i);
+    i = i + 1;
+}
+```
+
+### Static Arrays
+
+```xvr
+var arr = [1, 2, 3, 4, 5];
+print(arr[0]);  // prints 1
+
+// Array assignment
+arr[1] = 20;
+print(arr[1]);  // prints 20
+```
+
+## Format String Parser
+
+The `xvr_format_string.c` module handles `{}` interpolation:
+
+```
+Format String Parsing Flow:
+┌─────────────────┐
+│  "Hello {}!"    │  (input)
+└────────┬────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  Parse for {} placeholders          │
+│  Count arguments                    │
+└────────┬────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────────────┐
+│  Infer types from LLVM values       │
+│  integer → %d                       │
+│  float   → %lf                      │
+│  string  → %s                       │
+└────────┬────────────────────────────┘
+         │
+         ▼
+┌─────────────────┐
+│  "Hello %s!"    │  (printf format)
+└─────────────────┘
+```
+
+### Type Mapping
+
+| XVR Type   | LLVM Type        | printf  |
+|------------|------------------|---------|
+| `string`   | `i8*`            | `%s`    |
+| `integer`  | `i32`            | `%d`    |
+| `float`    | `float` → `double` | `%lf` |
+| `boolean` | `i1`             | `%s`    |
+
+## Output Examples
+
+### LLVM IR
+
+```bash
+$ xvr test.xvr -l
+; ModuleID = 'test'
+source_filename = "test"
+
+@fmt_str = private unnamed_addr constant [11 x i8] c"Hello, %s!\00", align 1
+
+define i32 @main() {
+entry:
+  %name = alloca ptr, align 8
+  store ptr @str_literal, ptr %name, align 8
+  %name1 = load ptr, ptr %name, align 8
+  %printf_call = call i32 (ptr, ...) @printf(ptr @fmt_str, ptr %name1)
+  ret i32 0
+}
+
+declare i32 @printf(ptr, ...)
+```
+
+### Object File
+
+```bash
+$ xvr test.xvr -c -o test.o
+$ file test.o
+test.o: ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), not stripped
+```
+
+## Error Handling
+
+### Type Mismatch
+
+XVR validates explicit type annotations:
+
+```xvr
+var x: int = 1.5;    // error: type mismatch: cannot convert from 'float' to 'int'
+var x: string = 123; // error: type mismatch: cannot convert from 'int' to 'string'
+var x: bool = 1;    // error: type mismatch: cannot convert from 'int' to 'bool'
+```
+
+Output:
+```
+[31merror[0m: type mismatch: cannot convert from 'float' to 'int'
+```
+
+## Building
 
 ### Requirements
 
@@ -190,74 +303,18 @@ The `-l` or `--llvm` flag dumps LLVM IR instead of executing:
 make
 ```
 
-The build system automatically detects LLVM. To specify a specific version:
+Output: `out/xvr`
 
-```bash
-make LLVM_CONFIG=llvm-config-21
-```
+## Differences from Interpreter
 
-## Output Formats
-
-### Human-Readable IR
-
-```bash
-$ ./xvr -l test.xvr
-; ModuleID = 'xvr_module'
-source_filename = "xvr_module"
-
-define i32 @fibo() {
-entry:
-  ret i32 0
-}
-```
-
-### Bitcode
-
-```bash
-$ ./xvr -l -o output.bc test.xvr
-```
-
-### Object File
-
-```bash
-$ ./xvr -c -o output.o test.xvr
-```
-
-## Memory Management
-
-The backend follows these ownership rules:
-
-- **Created objects**: Caller owns, must call destroy function
-- **LLVMValueRef/LLVMModuleRef**: Owned by LLVM module, don't free manually
-- **Strings**: Caller owns, must free returned strings
-
-## Testing
-
-Run the LLVM backend tests:
-
-```bash
-make test
-```
-
-Tests are located in `test/test_llvm_backend.c` and cover:
-- Context creation/destruction
-- Type mapping
-- Module management
-- IR building
-- Optimization
-- Target configuration
-- Full codegen pipeline
-
-## Platform Support
-
-- **Linux**: Full support with LLVM 21
-- **Windows (MSYS2/MinGW)**: Supported, requires `mingw-w64-x86_64-llvm`
-- **macOS**: Should work with LLVM from Homebrew or official packages
+- **AOT only**: No interpreter, no REPL
+- **Format strings**: Uses `{}` instead of printf `%` syntax
+- **Variables**: Use `var` keyword (not `let`)
+- **Semicolons**: Optional (like Rust/C++)
 
 ## Future Enhancements
 
-- Full function return value support
-- Struct types for compound types
-- Better optimization for xvr-specific patterns
-- Native code compilation (via LLC)
-- JIT execution integration
+- Function declarations
+- Struct types
+- Better optimization passes
+- Multiple return values

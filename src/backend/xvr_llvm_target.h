@@ -25,6 +25,8 @@ SOFTWARE.
 #ifndef XVR_LLVM_TARGET_H
 #define XVR_LLVM_TARGET_H
 
+#include <llvm-c/Target.h>
+#include <llvm-c/TargetMachine.h>
 #include <stdbool.h>
 #include <stddef.h>
 

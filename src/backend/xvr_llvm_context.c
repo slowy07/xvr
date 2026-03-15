@@ -27,15 +27,7 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
-static char* Xvr_private_strdup(const char* str) {
-    if (!str) return NULL;
-    size_t len = strlen(str) + 1;
-    char* dup = malloc(len);
-    if (dup) {
-        memcpy(dup, str, len);
-    }
-    return dup;
-}
+#include "xvr_common.h"
 
 struct Xvr_LLVMContext {
     LLVMContextRef llvm_context;
@@ -93,7 +85,7 @@ void Xvr_LLVMContextSetError(Xvr_LLVMContext* ctx, const char* message) {
         free(ctx->error_message);
     }
     if (message) {
-        ctx->error_message = Xvr_private_strdup(message);
+        ctx->error_message = Xvr_strdup(message);
     } else {
         ctx->error_message = NULL;
     }
