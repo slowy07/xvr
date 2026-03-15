@@ -7,12 +7,8 @@
 #include "compiler_tools.h"
 #include "xvr_ast_node.h"
 #include "xvr_common.h"
-#include "xvr_compiler.h"
 #include "xvr_console_colors.h"
-#include "xvr_lexer.h"
-#include "xvr_literal.h"
 #include "xvr_parser.h"
-#include "xvr_refstring.h"
 #include "xvr_unused.h"
 
 static void print_error(const char* filename, int line, const char* error_type,
@@ -49,15 +45,6 @@ static void print_compiler_error(const char* filename, int line,
     }
     fprintf(stderr, "\n");
 }
-#include "compiler_tools.h"
-#include "xvr_ast_node.h"
-#include "xvr_common.h"
-#include "xvr_compiler.h"
-#include "xvr_console_colors.h"
-#include "xvr_lexer.h"
-#include "xvr_literal.h"
-#include "xvr_parser.h"
-#include "xvr_refstring.h"
 
 int main(int argc, const char* argv[]) {
     Xvr_initCommandLine(argc, argv);

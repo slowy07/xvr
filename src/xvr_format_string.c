@@ -1,7 +1,7 @@
 /**
  * XVR Format String Parser Implementation
  *
- * Parses format strings with {} placeholders (Rust-style)
+ * Parses format strings with {} placeholders
  */
 
 #include "xvr_format_string.h"

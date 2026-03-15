@@ -268,11 +268,37 @@ var x = 1;  // error: unused variable 'x'
 
 Output:
 ```
-[error]: unused variable 'x'
+[31merror[0m: unused variable 'x'
   --> line 1
-[help]: variable 'x' is declared but never used
-[help]: remove the unused variable or use it in an expression
+[38;2;140;207;126mhelp[0m: variable 'x' is declared but never used
+[38;2;140;207;126mhelp[0m: remove the unused variable or use it in an expression
 ```
+
+### Type Mismatch
+
+XVR validates that explicit type annotations match the inferred type from the value:
+
+```xvr
+var x: int = 1.5;    // error: type mismatch: cannot convert from 'float' to 'int'
+var x: string = 123; // error: type mismatch: cannot convert from 'int' to 'string'
+var x: bool = 1;    // error: type mismatch: cannot convert from 'int' to 'bool'
+```
+
+Output:
+```
+[31merror[0m: type mismatch: cannot convert from 'float' to 'int'
+[38;2;140;207;126mhelp[0m: Check your code for type errors or unsupported features
+```
+
+**Allowed implicit conversions:**
+- Integer types to float/float64 (e.g., `var x: float = 42;`)
+- Between different integer sizes (e.g., `var x: int64 = 42;`)
+- Exact type matches
+
+**Not allowed:**
+- Float to integer
+- String to/from numeric types
+- Integer to boolean
 
 ## Future Enhancements
 

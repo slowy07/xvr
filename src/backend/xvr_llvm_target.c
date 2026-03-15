@@ -31,15 +31,7 @@ SOFTWARE.
 #include <string.h>
 #include <unistd.h>
 
-static char* Xvr_private_strdup(const char* str) {
-    if (!str) return NULL;
-    size_t len = strlen(str) + 1;
-    char* dup = malloc(len);
-    if (dup) {
-        memcpy(dup, str, len);
-    }
-    return dup;
-}
+#include "xvr_common.h"
 
 struct Xvr_LLVMTargetConfig {
     char* triple;
@@ -74,7 +66,7 @@ static bool set_string_field(char** field, const char* value) {
         return false;
     }
     free(*field);
-    *field = Xvr_private_strdup(value);
+    *field = Xvr_strdup(value);
     return (*field != NULL);
 }
 

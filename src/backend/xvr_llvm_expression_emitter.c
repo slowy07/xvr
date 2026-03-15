@@ -326,7 +326,9 @@ static LLVMValueRef emit_binary_op(Xvr_LLVMExpressionEmitter* emitter,
 
 /* Forward declaration for emit_array_print */
 static LLVMValueRef emit_array_print(Xvr_LLVMExpressionEmitter* emitter,
-                                     LLVMValueRef array_ptr, int array_count);
+                                     LLVMValueRef array_ptr, int array_count,
+                                     LLVMTypeRef elem_type,
+                                     const char* format_str);
 
 static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
                                 Xvr_ASTNode* args) {
@@ -540,7 +542,9 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
 }
 
 static LLVMValueRef emit_array_print(Xvr_LLVMExpressionEmitter* emitter,
-                                     LLVMValueRef array_ptr, int array_count) {
+                                     LLVMValueRef array_ptr, int array_count,
+                                     LLVMTypeRef elem_type,
+                                     const char* fmt_str) {
     if (!emitter || !array_ptr || array_count <= 0) {
         return NULL;
     }
@@ -584,18 +588,28 @@ static LLVMValueRef emit_array_print(Xvr_LLVMExpressionEmitter* emitter,
     LLVMPositionBuilderAtEnd(builder, loop_body);
     LLVMValueRef zero = LLVMConstNull(i32_type);
     LLVMValueRef indices[2] = {zero, i_val};
-    LLVMTypeRef array_type = LLVMArrayType(i32_type, array_count);
+    LLVMTypeRef array_type = LLVMArrayType(elem_type, array_count);
     LLVMValueRef elem_ptr =
         LLVMBuildGEP2(builder, array_type, array_ptr, indices, 2, "elem_ptr");
     LLVMValueRef elem_val =
-        LLVMBuildLoad2(builder, i32_type, elem_ptr, "elem_val");
+        LLVMBuildLoad2(builder, elem_type, elem_ptr, "elem_val");
 
-    LLVMValueRef fmt = LLVMBuildGlobalStringPtr(builder, "%d ", "fmt");
+    LLVMValueRef fmt = LLVMBuildGlobalStringPtr(builder, fmt_str, "fmt");
+
+    LLVMTypeRef printf_arg_type = elem_type;
+    LLVMValueRef printf_elem_val = elem_val;
+
+    if (LLVMGetTypeKind(elem_type) == LLVMFloatTypeKind) {
+        printf_arg_type = LLVMDoubleTypeInContext(llvm_ctx);
+        printf_elem_val = LLVMBuildFPExt(builder, elem_val, printf_arg_type,
+                                         "float_to_double");
+    }
+
     LLVMBuildCall2(
         builder,
-        LLVMFunctionType(i32_type, (LLVMTypeRef[]){i8_ptr_type, i32_type}, 2,
-                         true),
-        printf_fn, (LLVMValueRef[]){fmt, elem_val}, 2, "print_elem");
+        LLVMFunctionType(
+            i32_type, (LLVMTypeRef[]){i8_ptr_type, printf_arg_type}, 2, true),
+        printf_fn, (LLVMValueRef[]){fmt, printf_elem_val}, 2, "print_elem");
 
     LLVMValueRef i_next = LLVMBuildAdd(
         builder, i_val, LLVMConstInt(i32_type, 1, false), "i_next");
@@ -826,23 +840,53 @@ static LLVMValueRef emit_unary_op(Xvr_LLVMExpressionEmitter* emitter,
             format_str = "%lf";
         } else if (type_kind == LLVMArrayTypeKind) {
             int array_count = LLVMGetArrayLength(operand_type);
-            return emit_array_print(emitter, operand, array_count);
+            LLVMTypeRef elem_type = LLVMGetElementType(operand_type);
+            LLVMTypeKind elem_kind = LLVMGetTypeKind(elem_type);
+            const char* arr_fmt = "%d ";
+            if (elem_kind == LLVMFloatTypeKind) {
+                arr_fmt = "%f ";
+            } else if (elem_kind == LLVMDoubleTypeKind) {
+                arr_fmt = "%lf ";
+            }
+            return emit_array_print(emitter, operand, array_count, elem_type,
+                                    arr_fmt);
         } else if (type_kind == LLVMPointerTypeKind) {
             LLVMTypeRef pointee_type = LLVMGetElementType(operand_type);
+            LLVMTypeKind pointee_kind =
+                pointee_type ? LLVMGetTypeKind(pointee_type) : 0;
             if (!pointee_type) {
                 /* Try using the variable's allocated type instead */
                 LLVMTypeRef operand_val_type = LLVMGetAllocatedType(operand);
                 if (operand_val_type &&
                     LLVMGetTypeKind(operand_val_type) == LLVMArrayTypeKind) {
                     int array_count = LLVMGetArrayLength(operand_val_type);
-                    return emit_array_print(emitter, operand, array_count);
+                    LLVMTypeRef elem_type =
+                        LLVMGetElementType(operand_val_type);
+                    LLVMTypeKind elem_kind = LLVMGetTypeKind(elem_type);
+                    const char* arr_fmt = "%d ";
+                    if (elem_kind == LLVMFloatTypeKind) {
+                        arr_fmt = "%f ";
+                    } else if (elem_kind == LLVMDoubleTypeKind) {
+                        arr_fmt = "%lf ";
+                    }
+                    return emit_array_print(emitter, operand, array_count,
+                                            elem_type, arr_fmt);
                 }
                 format_str = "%s";
             } else {
                 LLVMTypeKind pointee_kind = LLVMGetTypeKind(pointee_type);
                 if (pointee_kind == LLVMArrayTypeKind) {
                     int array_count = LLVMGetArrayLength(pointee_type);
-                    return emit_array_print(emitter, operand, array_count);
+                    LLVMTypeRef elem_type = LLVMGetElementType(pointee_type);
+                    LLVMTypeKind elem_kind = LLVMGetTypeKind(elem_type);
+                    const char* arr_fmt = "%d ";
+                    if (elem_kind == LLVMFloatTypeKind) {
+                        arr_fmt = "%f ";
+                    } else if (elem_kind == LLVMDoubleTypeKind) {
+                        arr_fmt = "%lf ";
+                    }
+                    return emit_array_print(emitter, operand, array_count,
+                                            elem_type, arr_fmt);
                 } else if (pointee_kind == LLVMIntegerTypeKind) {
                     unsigned elem_bits = LLVMGetIntTypeWidth(pointee_type);
                     if (elem_bits == 8) {

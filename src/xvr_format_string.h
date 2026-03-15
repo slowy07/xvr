@@ -1,7 +1,7 @@
 /**
  * XVR Format String Parser
  *
- * Parses format strings with {} placeholders (Rust-style)
+ * Parses format strings with {} placeholders
  * and converts them to printf format strings for code generation.
  *
  * Security: User-controlled strings are NEVER interpreted as format strings.

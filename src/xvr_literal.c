@@ -4,7 +4,6 @@
 #include <string.h>
 
 #include "xvr_console_colors.h"
-#include "xvr_interpreter.h"
 #include "xvr_literal_array.h"
 #include "xvr_literal_dictionary.h"
 #include "xvr_memory.h"

@@ -199,6 +199,18 @@ void Xvr_helpCommandLine(int argc, const char* argv[]);
  * @brief Embedded bytecode and runtime version metadata
  */
 #define XVR_VERSION_MAJOR 0
-#define XVR_VERSION_MINOR 4
-#define XVR_VERSION_PATCH 7
+#define XVR_VERSION_MINOR 5
+#define XVR_VERSION_PATCH 8
+
+/**
+ * @brief Private string duplicate implementation
+ *
+ * Provides a consistent strdup-like function across all backends
+ * without depending on POSIX extensions
+ *
+ * @param str String to duplicate
+ * @return Newly allocated string copy, or NULL if str is NULL
+ */
+char* Xvr_strdup(const char* str);
+
 #endif  // !XVR_COMMON_H

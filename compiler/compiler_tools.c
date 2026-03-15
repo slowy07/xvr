@@ -1,50 +1,19 @@
 /**
-MIT License
-
-Copyright (c) 2025 arfy slowy
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
-*/
+ * MIT License
+ * Copyright (c) 2025 arfy slowy
+ *
+ * Compiler Tools - Simplified for LLVM AOT only
+ */
 
 #include "compiler_tools.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 
-#if !defined(_WIN32) && !defined(_WIN64)
-#    include <termios.h>
-#endif
-
-#include "lib_about.h"
-#include "lib_runner.h"
-#include "lib_standard.h"
-#include "lib_timer.h"
 #include "xvr_ast_node.h"
-#include "xvr_common.h"
-#include "xvr_compiler.h"
-#include "xvr_console_colors.h"
-#include "xvr_interpreter.h"
 #include "xvr_lexer.h"
 #include "xvr_parser.h"
-#include "xvr_unused.h"
 
 #ifdef XVR_EXPORT_LLVM
 #    include "backend/xvr_llvm_codegen.h"
@@ -54,8 +23,7 @@ const unsigned char* Xvr_readFile(const char* path, size_t* fileSize) {
     FILE* file = fopen(path, "rb");
 
     if (file == NULL) {
-        fprintf(stderr,
-                XVR_CC_ERROR "Could not open file \"%s\"\n" XVR_CC_RESET, path);
+        fprintf(stderr, "Could not open file \"%s\"\n", path);
         return NULL;
     }
 
@@ -66,48 +34,22 @@ const unsigned char* Xvr_readFile(const char* path, size_t* fileSize) {
     unsigned char* buffer = (unsigned char*)malloc(*fileSize + 1);
 
     if (buffer == NULL) {
-        fprintf(stderr,
-                XVR_CC_ERROR "Not enough memory to read \"%s\"\n" XVR_CC_RESET,
-                path);
+        fprintf(stderr, "Not enough memory to read \"%s\"\n", path);
         return NULL;
     }
 
     size_t bytesRead = fread(buffer, sizeof(unsigned char), *fileSize, file);
 
-    buffer[*fileSize] = '\0';  // NOTE: fread doesn't append this
+    buffer[*fileSize] = '\0';
 
     if (bytesRead < *fileSize) {
-        fprintf(stderr,
-                XVR_CC_ERROR "Could not read file \"%s\"\n" XVR_CC_RESET, path);
+        fprintf(stderr, "Could not read file \"%s\"\n", path);
         return NULL;
     }
 
     fclose(file);
 
     return buffer;
-}
-
-int Xvr_writeFile(const char* path, const unsigned char* bytes, size_t size) {
-    FILE* file = fopen(path, "wb");
-
-    if (file == NULL) {
-        fprintf(stderr,
-                XVR_CC_ERROR "Could not open file \"%s\"\n" XVR_CC_RESET, path);
-        return -1;
-    }
-
-    int written = fwrite(bytes, size, 1, file);
-
-    if (written != 1) {
-        fprintf(stderr,
-                XVR_CC_ERROR "Could not write file \"%s\"\n" XVR_CC_RESET,
-                path);
-        return -1;
-    }
-
-    fclose(file);
-
-    return 0;
 }
 
 #ifdef XVR_EXPORT_LLVM
@@ -147,338 +89,4 @@ Xvr_ASTNode** parse_to_ast(const char* source, int* out_count) {
     *out_count = nodeCount;
     return nodes;
 }
-
-void Xvr_compileToLLVMIR(const char* source) {
-    int nodeCount = 0;
-    Xvr_ASTNode** nodes = parse_to_ast(source, &nodeCount);
-    if (!nodes) {
-        fprintf(stderr, XVR_CC_ERROR "Failed to parse source\n" XVR_CC_RESET);
-        return;
-    }
-
-    Xvr_LLVMCodegen* codegen = Xvr_LLVMCodegenCreate("xvr_module");
-    if (!codegen) {
-        fprintf(stderr, XVR_CC_ERROR "Failed to create codegen\n" XVR_CC_RESET);
-        for (int i = 0; i < nodeCount; i++) {
-            Xvr_freeASTNode(nodes[i]);
-        }
-        free(nodes);
-        return;
-    }
-
-    Xvr_LLVMCodegenSetOptimizationLevel(codegen, XVR_LLVM_OPT_O2);
-
-    for (int i = 0; i < nodeCount; i++) {
-        Xvr_LLVMCodegenEmitAST(codegen, nodes[i]);
-    }
-
-    size_t ir_len = 0;
-    char* ir = Xvr_LLVMCodegenPrintIR(codegen, &ir_len);
-    if (ir) {
-        printf("%s\n", ir);
-        free(ir);
-    }
-
-    Xvr_LLVMCodegenDestroy(codegen);
-
-    for (int i = 0; i < nodeCount; i++) {
-        Xvr_freeASTNode(nodes[i]);
-    }
-    free(nodes);
-}
 #endif
-
-// repl functions
-const unsigned char* Xvr_compileString(const char* source, size_t* size) {
-    Xvr_Lexer lexer;
-    Xvr_Parser parser;
-    Xvr_Compiler compiler;
-
-    Xvr_initLexer(&lexer, source);
-    Xvr_initParser(&parser, &lexer);
-    Xvr_initCompiler(&compiler);
-
-    Xvr_ASTNode** nodes = NULL;
-    int nodeCount = 0;
-    int nodeCapacity = 0;
-
-    Xvr_ASTNode* node = Xvr_scanParser(&parser);
-    while (node != NULL) {
-        if (node->type == XVR_AST_NODE_ERROR) {
-            Xvr_freeASTNode(node);
-            for (int i = 0; i < nodeCount; i++) {
-                Xvr_freeASTNode(nodes[i]);
-            }
-            free(nodes);
-            Xvr_freeCompiler(&compiler);
-            Xvr_freeParser(&parser);
-            return NULL;
-        }
-
-        if (nodeCount >= nodeCapacity) {
-            nodeCapacity = nodeCapacity < 8 ? 8 : nodeCapacity * 2;
-            nodes = realloc(nodes, sizeof(Xvr_ASTNode*) * nodeCapacity);
-        }
-        nodes[nodeCount++] = node;
-        node = Xvr_scanParser(&parser);
-    }
-
-    bool unusedError = false;
-    Xvr_UnusedChecker checker;
-    Xvr_initUnusedChecker(&checker);
-    Xvr_checkUnusedBegin(&checker);
-
-    for (int i = 0; i < nodeCount; i++) {
-        Xvr_checkUnusedNode(&checker, nodes[i]);
-    }
-
-    if (!Xvr_checkUnusedEnd(&checker)) {
-        unusedError = true;
-    }
-    Xvr_freeUnusedChecker(&checker);
-
-    if (unusedError) {
-        for (int i = 0; i < nodeCount; i++) {
-            Xvr_freeASTNode(nodes[i]);
-        }
-        free(nodes);
-        Xvr_freeCompiler(&compiler);
-        Xvr_freeParser(&parser);
-        return NULL;
-    }
-
-    for (int i = 0; i < nodeCount; i++) {
-        Xvr_writeCompiler(&compiler, nodes[i]);
-        Xvr_freeASTNode(nodes[i]);
-    }
-    free(nodes);
-
-    const unsigned char* tb = Xvr_collateCompiler(&compiler, size);
-
-    Xvr_freeCompiler(&compiler);
-    Xvr_freeParser(&parser);
-    return tb;
-}
-
-void Xvr_runBinary(const unsigned char* tb, size_t size) {
-    Xvr_Interpreter interpreter;
-    Xvr_initInterpreter(&interpreter);
-
-    Xvr_injectNativeHook(&interpreter, "about", Xvr_hookAbout);
-    Xvr_injectNativeHook(&interpreter, "standard", Xvr_hookStandard);
-    Xvr_injectNativeHook(&interpreter, "timer", Xvr_hookTimer);
-    Xvr_injectNativeHook(&interpreter, "runner", Xvr_hookRunner);
-
-    Xvr_runInterpreter(&interpreter, tb, size);
-    Xvr_freeInterpreter(&interpreter);
-}
-
-void Xvr_runBinaryFile(const char* fname) {
-    size_t size = 0;
-    const unsigned char* tb = (unsigned char*)Xvr_readFile(fname, &size);
-    if (!tb) {
-        return;
-    }
-    Xvr_runBinary(tb, size);
-    // interpreter takes ownership of the binary data
-}
-
-void Xvr_runSource(const char* source) {
-#ifdef XVR_EXPORT_LLVM
-    if (Xvr_commandLine.dumpLLVM) {
-        Xvr_compileToLLVMIR(source);
-        return;
-    }
-
-    int nodeCount = 0;
-    Xvr_ASTNode** nodes = parse_to_ast(source, &nodeCount);
-    if (!nodes) {
-        fprintf(stderr, XVR_CC_ERROR "Failed to parse source\n" XVR_CC_RESET);
-        return;
-    }
-
-    Xvr_LLVMCodegen* codegen = Xvr_LLVMCodegenCreate("xvr_module");
-    if (!codegen) {
-        fprintf(stderr, XVR_CC_ERROR "Failed to create codegen\n" XVR_CC_RESET);
-        for (int i = 0; i < nodeCount; i++) {
-            Xvr_freeASTNode(nodes[i]);
-        }
-        free(nodes);
-        return;
-    }
-
-    Xvr_LLVMCodegenSetOptimizationLevel(codegen, XVR_LLVM_OPT_O2);
-
-    for (int i = 0; i < nodeCount; i++) {
-        Xvr_LLVMCodegenEmitAST(codegen, nodes[i]);
-    }
-
-    if (Xvr_LLVMCodegenHasError(codegen)) {
-        fprintf(stderr, XVR_CC_ERROR "%s\n" XVR_CC_RESET,
-                Xvr_LLVMCodegenGetError(codegen));
-        Xvr_LLVMCodegenDestroy(codegen);
-        for (int i = 0; i < nodeCount; i++) {
-            Xvr_freeASTNode(nodes[i]);
-        }
-        free(nodes);
-        return;
-    }
-
-    if (Xvr_LLVMCodegenExecuteJIT(codegen)) {
-        Xvr_LLVMCodegenDestroy(codegen);
-        for (int i = 0; i < nodeCount; i++) {
-            Xvr_freeASTNode(nodes[i]);
-        }
-        free(nodes);
-        return;
-    }
-
-    Xvr_LLVMCodegenDestroy(codegen);
-    for (int i = 0; i < nodeCount; i++) {
-        Xvr_freeASTNode(nodes[i]);
-    }
-    free(nodes);
-#endif
-
-    size_t size = 0;
-    const unsigned char* tb = Xvr_compileString(source, &size);
-    if (!tb) {
-        return;
-    }
-
-    Xvr_runBinary(tb, size);
-}
-
-void Xvr_runSourceFile(const char* fname) {
-    size_t size = 0;
-    const char* source = (const char*)Xvr_readFile(fname, &size);
-
-    if (!source) {
-        return;
-    }
-
-    Xvr_runSource(source);
-    free((void*)source);
-}
-
-#if !defined(_WIN32) && !defined(_WIN64)
-static struct termios orig_termios;
-static int termios_saved = 0;
-
-static void enableRawMode(void) {
-    if (!isatty(STDIN_FILENO)) return;
-
-    struct termios raw;
-    tcgetattr(STDIN_FILENO, &orig_termios);
-    termios_saved = 1;
-    raw = orig_termios;
-    raw.c_lflag &= ~(ECHO | ICANON);
-    raw.c_cc[VMIN] = 1;
-    raw.c_cc[VTIME] = 0;
-    tcsetattr(STDIN_FILENO, TCSAFLUSH, &raw);
-}
-
-static void disableRawMode(void) {
-    if (termios_saved) {
-        tcsetattr(STDIN_FILENO, TCSAFLUSH, &orig_termios);
-        termios_saved = 0;
-    }
-}
-#endif
-
-char* Xvr_readLine(char* buffer, int size) {
-    if (!isatty(STDIN_FILENO)) {
-        return fgets(buffer, size, stdin);
-    }
-
-#if !defined(_WIN32) && !defined(_WIN64)
-    enableRawMode();
-
-    int pos = 0;
-    int len = 0;
-    memset(buffer, 0, size);
-
-    while (1) {
-        char c;
-        if (read(STDIN_FILENO, &c, 1) != 1) {
-            disableRawMode();
-            return NULL;
-        }
-
-        if (c == '\x1b') {
-            char seq[2];
-            if (read(STDIN_FILENO, &seq[0], 1) != 1) continue;
-            if (read(STDIN_FILENO, &seq[1], 1) != 1) continue;
-
-            if (seq[0] == '[') {
-                switch (seq[1]) {
-                case 'A':
-                case 'B':
-                    break;
-                case 'C':
-                    if (pos < len) {
-                        pos++;
-                        write(STDOUT_FILENO, "\x1b[C", 3);
-                    }
-                    break;
-                case 'D':
-                    if (pos > 0) {
-                        pos--;
-                        write(STDOUT_FILENO, "\x1b[D", 3);
-                    }
-                    break;
-                }
-            }
-            continue;
-        }
-
-        if (c == 127 || c == '\b') {
-            if (pos > 0) {
-                memmove(&buffer[pos - 1], &buffer[pos], len - pos);
-                pos--;
-                len--;
-                buffer[len] = '\0';
-
-                char clr[256];
-                int n = snprintf(clr, sizeof(clr), "\r> %s\033[K", buffer);
-                write(STDOUT_FILENO, clr, n);
-                for (int i = len; i > pos; i--) {
-                    write(STDOUT_FILENO, "\b", 1);
-                }
-            }
-            continue;
-        }
-
-        if (c == '\n' || c == '\r') {
-            buffer[len] = '\n';
-            buffer[len + 1] = '\0';
-            write(STDOUT_FILENO, "\n", 1);
-            disableRawMode();
-            return buffer;
-        }
-
-        if (c == 4 && len == 0) {
-            disableRawMode();
-            return NULL;
-        }
-
-        if (c >= 32 && len < size - 2) {
-            if (pos < len) {
-                memmove(&buffer[pos + 1], &buffer[pos], len - pos);
-            }
-            buffer[pos] = c;
-            pos++;
-            len++;
-
-            char clr[256];
-            int n = snprintf(clr, sizeof(clr), "\r> %s\033[K", buffer);
-            write(STDOUT_FILENO, clr, n);
-            for (int i = len; i > pos; i--) {
-                write(STDOUT_FILENO, "\b", 1);
-            }
-        }
-    }
-#else
-    return fgets(buffer, size, stdin);
-#endif
-}

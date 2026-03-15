@@ -56,6 +56,11 @@ static void consumeSemicolon(Xvr_Parser* parser) {
         return;
     }
 
+    if (parser->current.type == XVR_TOKEN_BRACE_RIGHT ||
+        parser->current.type == XVR_TOKEN_EOF) {
+        return;
+    }
+
     error(parser, parser->current, "Expected ';'");
 }
 
@@ -2091,8 +2096,6 @@ static void varDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         // values are null by default
         Xvr_emitASTNodeLiteral(&expressionNode, XVR_TO_NULL_LITERAL);
     }
-
-    // TODO: static type checking?
 
     // declare it
     Xvr_emitASTNodeVarDecl(nodeHandle, identifier, typeLiteral, expressionNode,

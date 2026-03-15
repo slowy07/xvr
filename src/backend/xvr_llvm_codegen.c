@@ -89,15 +89,9 @@ static bool is_integer_type(Xvr_LiteralType type) {
 #include <stdlib.h>
 #include <string.h>
 
-static char* Xvr_private_strdup(const char* str) {
-    if (!str) return NULL;
-    size_t len = strlen(str) + 1;
-    char* dup = malloc(len);
-    if (dup) {
-        memcpy(dup, str, len);
-    }
-    return dup;
-}
+#include "xvr_common.h"
+
+static char* Xvr_private_strdup(const char* str) { return Xvr_strdup(str); }
 
 #include "xvr_ast_node.h"
 #include "xvr_llvm_context.h"
@@ -123,6 +117,7 @@ struct Xvr_LLVMCodegen {
 
     bool has_error;
     char* error_message;
+    bool main_created;
 };
 
 Xvr_LLVMCodegen* Xvr_LLVMCodegenCreate(const char* module_name) {
@@ -336,8 +331,7 @@ static bool ensure_main_function(Xvr_LLVMCodegen* codegen);
 static void finalize_main_function(Xvr_LLVMCodegen* codegen);
 
 static bool ensure_main_function(Xvr_LLVMCodegen* codegen) {
-    static bool main_created = false;
-    if (main_created) {
+    if (codegen->main_created) {
         return true;
     }
 
@@ -356,13 +350,12 @@ static bool ensure_main_function(Xvr_LLVMCodegen* codegen) {
 
     Xvr_LLVMFunctionEmitterSetCurrentFunction(codegen->fn_emitter, main_fn);
 
-    main_created = true;
+    codegen->main_created = true;
     return true;
 }
 
 static void finalize_main_function(Xvr_LLVMCodegen* codegen) {
-    static bool finalized = false;
-    if (finalized) {
+    if (!codegen->main_created) {
         return;
     }
 
@@ -371,7 +364,6 @@ static void finalize_main_function(Xvr_LLVMCodegen* codegen) {
     LLVMTypeRef int32_type = LLVMInt32TypeInContext(llvm_ctx);
 
     LLVMBuildRet(builder, LLVMConstInt(int32_type, 0, false));
-    finalized = true;
 }
 
 static bool emit_main_function(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* stmt) {

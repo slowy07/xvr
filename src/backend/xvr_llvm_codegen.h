@@ -29,6 +29,7 @@ SOFTWARE.
 #include <stddef.h>
 
 #include "xvr_ast_node.h"
+#include "xvr_common.h"
 #include "xvr_llvm_context.h"
 #include "xvr_llvm_control_flow.h"
 #include "xvr_llvm_expression_emitter.h"
