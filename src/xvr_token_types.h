@@ -158,6 +158,7 @@ typedef enum Xvr_TokenType {
     // other operators
     XVR_TOKEN_QUESTION,
     XVR_TOKEN_COLON,
+    XVR_TOKEN_COLON_COLON,
     XVR_TOKEN_SEMICOLON,
     XVR_TOKEN_COMMA,
     XVR_TOKEN_DOT,

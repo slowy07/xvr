@@ -345,6 +345,8 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
     int arg_count = 0;
     if (args->type == XVR_AST_NODE_COMPOUND) {
         arg_count = args->compound.count;
+    } else if (args->type == XVR_AST_NODE_FN_COLLECTION) {
+        arg_count = args->fnCollection.count;
     }
 
     if (arg_count == 0) {
@@ -352,7 +354,12 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
     }
 
     /* Get the format string (first arg) - must be a literal for security */
-    Xvr_ASTNode* format_arg = &args->compound.nodes[0];
+    Xvr_ASTNode* format_arg = NULL;
+    if (args->type == XVR_AST_NODE_COMPOUND) {
+        format_arg = &args->compound.nodes[0];
+    } else if (args->type == XVR_AST_NODE_FN_COLLECTION) {
+        format_arg = &args->fnCollection.nodes[0];
+    }
     const char* format_literal = NULL;
 
     if (format_arg->type == XVR_AST_NODE_LITERAL &&
@@ -630,6 +637,58 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
     /* Handle PRINTF specially - it's a variadic function call */
     if (binary->opcode == XVR_OP_PRINTF) {
         return emit_printf(emitter, binary->left);
+    }
+
+    /* Handle namespace::function calls like std::print */
+    if (binary->opcode == XVR_OP_DOT) {
+        /* Check if this is std::print */
+        if (binary->left && binary->left->type == XVR_AST_NODE_LITERAL &&
+            binary->left->atomic.literal.type == XVR_LITERAL_IDENTIFIER) {
+            const char* namespace_name =
+                (const char*)binary->left->atomic.literal.as.string.ptr->data;
+
+            /* Check if it's std:: and the right side is a function call */
+            if (namespace_name && strcmp(namespace_name, "std") == 0) {
+                /* Right side should be a function call binary node */
+                if (binary->right &&
+                    binary->right->type == XVR_AST_NODE_BINARY &&
+                    (binary->right->binary.opcode == XVR_OP_FN_CALL ||
+                     binary->right->binary.opcode == XVR_OP_DOT)) {
+                    // Get the function name
+                    const char* fn_name = NULL;
+                    if (binary->right->binary.left &&
+                        binary->right->binary.left->type ==
+                            XVR_AST_NODE_LITERAL &&
+                        binary->right->binary.left->atomic.literal.type ==
+                            XVR_LITERAL_IDENTIFIER) {
+                        fn_name = (const char*)binary->right->binary.left
+                                      ->atomic.literal.as.string.ptr->data;
+                    }
+
+                    // The function call is stored as XVR_AST_NODE_FN_CALL in
+                    // binary.right For now, check if we can find the FN_CALL
+                    // node
+                    Xvr_ASTNode* fn_call_node = NULL;
+
+                    // Try to find the FN_CALL node - it could be in different
+                    // places
+                    if (binary->right->binary.right &&
+                        binary->right->binary.right->type ==
+                            XVR_AST_NODE_FN_CALL) {
+                        fn_call_node = binary->right->binary.right;
+                    }
+
+                    if (fn_call_node) {
+                        if (fn_name && strcmp(fn_name, "print") == 0) {
+                            /* This is std::print - route to emit_printf */
+                            return emit_printf(emitter,
+                                               fn_call_node->fnCall.arguments);
+                        }
+                    }
+                }
+            }
+        }
+        return NULL;
     }
 
     /* Handle variable assignment: x = expr, x += expr, etc. */

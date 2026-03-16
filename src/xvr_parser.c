@@ -759,6 +759,25 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     }
 }
 
+static Xvr_Opcode identifierOrKeyword(Xvr_Parser* parser,
+                                      Xvr_ASTNode** nodeHandle) {
+    Xvr_Token identifierToken = parser->previous;
+
+    int length = identifierToken.length;
+
+    if (length > 256) {
+        length = 256;
+    }
+
+    Xvr_RefString* refStr =
+        Xvr_createRefStringLength(identifierToken.lexeme, length);
+    Xvr_Literal identifier = XVR_TO_IDENTIFIER_LITERAL(refStr);
+    Xvr_emitASTNodeLiteral(nodeHandle, identifier);
+    Xvr_freeLiteral(identifier);
+
+    return XVR_OP_EOF;
+}
+
 static Xvr_Opcode identifier(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     // make a copy of the string
     Xvr_Token identifierToken = parser->previous;
@@ -1159,28 +1178,28 @@ ParseRule parseRules[] = {
     {castingPrefix, NULL, PREC_CALL},  // TOKEN_FLOAT64,
 
     // keywords and reserved words
-    {NULL, NULL, PREC_NONE},       // TOKEN_AS,
-    {NULL, NULL, PREC_NONE},       // TOKEN_ASSERT,
-    {NULL, NULL, PREC_NONE},       // TOKEN_BREAK,
-    {NULL, NULL, PREC_NONE},       // TOKEN_CLASS,
-    {NULL, NULL, PREC_NONE},       // TOKEN_CONST,
-    {NULL, NULL, PREC_NONE},       // TOKEN_CONTINUE,
-    {NULL, NULL, PREC_NONE},       // TOKEN_DO,
-    {NULL, NULL, PREC_NONE},       // TOKEN_ELSE,
-    {NULL, NULL, PREC_NONE},       // TOKEN_EXPORT,
-    {NULL, NULL, PREC_NONE},       // TOKEN_FOR,
-    {NULL, NULL, PREC_NONE},       // TOKEN_FOREACH,
-    {NULL, NULL, PREC_NONE},       // TOKEN_IF,
-    {NULL, NULL, PREC_NONE},       // TOKEN_IMPORT,
-    {NULL, NULL, PREC_NONE},       // TOKEN_IN,
-    {NULL, NULL, PREC_NONE},       // TOKEN_OF,
-    {NULL, NULL, PREC_NONE},       // TOKEN_PRINT,
-    {NULL, NULL, PREC_NONE},       // TOKEN_RETURN,
-    {atomic, NULL, PREC_PRIMARY},  // TOKEN_TYPE,
-    {asType, NULL, PREC_CALL},     // TOKEN_ASTYPE,
-    {typeOf, NULL, PREC_CALL},     // TOKEN_TYPEOF,
-    {NULL, NULL, PREC_NONE},       // TOKEN_VAR,
-    {NULL, NULL, PREC_NONE},       // TOKEN_WHILE,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_AS,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_ASSERT,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_BREAK,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_CLASS,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_CONST,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_CONTINUE,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_DO,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_ELSE,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_EXPORT,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_FOR,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_FOREACH,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_IF,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_IMPORT,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_IN,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_OF,
+    {identifierOrKeyword, fnCall, PREC_CALL},  // TOKEN_PRINT,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_RETURN,
+    {atomic, NULL, PREC_PRIMARY},              // TOKEN_TYPE,
+    {asType, NULL, PREC_CALL},                 // TOKEN_ASTYPE,
+    {typeOf, NULL, PREC_CALL},                 // TOKEN_TYPEOF,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_VAR,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_WHILE,
 
     // literal values
     {identifier, castingInfix, PREC_PRIMARY},  // TOKEN_IDENTIFIER,
@@ -1238,6 +1257,7 @@ ParseRule parseRules[] = {
     // other operators
     {NULL, question, PREC_TERNARY},  // TOKEN_QUESTION,
     {NULL, NULL, PREC_NONE},         // TOKEN_COLON,
+    {NULL, dot, PREC_CALL},          // TOKEN_COLON_COLON,
     {NULL, NULL, PREC_NONE},         // TOKEN_SEMICOLON,
     {NULL, NULL, PREC_NONE},         // TOKEN_COMMA,
     {NULL, dot, PREC_CALL},          // TOKEN_DOT,

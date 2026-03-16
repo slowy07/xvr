@@ -475,7 +475,8 @@ Xvr_Token Xvr_private_scanLexer(Xvr_Lexer* lexer) {
     case '?':
         return makeToken(lexer, XVR_TOKEN_QUESTION);
     case ':':
-        return makeToken(lexer, XVR_TOKEN_COLON);
+        return makeToken(lexer, match(lexer, ":", 1) ? XVR_TOKEN_COLON_COLON
+                                                     : XVR_TOKEN_COLON);
     case ';':
         return makeToken(lexer, XVR_TOKEN_SEMICOLON);
     case ',':

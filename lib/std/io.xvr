@@ -1,0 +1,15 @@
+# Standard IO Module
+# Provides print functionality using LLVM printf
+
+# print function - prints string without newline
+# Uses the builtin printf through format string
+proc std_print(msg: string) -> int
+    # This will be replaced by native printf call
+    return 0
+end
+
+# println function - prints string with newline  
+proc std_println(msg: string) -> int
+    # This will be replaced by native printf call
+    return 0
+end
