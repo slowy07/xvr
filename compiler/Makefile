@@ -6,12 +6,12 @@ CFLAGS = $(CFLAGS_BASE) -DXVR_IMPORT -DXVR_EXPORT_LLVM -I. -I../src -I../src/bac
 
 LDFLAGS = $(shell $(LLVM_CONFIG) --libs core bitwriter)
 
-OUT = ../$(XVR_OUTDIR)
+OUT = ../out
 
 all: $(OUT)/xvr
 
-$(OUT)/xvr: $(OBJS)
-	$(CC) -o $@ $^ $(OUT)/libxvr.a $(LDFLAGS)
+$(OUT)/xvr: $(OBJS) $(OUT)/libxvr.a
+	$(CC) -o $@ $^ $(LDFLAGS)
 
 clean:
 	rm -f $(OBJS) $(OUT)/xvr

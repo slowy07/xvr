@@ -27,24 +27,31 @@ make
 # Compile and run a .xvr file (default)
 ./out/xvr source.xvr
 
-# Compile to object file only
-./out/xvr -c source.xvr -o output.o
+# Compile to executable
+./out/xvr source.xvr -o output
 
-# Dump LLVM IR
-./out/xvr -S source.xvr
+# Compile to object file only
+./out/xvr source.xvr -c output.o
+
+# Dump LLVM IR to stdout
+./out/xvr source.xvr -l
 ```
 
 ## Say hello with Xvr
 ```xvr
-print("Hello, World!");
+std::print("Hello, World!");
 ```
 
 ## Print with Format Specifiers
 ```xvr
-print("Hello, {}", "World");           // Hello, World
-print("Number: {}", 42);               // Number: 42
-print("Float: {}", 3.14);             // Float: 3.14
-print("{} is {} years old", "arfy", 25);  // arfy is 25 years old
+std::print("Hello, {}", "World");           // Hello, World
+std::print("Number: {}", 42);                // Number: 42
+std::print("Float: {}", 3.14);               // Float: 3.14
+std::print("{} is {} years old", "arfy", 25);  // arfy is 25 years old
+
+// Arrays
+var data: [int] = [1, 2, 3];
+std::print("array: {}", data);               // array: 1 2 3
 ```
 
 XVR uses `{}` placeholders. Supported types: integers, floats, strings, arrays.

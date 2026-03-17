@@ -469,6 +469,17 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
         return result;
     }
 
+    typedef struct {
+        LLVMValueRef array_ptr;
+        int array_count;
+        LLVMTypeRef elem_type;
+        const char* fmt_str;
+    } ArrayPrintInfo;
+
+    ArrayPrintInfo* array_infos =
+        calloc(num_format_args, sizeof(ArrayPrintInfo));
+    int array_info_count = 0;
+
     LLVMValueRef* arg_values = malloc(sizeof(LLVMValueRef) * num_format_args);
     XvrFormatArgType* arg_types =
         malloc(sizeof(XvrFormatArgType) * num_format_args);
@@ -480,7 +491,42 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
             LLVMTypeRef llvm_type = LLVMTypeOf(arg_values[i]);
             LLVMTypeKind kind = LLVMGetTypeKind(llvm_type);
             if (kind == LLVMPointerTypeKind) {
-                arg_types[i] = XVR_FORMAT_ARG_STRING;
+                LLVMTypeRef pointee = LLVMGetElementType(llvm_type);
+                LLVMTypeRef array_type = NULL;
+                if (pointee) {
+                    /* Pointer has element type - check if it's an array */
+                    if (LLVMGetTypeKind(pointee) == LLVMArrayTypeKind) {
+                        array_type = pointee;
+                    }
+                } else {
+                    /* Opaque pointer - check if it's an alloca */
+                    if (LLVMIsAAllocaInst(arg_values[i])) {
+                        array_type = LLVMGetAllocatedType(arg_values[i]);
+                        if (array_type &&
+                            LLVMGetTypeKind(array_type) != LLVMArrayTypeKind) {
+                            array_type = NULL;
+                        }
+                    }
+                }
+                if (array_type) {
+                    LLVMTypeRef elem_type = LLVMGetElementType(array_type);
+                    int array_count = LLVMGetArrayLength(array_type);
+                    const char* fmt_str = "%d ";
+                    LLVMTypeKind elem_kind = LLVMGetTypeKind(elem_type);
+                    if (elem_kind == LLVMFloatTypeKind ||
+                        elem_kind == LLVMDoubleTypeKind) {
+                        fmt_str = "%f ";
+                    }
+                    array_infos[array_info_count].array_ptr = arg_values[i];
+                    array_infos[array_info_count].array_count = array_count;
+                    array_infos[array_info_count].elem_type = elem_type;
+                    array_infos[array_info_count].fmt_str = fmt_str;
+                    array_info_count++;
+                    arg_values[i] = NULL;
+                    arg_types[i] = XVR_FORMAT_ARG_ARRAY;
+                } else {
+                    arg_types[i] = XVR_FORMAT_ARG_STRING;
+                }
             } else if (kind == LLVMFloatTypeKind) {
                 arg_types[i] = XVR_FORMAT_ARG_FLOAT;
                 LLVMValueRef converted = LLVMBuildFPExt(
@@ -525,11 +571,19 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
         printf_fn = LLVMAddFunction(module, "printf", printf_type);
     }
 
-    LLVMValueRef* call_args =
-        malloc(sizeof(LLVMValueRef) * (num_format_args + 1));
-    call_args[0] = format_global;
+    int non_null_count = 0;
     for (uint32_t i = 0; i < num_format_args; i++) {
-        call_args[i + 1] = arg_values[i];
+        if (arg_values[i] != NULL) non_null_count++;
+    }
+
+    LLVMValueRef* call_args =
+        malloc(sizeof(LLVMValueRef) * (non_null_count + 1));
+    call_args[0] = format_global;
+    int j = 1;
+    for (uint32_t i = 0; i < num_format_args; i++) {
+        if (arg_values[i] != NULL) {
+            call_args[j++] = arg_values[i];
+        }
     }
 
     LLVMTypeRef printf_type = LLVMFunctionType(
@@ -539,11 +593,18 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
 
     LLVMValueRef result =
         LLVMBuildCall2(llvm_builder, printf_type, printf_fn, call_args,
-                       num_format_args + 1, "printf_call");
+                       non_null_count + 1, "printf_call");
+
+    for (int i = 0; i < array_info_count; i++) {
+        emit_array_print(emitter, array_infos[i].array_ptr,
+                         array_infos[i].array_count, array_infos[i].elem_type,
+                         array_infos[i].fmt_str);
+    }
 
     free(arg_values);
     free(arg_types);
     free(call_args);
+    free(array_infos);
 
     return result;
 }
