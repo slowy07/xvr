@@ -424,11 +424,18 @@ static bool emit_main_function(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* stmt) {
                         typesMatch = true;
                     } else if (declaredType == XVR_LITERAL_FLOAT &&
                                (inferredType == XVR_LITERAL_FLOAT64 ||
+                                inferredType == XVR_LITERAL_INTEGER ||
+                                inferredType == XVR_LITERAL_FLOAT32)) {
+                        typesMatch = true;
+                    } else if (declaredType == XVR_LITERAL_FLOAT32 &&
+                               (inferredType == XVR_LITERAL_FLOAT ||
+                                inferredType == XVR_LITERAL_FLOAT64 ||
                                 inferredType == XVR_LITERAL_INTEGER)) {
                         typesMatch = true;
                     } else if (declaredType == XVR_LITERAL_FLOAT64 &&
                                (inferredType == XVR_LITERAL_FLOAT ||
-                                inferredType == XVR_LITERAL_INTEGER)) {
+                                inferredType == XVR_LITERAL_INTEGER ||
+                                inferredType == XVR_LITERAL_FLOAT32)) {
                         typesMatch = true;
                     } else if (is_integer_type(declaredType) &&
                                is_integer_type(inferredType)) {

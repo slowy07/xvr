@@ -131,6 +131,11 @@ static void freeASTNodeCustom(Xvr_ASTNode* node, bool freeSelf) {
         Xvr_freeLiteral(node->postfixDecrement.identifier);
         break;
 
+    case XVR_AST_NODE_CAST:
+        Xvr_freeLiteral(node->cast.targetType);
+        Xvr_freeASTNode(node->cast.expression);
+        break;
+
     case XVR_AST_NODE_IMPORT:
         Xvr_freeLiteral(node->import.identifier);
         Xvr_freeLiteral(node->import.alias);
@@ -400,6 +405,17 @@ void Xvr_emitASTNodeImport(Xvr_ASTNode** nodeHandle, Xvr_Literal identifier,
     tmp->type = XVR_AST_NODE_IMPORT;
     tmp->import.identifier = Xvr_copyLiteral(identifier);
     tmp->import.alias = Xvr_copyLiteral(alias);
+
+    *nodeHandle = tmp;
+}
+
+void Xvr_emitASTNodeCast(Xvr_ASTNode** nodeHandle, Xvr_Literal targetType,
+                         Xvr_ASTNode* expression) {
+    Xvr_ASTNode* tmp = XVR_ALLOCATE(Xvr_ASTNode, 1);
+
+    tmp->type = XVR_AST_NODE_CAST;
+    tmp->cast.targetType = Xvr_copyLiteral(targetType);
+    tmp->cast.expression = expression;
 
     *nodeHandle = tmp;
 }

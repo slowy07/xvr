@@ -165,6 +165,9 @@ static Xvr_Opcode typeOf(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     return XVR_OP_EOF;
 }
 
+/* Forward declaration for expression */
+static void expression(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle);
+
 static Xvr_Opcode compound(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     // read either an array or a dictionary into a literal node
 
@@ -804,8 +807,66 @@ static Xvr_Opcode identifier(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     return XVR_OP_EOF;
 }
 
+static Xvr_LiteralType getTypeFromToken(Xvr_TokenType type) {
+    switch (type) {
+    case XVR_TOKEN_BOOLEAN:
+        return XVR_LITERAL_BOOLEAN;
+    case XVR_TOKEN_INTEGER:
+        return XVR_LITERAL_INTEGER;
+    case XVR_TOKEN_INT8:
+        return XVR_LITERAL_INT8;
+    case XVR_TOKEN_INT16:
+        return XVR_LITERAL_INT16;
+    case XVR_TOKEN_INT32:
+        return XVR_LITERAL_INT32;
+    case XVR_TOKEN_INT64:
+        return XVR_LITERAL_INT64;
+    case XVR_TOKEN_UINT8:
+        return XVR_LITERAL_UINT8;
+    case XVR_TOKEN_UINT16:
+        return XVR_LITERAL_UINT16;
+    case XVR_TOKEN_UINT32:
+        return XVR_LITERAL_UINT32;
+    case XVR_TOKEN_UINT64:
+        return XVR_LITERAL_UINT64;
+    case XVR_TOKEN_FLOAT16:
+        return XVR_LITERAL_FLOAT16;
+    case XVR_TOKEN_FLOAT32:
+        return XVR_LITERAL_FLOAT32;
+    case XVR_TOKEN_FLOAT64:
+        return XVR_LITERAL_FLOAT64;
+    case XVR_TOKEN_FLOAT:
+        return XVR_LITERAL_FLOAT;
+    case XVR_TOKEN_STRING:
+        return XVR_LITERAL_STRING;
+    default:
+        return XVR_LITERAL_NULL;
+    }
+}
+
 static Xvr_Opcode castingPrefix(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
-    switch (parser->previous.type) {
+    Xvr_TokenType tokenType = parser->previous.type;
+
+    /* Check if this is a cast expression: type(expression) */
+    if (parser->current.type == XVR_TOKEN_PAREN_LEFT) {
+        consume(parser, XVR_TOKEN_PAREN_LEFT, "Expected '(' after type");
+
+        Xvr_ASTNode* expr = NULL;
+        expression(parser, &expr);
+
+        consume(parser, XVR_TOKEN_PAREN_RIGHT, "Expected ')' after expression");
+
+        Xvr_LiteralType xvrType = getTypeFromToken(tokenType);
+        Xvr_Literal targetType = XVR_TO_TYPE_LITERAL(xvrType, false);
+
+        Xvr_emitASTNodeCast(nodeHandle, targetType, expr);
+        Xvr_freeLiteral(targetType);
+
+        return XVR_OP_CAST;
+    }
+
+    /* Otherwise, just emit the type literal */
+    switch (tokenType) {
     case XVR_TOKEN_BOOLEAN: {
         Xvr_Literal literal = XVR_TO_TYPE_LITERAL(XVR_LITERAL_BOOLEAN, false);
         Xvr_emitASTNodeLiteral(nodeHandle, literal);

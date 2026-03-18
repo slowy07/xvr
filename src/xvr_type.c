@@ -27,7 +27,11 @@ static Xvr_Type* find_or_create_type(const char* name, Xvr_TypeKind kind) {
 }
 
 Xvr_Type* Xvr_TypeCreateInteger(int size_bits, Xvr_Signedness signedness) {
-    Xvr_Type* type = find_or_create_type("int", XVR_KIND_INTEGER);
+    char name[32];
+    snprintf(name, sizeof(name), "int%d_%s", size_bits,
+             signedness == XVR_SIGNEDNESS_SIGNED ? "s" : "u");
+
+    Xvr_Type* type = find_or_create_type(name, XVR_KIND_INTEGER);
     if (type) return type;
 
     type = calloc(1, sizeof(Xvr_Type));
@@ -36,7 +40,7 @@ Xvr_Type* Xvr_TypeCreateInteger(int size_bits, Xvr_Signedness signedness) {
     type->kind = XVR_KIND_INTEGER;
     type->data.integer.size_bits = size_bits;
     type->data.integer.signedness = signedness;
-    type->name = "int";
+    type->name = strdup(name);
 
     if (g_type_table.count < 32) {
         g_type_table.types[g_type_table.count++] = type;
@@ -232,21 +236,19 @@ const char* Xvr_TypeToString(const Xvr_Type* type) {
 
     switch (type->kind) {
     case XVR_KIND_INTEGER:
-        snprintf(buffer, sizeof(buffer), "int%d%s",
-                 type->data.integer.size_bits,
+        snprintf(buffer, 64, "int%d%s", type->data.integer.size_bits,
                  type->data.integer.signedness == XVR_SIGNEDNESS_UNSIGNED ? "u"
                                                                           : "");
         return buffer;
     case XVR_KIND_FLOAT:
-        snprintf(buffer, sizeof(buffer), "float%d",
-                 type->data.float_type.size_bits);
+        snprintf(buffer, 64, "float%d", type->data.float_type.size_bits);
         return buffer;
     case XVR_KIND_BOOL:
         return "bool";
     case XVR_KIND_STRING:
         return "string";
     case XVR_KIND_POINTER:
-        snprintf(buffer, sizeof(buffer), "pointer<%s>",
+        snprintf(buffer, 64, "pointer<%s>",
                  Xvr_TypeToString(type->data.pointer.pointee_type));
         return buffer;
     case XVR_KIND_VOID:

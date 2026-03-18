@@ -12,12 +12,12 @@ jobs:
       - name: install clang-format
         run: sudo apt-get update && sudo apt-get install -y clang-format
 
-      - name: install LLVM 21
+      - name: install LLVM 22
         run: |
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-21 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
-          sudo apt-get install -y llvm-21 llvm-21-dev
+          sudo apt-get install -y llvm-22 llvm-22-dev
 
       - name: find C source files
         run: find . -type f \( -name "*.c" -o -name "*.h" \) > c_files.txt
@@ -32,6 +32,31 @@ jobs:
           done < c_files.txt
         shell: bash
 
-      - name: testing
+      - name: build compiler
+        run: make -j$(nproc)
+
+      - name: run tests
         run: |
-          make test
+          echo ""
+          echo "  Running Test Suite"
+          echo ""
+          failed=0
+          for f in out/test_all; do
+            if [ -x "$f" ] && [ -f "$f" ]; then
+              echo ""
+              echo "Running: $f"
+              if "$f"; then
+                echo "PASS: $f"
+              else
+                echo "FAIL: $f (exit code: $?)"
+                failed=1
+              fi
+            fi
+          done
+          echo ""
+          if [ $failed -eq 0 ]; then
+            echo "  ALL TESTS PASSED!"
+          else
+            echo "  SOME TESTS FAILED!"
+            exit 1
+          fi

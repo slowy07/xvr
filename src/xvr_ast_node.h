@@ -88,7 +88,8 @@ typedef enum Xvr_ASTNodeType {
     XVR_AST_NODE_POSTFIX_INCREMENT,  // x++
     XVR_AST_NODE_PREFIX_DECREMENT,   // --x
     XVR_AST_NODE_POSTFIX_DECREMENT,  // x--
-    XVR_AST_NODE_IMPORT,             // import lib as alias_lib
+    XVR_AST_NODE_CAST,               // type(expr) - explicit type conversion
+    XVR_AST_NODE_IMPORT,             // import lib as alias
     XVR_AST_NODE_PASS                // for do nothing
 } Xvr_ASTNodeType;
 
@@ -391,6 +392,22 @@ void Xvr_emitASTNodePostfixDecrement(Xvr_ASTNode** nodeHandle,
                                      Xvr_Literal identifier);
 
 /**
+ * @struct Xvr_NodeCast
+ * @brief type cast expression: int32(x), float64(y), string(n)
+ *
+ * example: int32("42"), float64(10), bool(1)
+ * memory: targetType is copied; expression is owned
+ */
+typedef struct Xvr_NodeCast {
+    Xvr_ASTNodeType type;     // XVR_AST_NODE_CAST
+    Xvr_Literal targetType;   // type to cast to (e.g., int32, float64)
+    Xvr_ASTNode* expression;  // expression to cast
+} Xvr_NodeCast;
+
+void Xvr_emitASTNodeCast(Xvr_ASTNode** nodeHandle, Xvr_Literal targetType,
+                         Xvr_ASTNode* expression);
+
+/**
  * @struct Xvr_NodePrefixIncrement
  * @brief prefix increment
  *
@@ -494,6 +511,7 @@ union Xvr_private_node {
         postfixIncrement;  // XVR_AST_NODE_POSTFIX_INCREMENT
     Xvr_NodePostfixDecrement
         postfixDecrement;  // XVR_AST_NODE_POSTFIX_DECREMENT
+    Xvr_NodeCast cast;     // XVR_AST_NODE_CAST
     Xvr_NodeImport import;
 };
 

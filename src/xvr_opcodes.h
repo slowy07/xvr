@@ -59,6 +59,7 @@ typedef enum Xvr_Opcode {
     XVR_OP_PRINT,   // converts `value` to string and outputs to stdout / stderr
     XVR_OP_PRINTF,  // print with format string: stack [format, arg1, ...,
                     // argN], operand is uint8_t arg count
+    XVR_OP_CAST,    // explicit type cast: int32(x), float64(y), etc.
 
     // data
     XVR_OP_LITERAL,       // uint8_t index to constant pool (0 - 255), fasters

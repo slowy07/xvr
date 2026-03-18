@@ -211,6 +211,24 @@ int run_parser_tests(void) {
 
     testParse("array NO semicolon", "[1, 2, 3]", XVR_AST_NODE_COMPOUND);
 
+    printf("INFO: Testing cast expressions...\n");
+    testParse("cast int32 from identifier", "int32(x);", XVR_AST_NODE_CAST);
+    testParse("cast int64 from identifier", "int64(x);", XVR_AST_NODE_CAST);
+    testParse("cast float32 from identifier", "float32(x);", XVR_AST_NODE_CAST);
+    testParse("cast float64 from identifier", "float64(x);", XVR_AST_NODE_CAST);
+    testParse("cast int16 from identifier", "int16(x);", XVR_AST_NODE_CAST);
+    testParse("cast int8 from identifier", "int8(x);", XVR_AST_NODE_CAST);
+    testParse("cast uint8 from identifier", "uint8(x);", XVR_AST_NODE_CAST);
+    testParse("cast uint16 from identifier", "uint16(x);", XVR_AST_NODE_CAST);
+    testParse("cast uint32 from identifier", "uint32(x);", XVR_AST_NODE_CAST);
+    testParse("cast uint64 from identifier", "uint64(x);", XVR_AST_NODE_CAST);
+    testParse("cast bool from identifier", "bool(x);", XVR_AST_NODE_CAST);
+    testParse("cast string from identifier", "string(x);", XVR_AST_NODE_CAST);
+    testParse("cast int32 from literal", "int32(42);", XVR_AST_NODE_CAST);
+    testParse("cast float64 from literal", "float64(3.14);", XVR_AST_NODE_CAST);
+    testParse("cast int32 from expression", "int32(1 + 2);", XVR_AST_NODE_CAST);
+    testParse("cast nested", "int32(float32(x));", XVR_AST_NODE_CAST);
+
     printf("Pass CIK (parser): %d/%d\n", passCount, testCount);
 
     if (passCount != testCount) {

@@ -264,6 +264,10 @@ static void checkNode(Xvr_UnusedChecker* checker, Xvr_ASTNode* node) {
         markUsed(checker, identifier);
     } break;
 
+    case XVR_AST_NODE_CAST:
+        checkNode(checker, node->cast.expression);
+        break;
+
     case XVR_AST_NODE_IMPORT:
         break;
     }
