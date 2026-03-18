@@ -1262,6 +1262,10 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
         return NULL;
     }
 
+    /* TODO: Consider using LLVMBuildSelect for constant conditions in ternary
+     * to avoid generating unnecessary basic blocks when the condition
+     * is a compile-time constant (e.g., true ? x : y becomes just x).
+     */
     case XVR_AST_NODE_TERNARY: {
         Xvr_NodeTernary* ternary = &node->ternary;
         if (!ternary->condition || !ternary->thenPath || !ternary->elsePath) {

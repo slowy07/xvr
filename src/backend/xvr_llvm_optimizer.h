@@ -25,6 +25,7 @@ SOFTWARE.
 #ifndef XVR_LLVM_OPTIMIZER_H
 #define XVR_LLVM_OPTIMIZER_H
 
+#include <llvm-c/TargetMachine.h>
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -47,6 +48,8 @@ void Xvr_LLVMOptimizerDestroy(Xvr_LLVMOptimizer* opt);
 
 bool Xvr_LLVMOptimizerSetLevel(Xvr_LLVMOptimizer* opt,
                                Xvr_LLVMOptimizationLevel level);
+bool Xvr_LLVMOptimizerSetTargetMachine(Xvr_LLVMOptimizer* opt,
+                                       LLVMTargetMachineRef tm);
 bool Xvr_LLVMOptimizerRun(Xvr_LLVMOptimizer* opt,
                           Xvr_LLVMModuleManager* module);
 

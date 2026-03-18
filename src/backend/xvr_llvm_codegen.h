@@ -48,6 +48,8 @@ void Xvr_LLVMCodegenDestroy(Xvr_LLVMCodegen* codegen);
 bool Xvr_LLVMCodegenSetOptimizationLevel(Xvr_LLVMCodegen* codegen,
                                          Xvr_LLVMOptimizationLevel level);
 
+bool Xvr_LLVMCodegenRunOptimizer(Xvr_LLVMCodegen* codegen);
+
 bool Xvr_LLVMCodegenSetTargetTriple(Xvr_LLVMCodegen* codegen,
                                     const char* triple);
 

@@ -222,8 +222,6 @@ static LLVMValueRef emit_if_expression(Xvr_LLVMControlFlow* cf,
 
     LLVMTypeRef result_type =
         Xvr_LLVMTypeMapperGetType(cf->type_mapper, if_node->returnType);
-    LLVMValueRef result_var =
-        LLVMBuildAlloca(llvm_builder, result_type, "if_result");
 
     LLVMBasicBlockRef then_block =
         Xvr_LLVMIRBuilderCreateBlockInFunction(builder, current_fn, "then");
@@ -234,6 +232,9 @@ static LLVMValueRef emit_if_expression(Xvr_LLVMControlFlow* cf,
 
     Xvr_LLVMIRBuilderCreateCondBr(builder, condition, then_block, else_block);
 
+    LLVMValueRef then_val = NULL;
+    LLVMBasicBlockRef then_end_block = then_block;
+
     Xvr_LLVMIRBuilderSetInsertPoint(builder, then_block);
     if (if_node->thenPath) {
         Xvr_ASTNode* then_node = if_node->thenPath;
@@ -243,58 +244,55 @@ static LLVMValueRef emit_if_expression(Xvr_LLVMControlFlow* cf,
                 Xvr_LLVMExpressionEmitterEmit(expr_emitter,
                                               &then_node->block.nodes[i]);
             }
-            LLVMValueRef then_val = Xvr_LLVMExpressionEmitterEmit(
+            then_val = Xvr_LLVMExpressionEmitterEmit(
                 expr_emitter,
                 &then_node->block.nodes[then_node->block.count - 1]);
-            if (then_val) {
-                LLVMBuildStore(llvm_builder, then_val, result_var);
-            }
         } else {
-            LLVMValueRef then_val =
-                Xvr_LLVMExpressionEmitterEmit(expr_emitter, then_node);
-            if (then_val) {
-                LLVMBuildStore(llvm_builder, then_val, result_var);
-            }
+            then_val = Xvr_LLVMExpressionEmitterEmit(expr_emitter, then_node);
         }
     }
     Xvr_LLVMIRBuilderCreateBr(builder, merge_block);
+    then_end_block = LLVMGetInsertBlock(llvm_builder);
+
+    LLVMValueRef else_val = NULL;
+    LLVMBasicBlockRef else_end_block = else_block;
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, else_block);
     if (if_node->elsePath) {
         Xvr_ASTNode* else_node = if_node->elsePath;
         if (else_node->type == XVR_AST_NODE_IF) {
-            LLVMValueRef else_val = emit_if_expression(cf, &else_node->pathIf);
-            if (else_val) {
-                LLVMBuildStore(llvm_builder, else_val, result_var);
-            }
+            else_val = emit_if_expression(cf, &else_node->pathIf);
         } else if (else_node->type == XVR_AST_NODE_BLOCK &&
                    else_node->block.nodes && else_node->block.count > 0) {
             for (int i = 0; i < else_node->block.count - 1; i++) {
                 Xvr_LLVMExpressionEmitterEmit(expr_emitter,
                                               &else_node->block.nodes[i]);
             }
-            LLVMValueRef else_val = Xvr_LLVMExpressionEmitterEmit(
+            else_val = Xvr_LLVMExpressionEmitterEmit(
                 expr_emitter,
                 &else_node->block.nodes[else_node->block.count - 1]);
-            if (else_val) {
-                LLVMBuildStore(llvm_builder, else_val, result_var);
-            }
         } else {
-            LLVMValueRef else_val =
-                Xvr_LLVMExpressionEmitterEmit(expr_emitter, else_node);
-            if (else_val) {
-                LLVMBuildStore(llvm_builder, else_val, result_var);
-            }
+            else_val = Xvr_LLVMExpressionEmitterEmit(expr_emitter, else_node);
         }
     }
     Xvr_LLVMIRBuilderCreateBr(builder, merge_block);
+    else_end_block = LLVMGetInsertBlock(llvm_builder);
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, merge_block);
-    LLVMValueRef result =
-        LLVMBuildLoad2(llvm_builder, result_type, result_var, "if_result");
 
-    cf->last_expression_result = result;
-    return result;
+    if (!then_val) {
+        then_val = LLVMConstNull(result_type);
+    }
+    if (!else_val) {
+        else_val = LLVMConstNull(result_type);
+    }
+
+    LLVMValueRef phi = LLVMBuildPhi(llvm_builder, result_type, "if_result");
+    LLVMAddIncoming(phi, &then_val, &then_end_block, 1);
+    LLVMAddIncoming(phi, &else_val, &else_end_block, 1);
+
+    cf->last_expression_result = phi;
+    return phi;
 }
 
 bool Xvr_LLVMControlFlowEmitIf(Xvr_LLVMControlFlow* cf, Xvr_NodeIf* if_node) {

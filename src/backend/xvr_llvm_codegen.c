@@ -304,6 +304,20 @@ bool Xvr_LLVMCodegenSetOptimizationLevel(Xvr_LLVMCodegen* codegen,
     return Xvr_LLVMOptimizerSetLevel(codegen->optimizer, level);
 }
 
+bool Xvr_LLVMCodegenRunOptimizer(Xvr_LLVMCodegen* codegen) {
+    if (!codegen || !codegen->optimizer) {
+        return false;
+    }
+
+    if (codegen->target_machine) {
+        Xvr_LLVMOptimizerSetTargetMachine(
+            codegen->optimizer,
+            Xvr_LLVMTargetMachineGetLLVMTargetMachine(codegen->target_machine));
+    }
+
+    return Xvr_LLVMOptimizerRun(codegen->optimizer, codegen->module);
+}
+
 bool Xvr_LLVMCodegenSetTargetTriple(Xvr_LLVMCodegen* codegen,
                                     const char* triple) {
     (void)codegen;

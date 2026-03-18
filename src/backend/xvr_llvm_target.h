@@ -64,4 +64,7 @@ void* Xvr_LLVMTargetMachineEmitToMemory(Xvr_LLVMTargetMachine* tm,
 const char* Xvr_LLVMTargetMachineGetDefaultTargetTriple(void);
 const char* Xvr_LLVMTargetMachineGetDefaultCPU(void);
 
+LLVMTargetMachineRef Xvr_LLVMTargetMachineGetLLVMTargetMachine(
+    Xvr_LLVMTargetMachine* tm);
+
 #endif

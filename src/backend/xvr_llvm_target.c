@@ -286,3 +286,11 @@ const char* Xvr_LLVMTargetMachineGetDefaultTargetTriple(void) {
 }
 
 const char* Xvr_LLVMTargetMachineGetDefaultCPU(void) { return "generic"; }
+
+LLVMTargetMachineRef Xvr_LLVMTargetMachineGetLLVMTargetMachine(
+    Xvr_LLVMTargetMachine* tm) {
+    if (!tm) {
+        return NULL;
+    }
+    return tm->target_machine;
+}

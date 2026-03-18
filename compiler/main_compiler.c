@@ -155,6 +155,16 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
+    /* FIXME: Optimizer causes SIGSEGV - re-enable once target machine
+     * configuration is fixed in xvr_llvm_optimizer.c
+     *
+     * TODO: Add command-line flag for optimization level (-O0, -O1, -O2, -O3)
+     *
+    if (!Xvr_commandLine.dumpLLVM) {
+        Xvr_LLVMCodegenRunOptimizer(codegen);
+    }
+    */
+
     bool shouldRun = !Xvr_commandLine.compileOnly && !Xvr_commandLine.dumpLLVM;
     char* outFile = NULL;
 
