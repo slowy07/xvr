@@ -110,6 +110,19 @@ int run_parser_tests(void) {
               XVR_AST_NODE_IF);
 
     testParse("while statement", "while (true) { 1; }", XVR_AST_NODE_WHILE);
+    testParse("while with false condition", "while (false) { 1; }",
+              XVR_AST_NODE_WHILE);
+    testParse("while with variable condition", "while (x > 0) { 1; }",
+              XVR_AST_NODE_WHILE);
+    testParse("while with complex condition", "while (x > 0 and y < 10) { 1; }",
+              XVR_AST_NODE_WHILE);
+    testParse("while with empty body", "while (true) { }", XVR_AST_NODE_WHILE);
+    testParse("while with multi-statement body", "while (true) { 1; 2; 3; }",
+              XVR_AST_NODE_WHILE);
+    testParse("while nested in if", "if (true) { while (x > 0) { x--; } }",
+              XVR_AST_NODE_IF);
+    testParse("if nested in while", "while (true) { if (x > 0) { break; } }",
+              XVR_AST_NODE_WHILE);
 
     testParse("for statement", "for (var i = 0; i < 10; i++) { 1; }",
               XVR_AST_NODE_FOR);

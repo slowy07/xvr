@@ -75,6 +75,47 @@ if (age >= 18) {
 }
 ```
 
+## Expression-Based If (Rust-like)
+
+In XVR, `if` can be used as an **expression** that returns a value. This is similar to Rust's ternary-like if expressions.
+
+### Basic Expression If
+
+```xvr
+var x: int32 = 10;
+var result: int32 = if (x > 5) { 100 } else { 0 };
+print("{}", result);  // Output: 100
+```
+
+### With Else-If Chains
+
+```xvr
+var score: int32 = 85;
+var grade: string = if (score >= 90) {
+    "A"
+} else if (score >= 80) {
+    "B"
+} else if (score >= 70) {
+    "C"
+} else {
+    "F"
+};
+print(grade);  // Output: B
+```
+
+### Important Notes
+
+1. **Type annotation required**: When using if as an expression, the variable must have an explicit type annotation
+2. **All branches must have values**: In expression form, every branch must return a value of compatible type
+
+```xvr
+// This works
+var x: int32 = if (condition) { 1 } else { 2 };
+
+// This will cause an error - type annotation required
+var x = if (condition) { 1 } else { 2 };  // ERROR
+```
+
 ## Conditions
 
 Conditions in if statements **must be boolean** (`bool`). The compiler will report an error if you use non-boolean types.
@@ -120,9 +161,40 @@ if (x > 5 and x < 20) {
 | `or` | Logical OR |
 | `!` | Logical NOT |
 
+## Error Handling
+
+The compiler provides clear error messages with helpful hints.
+
+### Non-Boolean Condition
+
+```xvr
+var x = 5;
+if (x) { }  // ERROR
+```
+
+Compiler output:
+```
+error: condition of if statement must be boolean, got 'i32'
+help: use a comparison operator (e.g., 'x > 0') or wrap the condition with 'bool()'
+```
+
+### Expression If Without Type Annotation
+
+```xvr
+var x = if (true) { 1 } else { 2 };  // ERROR
+```
+
+Compiler output:
+```
+error: expression-based if requires explicit type annotation
+help: declare the variable with a type: var x: int32 = if ...
+```
+
 ## LLVM IR Generation
 
 When compiled, `if` statements generate proper LLVM basic blocks:
+
+### Statement Form
 
 ```llvm
 entry:
@@ -141,6 +213,27 @@ ifcont:                                           ; preds = %else, %then
   ; execution continues here
 ```
 
+### Expression Form
+
+```llvm
+entry:
+  %result = alloca i32
+  %cond = icmp sgt i32 %x, 10
+  br i1 %cond, label %then, label %else
+
+then:                                             ; preds = %entry
+  store i32 100, ptr %result
+  br label %ifcont
+
+else:                                             ; preds = %entry
+  store i32 0, ptr %result
+  br label %ifcont
+
+ifcont:                                           ; preds = %else, %then
+  %value = load i32, ptr %result
+  ; %value contains the result
+```
+
 The compiler generates:
 - **Conditional branch** (`br i1`) based on the condition
 - **Basic blocks** for then and else branches
@@ -152,16 +245,21 @@ The compiler generates:
 2. **Keep conditions simple** - Complex conditions should be extracted to variables
 3. **Prefer early returns** - Handle edge cases first
 4. **Use consistent formatting** - Always use braces, even for single statements
+5. **Use expression if for simple assignments** - Cleaner than if-else statements
 
 ```xvr
-// Good
-if (is_valid) {
-    process();
+// Good - simple conditional assignment
+var max: int32 = if (a > b) { a } else { b };
+
+// Good - explicit statement form for complex logic
+if (condition) {
+    doSomething();
+    doAnotherThing();
 }
 
 // Avoid
-if (is_valid)
-    process();
+if (condition)
+    doSomething();
 ```
 
 ## Summary
@@ -171,4 +269,5 @@ if (is_valid)
 - `else if` chains multiple conditions
 - Conditions must be boolean
 - Nested ifs are allowed but should be minimized
-
+- **Expression-based if** returns values (requires type annotation)
+- Error messages include helpful hints for fixing issues

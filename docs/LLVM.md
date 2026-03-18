@@ -167,40 +167,132 @@ var pi = 3.14;
 
 ### If Statements
 
-XVR supports if-else statements with strict boolean type checking:
+XVR supports traditional if-else statements and **expression-based if** (Rust-like):
+
+#### Statement Form
 
 ```xvr
 var score: int32 = 85;
 
-// Basic if
-if (score >= 90) {
-    print("Grade: A");
-}
-
-// If-else
-if (score >= 90) {
-    print("Grade: A");
-} else {
-    print("Grade: B or lower");
-}
-
-// If-else-if chain
 if (score >= 90) {
     print("Grade: A");
 } else if (score >= 80) {
     print("Grade: B");
-} else if (score >= 70) {
-    print("Grade: C");
 } else {
-    print("Grade: F");
+    print("Grade: C or lower");
 }
 ```
 
-**Conditions must be boolean** - the compiler validates this:
+#### Expression Form (Rust-like)
+
+The `if` can be used as an expression that returns a value:
+
+```xvr
+var score: int32 = 85;
+
+var grade: string = if (score >= 90) {
+    "A"
+} else if (score >= 80) {
+    "B"
+} else {
+    "C or lower"
+};
+
+print(grade);
+```
+
+**Note:** Expression-based `if` requires explicit type annotation on the variable.
+
+### While Loops
+
+```xvr
+var i = 0;
+while (i < 10) {
+    print("{}", i);
+    i = i + 1;
+}
+```
+
+### Break and Continue
+
+Control loop execution with `break` and `continue`:
+
+```xvr
+var i = 0;
+while (i < 100) {
+    i = i + 1;
+    if (i == 50) {
+        break;  // Exit loop when i reaches 50
+    }
+    if (i % 2 == 0) {
+        continue;  // Skip even numbers
+    }
+    print("{}", i);  // Only prints odd numbers
+}
+```
+
+**Conditions must be boolean** - the compiler validates this and provides helpful hints:
 
 ```xvr
 var x = 5;
 if (x) { }  // ERROR: condition must be boolean
+// help: use a comparison operator (e.g., 'x > 0') or wrap the condition with 'bool()'
+```
+
+#### Expression Form (Rust-like)
+
+The `if` can be used as an expression that returns a value:
+
+```xvr
+var score: int32 = 85;
+
+var grade: string = if (score >= 90) {
+    "A"
+} else if (score >= 80) {
+    "B"
+} else {
+    "C or lower"
+};
+
+print(grade);
+```
+
+**Note:** Expression-based `if` requires explicit type annotation on the variable.
+
+### While Loops
+
+```xvr
+var i = 0;
+while (i < 10) {
+    print("{}", i);
+    i = i + 1;
+}
+```
+
+### Break and Continue
+
+Control loop execution with `break` and `continue`:
+
+```xvr
+var i = 0;
+while (i < 100) {
+    i = i + 1;
+    if (i == 50) {
+        break;  // Exit loop when i reaches 50
+    }
+    if (i % 2 == 0) {
+        continue;  // Skip even numbers
+    }
+    print("{}", i);  // Only prints odd numbers
+}
+```
+
+**Conditions must be boolean** - the compiler validates this and provides helpful hints:
+
+```xvr
+var x = 5;
+if (x) { }  // ERROR: condition must be boolean
+// help: use a comparison operator (e.g., 'x > 0') or wrap the condition with 'bool()'
 ```
 
 ### Print with Format Strings
@@ -228,6 +320,32 @@ while (i < 10) {
     print("{}", i);
     i = i + 1;
 }
+```
+
+### Break and Continue
+
+Control loop execution with `break` and `continue`:
+
+```xvr
+var i = 0;
+while (i < 100) {
+    i = i + 1;
+    if (i == 50) {
+        break;  // Exit loop when i reaches 50
+    }
+    if (i % 2 == 0) {
+        continue;  // Skip even numbers
+    }
+    print("{}", i);  // Only prints odd numbers
+}
+```
+
+**Conditions must be boolean** - the compiler validates this and provides helpful hints:
+
+```xvr
+var x = 5;
+while (x) { }  // ERROR: condition must be boolean
+// help: use a comparison operator (e.g., 'x > 0') or wrap the condition with 'bool()'
 ```
 
 ### Static Arrays
@@ -313,19 +431,54 @@ test.o: ELF 64-bit LSB relocatable, x86-64, version 1 (SYSV), not stripped
 
 ## Error Handling
 
+The XVR compiler provides clear, actionable error messages with helpful hints.
+
 ### Type Mismatch
 
 XVR validates explicit type annotations:
 
 ```xvr
 var x: int = 1.5;    // error: type mismatch: cannot convert from 'float' to 'int'
-var x: string = 123; // error: type mismatch: cannot convert from 'int' to 'string'
-var x: bool = 1;    // error: type mismatch: cannot convert from 'int' to 'bool'
+var x: string = 123;  // error: type mismatch: cannot convert from 'int' to 'string'
+var x: bool = 1;      // error: type mismatch: cannot convert from 'int' to 'bool'
 ```
 
-Output:
+### Non-Boolean Conditions
+
+Control flow conditions must be boolean:
+
+```xvr
+var x = 5;
+if (x) { }  // ERROR
 ```
-[31merror[0m: type mismatch: cannot convert from 'float' to 'int'
+
+Error output:
+```
+error: condition of if statement must be boolean, got 'i32'
+help: use a comparison operator (e.g., 'x > 0') or wrap the condition with 'bool()'
+```
+
+### Break/Continue Outside Loop
+
+```xvr
+if (true) {
+    break;  // ERROR
+}
+```
+
+Error output:
+```
+error: break statement must be inside a loop
+help: place the 'break' statement inside a 'while' or 'for' loop
+```
+
+### Maximum Loop Nesting
+
+Loops can be nested up to 64 levels deep:
+
+```xvr
+error: maximum loop nesting depth (64) exceeded
+help: simplify nested loop structure
 ```
 
 ## Building

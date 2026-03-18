@@ -1263,33 +1263,44 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
 
     case XVR_AST_NODE_IF:
         if (emitter->control_flow) {
-            return Xvr_LLVMControlFlowEmitIf(emitter->control_flow,
-                                             &node->pathIf);
+            if (!Xvr_LLVMControlFlowEmitIf(emitter->control_flow,
+                                           &node->pathIf)) {
+                Xvr_LLVMControlFlowPrintError(emitter->control_flow);
+            }
         }
         return NULL;
 
     case XVR_AST_NODE_WHILE:
         if (emitter->control_flow) {
-            Xvr_LLVMControlFlowEmitWhile(emitter->control_flow,
-                                         &node->pathWhile);
+            if (!Xvr_LLVMControlFlowEmitWhile(emitter->control_flow,
+                                              &node->pathWhile)) {
+                Xvr_LLVMControlFlowPrintError(emitter->control_flow);
+            }
         }
         return NULL;
 
     case XVR_AST_NODE_FOR:
         if (emitter->control_flow) {
-            Xvr_LLVMControlFlowEmitFor(emitter->control_flow, &node->pathFor);
+            if (!Xvr_LLVMControlFlowEmitFor(emitter->control_flow,
+                                            &node->pathFor)) {
+                Xvr_LLVMControlFlowPrintError(emitter->control_flow);
+            }
         }
         return NULL;
 
     case XVR_AST_NODE_BREAK:
         if (emitter->control_flow) {
-            Xvr_LLVMControlFlowEmitBreak(emitter->control_flow);
+            if (!Xvr_LLVMControlFlowEmitBreak(emitter->control_flow)) {
+                Xvr_LLVMControlFlowPrintError(emitter->control_flow);
+            }
         }
         return NULL;
 
     case XVR_AST_NODE_CONTINUE:
         if (emitter->control_flow) {
-            Xvr_LLVMControlFlowEmitContinue(emitter->control_flow);
+            if (!Xvr_LLVMControlFlowEmitContinue(emitter->control_flow)) {
+                Xvr_LLVMControlFlowPrintError(emitter->control_flow);
+            }
         }
         return NULL;
 
