@@ -32,9 +32,6 @@ jobs:
           done < c_files.txt
         shell: bash
 
-      - name: build compiler
-        run: make -j$(nproc)
-
       - name: run tests
         run: |
           echo ""
