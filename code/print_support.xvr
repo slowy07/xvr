@@ -1,20 +1,20 @@
-// print string and concat
-print("arfy slowy");
-print("xaviera " + "putri");
+include std;
 
-// escape string
-print("\tDerune\nCitizen");
+std::print("=== Print Support ===\n");
 
-// print numbers
-print(42);
-print(3.14);
+std::print("arfy slowy\n");
+std::print("xaviera " + "putri\n");
 
-// print boolean
-print(true);
-print(false);
+std::print("\tDerune\nCitizen\n");
 
-// print null
-print(null);
+std::print("Integer: {}\n", 42);
+std::print("Float: {}\n", 3.14);
 
-// print array
-print([1, 2, 3]);
+std::print("Boolean true: {}\n", true);
+std::print("Boolean false: {}\n", false);
+
+std::print("Null: {}\n", null);
+
+std::print("Array [1, 2, 3]: ");
+std::print([1, 2, 3]);
+std::print("\n");

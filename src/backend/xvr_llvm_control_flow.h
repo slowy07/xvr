@@ -61,4 +61,7 @@ void Xvr_LLVMControlFlowPopLoopTarget(Xvr_LLVMControlFlow* cf);
 
 void Xvr_LLVMControlFlowPrintError(Xvr_LLVMControlFlow* cf);
 
+LLVMValueRef Xvr_LLVMControlFlowGetLastExpressionResult(
+    Xvr_LLVMControlFlow* cf);
+
 #endif

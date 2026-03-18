@@ -1,19 +1,26 @@
+include std;
+
+std::print("=== Variable Scope ===\n");
+
 var hasil = 42;
+std::print("Initial: {}\n", hasil);
 
 hasil = 3 + 3;
+std::print("After addition: {}\n", hasil);
 
-// variable access
 hasil = hasil + 1;
+std::print("After increment: {}\n", hasil);
 
-print(hasil);
+std::print("=== Shadowing (Different Scope) ===\n");
 
-// shadowing - redefining in same scope should error, using different scope
 {
-  var hasil = 32;
-  print(hasil);
+    var hasil = 32;
+    std::print("Inner scope hasil: {}\n", hasil);
 }
 
 {
-  var hasil = 20;
-  print(hasil);
+    var hasil = 20;
+    std::print("Another inner scope hasil: {}\n", hasil);
 }
+
+std::print("Outer scope hasil: {}\n", hasil);

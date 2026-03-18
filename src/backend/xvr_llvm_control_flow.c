@@ -51,6 +51,8 @@ struct Xvr_LLVMControlFlow {
     LLVMBasicBlockRef loop_cond_stack[MAX_LOOP_NESTING];
     int loop_stack_depth;
 
+    LLVMValueRef last_expression_result;
+
     bool has_error;
     char error_message[MAX_ERROR_MESSAGE];
     char error_hint[MAX_ERROR_MESSAGE];
@@ -136,6 +138,7 @@ Xvr_LLVMControlFlow* Xvr_LLVMControlFlowCreate(
     cf->builder = builder;
     cf->type_mapper = type_mapper;
     cf->expr_emitter = expr_emitter;
+    cf->last_expression_result = NULL;
 
     return cf;
 }
@@ -158,6 +161,14 @@ void Xvr_LLVMControlFlowClearError(Xvr_LLVMControlFlow* cf) {
     cf->has_error = false;
     cf->error_message[0] = '\0';
     cf->error_hint[0] = '\0';
+}
+
+LLVMValueRef Xvr_LLVMControlFlowGetLastExpressionResult(
+    Xvr_LLVMControlFlow* cf) {
+    if (!cf) return NULL;
+    LLVMValueRef result = cf->last_expression_result;
+    cf->last_expression_result = NULL;
+    return result;
 }
 
 static bool is_boolean_type(LLVMValueRef value) {
@@ -282,6 +293,7 @@ static LLVMValueRef emit_if_expression(Xvr_LLVMControlFlow* cf,
     LLVMValueRef result =
         LLVMBuildLoad2(llvm_builder, result_type, result_var, "if_result");
 
+    cf->last_expression_result = result;
     return result;
 }
 

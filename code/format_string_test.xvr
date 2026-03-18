@@ -1,9 +1,23 @@
-// Test string interpolation
+include std;
+
+std::print("=== Format String Test ===\n");
+
 var name = "world";
-print("Hello, {}!", name);
+std::print("Hello, {}!\n", name);
 
 var num = 42;
-print("The answer is {}", num);
+std::print("The answer is {}\n", num);
 
 var pi = 3.14;
-print("Pi is {}", pi);
+std::print("Pi is {}\n", pi);
+
+var first = "John";
+var last = "Doe";
+std::print("Name: {} {}\n", first, last);
+
+std::print("Multiple: {} + {} = {}\n", 1, 2, 3);
+
+var arr = [1, 2, 3];
+std::print("Array: ");
+std::print(arr);
+std::print("\n");

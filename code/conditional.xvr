@@ -1,26 +1,44 @@
+include std;
+
+std::print("=== Conditional Statements ===\n");
+
 if (true) {
-  print("nice one cik");
+    std::print("nice one cik\n");
 } else {
-  print("tidak nice one loh ya");
+    std::print("tidak nice one loh ya\n");
 }
 
 var angka: int = 42;
 
 if (angka == 42) {
-  print("angka kamu 42");
+    std::print("angka kamu 42\n");
 } else {
-  print("angka kamu bukan 42");
+    std::print("angka kamu bukan 42\n");
 }
 
-// ternary operator
+std::print("=== Expression-based If (Rust-like) ===\n");
+
+var score: int = 85;
+var grade: string = if (score >= 90) {
+    "A"
+} else if (score >= 80) {
+    "B"
+} else if (score >= 70) {
+    "C"
+} else {
+    "F"
+};
+std::print("Score: {} = Grade: {}\n", score, grade);
+
+std::print("=== Ternary Operator ===\n");
+
 var result = true ? "yes" : "no";
-print(result);
+std::print("true ? yes : no = {}\n", result);
 
 var result2 = false ? "yes" : "no";
-print(result2);
+std::print("false ? yes : no = {}\n", result2);
 
-// nested ternary
 var x = 10;
 var y = 20;
 var max = x > y ? x : y;
-print(max);
+std::print("max({}, {}) = {}\n", x, y, max);

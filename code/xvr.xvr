@@ -1,0 +1,144 @@
+// XVR Language Demo Script
+// This script demonstrates features in the XVR AOT compiler
+
+include std;
+
+std::print("====================================\n");
+std::print("  XVR Language Demo\n");
+std::print("====================================\n\n");
+
+std::print("--- Variables and Types ---\n");
+
+var integer_var: int = 42;
+var float_var: float = 3.14;
+var string_var: string = "Hello, XVR!";
+var bool_var: bool = true;
+
+std::print("Integer: {}\n", integer_var);
+std::print("Float: {}\n", float_var);
+std::print("String: {}\n", string_var);
+std::print("Boolean: {}\n", bool_var);
+
+std::print("\n--- Arithmetic Operations ---\n");
+
+var a: int = 10;
+var b: int = 3;
+
+std::print("a = {}, b = {}\n", a, b);
+std::print("a + b = {}\n", a + b);
+std::print("a - b = {}\n", a - b);
+std::print("a * b = {}\n", a * b);
+std::print("a / b = {}\n", a / b);
+std::print("a % b = {}\n", a % b);
+
+a++;
+std::print("After a++: a = {}\n", a);
+b--;
+std::print("After b--: b = {}\n", b);
+
+std::print("\n--- Comparison Operators ---\n");
+
+var x: int = 5;
+var y: int = 10;
+
+std::print("x = {}, y = {}\n", x, y);
+std::print("x > y: {}\n", x > y);
+std::print("x < y: {}\n", x < y);
+std::print("x >= y: {}\n", x >= y);
+std::print("x <= y: {}\n", x <= y);
+std::print("x == y: {}\n", x == y);
+std::print("x != y: {}\n", x != y);
+
+std::print("\n--- Logical Operators ---\n");
+
+var p: bool = true;
+var q: bool = false;
+
+std::print("p = true, q = false\n");
+std::print("p and q: {}\n", p and q);
+std::print("p or q: {}\n", p or q);
+std::print("not p: {}\n", not p);
+
+std::print("\n--- If/Else Statements ---\n");
+
+var score: int = 85;
+
+if (score >= 90) {
+    std::print("Grade: A (Excellent!)\n");
+} else if (score >= 80) {
+    std::print("Grade: B (Good!)\n");
+} else if (score >= 70) {
+    std::print("Grade: C (Average)\n");
+} else if (score >= 60) {
+    std::print("Grade: D (Poor)\n");
+} else {
+    std::print("Grade: F (Failed)\n");
+}
+
+std::print("\n--- While Loop ---\n");
+
+var count: int = 1;
+std::print("Counting from 1 to 5:\n");
+while (count <= 5) {
+    std::print("  {}\n", count);
+    count++;
+}
+
+std::print("\n--- For Loop ---\n");
+
+std::print("For loop 0-9:\n");
+for (var i = 0; i < 10; i++) {
+    std::print("  {}\n", i);
+}
+
+std::print("For loop (countdown):\n");
+for (var j = 5; j > 0; j--) {
+    std::print("  {}\n", j);
+}
+
+std::print("\n--- Break and Continue ---\n");
+
+std::print("Break example (stop at 5):\n");
+for (var k = 0; k < 10; k++) {
+    if (k == 5) {
+        break;
+    }
+    std::print("  {}\n", k);
+}
+
+std::print("\nContinue example (skip even):\n");
+for (var n = 0; n < 10; n++) {
+    if (n % 2 == 0) {
+        continue;
+    }
+    std::print("  {} (odd)\n", n);
+}
+
+std::print("\n--- Nested Loops (Multiplication Table) ---\n");
+
+for (var row = 1; row <= 5; row++) {
+    for (var col = 1; col <= 5; col++) {
+        var product = row * col;
+        std::print("{}x{}={}\t", row, col, product);
+    }
+    std::print("\n");
+}
+
+std::print("--- Arrays ---\n");
+
+var numbers: [int] = [1, 2, 3, 4, 5];
+std::print("Array: ");
+std::print(numbers);
+std::print("\n");
+
+std::print("numbers[0] = {}\n", numbers[0]);
+std::print("numbers[4] = {}\n", numbers[4]);
+
+numbers[2] = 99;
+std::print("After numbers[2] = 99: ");
+std::print(numbers);
+std::print("\n");
+
+std::print("\n====================================\n");
+std::print("  Demo Complete!\n");
+std::print("====================================\n");

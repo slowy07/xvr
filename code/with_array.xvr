@@ -1,36 +1,52 @@
+include std;
+
+std::print("=== Array Operations ===\n");
+
 var hasil: [int] = [1, 2, 3, 4, 5];
 
 var hitung: int = 0;
 while (hitung < 5) {
-  print(hasil[hitung]);
-  hitung += 1;
+    std::print("hasil[{}] = {}\n", hitung, hasil[hitung]);
+    hitung += 1;
 }
 
-print(hasil);
+std::print("Full array: ");
+std::print(hasil);
+std::print("\n");
 
-// assign new value on array
+std::print("=== Assign New Value ===\n");
+
 var angka: [int] = [1, 2, 3];
+std::print("Before: ");
+std::print(angka);
+std::print("\n");
+
 angka[1] = 20;
+std::print("After angka[1] = 20: ");
+std::print(angka);
+std::print("\n");
+
+std::print("=== Multi-dimensional Array ===\n");
 
 var nilai = [
-  [1, 2, 3], 
-  [4, 5, 6]
+    [1, 2, 3],
+    [4, 5, 6]
 ];
 nilai[1][2] = 50;
+std::print("2D Array: ");
+std::print(nilai);
+std::print("\n");
 
-var nilai_kedua = [
-  [2, 3, 4],
-  [5, 6, 7]
-];
+std::print("=== Trailing Comma ===\n");
 
-// support trailing comma
-var data_pertama: [int] = [1, 2, 3];
-print(data_pertama);
+var data_pertama: [int] = [1, 2, 3,];
+std::print("Trailing comma array: ");
+std::print(data_pertama);
+std::print("\n");
 
-// support with empty array
+std::print("=== Empty Array ===\n");
+
 var array_kosong = [];
-print(array_kosong);
-
-print(angka);
-print(nilai);
-print(nilai_kedua);
+std::print("Empty array: ");
+std::print(array_kosong);
+std::print("\n");

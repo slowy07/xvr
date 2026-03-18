@@ -1,10 +1,14 @@
+include std;
+
+std::print("=== Data Table (Dictionary) ===\n");
+
 var datatable = ["b": 1, "ba": 2, "bab": 3];
-print(datatable);
+std::print("datatable: {}\n", datatable);
 
 var trail = [
-  "ab": 1,
-  "abab": 2,
-  "ababc": 3
+    "ab": 1,
+    "abab": 2,
+    "ababc": 3
 ];
 
-print(trail);
+std::print("trail: {}\n", trail);
