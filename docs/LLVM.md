@@ -165,6 +165,44 @@ var name = "hello";
 var pi = 3.14;
 ```
 
+### If Statements
+
+XVR supports if-else statements with strict boolean type checking:
+
+```xvr
+var score: int32 = 85;
+
+// Basic if
+if (score >= 90) {
+    print("Grade: A");
+}
+
+// If-else
+if (score >= 90) {
+    print("Grade: A");
+} else {
+    print("Grade: B or lower");
+}
+
+// If-else-if chain
+if (score >= 90) {
+    print("Grade: A");
+} else if (score >= 80) {
+    print("Grade: B");
+} else if (score >= 70) {
+    print("Grade: C");
+} else {
+    print("Grade: F");
+}
+```
+
+**Conditions must be boolean** - the compiler validates this:
+
+```xvr
+var x = 5;
+if (x) { }  // ERROR: condition must be boolean
+```
+
 ### Print with Format Strings
 
 XVR uses `{}` placeholders:

@@ -229,6 +229,38 @@ int run_parser_tests(void) {
     testParse("cast int32 from expression", "int32(1 + 2);", XVR_AST_NODE_CAST);
     testParse("cast nested", "int32(float32(x));", XVR_AST_NODE_CAST);
 
+    printf("INFO: Testing if expressions...\n");
+    testParse("simple if statement", "if (true) { 1 }", XVR_AST_NODE_IF);
+    testParse("if-else statement", "if (true) { 1 } else { 2 }",
+              XVR_AST_NODE_IF);
+    testParse("if-else-if statement", "if (true) { 1 } else if (false) { 2 }",
+              XVR_AST_NODE_IF);
+    testParse("if-else-if-else statement",
+              "if (true) { 1 } else if (false) { 2 } else { 3 }",
+              XVR_AST_NODE_IF);
+    testParse("nested if", "if (a) { if (b) { 1 } }", XVR_AST_NODE_IF);
+    testParse("if with comparison", "if (x > 10) { 1 }", XVR_AST_NODE_IF);
+    testParse("if-else with comparison", "if (x > 10) { 1 } else { 0 }",
+              XVR_AST_NODE_IF);
+    testParse("if with and", "if (a and b) { 1 }", XVR_AST_NODE_IF);
+    testParse("if with or", "if (a or b) { 1 }", XVR_AST_NODE_IF);
+    testParse("if with not", "if (!a) { 1 }", XVR_AST_NODE_IF);
+    testParse("if-else with else-if chain",
+              "if (x) { 1 } else if (y) { 2 } else if (z) { 3 } else { 4 }",
+              XVR_AST_NODE_IF);
+
+    printf("INFO: Testing expression-based if...\n");
+    testParse("expr if assignment", "var x = if (a) { 1 } else { 2 }",
+              XVR_AST_NODE_VAR_DECL);
+    testParse("expr if with type", "var x: int32 = if (a) { 1 } else { 2 }",
+              XVR_AST_NODE_VAR_DECL);
+    testParse("expr if chained",
+              "var x = if (a) { 1 } else if (b) { 2 } else { 3 }",
+              XVR_AST_NODE_VAR_DECL);
+    testParse("expr if nested",
+              "var x = if (a) { if (b) { 1 } else { 2 } } else { 3 }",
+              XVR_AST_NODE_VAR_DECL);
+
     printf("Pass CIK (parser): %d/%d\n", passCount, testCount);
 
     if (passCount != testCount) {

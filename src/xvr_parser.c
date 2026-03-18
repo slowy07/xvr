@@ -139,6 +139,8 @@ static void declaration(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle);
 static void parsePrecedence(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle,
                             PrecedenceRule rule);
 static Xvr_Literal readTypeToLiteral(Xvr_Parser* parser);
+static Xvr_ASTNode* parseIfChain(Xvr_Parser* parser);
+static Xvr_Opcode ifExpression(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle);
 
 // TODO: resolve the messy order of these
 // the expression rules
@@ -1250,7 +1252,7 @@ ParseRule parseRules[] = {
     {NULL, NULL, PREC_NONE},                   // TOKEN_EXPORT,
     {NULL, NULL, PREC_NONE},                   // TOKEN_FOR,
     {NULL, NULL, PREC_NONE},                   // TOKEN_FOREACH,
-    {NULL, NULL, PREC_NONE},                   // TOKEN_IF,
+    {ifExpression, NULL, PREC_ASSIGNMENT},     // TOKEN_IF,
     {NULL, NULL, PREC_NONE},                   // TOKEN_IMPORT,
     {NULL, NULL, PREC_NONE},                   // TOKEN_IN,
     {NULL, NULL, PREC_NONE},                   // TOKEN_OF,
@@ -1758,26 +1760,81 @@ static void assertStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     consumeSemicolon(parser);
 }
 
-static void ifStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+static Xvr_Opcode ifExpression(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+    (void)nodeHandle;
+    Xvr_ASTNode* ifNode = parseIfChain(parser);
+    if (ifNode) {
+        *nodeHandle = ifNode;
+    }
+    return XVR_OP_EOF;
+}
+
+static Xvr_ASTNode* parseIfChain(Xvr_Parser* parser) {
     Xvr_ASTNode* condition = NULL;
     Xvr_ASTNode* thenPath = NULL;
     Xvr_ASTNode* elsePath = NULL;
 
-    // read the condition
     consume(parser, XVR_TOKEN_PAREN_LEFT,
             "Expected '(' at beginning of if clause");
     parsePrecedence(parser, &condition, PREC_TERNARY);
-
-    // read the then path
     consume(parser, XVR_TOKEN_PAREN_RIGHT, "Expected ')' at end of if clause");
-    declaration(parser, &thenPath);
 
-    // read the optional else path
-    if (match(parser, XVR_TOKEN_ELSE)) {
-        declaration(parser, &elsePath);
+    if (match(parser, XVR_TOKEN_BRACE_LEFT)) {
+        Xvr_emitASTNodeBlock(&thenPath);
+        while (!match(parser, XVR_TOKEN_BRACE_RIGHT)) {
+            if ((thenPath)->block.capacity < (thenPath)->block.count + 1) {
+                int oldCapacity = (thenPath)->block.capacity;
+                (thenPath)->block.capacity = XVR_GROW_CAPACITY(oldCapacity);
+                (thenPath)->block.nodes =
+                    XVR_GROW_ARRAY(Xvr_ASTNode, (thenPath)->block.nodes,
+                                   oldCapacity, (thenPath)->block.capacity);
+            }
+            Xvr_ASTNode* tmpNode = NULL;
+            declaration(parser, &tmpNode);
+            if (parser->panic) {
+                return NULL;
+            }
+            ((thenPath)->block.nodes[(thenPath)->block.count++]) = *tmpNode;
+            XVR_FREE(Xvr_ASTNode, tmpNode);
+        }
+    } else {
+        declaration(parser, &thenPath);
     }
 
-    Xvr_emitASTNodeIf(nodeHandle, condition, thenPath, elsePath);
+    if (match(parser, XVR_TOKEN_ELSE)) {
+        if (match(parser, XVR_TOKEN_IF)) {
+            elsePath = parseIfChain(parser);
+        } else if (match(parser, XVR_TOKEN_BRACE_LEFT)) {
+            Xvr_emitASTNodeBlock(&elsePath);
+            while (!match(parser, XVR_TOKEN_BRACE_RIGHT)) {
+                if ((elsePath)->block.capacity < (elsePath)->block.count + 1) {
+                    int oldCapacity = (elsePath)->block.capacity;
+                    (elsePath)->block.capacity = XVR_GROW_CAPACITY(oldCapacity);
+                    (elsePath)->block.nodes =
+                        XVR_GROW_ARRAY(Xvr_ASTNode, (elsePath)->block.nodes,
+                                       oldCapacity, (elsePath)->block.capacity);
+                }
+                Xvr_ASTNode* tmpNode = NULL;
+                declaration(parser, &tmpNode);
+                if (parser->panic) {
+                    return NULL;
+                }
+                ((elsePath)->block.nodes[(elsePath)->block.count++]) = *tmpNode;
+                XVR_FREE(Xvr_ASTNode, tmpNode);
+            }
+        } else {
+            declaration(parser, &elsePath);
+        }
+    }
+
+    Xvr_ASTNode* ifNode = NULL;
+    Xvr_emitASTNodeIf(&ifNode, condition, thenPath, elsePath);
+    return ifNode;
+}
+
+static void ifStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+    Xvr_ASTNode* ifNode = parseIfChain(parser);
+    *nodeHandle = ifNode;
 }
 
 static void whileStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
@@ -2142,6 +2199,14 @@ static Xvr_Literal readTypeToLiteral(Xvr_Parser* parser) {
     return literal;
 }
 
+static void mark_if_as_expression(Xvr_ASTNode* node,
+                                  Xvr_LiteralType returnType) {
+    if (!node) return;
+    if (node->type == XVR_AST_NODE_IF) {
+        Xvr_markIfAsExpression(node, returnType);
+    }
+}
+
 static void varDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     // read the identifier
     consume(parser, XVR_TOKEN_IDENTIFIER,
@@ -2173,6 +2238,8 @@ static void varDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_ASTNode* expressionNode = NULL;
     if (match(parser, XVR_TOKEN_ASSIGN)) {
         expression(parser, &expressionNode);
+        // Mark if as expression if present
+        mark_if_as_expression(expressionNode, typeLiteral.as.type.typeOf);
     } else {
         // values are null by default
         Xvr_emitASTNodeLiteral(&expressionNode, XVR_TO_NULL_LITERAL);

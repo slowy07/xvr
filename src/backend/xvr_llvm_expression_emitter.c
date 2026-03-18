@@ -1263,7 +1263,8 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
 
     case XVR_AST_NODE_IF:
         if (emitter->control_flow) {
-            Xvr_LLVMControlFlowEmitIf(emitter->control_flow, &node->pathIf);
+            return Xvr_LLVMControlFlowEmitIf(emitter->control_flow,
+                                             &node->pathIf);
         }
         return NULL;
 

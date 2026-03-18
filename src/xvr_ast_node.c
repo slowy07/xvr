@@ -313,8 +313,17 @@ void Xvr_emitASTNodeIf(Xvr_ASTNode** nodeHandle, Xvr_ASTNode* condition,
     tmp->pathIf.condition = condition;
     tmp->pathIf.thenPath = thenPath;
     tmp->pathIf.elsePath = elsePath;
+    tmp->pathIf.returnType = XVR_LITERAL_TYPE;
+    tmp->pathIf.isExpression = false;
 
     *nodeHandle = tmp;
+}
+
+void Xvr_markIfAsExpression(Xvr_ASTNode* node, Xvr_LiteralType returnType) {
+    if (node && node->type == XVR_AST_NODE_IF) {
+        node->pathIf.isExpression = true;
+        node->pathIf.returnType = returnType;
+    }
 }
 
 void Xvr_emitASTNodeWhile(Xvr_ASTNode** nodeHandle, Xvr_ASTNode* condition,

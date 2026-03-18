@@ -43,7 +43,8 @@ Xvr_LLVMControlFlow* Xvr_LLVMControlFlowCreate(
     Xvr_LLVMExpressionEmitter* expr_emitter);
 void Xvr_LLVMControlFlowDestroy(Xvr_LLVMControlFlow* cf);
 
-bool Xvr_LLVMControlFlowEmitIf(Xvr_LLVMControlFlow* cf, Xvr_NodeIf* if_node);
+LLVMValueRef Xvr_LLVMControlFlowEmitIf(Xvr_LLVMControlFlow* cf,
+                                       Xvr_NodeIf* if_node);
 bool Xvr_LLVMControlFlowEmitWhile(Xvr_LLVMControlFlow* cf,
                                   Xvr_NodeWhile* while_node);
 bool Xvr_LLVMControlFlowEmitFor(Xvr_LLVMControlFlow* cf, Xvr_NodeFor* for_node);

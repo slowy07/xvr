@@ -72,9 +72,125 @@ Xvr_LLVMControlFlow* Xvr_LLVMControlFlowCreate(
 
 void Xvr_LLVMControlFlowDestroy(Xvr_LLVMControlFlow* cf) { free(cf); }
 
-bool Xvr_LLVMControlFlowEmitIf(Xvr_LLVMControlFlow* cf, Xvr_NodeIf* if_node) {
+static bool is_boolean_type(LLVMValueRef value) {
+    if (!value) return false;
+    LLVMTypeRef type = LLVMTypeOf(value);
+    return LLVMGetTypeKind(type) == LLVMIntegerTypeKind &&
+           LLVMGetIntTypeWidth(type) == 1;
+}
+
+static LLVMValueRef emit_branch_for_if(Xvr_LLVMControlFlow* cf,
+                                       Xvr_NodeIf* if_node,
+                                       LLVMBasicBlockRef then_block,
+                                       LLVMBasicBlockRef else_block,
+                                       LLVMBasicBlockRef merge_block,
+                                       LLVMValueRef condition);
+
+static LLVMValueRef emit_if_expression(Xvr_LLVMControlFlow* cf,
+                                       Xvr_NodeIf* if_node) {
+    if (!cf || !if_node) return NULL;
+
+    Xvr_LLVMIRBuilder* builder = cf->builder;
+    Xvr_LLVMExpressionEmitter* expr_emitter = cf->expr_emitter;
+    LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+
+    LLVMValueRef current_fn =
+        Xvr_LLVMExpressionEmitterGetCurrentFunction(expr_emitter);
+    if (!current_fn) return NULL;
+
+    LLVMValueRef condition =
+        Xvr_LLVMExpressionEmitterEmit(expr_emitter, if_node->condition);
+    if (!condition) return NULL;
+
+    if (!is_boolean_type(condition)) {
+        fprintf(stderr, "error: condition of if expression must be boolean\n");
+        return NULL;
+    }
+
+    LLVMTypeRef result_type =
+        Xvr_LLVMTypeMapperGetType(cf->type_mapper, if_node->returnType);
+    LLVMValueRef result_var =
+        LLVMBuildAlloca(llvm_builder, result_type, "if_result");
+
+    LLVMBasicBlockRef then_block =
+        Xvr_LLVMIRBuilderCreateBlockInFunction(builder, current_fn, "then");
+    LLVMBasicBlockRef else_block =
+        Xvr_LLVMIRBuilderCreateBlockInFunction(builder, current_fn, "else");
+    LLVMBasicBlockRef merge_block =
+        Xvr_LLVMIRBuilderCreateBlockInFunction(builder, current_fn, "ifcont");
+
+    Xvr_LLVMIRBuilderCreateCondBr(builder, condition, then_block, else_block);
+
+    Xvr_LLVMIRBuilderSetInsertPoint(builder, then_block);
+    if (if_node->thenPath) {
+        Xvr_ASTNode* then_node = if_node->thenPath;
+        if (then_node->type == XVR_AST_NODE_BLOCK && then_node->block.nodes &&
+            then_node->block.count > 0) {
+            for (int i = 0; i < then_node->block.count - 1; i++) {
+                Xvr_LLVMExpressionEmitterEmit(expr_emitter,
+                                              &then_node->block.nodes[i]);
+            }
+            LLVMValueRef then_val = Xvr_LLVMExpressionEmitterEmit(
+                expr_emitter,
+                &then_node->block.nodes[then_node->block.count - 1]);
+            if (then_val) {
+                LLVMBuildStore(llvm_builder, then_val, result_var);
+            }
+        } else {
+            LLVMValueRef then_val =
+                Xvr_LLVMExpressionEmitterEmit(expr_emitter, then_node);
+            if (then_val) {
+                LLVMBuildStore(llvm_builder, then_val, result_var);
+            }
+        }
+    }
+    Xvr_LLVMIRBuilderCreateBr(builder, merge_block);
+
+    Xvr_LLVMIRBuilderSetInsertPoint(builder, else_block);
+    if (if_node->elsePath) {
+        Xvr_ASTNode* else_node = if_node->elsePath;
+        if (else_node->type == XVR_AST_NODE_IF) {
+            LLVMValueRef else_val = emit_if_expression(cf, &else_node->pathIf);
+            if (else_val) {
+                LLVMBuildStore(llvm_builder, else_val, result_var);
+            }
+        } else if (else_node->type == XVR_AST_NODE_BLOCK &&
+                   else_node->block.nodes && else_node->block.count > 0) {
+            for (int i = 0; i < else_node->block.count - 1; i++) {
+                Xvr_LLVMExpressionEmitterEmit(expr_emitter,
+                                              &else_node->block.nodes[i]);
+            }
+            LLVMValueRef else_val = Xvr_LLVMExpressionEmitterEmit(
+                expr_emitter,
+                &else_node->block.nodes[else_node->block.count - 1]);
+            if (else_val) {
+                LLVMBuildStore(llvm_builder, else_val, result_var);
+            }
+        } else {
+            LLVMValueRef else_val =
+                Xvr_LLVMExpressionEmitterEmit(expr_emitter, else_node);
+            if (else_val) {
+                LLVMBuildStore(llvm_builder, else_val, result_var);
+            }
+        }
+    }
+    Xvr_LLVMIRBuilderCreateBr(builder, merge_block);
+
+    Xvr_LLVMIRBuilderSetInsertPoint(builder, merge_block);
+    LLVMValueRef result =
+        LLVMBuildLoad2(llvm_builder, result_type, result_var, "if_result");
+
+    return result;
+}
+
+LLVMValueRef Xvr_LLVMControlFlowEmitIf(Xvr_LLVMControlFlow* cf,
+                                       Xvr_NodeIf* if_node) {
     if (!cf || !if_node) {
-        return false;
+        return NULL;
+    }
+
+    if (if_node->isExpression) {
+        return emit_if_expression(cf, if_node);
     }
 
     Xvr_LLVMIRBuilder* builder = cf->builder;
@@ -89,6 +205,13 @@ bool Xvr_LLVMControlFlowEmitIf(Xvr_LLVMControlFlow* cf, Xvr_NodeIf* if_node) {
     LLVMValueRef condition =
         Xvr_LLVMExpressionEmitterEmit(expr_emitter, if_node->condition);
     if (!condition) {
+        return false;
+    }
+
+    if (!is_boolean_type(condition)) {
+        fprintf(stderr,
+                "error: condition of if statement must be boolean, got integer "
+                "type\n");
         return false;
     }
 
@@ -115,7 +238,7 @@ bool Xvr_LLVMControlFlowEmitIf(Xvr_LLVMControlFlow* cf, Xvr_NodeIf* if_node) {
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, merge_block);
 
-    return true;
+    return NULL;
 }
 
 bool Xvr_LLVMControlFlowEmitWhile(Xvr_LLVMControlFlow* cf,

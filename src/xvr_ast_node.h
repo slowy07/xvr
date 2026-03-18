@@ -315,6 +315,7 @@ typedef struct Xvr_NodeFnReturn {
 
 void Xvr_emitASTNodeIf(Xvr_ASTNode** nodeHandle, Xvr_ASTNode* condition,
                        Xvr_ASTNode* thenPath, Xvr_ASTNode* elsePath);
+void Xvr_markIfAsExpression(Xvr_ASTNode* node, Xvr_LiteralType returnType);
 void Xvr_emitASTNodeWhile(Xvr_ASTNode** nodeHandle, Xvr_ASTNode* condition,
                           Xvr_ASTNode* thenPath);
 void Xvr_emitASTNodeFor(Xvr_ASTNode** nodeHandle, Xvr_ASTNode* preClause,
@@ -327,13 +328,21 @@ void Xvr_emitASTNodeContinue(Xvr_ASTNode** nodeHandle);
  * @struct Xvr_NodeIf
  * @brief conditional statement: if condition then stmt else stmt
  *
+ * Supports both statement form and expression form (like Rust):
+ *   if condition { ... } else if condition { ... } else { ... }
+ *   var x = if condition { value1 } else { value2 };
+ *
  * memory : condition, thenPath, elsePath
  */
 typedef struct Xvr_NodeIf {
     Xvr_ASTNodeType type;    // XVR_AST_NODE_IF
     Xvr_ASTNode* condition;  // boolean expression
     Xvr_ASTNode* thenPath;   // executed if true
-    Xvr_ASTNode* elsePath;   // executed if false
+    Xvr_ASTNode* elsePath;   // executed if false (can be another Xvr_NodeIf for
+                             // else-if chains)
+    Xvr_LiteralType returnType;  // unified return type for expression-based if
+                                 // (XVR_LITERAL_TYPE if statement-only)
+    bool isExpression;           // true if used as expression (needs PHI node)
 } Xvr_NodeIf;
 
 /**

@@ -30,9 +30,7 @@ int run_ast_node_tests(void);
 int run_llvm_backend_tests(void);
 
 void print_header(const char* title) {
-    printf("\n" XVR_CC_NOTICE "========================================\n");
-    printf("  %s\n", title);
-    printf("========================================\n" XVR_CC_RESET);
+    printf("\n" XVR_CC_NOTICE "  %s\n" XVR_CC_RESET, title);
 }
 
 void print_test_start(const char* test_name) {

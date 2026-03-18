@@ -32,9 +32,6 @@
 
 #define TEST_PASS(msg) printf(XVR_CC_NOTICE "  [PASS] %s\n" XVR_CC_RESET, msg)
 
-/* ========================================================================
- * Test: Context Creation and Destruction
- * ======================================================================== */
 static int test_context_create_destroy(void) {
     printf("\n  --- Context Create/Destroy ---\n");
 
@@ -51,9 +48,6 @@ static int test_context_create_destroy(void) {
     return 0;
 }
 
-/* ========================================================================
- * Test: Type Mapper
- * ======================================================================== */
 static int test_type_mapper(void) {
     printf("\n  --- Type Mapper ---\n");
 
@@ -99,9 +93,6 @@ static int test_type_mapper(void) {
     return 0;
 }
 
-/* ========================================================================
- * Test: Module Manager
- * ======================================================================== */
 static int test_module_manager(void) {
     printf("\n  --- Module Manager ---\n");
 
@@ -127,9 +118,6 @@ static int test_module_manager(void) {
     return 0;
 }
 
-/* ========================================================================
- * Test: IR Builder
- * ======================================================================== */
 static int test_ir_builder(void) {
     printf("\n  --- IR Builder ---\n");
 
@@ -168,9 +156,6 @@ static int test_ir_builder(void) {
     return 0;
 }
 
-/* ========================================================================
- * Test: Optimizer
- * ======================================================================== */
 static int test_optimizer(void) {
     printf("\n  --- Optimizer ---\n");
 
@@ -199,9 +184,6 @@ static int test_optimizer(void) {
     return 0;
 }
 
-/* ========================================================================
- * Test: Target Configuration
- * ======================================================================== */
 static int test_target_config(void) {
     printf("\n  --- Target Configuration ---\n");
 
@@ -231,9 +213,6 @@ static int test_target_config(void) {
     return 0;
 }
 
-/* ========================================================================
- * Test: Codegen Basic Operations
- * ======================================================================== */
 static int test_codegen_basic(void) {
     printf("\n  --- Codegen Basic Operations ---\n");
 
@@ -257,9 +236,6 @@ static int test_codegen_basic(void) {
     return 0;
 }
 
-/* ========================================================================
- * Test: Codegen Optimization Levels
- * ======================================================================== */
 static int test_codegen_optimization(void) {
     printf("\n  --- Codegen Optimization ---\n");
 
@@ -289,9 +265,6 @@ static int test_codegen_optimization(void) {
     return 0;
 }
 
-/* ========================================================================
- * Test: Codegen Target Configuration
- * ======================================================================== */
 static int test_codegen_target(void) {
     printf("\n  --- Codegen Target ---\n");
 
@@ -308,9 +281,6 @@ static int test_codegen_target(void) {
     return 0;
 }
 
-/* ========================================================================
- * Test: Codegen Bitcode Writing
- * ======================================================================== */
 static int test_codegen_bitcode(void) {
     printf("\n  --- Codegen Bitcode ---\n");
 
@@ -325,9 +295,6 @@ static int test_codegen_bitcode(void) {
     return 0;
 }
 
-/* ========================================================================
- * Test: Full Compilation Pipeline
- * ======================================================================== */
 static int test_full_compilation_pipeline(void) {
     printf("\n  --- Full Compilation Pipeline ---\n");
 
@@ -408,9 +375,6 @@ static int test_full_compilation_pipeline(void) {
     return 0;
 }
 
-/* ========================================================================
- * Test: Various Data Types Compilation
- * ======================================================================== */
 static int test_datatypes_compilation(void) {
     printf("\n  --- Data Types Compilation ---\n");
 
@@ -477,13 +441,8 @@ static int test_datatypes_compilation(void) {
     return 0;
 }
 
-/* ========================================================================
- * Main Test Runner
- * ======================================================================== */
 int run_llvm_backend_tests(void) {
-    printf("\n" XVR_CC_NOTICE "========================================\n");
-    printf("  LLVM Backend Tests\n");
-    printf("========================================\n" XVR_CC_RESET);
+    printf("\n" XVR_CC_NOTICE "  LLVM Backend Tests\n" XVR_CC_RESET);
 
     int failures = 0;
 
