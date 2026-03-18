@@ -30,6 +30,40 @@ for (init; condition; increment) {
 | `condition` | Evaluated before each iteration; loop continues if true |
 | `increment` | Executed after each iteration (e.g., `i++`) |
 
+### For Loop with std::print
+
+```xvr
+include std;
+
+for (var i = 0; i < 20; i++) {
+    std::print("{}\n", i);
+}
+```
+
+**Output:**
+```
+0
+1
+2
+...
+18
+19
+```
+
+### For Loop with Increment/Decrement
+
+```xvr
+// Count up
+for (var i: int32 = 0; i < 5; i++) {
+    print("{}", i);  // 0, 1, 2, 3, 4
+}
+
+// Count down
+for (var i: int32 = 5; i > 0; i--) {
+    print("{}", i);  // 5, 4, 3, 2, 1
+}
+```
+
 ### For Loop Example
 
 ```xvr
@@ -176,6 +210,36 @@ while (true) {
 }
 ```
 
+### Nested Loops
+
+```xvr
+for (var i: int32 = 0; i < 3; i++) {
+    for (var j: int32 = 0; j < 3; j++) {
+        print("({}, {})", i, j);
+    }
+}
+// Output: (0,0) (0,1) (0,2) (1,0) (1,1) (1,2) (2,0) (2,1) (2,2)
+```
+
+## Increment and Decrement Operators
+
+XVR supports both prefix and postfix increment/decrement:
+
+| Operator | Description | Example | Result |
+|----------|-------------|---------|--------|
+| `++` | Postfix increment | `i++` | Returns old value, then increments |
+| `--` | Postfix decrement | `i--` | Returns old value, then decrements |
+| `++` | Prefix increment | `++i` | Increments, then returns new value |
+| `--` | Prefix decrement | `--i` | Decrements, then returns new value |
+
+### Example
+
+```xvr
+var a: int32 = 5;
+var b: int32 = a++;  // b = 5, a = 6
+var c: int32 = ++a;  // c = 7, a = 7
+```
+
 ## Error Handling
 
 ### Break/Continue Outside Loop
@@ -209,8 +273,39 @@ help: use a comparison operator (e.g., 'x > 0') or wrap the condition with 'bool
 
 Loops generate proper LLVM basic blocks:
 
+### For Loop IR
+
 ```llvm
-; while loop
+; for (var i = 0; i < 5; i++) { print(i); }
+entry:
+  %i = alloca i32
+  store i32 0, ptr %i
+  br label %for_cond
+
+for_cond:                                   ; preds = %entry, %for_inc
+  %i1 = load i32, ptr %i
+  %lt = icmp slt i32 %i1, 5
+  br i1 %lt, label %for_body, label %for_end
+
+for_body:                                   ; preds = %for_cond
+  %i2 = load i32, ptr %i
+  call @printf(ptr @fmt, i32 %i2)
+  br label %for_inc
+
+for_inc:                                    ; preds = %for_body
+  %i3 = load i32, ptr %i
+  %inc = add i32 %i3, 1
+  store i32 %inc, ptr %i
+  br label %for_cond
+
+for_end:                                    ; preds = %for_cond
+  ret i32 0
+```
+
+### While Loop IR
+
+```llvm
+; while (i < 10) { i = i + 1; }
 entry:
   br label %while_cond
 
@@ -226,12 +321,6 @@ while_end:                                    ; preds = %while_cond
   ; code after loop
 ```
 
-The compiler generates:
-- **Entry block** - branches to condition
-- **Condition block** - evaluates condition, branches to body or end
-- **Body block** - executes loop body, branches back to condition
-- **End block** - continues after loop
-
 ## Best Practices
 
 1. **Avoid infinite loops** unless intentional
@@ -239,6 +328,7 @@ The compiler generates:
 3. **Use continue for skipping** - cleaner than nested if statements
 4. **Keep loops simple** - extract complex logic to functions
 5. **Watch for off-by-one errors** - test boundary conditions
+6. **Use for loops for counted iterations** - more readable
 
 ```xvr
 // Good - clear loop condition
@@ -260,9 +350,11 @@ for (var i: int32 = 1; i <= length - 1; i++) {
 | `while` | Loop with condition |
 | `break` | Exit loop immediately |
 | `continue` | Skip to next iteration |
+| `++` / `--` | Increment/decrement operators |
 | Conditions | Must be boolean |
 
 - `for` loops are best when you know the number of iterations
 - `while` loops are best when the number of iterations is unknown
 - `break` and `continue` provide fine-grained control over loop execution
 - Always ensure loops have a way to terminate
+- Use `std::print()` for formatted output with `\n` for newlines

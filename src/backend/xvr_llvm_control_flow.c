@@ -455,9 +455,15 @@ bool Xvr_LLVMControlFlowEmitFor(Xvr_LLVMControlFlow* cf,
         Xvr_LLVMIRBuilderCreateBlockInFunction(builder, current_fn, "for_end");
 
     cf->loop_end_stack[cf->loop_stack_depth] = end_block;
-    cf->loop_cond_stack[cf->loop_stack_depth] = cond_block;
+    cf->loop_cond_stack[cf->loop_stack_depth] = inc_block;
     cf->loop_stack_depth++;
 
+    /* Emit preClause (initialization) - may create its own block */
+    if (for_node->preClause) {
+        Xvr_LLVMExpressionEmitterEmit(expr_emitter, for_node->preClause);
+    }
+
+    /* Branch from current location to condition block */
     Xvr_LLVMIRBuilderCreateBr(builder, cond_block);
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, cond_block);

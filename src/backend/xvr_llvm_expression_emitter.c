@@ -919,19 +919,136 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
  * - NEGATE: arithmetic negation
  */
 static LLVMValueRef emit_unary_op(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_Opcode opcode, LLVMValueRef operand);
+
+static LLVMValueRef lookup_var_with_type(Xvr_LLVMExpressionEmitter* emitter,
+                                         const char* name,
+                                         Xvr_LiteralType* out_type);
+
+static LLVMValueRef emit_postfix_op(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* node, bool is_increment) {
+    if (!emitter || !node) {
+        return NULL;
+    }
+
+    Xvr_LLVMIRBuilder* builder = emitter->builder;
+    LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+
+    Xvr_Literal identifier;
+    if (node->type == XVR_AST_NODE_POSTFIX_INCREMENT) {
+        identifier = node->postfixIncrement.identifier;
+    } else if (node->type == XVR_AST_NODE_POSTFIX_DECREMENT) {
+        identifier = node->postfixDecrement.identifier;
+    } else {
+        return NULL;
+    }
+
+    const char* var_name = NULL;
+    if (identifier.type == XVR_LITERAL_IDENTIFIER && identifier.as.string.ptr) {
+        var_name = (const char*)identifier.as.string.ptr->data;
+    }
+
+    if (!var_name) {
+        return NULL;
+    }
+
+    Xvr_LiteralType var_type_xvr = XVR_LITERAL_ANY;
+    LLVMValueRef var_ptr =
+        lookup_var_with_type(emitter, var_name, &var_type_xvr);
+    if (!var_ptr) {
+        return NULL;
+    }
+
+    LLVMTypeRef var_type = LLVMGetAllocatedType(var_ptr);
+    if (!var_type) {
+        var_type = LLVMInt32TypeInContext(
+            Xvr_LLVMContextGetLLVMContext(emitter->context));
+    }
+
+    LLVMValueRef old_value =
+        LLVMBuildLoad2(llvm_builder, var_type, var_ptr, var_name);
+
+    LLVMValueRef one = LLVMConstInt(var_type, 1, false);
+    LLVMValueRef new_value;
+    if (is_increment) {
+        new_value = LLVMBuildAdd(llvm_builder, old_value, one, "inc");
+    } else {
+        new_value = LLVMBuildSub(llvm_builder, old_value, one, "dec");
+    }
+
+    LLVMBuildStore(llvm_builder, new_value, var_ptr);
+
+    return old_value;
+}
+
+static LLVMValueRef emit_prefix_op(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* node, bool is_increment) {
+    if (!emitter || !node) {
+        return NULL;
+    }
+
+    Xvr_LLVMIRBuilder* builder = emitter->builder;
+    LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+
+    Xvr_Literal identifier;
+    if (node->type == XVR_AST_NODE_PREFIX_INCREMENT) {
+        identifier = node->prefixIncrement.identifier;
+    } else if (node->type == XVR_AST_NODE_PREFIX_DECREMENT) {
+        identifier = node->prefixDecrement.identifier;
+    } else {
+        return NULL;
+    }
+
+    const char* var_name = NULL;
+    if (identifier.type == XVR_LITERAL_IDENTIFIER && identifier.as.string.ptr) {
+        var_name = (const char*)identifier.as.string.ptr->data;
+    }
+
+    if (!var_name) {
+        return NULL;
+    }
+
+    Xvr_LiteralType var_type_xvr = XVR_LITERAL_ANY;
+    LLVMValueRef var_ptr =
+        lookup_var_with_type(emitter, var_name, &var_type_xvr);
+    if (!var_ptr) {
+        return NULL;
+    }
+
+    LLVMTypeRef var_type = LLVMGetAllocatedType(var_ptr);
+    if (!var_type) {
+        var_type = LLVMInt32TypeInContext(
+            Xvr_LLVMContextGetLLVMContext(emitter->context));
+    }
+
+    LLVMValueRef old_value =
+        LLVMBuildLoad2(llvm_builder, var_type, var_ptr, var_name);
+
+    LLVMValueRef one = LLVMConstInt(var_type, 1, false);
+    LLVMValueRef new_value;
+    if (is_increment) {
+        new_value = LLVMBuildAdd(llvm_builder, old_value, one, "inc");
+    } else {
+        new_value = LLVMBuildSub(llvm_builder, old_value, one, "dec");
+    }
+
+    LLVMBuildStore(llvm_builder, new_value, var_ptr);
+
+    return new_value;
+}
+
+static LLVMValueRef emit_unary_op(Xvr_LLVMExpressionEmitter* emitter,
                                   Xvr_Opcode opcode, LLVMValueRef operand) {
     Xvr_LLVMIRBuilder* builder = emitter->builder;
     LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
 
     switch (opcode) {
     case XVR_OP_INVERT: {
-        /* Boolean NOT: compare operand to zero */
         LLVMValueRef zero = LLVMConstNull(LLVMInt1TypeInContext(llvm_ctx));
         return Xvr_LLVMIRBuilderCreateICmpNE(builder, operand, zero, "not");
     }
 
     case XVR_OP_NEGATE: {
-        /* Arithmetic negation: 0 - operand */
         LLVMValueRef zero = LLVMConstNull(LLVMInt32TypeInContext(llvm_ctx));
         return Xvr_LLVMIRBuilderCreateSub(builder, zero, operand, "neg");
     }
@@ -1424,12 +1541,20 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
     case XVR_AST_NODE_FN_DECL:
     case XVR_AST_NODE_FN_COLLECTION:
     case XVR_AST_NODE_FN_RETURN:
-    case XVR_AST_NODE_PREFIX_INCREMENT:
-    case XVR_AST_NODE_POSTFIX_INCREMENT:
-    case XVR_AST_NODE_PREFIX_DECREMENT:
-    case XVR_AST_NODE_POSTFIX_DECREMENT:
     case XVR_AST_NODE_CAST:
         return Xvr_LLVMExpressionEmitterEmitCast(emitter, &node->cast);
+
+    case XVR_AST_NODE_PREFIX_INCREMENT:
+        return emit_prefix_op(emitter, node, true);
+
+    case XVR_AST_NODE_PREFIX_DECREMENT:
+        return emit_prefix_op(emitter, node, false);
+
+    case XVR_AST_NODE_POSTFIX_INCREMENT:
+        return emit_postfix_op(emitter, node, true);
+
+    case XVR_AST_NODE_POSTFIX_DECREMENT:
+        return emit_postfix_op(emitter, node, false);
 
     case XVR_AST_NODE_IMPORT:
     case XVR_AST_NODE_PASS:

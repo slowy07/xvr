@@ -740,6 +740,138 @@ int run_compiler_tests(void) {
         Xvr_LLVMCodegenDestroy(while_codegen);
     }
 
+    /* For Loop Tests */
+    printf("\n" XVR_CC_NOTICE "  --- For Loop Tests ---\n\n" XVR_CC_RESET);
+
+    struct {
+        const char* name;
+        const char* source;
+        const char* expected_ir_pattern;
+        int expect_success;
+    } for_tests[] = {
+        {"simple for loop", "for (var i = 0; i < 5; i++) { print(i); }",
+         "for_cond", 1},
+        {"for with std print",
+         "include std; for ( var i = 0; i < 20; i++) { std::print(\"{}\\n\", "
+         "i); }",
+         "for_cond", 1},
+        {"for with break",
+         "for (var i = 0; i < 100; i++) { if (i == 10) { break; } print(i); }",
+         "for_cond", 1},
+        {"for with continue",
+         "for (var i = 0; i < 5; i++) { if (i == 2) { continue; } print(i); }",
+         "for_cond", 1},
+        {"for with decrement", "for (var i = 5; i > 0; i--) { print(i); }",
+         "for_cond", 1},
+        {"nested for loops",
+         "for (var i = 0; i < 3; i++) { for (var j = 0; j < 3; j++) { "
+         "print(i); } }",
+         "for_cond", 1},
+        {"for with complex body",
+         "var sum = 0; for (var i = 0; i < 10; i++) { sum = sum + i; }",
+         "for_cond", 1},
+    };
+
+    int num_for_tests = sizeof(for_tests) / sizeof(for_tests[0]);
+
+    for (int i = 0; i < num_for_tests; i++) {
+        printf("  [RUN ] For test: %s\n", for_tests[i].name);
+
+        Xvr_LLVMCodegen* for_codegen = Xvr_LLVMCodegenCreate("for_test");
+        if (for_codegen == NULL) {
+            printf(XVR_CC_ERROR
+                   "  [SKIP] %s - codegen creation failed\n" XVR_CC_RESET,
+                   for_tests[i].name);
+            test_count++;
+            continue;
+        }
+
+        Xvr_Lexer for_lexer;
+        Xvr_Parser for_parser;
+        Xvr_initLexer(&for_lexer, for_tests[i].source);
+        Xvr_initParser(&for_parser, &for_lexer);
+
+        Xvr_ASTNode** for_nodes = NULL;
+        int for_node_count = 0;
+        int for_node_capacity = 0;
+
+        Xvr_ASTNode* for_node = Xvr_scanParser(&for_parser);
+        while (for_node != NULL) {
+            if (for_node->type == XVR_AST_NODE_ERROR) {
+                if (for_tests[i].expect_success) {
+                    printf(XVR_CC_ERROR
+                           "  [FAIL] %s - parse error\n" XVR_CC_RESET,
+                           for_tests[i].name);
+                } else {
+                    printf(XVR_CC_NOTICE
+                           "  [PASS] %s (expected parse error)\n" XVR_CC_RESET,
+                           for_tests[i].name);
+                    pass_count++;
+                }
+                test_count++;
+                Xvr_freeParser(&for_parser);
+                Xvr_LLVMCodegenDestroy(for_codegen);
+                continue;
+            }
+
+            if (for_node_capacity == 0) {
+                for_node_capacity = 8;
+                for_nodes = malloc(sizeof(Xvr_ASTNode*) * for_node_capacity);
+            } else if (for_node_count >= for_node_capacity) {
+                for_node_capacity *= 2;
+                for_nodes = realloc(for_nodes,
+                                    sizeof(Xvr_ASTNode*) * for_node_capacity);
+            }
+            for_nodes[for_node_count++] = for_node;
+            for_node = Xvr_scanParser(&for_parser);
+        }
+
+        Xvr_freeParser(&for_parser);
+
+        int emit_error = 0;
+        for (int j = 0; j < for_node_count; j++) {
+            Xvr_LLVMCodegenEmitAST(for_codegen, for_nodes[j]);
+            if (Xvr_LLVMCodegenHasError(for_codegen)) {
+                emit_error = 1;
+            }
+        }
+
+        if (emit_error) {
+            if (for_tests[i].expect_success) {
+                printf(XVR_CC_ERROR
+                       "  [FAIL] %s - codegen error: %s\n" XVR_CC_RESET,
+                       for_tests[i].name, Xvr_LLVMCodegenGetError(for_codegen));
+            } else {
+                printf(XVR_CC_NOTICE
+                       "  [PASS] %s (expected error: %s)\n" XVR_CC_RESET,
+                       for_tests[i].name, Xvr_LLVMCodegenGetError(for_codegen));
+                pass_count++;
+            }
+            test_count++;
+        } else {
+            size_t for_ir_len = 0;
+            char* for_ir = Xvr_LLVMCodegenPrintIR(for_codegen, &for_ir_len);
+
+            if (for_ir && for_tests[i].expected_ir_pattern &&
+                strstr(for_ir, for_tests[i].expected_ir_pattern) == NULL) {
+                printf(XVR_CC_ERROR
+                       "  [FAIL] %s - expected '%s' in IR\n" XVR_CC_RESET,
+                       for_tests[i].name, for_tests[i].expected_ir_pattern);
+            } else {
+                printf(XVR_CC_NOTICE "  [PASS] %s\n" XVR_CC_RESET,
+                       for_tests[i].name);
+                pass_count++;
+            }
+            test_count++;
+
+            if (for_ir) free(for_ir);
+        }
+
+        for (int j = 0; j < for_node_count; j++) Xvr_freeASTNode(for_nodes[j]);
+        free(for_nodes);
+        Xvr_LLVMCodegenDestroy(for_codegen);
+    }
+
     /* If Error Tests */
     printf("\n" XVR_CC_NOTICE "  --- If Error Tests ---\n\n" XVR_CC_RESET);
 

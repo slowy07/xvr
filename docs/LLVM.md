@@ -213,6 +213,51 @@ while (i < 10) {
 }
 ```
 
+### For Loops
+
+The `for` loop is ideal when you know the number of iterations:
+
+```xvr
+// Basic for loop
+for (var i = 0; i < 5; i++) {
+    print("{}", i);  // 0, 1, 2, 3, 4
+}
+
+// With std::print
+include std;
+for (var i = 0; i < 20; i++) {
+    std::print("{}\n", i);
+}
+```
+
+**Syntax:**
+```xvr
+for (init; condition; increment) {
+    // body
+}
+```
+
+| Part | Description |
+|------|-------------|
+| `init` | Variable initialization (e.g., `var i = 0`) |
+| `condition` | Boolean expression evaluated before each iteration |
+| `increment` | Executed after each iteration (e.g., `i++`, `i--`) |
+
+### Increment/Decrement Operators
+
+| Operator | Description |
+|----------|-------------|
+| `++` | Increment by 1 |
+| `--` | Decrement by 1 |
+
+```xvr
+// Count up
+for (var i = 0; i < 5; i++) { }  // 0, 1, 2, 3, 4
+
+// Count down
+for (var i = 5; i > 0; i--) { }  // 5, 4, 3, 2, 1
+```
+
 ### Break and Continue
 
 Control loop execution with `break` and `continue`:
@@ -236,64 +281,6 @@ while (i < 100) {
 ```xvr
 var x = 5;
 if (x) { }  // ERROR: condition must be boolean
-// help: use a comparison operator (e.g., 'x > 0') or wrap the condition with 'bool()'
-```
-
-#### Expression Form (Rust-like)
-
-The `if` can be used as an expression that returns a value:
-
-```xvr
-var score: int32 = 85;
-
-var grade: string = if (score >= 90) {
-    "A"
-} else if (score >= 80) {
-    "B"
-} else {
-    "C or lower"
-};
-
-print(grade);
-```
-
-**Note:** Expression-based `if` requires explicit type annotation on the variable.
-
-### While Loops
-
-```xvr
-var i = 0;
-while (i < 10) {
-    print("{}", i);
-    i = i + 1;
-}
-```
-
-### Break and Continue
-
-Control loop execution with `break` and `continue`:
-
-```xvr
-var i = 0;
-while (i < 100) {
-    i = i + 1;
-    if (i == 50) {
-        break;  // Exit loop when i reaches 50
-    }
-    if (i % 2 == 0) {
-        continue;  // Skip even numbers
-    }
-    print("{}", i);  // Only prints odd numbers
-}
-```
-
-**Conditions must be boolean** - the compiler validates this and provides helpful hints:
-
-```xvr
-var x = 5;
-if (x) { }  // ERROR: condition must be boolean
-// help: use a comparison operator (e.g., 'x > 0') or wrap the condition with 'bool()'
-```
 
 ### Print with Format Strings
 
