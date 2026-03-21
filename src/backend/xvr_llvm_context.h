@@ -106,4 +106,14 @@ const char* Xvr_LLVMContextGetErrorMessage(Xvr_LLVMContext* ctx);
  */
 void Xvr_LLVMContextClearError(Xvr_LLVMContext* ctx);
 
+/**
+ * @brief Sets an error message on the context
+ * @param ctx Context to set error on
+ * @param message Error message string (copied internally)
+ *
+ * This function sets an error state on the context,
+ * making Xvr_LLVMContextHasError() return true.
+ */
+void Xvr_LLVMContextSetError(Xvr_LLVMContext* ctx, const char* message);
+
 #endif

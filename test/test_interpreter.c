@@ -60,7 +60,7 @@ int run_interpreter_tests(void) {
     }
 
     {
-        const char* source = "print(null);";
+        const char* source = "std::print(null);";
         Xvr_Lexer lexer;
         Xvr_Parser parser;
         Xvr_Compiler compiler;

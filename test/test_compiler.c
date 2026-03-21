@@ -33,7 +33,7 @@ int run_compiler_tests(void) {
 
     /* Test 2: Parse and compile simple source */
     printf("  [RUN ] Parse and compile simple source...\n");
-    const char* source = "var x = 42;\nprint(x);\n";
+    const char* source = "var x = 42;\nstd::print(x);\n";
 
     Xvr_Lexer lexer;
     Xvr_Parser parser;
@@ -120,55 +120,71 @@ int run_compiler_tests(void) {
     } cast_tests[] = {
         /* int to int casts */
         {"int32 to int32",
-         "var x: int32 = 10; var y: int32 = int32(x); print(y);", "i32", 1},
+         "var x: int32 = 10; var y: int32 = int32(x);          std::print(y);",
+         "i32", 1},
         {"int32 to int16",
-         "var x: int32 = 10; var y: int16 = int16(x); print(y);", "trunc", 1},
+         "var x: int32 = 10; var y: int16 = int16(x);          std::print(y);",
+         "trunc", 1},
         {"int16 to int32",
-         "var x: int16 = 10; var y: int32 = int32(x); print(y);", "sext", 1},
+         "var x: int16 = 10; var y: int32 = int32(x);          std::print(y);",
+         "sext", 1},
         {"int64 to int32",
-         "var x: int64 = 10; var y: int32 = int32(x); print(y);", "trunc", 1},
+         "var x: int64 = 10; var y: int32 = int32(x);          std::print(y);",
+         "trunc", 1},
         {"int32 to int64",
-         "var x: int32 = 10; var y: int64 = int64(x); print(y);", "sext", 1},
+         "var x: int32 = 10; var y: int64 = int64(x);          std::print(y);",
+         "sext", 1},
 
         /* int to float casts */
         {"int32 to float32",
-         "var x: int32 = 10; var y: float32 = float32(x); print(y);", "sitofp",
-         1},
+         "var x: int32 = 10; var y: float32 = float32(x);          "
+         "std::print(y);",
+         "sitofp", 1},
         {"int32 to float64",
-         "var x: int32 = 10; var y: float64 = float64(x); print(y);", "sitofp",
-         1},
+         "var x: int32 = 10; var y: float64 = float64(x);          "
+         "std::print(y);",
+         "sitofp", 1},
 
         /* float to int casts */
         {"float32 to int32",
-         "var x: float32 = 10.0; var y: int32 = int32(x); print(y);", "fptosi",
-         1},
+         "var x: float32 = 10.0; var y: int32 = int32(x);          "
+         "std::print(y);",
+         "fptosi", 1},
         {"float64 to int32",
-         "var x: float64 = 10.0; var y: int32 = int32(x); print(y);", "fptosi",
-         1},
+         "var x: float64 = 10.0; var y: int32 = int32(x);          "
+         "std::print(y);",
+         "fptosi", 1},
 
         /* float to float casts */
         {"float32 to float64",
-         "var x: float32 = 10.0; var y: float64 = float64(x); print(y);",
+         "var x: float32 = 10.0; var y: float64 = float64(x);          "
+         "std::print(y);",
          "fpext", 1},
         {"float64 to float32",
-         "var x: float64 = 10.0; var y: float32 = float32(x); print(y);",
+         "var x: float64 = 10.0; var y: float32 = float32(x);          "
+         "std::print(y);",
          "fptrunc", 1},
 
         /* bool casts */
-        {"int32 to bool", "var x: int32 = 10; var y: bool = bool(x); print(y);",
+        {"int32 to bool",
+         "var x: int32 = 10; var y: bool = bool(x);          std::print(y);",
          "icmp ne i32", 1},
         {"float32 to bool",
-         "var x: float32 = 10.0; var y: bool = bool(x); print(y);", "fcmp one",
-         1},
+         "var x: float32 = 10.0; var y: bool = bool(x);          "
+         "std::print(y);",
+         "fcmp one", 1},
 
         /* chained casts */
         {"chained int to float to int",
-         "var x: int32 = 10; var y: int32 = int32(float64(x)); print(y);",
+         "var x: int32 = 10; var y: int32 = int32(float64(x));          "
+         "std::print(y);",
          "sitofp", 1},
 
         /* uint casts */
         {"int32 to uint32",
-         "var x: int32 = 10; var y: uint32 = uint32(x); print(y);", "i32", 1},
+         "var x: int32 = 10; var y: uint32 = uint32(x);          "
+         "std::print(y);",
+         "i32", 1},
     };
 
     int num_cast_tests = sizeof(cast_tests) / sizeof(cast_tests[0]);
@@ -290,12 +306,15 @@ int run_compiler_tests(void) {
     } error_tests[] = {
         /* String casts require runtime helper functions - codegen succeeds but
            runtime will fail */
-        {"string to int", "var s = \"42\"; var n: int32 = int32(s); print(n);",
-         0, "Requires runtime helper: str_to_int32"},
+        {"string to int",
+         "var s = \"42\"; var n: int32 = int32(s);          std::print(n);", 0,
+         "Requires runtime helper: str_to_int32"},
         {"string to float",
-         "var s = \"3.14\"; var f: float32 = float32(s); print(f);", 0,
-         "Requires runtime helper: str_to_float32"},
-        {"int to string", "var n: int32 = 42; var s = string(n); print(s);", 0,
+         "var s = \"3.14\"; var f: float32 = float32(s);          "
+         "std::print(f);",
+         0, "Requires runtime helper: str_to_float32"},
+        {"int to string",
+         "var n: int32 = 42; var s = string(n);          std::print(s);", 0,
          "Requires runtime helper: int_to_str"},
     };
 
@@ -384,18 +403,20 @@ int run_compiler_tests(void) {
         const char* source;
         const char* expected_ir_pattern;
     } literal_tests[] = {
-        {"int literal to int32", "var x = 42; var n = int32(x); print(n);",
-         "i32"},
-        {"int literal to float32", "var x = 42; var f = float32(x); print(f);",
-         "sitofp"},
-        {"float literal to int32", "var x = 3.14; var n = int32(x); print(n);",
-         "fptosi"},
+        {"int literal to int32",
+         "var x = 42; var n = int32(x);          std::print(n);", "i32"},
+        {"int literal to float32",
+         "var x = 42; var f = float32(x);          std::print(f);", "sitofp"},
+        {"float literal to int32",
+         "var x = 3.14; var n = int32(x);          std::print(n);", "fptosi"},
         {"float literal to float64",
-         "var x = 3.14; var d = float64(x); print(d);", "fpext"},
-        {"literal 0 to bool", "var x = 0; var b = bool(x); print(b);", "icmp"},
-        {"literal 1 to bool", "var x = 1; var b = bool(x); print(b);", "icmp"},
-        {"literal true to int32", "var x = true; var n = int32(x); print(n);",
-         "zext"},
+         "var x = 3.14; var d = float64(x);          std::print(d);", "fpext"},
+        {"literal 0 to bool",
+         "var x = 0; var b = bool(x);          std::print(b);", "icmp"},
+        {"literal 1 to bool",
+         "var x = 1; var b = bool(x);          std::print(b);", "icmp"},
+        {"literal true to int32",
+         "var x = true; var n = int32(x);          std::print(n);", "zext"},
     };
 
     int num_literal_tests = sizeof(literal_tests) / sizeof(literal_tests[0]);
@@ -480,29 +501,37 @@ int run_compiler_tests(void) {
         int expect_success;
     } if_tests[] = {
         /* Basic if statements */
-        {"simple if", "if (true) { print(1); }", "br i1", 1},
-        {"if-else", "if (true) { print(1); } else { print(2); }", "br i1", 1},
+        {"simple if", "if (true) { std::print(1); }", "br i1", 1},
+        {"if-else", "if (true) { std::print(1); } else { std::print(2); }",
+         "br i1", 1},
         {"if-else-if chain",
-         "if (true) { print(1); } else if (false) { print(2); } else { "
-         "print(3); }",
+         "if (true) { std::print(1); } else if (false) { std::print(2); } else "
+         "{ "
+         "std::print(3); }",
          "br i1", 1},
 
         /* Nested if */
-        {"nested if", "if (true) { if (false) { print(1); } }", "br i1", 1},
+        {"nested if", "if (true) { if (false) { std::print(1); } }", "br i1",
+         1},
 
         /* If with comparison */
-        {"if with gt", "var x = 5; if (x > 10) { print(1); }", "icmp sgt", 1},
-        {"if with lt", "var x = 5; if (x < 10) { print(1); }", "icmp slt", 1},
-        {"if with eq", "var x = 5; if (x == 5) { print(1); }", "icmp eq", 1},
-        {"if with neq", "var x = 5; if (x != 5) { print(1); }", "icmp ne", 1},
+        {"if with gt", "var x = 5; if (x > 10) { std::print(1); }", "icmp sgt",
+         1},
+        {"if with lt", "var x = 5; if (x < 10) { std::print(1); }", "icmp slt",
+         1},
+        {"if with eq", "var x = 5; if (x == 5) { std::print(1); }", "icmp eq",
+         1},
+        {"if with neq", "var x = 5; if (x != 5) { std::print(1); }", "icmp ne",
+         1},
 
         /* If with logical operators - removed because LLVM optimizes these away
          * when the condition is constant. Use comparisons instead. */
 
         /* Complex else-if chain */
         {"chained else-if",
-         "var x = 5; if (x > 10) { print(1); } else if (x > 5) { print(2); } "
-         "else if (x > 0) { print(3); } else { print(4); }",
+         "var x = 5; if (x > 10) { std::print(1); } else if (x > 5) { "
+         "std::print(2); } "
+         "else if (x > 0) { std::print(3); } else { std::print(4); }",
          "icmp", 1},
     };
 
@@ -615,16 +644,19 @@ int run_compiler_tests(void) {
         const char* expected_ir_pattern;
         int expect_success;
     } while_tests[] = {
-        {"simple while true", "while (true) { print(1); }", "br i1", 1},
-        {"simple while false", "while (false) { print(1); }", "br i1", 1},
+        {"simple while true", "while (true) { std::print(1); }", "br i1", 1},
+        {"simple while false", "while (false) { std::print(1); }", "br i1", 1},
         {"while with variable condition",
-         "var x = 5; while (x > 0) { print(x); x = x - 1; }", "icmp sgt", 1},
-        {"while with gt", "var x = 5; while (x > 10) { print(1); }", "icmp sgt",
+         "var x = 5; while (x > 0) { std::print(x); x = x - 1; }", "icmp sgt",
          1},
-        {"while with lt", "var x = 5; while (x < 10) { print(1); x = x + 1; }",
-         "icmp slt", 1},
-        {"while with eq", "var x = 5; while (x == 5) { print(1); x = x + 1; }",
-         "icmp eq", 1},
+        {"while with gt", "var x = 5; while (x > 10) { std::print(1); }",
+         "icmp sgt", 1},
+        {"while with lt",
+         "var x = 5; while (x < 10) { std::print(1); x = x + 1; }", "icmp slt",
+         1},
+        {"while with eq",
+         "var x = 5; while (x == 5) { std::print(1); x = x + 1; }", "icmp eq",
+         1},
         {"nested while",
          "var x = 0; while (x < 3) { var y = 0; while (y < 3) { y = y + 1; } "
          "x = x + 1; }",
@@ -749,23 +781,23 @@ int run_compiler_tests(void) {
         const char* expected_ir_pattern;
         int expect_success;
     } for_tests[] = {
-        {"simple for loop", "for (var i = 0; i < 5; i++) { print(i); }",
+        {"simple for loop", "for (var i = 0; i < 5; i++) { std::print(i); }",
          "for_cond", 1},
         {"for with std print",
-         "include std; for ( var i = 0; i < 20; i++) { std::print(\"{}\\n\", "
-         "i); }",
-         "for_cond", 1},
+         "for (var i = 0; i < 20; i++) { std::print(i); }", "for_cond", 1},
         {"for with break",
-         "for (var i = 0; i < 100; i++) { if (i == 10) { break; } print(i); }",
+         "for (var i = 0; i < 100; i++) { if (i == 10) { break; } "
+         "std::print(i); }",
          "for_cond", 1},
         {"for with continue",
-         "for (var i = 0; i < 5; i++) { if (i == 2) { continue; } print(i); }",
+         "for (var i = 0; i < 5; i++) { if (i == 2) { continue; } "
+         "std::print(i); }",
          "for_cond", 1},
-        {"for with decrement", "for (var i = 5; i > 0; i--) { print(i); }",
+        {"for with decrement", "for (var i = 5; i > 0; i--) { std::print(i); }",
          "for_cond", 1},
         {"nested for loops",
          "for (var i = 0; i < 3; i++) { for (var j = 0; j < 3; j++) { "
-         "print(i); } }",
+         "std::print(i); } }",
          "for_cond", 1},
         {"for with complex body",
          "var sum = 0; for (var i = 0; i < 10; i++) { sum = sum + i; }",
@@ -884,13 +916,13 @@ int run_compiler_tests(void) {
         /* Non-boolean condition tests - these print errors to stderr but don't
          * fail codegen Note: This is a known limitation - errors should be
          * tracked in codegen */
-        {"int condition", "var x = 5; if (x) { print(1); }", 0,
+        {"int condition", "var x = 5; if (x) { std::print(1); }", 0,
          "Error printed to stderr, not tracked in codegen API"},
-        {"string condition", "var s = \"hello\"; if (s) { print(1); }", 0,
+        {"string condition", "var s = \"hello\"; if (s) { std::print(1); }", 0,
          "Error printed to stderr, not tracked in codegen API"},
-        {"float condition", "var f = 3.14; if (f) { print(1); }", 0,
+        {"float condition", "var f = 3.14; if (f) { std::print(1); }", 0,
          "Error printed to stderr, not tracked in codegen API"},
-        {"null condition", "var n = null; if (n) { print(1); }", 0,
+        {"null condition", "var n = null; if (n) { std::print(1); }", 0,
          "Error printed to stderr, not tracked in codegen API"},
     };
 
@@ -965,6 +997,100 @@ int run_compiler_tests(void) {
         for (int j = 0; j < err_node_count; j++) Xvr_freeASTNode(err_nodes[j]);
         free(err_nodes);
         Xvr_LLVMCodegenDestroy(err_codegen);
+    }
+
+    /* Void Function Tests */
+    printf("\n" XVR_CC_NOTICE "  --- Void Function Tests ---\n\n" XVR_CC_RESET);
+
+    struct {
+        const char* name;
+        const char* source;
+        const char* expected_ir_pattern;
+        int expect_success;
+    } void_fn_tests[] = {
+        {"void proc declaration", "proc greet(): void { std::print(1); }",
+         "main", 1},
+        {"void proc with return;", "proc done(): void { return; }", "main", 1},
+        {"void proc call", "proc foo(): void { std::print(1); } foo();", "main",
+         1},
+        {"int proc with implicit return", "proc get_val(): int { 42 }", "main",
+         1},
+        {"int proc with explicit return", "proc get_val(): int { return 42; }",
+         "main", 1},
+        {"print without std:: should fail", "print(1);", "main", 0},
+    };
+
+    int num_void_fn_tests = sizeof(void_fn_tests) / sizeof(void_fn_tests[0]);
+
+    for (int i = 0; i < num_void_fn_tests; i++) {
+        printf("  [RUN ] Void function test: %s\n", void_fn_tests[i].name);
+
+        Xvr_LLVMCodegen* void_codegen = Xvr_LLVMCodegenCreate("void_fn_test");
+        if (void_codegen == NULL) {
+            printf(XVR_CC_ERROR
+                   "  [SKIP] %s - codegen creation failed\n" XVR_CC_RESET,
+                   void_fn_tests[i].name);
+            test_count++;
+            continue;
+        }
+
+        Xvr_Lexer void_lexer;
+        Xvr_Parser void_parser;
+        Xvr_initLexer(&void_lexer, void_fn_tests[i].source);
+        Xvr_initParser(&void_parser, &void_lexer);
+
+        Xvr_ASTNode** void_nodes = NULL;
+        int void_node_count = 0;
+        int void_node_capacity = 0;
+
+        Xvr_ASTNode* void_node = Xvr_scanParser(&void_parser);
+        while (void_node != NULL) {
+            if (void_node_capacity == 0) {
+                void_node_capacity = 8;
+                void_nodes = malloc(sizeof(Xvr_ASTNode*) * void_node_capacity);
+            } else if (void_node_count >= void_node_capacity) {
+                void_node_capacity *= 2;
+                void_nodes = realloc(void_nodes,
+                                     sizeof(Xvr_ASTNode*) * void_node_capacity);
+            }
+            void_nodes[void_node_count++] = void_node;
+            void_node = Xvr_scanParser(&void_parser);
+        }
+
+        Xvr_freeParser(&void_parser);
+
+        int has_error = 0;
+        for (int j = 0; j < void_node_count; j++) {
+            Xvr_LLVMCodegenEmitAST(void_codegen, void_nodes[j]);
+            if (Xvr_LLVMCodegenHasError(void_codegen)) {
+                has_error = 1;
+            }
+        }
+
+        if (has_error) {
+            if (void_fn_tests[i].expect_success) {
+                printf(XVR_CC_ERROR
+                       "  [FAIL] %s - codegen error: %s\n" XVR_CC_RESET,
+                       void_fn_tests[i].name,
+                       Xvr_LLVMCodegenGetError(void_codegen));
+            } else {
+                printf(XVR_CC_NOTICE
+                       "  [PASS] %s (expected error)\n" XVR_CC_RESET,
+                       void_fn_tests[i].name);
+                pass_count++;
+            }
+            test_count++;
+        } else {
+            printf(XVR_CC_NOTICE "  [PASS] %s\n" XVR_CC_RESET,
+                   void_fn_tests[i].name);
+            pass_count++;
+            test_count++;
+        }
+
+        for (int j = 0; j < void_node_count; j++)
+            Xvr_freeASTNode(void_nodes[j]);
+        free(void_nodes);
+        Xvr_LLVMCodegenDestroy(void_codegen);
     }
 
     printf("\n" XVR_CC_NOTICE "  Cast tests: %d/%d passed\n" XVR_CC_RESET,

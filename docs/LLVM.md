@@ -167,7 +167,6 @@ var pi = 3.14;
 
 ### If Statements
 
-XVR supports traditional if-else statements and **expression-based if** (Rust-like):
 
 #### Statement Form
 
@@ -175,15 +174,14 @@ XVR supports traditional if-else statements and **expression-based if** (Rust-li
 var score: int32 = 85;
 
 if (score >= 90) {
-    print("Grade: A");
+    std::print("Grade: A");
 } else if (score >= 80) {
-    print("Grade: B");
+    std::print("Grade: B");
 } else {
-    print("Grade: C or lower");
+    std::print("Grade: C or lower");
 }
 ```
 
-#### Expression Form (Rust-like)
 
 The `if` can be used as an expression that returns a value:
 
@@ -198,7 +196,7 @@ var grade: string = if (score >= 90) {
     "C or lower"
 };
 
-print(grade);
+std::print(grade);
 ```
 
 **Note:** Expression-based `if` requires explicit type annotation on the variable.
@@ -208,7 +206,7 @@ print(grade);
 ```xvr
 var i = 0;
 while (i < 10) {
-    print("{}", i);
+    std::print("{}", i);
     i = i + 1;
 }
 ```
@@ -220,7 +218,7 @@ The `for` loop is ideal when you know the number of iterations:
 ```xvr
 // Basic for loop
 for (var i = 0; i < 5; i++) {
-    print("{}", i);  // 0, 1, 2, 3, 4
+    std::print("{}", i);  // 0, 1, 2, 3, 4
 }
 
 // With std::print
@@ -272,7 +270,7 @@ while (i < 100) {
     if (i % 2 == 0) {
         continue;  // Skip even numbers
     }
-    print("{}", i);  // Only prints odd numbers
+    std::print("{}", i);  // Only prints odd numbers
 }
 ```
 
@@ -290,13 +288,13 @@ XVR uses `{}` placeholders:
 var name = "world";
 var num = 42;
 
-print("Hello, {}!", name);      // Hello, world!
-print("Value: {}", num);         // Value: 42
-print("{} + {} = {}", 1, 2, 3); // 1 + 2 = 3
+std::print("Hello, {}!", name);      // Hello, world!
+std::print("Value: {}", num);         // Value: 42
+std::print("{} + {} = {}", 1, 2, 3); // 1 + 2 = 3
 
 // Direct array printing
 var arr = [1, 2, 3];
-print(arr);                      // prints: 1 2 3
+std::print(arr);                      // prints: 1 2 3
 ```
 
 ### While Loops
@@ -304,7 +302,7 @@ print(arr);                      // prints: 1 2 3
 ```xvr
 var i = 0;
 while (i < 10) {
-    print("{}", i);
+    std::print("{}", i);
     i = i + 1;
 }
 ```
@@ -323,7 +321,7 @@ while (i < 100) {
     if (i % 2 == 0) {
         continue;  // Skip even numbers
     }
-    print("{}", i);  // Only prints odd numbers
+    std::print("{}", i);  // Only prints odd numbers
 }
 ```
 
@@ -339,11 +337,11 @@ while (x) { }  // ERROR: condition must be boolean
 
 ```xvr
 var arr = [1, 2, 3, 4, 5];
-print(arr[0]);  // prints 1
+std::print(arr[0]);  // prints 1
 
 // Array assignment
 arr[1] = 20;
-print(arr[1]);  // prints 20
+std::print(arr[1]);  // prints 20
 ```
 
 ## Format String Parser
@@ -488,7 +486,7 @@ Output: `out/xvr`
 - **AOT only**: No interpreter, no REPL
 - **Format strings**: Uses `{}` instead of printf `%` syntax
 - **Variables**: Use `var` keyword (not `let`)
-- **Semicolons**: Optional (like Rust/C++)
+- **Semicolons**: Optional
 
 ## Future Enhancements
 

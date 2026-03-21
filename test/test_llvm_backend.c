@@ -299,7 +299,7 @@ static int test_full_compilation_pipeline(void) {
     printf("\n  --- Full Compilation Pipeline ---\n");
 
     /* Test compiling a simple program */
-    const char* source = "var x = 42;\nprint(x);\n";
+    const char* source = "var x = 42;\nstd::print(x);\n";
 
     /* Parse the source */
     Xvr_Lexer lexer;
@@ -382,12 +382,12 @@ static int test_datatypes_compilation(void) {
         const char* name;
         const char* source;
     } test_cases[] = {
-        {"Integer", "var x = 42;\nprint(x);\n"},
-        {"Float", "var x = 3.14;\nprint(x);\n"},
-        {"String", "var x = \"hello\";\nprint(x);\n"},
-        {"Boolean", "var x = true;\nprint(x);\n"},
-        {"Array", "var x = [1, 2, 3];\nprint(x);\n"},
-        {"Negative", "var x = -42;\nprint(x);\n"},
+        {"Integer", "var x = 42;\nstd::print(x);\n"},
+        {"Float", "var x = 3.14;\nstd::print(x);\n"},
+        {"String", "var x = \"hello\";\nstd::print(x);\n"},
+        {"Boolean", "var x = true;\nstd::print(x);\n"},
+        {"Array", "var x = [1, 2, 3];\nstd::print(x);\n"},
+        {"Negative", "var x = -42;\nstd::print(x);\n"},
     };
 
     int num_tests = sizeof(test_cases) / sizeof(test_cases[0]);

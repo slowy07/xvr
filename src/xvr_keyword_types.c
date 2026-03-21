@@ -8,6 +8,7 @@
 Xvr_KeywordType Xvr_keywordTypes[] = {
     // type keywords
     {XVR_TOKEN_NULL, "null"},
+    {XVR_TOKEN_VOID, "void"},
     {XVR_TOKEN_BOOLEAN, "bool"},
     {XVR_TOKEN_INTEGER, "int"},
     {XVR_TOKEN_FLOAT, "float"},

@@ -639,6 +639,21 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
         return emit_printf(emitter, binary->left);
     }
 
+    /* Error: standalone print() is not supported, use std::print() instead */
+    if (binary->opcode == XVR_OP_FN_CALL) {
+        if (binary->left && binary->left->type == XVR_AST_NODE_LITERAL &&
+            binary->left->atomic.literal.type == XVR_LITERAL_IDENTIFIER) {
+            const char* fn_name =
+                (const char*)binary->left->atomic.literal.as.string.ptr->data;
+            if (fn_name && strcmp(fn_name, "print") == 0) {
+                Xvr_LLVMContextSetError(
+                    emitter->context,
+                    "print() is not supported, use std::print() instead");
+                return NULL;
+            }
+        }
+    }
+
     /* Handle namespace::function calls like std::print */
     if (binary->opcode == XVR_OP_DOT) {
         /* Check if this is std::print */

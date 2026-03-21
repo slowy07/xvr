@@ -133,6 +133,15 @@ int run_parser_tests(void) {
               "proc foo(x: int, y: int) { x + y; }", XVR_AST_NODE_FN_DECL);
     testParse("function declaration with return type",
               "proc foo(): int { return 1; }", XVR_AST_NODE_FN_DECL);
+    testParse("function declaration with void return type",
+              "proc foo(): void { std::print(1); }", XVR_AST_NODE_FN_DECL);
+    testParse("function declaration void with no return",
+              "proc greet(): void { std::print(\"hi\"); }",
+              XVR_AST_NODE_FN_DECL);
+    testParse("function declaration void with return;",
+              "proc done(): void { return; }", XVR_AST_NODE_FN_DECL);
+    testParse("function declaration void implicit return",
+              "proc get_value(): int { 42 }", XVR_AST_NODE_FN_DECL);
 
     testParse("function call", "foo();", XVR_AST_NODE_BINARY);
     testParse("function call with args", "foo(1, 2);", XVR_AST_NODE_BINARY);
@@ -177,8 +186,6 @@ int run_parser_tests(void) {
               XVR_AST_NODE_VAR_DECL);
     testParse("var decl with type NO semi", "var x: int = 1",
               XVR_AST_NODE_VAR_DECL);
-    testParse("print NO semicolon at newline", "print(\"%d\", 1)",
-              XVR_AST_NODE_BINARY);
     testParse("return NO semicolon at newline", "return 1",
               XVR_AST_NODE_FN_RETURN);
     testParse("break NO semicolon at newline", "break", XVR_AST_NODE_BREAK);
@@ -188,7 +195,6 @@ int run_parser_tests(void) {
               XVR_AST_NODE_LITERAL);
 
     testParse("var decl WITH semicolon", "var x = 1;", XVR_AST_NODE_VAR_DECL);
-    testParse("print WITH semicolon", "print(\"%d\", 1);", XVR_AST_NODE_BINARY);
     testParse("return WITH semicolon", "return 1;", XVR_AST_NODE_FN_RETURN);
 
     testParseMultiple("multi stmt same line WITH semi", "var x = 1; var y = 2",

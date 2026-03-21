@@ -16,7 +16,7 @@ var c: int = 1 / 5;
 var d: int = 15;
 var answer: int = ((5 * 1) / 5) + ((15 * 1) / 5);
 
-print(answer);
+std::print(answer);
 ```
 
 you can re assign some variable.
@@ -24,17 +24,17 @@ you can re assign some variable.
 ```
 var data: int = 30 * 40;
 
-print(data);
+std::print(data);
 
 data = 30 + 40;
 
-print(data);
+std::print(data);
 ```
 
 **fun fact**: you can using `+` for combine some string
 
 ```
-print("jane " + "slowy");
+std::print("jane " + "slowy");
 ```
 
 ## Playing with variable
@@ -44,7 +44,7 @@ Can we print other data types combine with string ?, absolutely no, you must con
 ```
 var age: int = 20;
 
-print("mamads are: " + string age + " years old");
+std::print("mamads are: " + string age + " years old");
 ```
 
 in `xvr` you can use `string` keyword to convert `integer` or `float` data type to string for print it with strings
@@ -57,10 +57,10 @@ Instead of using string concatenation, you can use format specifiers:
 var age: int = 20;
 var name: string = "arfy";
 
-print("%s is %d years old", name, age);  // arfy is 20 years old
+std::print("%s is %d years old", name, age);  // arfy is 20 years old
 
 var price: float = 19.99;
-print("Price: $%f", price);              // Price: $19.99
+std::print("Price: $%f", price);              // Price: $19.99
 ```
 
 This is cleaner than string concatenation and avoids explicit type conversion.
@@ -75,7 +75,7 @@ you can make some variable names as alias for data types, using `astype`, with s
 var dataList: type = astype [int];
 var my_list_number: dataList = [1, 2, 3, 4];
 
-print(my_list_number);
+std::print(my_list_number);
 ```
 
 ```
@@ -84,5 +84,5 @@ print(my_list_number);
 var integersNumber: type = astype int;
 var my_number: integersNumber = 20;
 
-print("my number are: " + string my_number + " look cool right");
+std::print("my number are: " + string my_number + " look cool right");
 ```

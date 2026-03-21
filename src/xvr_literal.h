@@ -97,6 +97,7 @@ typedef int (*Xvr_HookFn)(struct Xvr_Interpreter* interpreter,
  */
 typedef enum {
     XVR_LITERAL_NULL,
+    XVR_LITERAL_VOID,
     XVR_LITERAL_BOOLEAN,
     XVR_LITERAL_INTEGER,
     XVR_LITERAL_FLOAT,

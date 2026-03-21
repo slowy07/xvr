@@ -1,6 +1,5 @@
 include std;
 
-std::print("=== Conditional Statements ===\n");
 
 if (true) {
     std::print("nice one cik\n");
@@ -16,7 +15,6 @@ if (angka == 42) {
     std::print("angka kamu bukan 42\n");
 }
 
-std::print("=== Expression-based If (Rust-like) ===\n");
 
 var score: int = 85;
 var grade: string = if (score >= 90) {
@@ -30,7 +28,6 @@ var grade: string = if (score >= 90) {
 };
 std::print("Score: {} = Grade: {}\n", score, grade);
 
-std::print("=== Ternary Operator ===\n");
 
 var result = true ? "yes" : "no";
 std::print("true ? yes : no = {}\n", result);

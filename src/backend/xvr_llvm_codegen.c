@@ -479,6 +479,10 @@ static bool emit_main_function(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* stmt) {
 
     Xvr_LLVMExpressionEmitterEmit(codegen->expr_emitter, stmt);
 
+    if (Xvr_LLVMContextHasError(codegen->context)) {
+        return false;
+    }
+
     return true;
 }
 
@@ -500,7 +504,15 @@ bool Xvr_LLVMCodegenEmitAST(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* ast) {
         return Xvr_LLVMFunctionEmitterEmit(codegen->fn_emitter, ast);
     }
 
-    return emit_main_function(codegen, ast);
+    if (!emit_main_function(codegen, ast)) {
+        if (Xvr_LLVMContextHasError(codegen->context)) {
+            set_error(codegen,
+                      Xvr_LLVMContextGetErrorMessage(codegen->context));
+        }
+        return false;
+    }
+
+    return true;
 }
 
 char* Xvr_LLVMCodegenPrintIR(Xvr_LLVMCodegen* codegen, size_t* out_len) {

@@ -22,7 +22,7 @@ if (condition) {
 var today_raining: bool = false;
 
 if (today_raining) {
-    print("wear jacket or use umbrella");
+    std::print("wear jacket or use umbrella");
 }
 ```
 
@@ -32,9 +32,9 @@ if (today_raining) {
 var today_raining: bool = false;
 
 if (today_raining) {
-    print("wear jacket or use umbrella");
+    std::print("wear jacket or use umbrella");
 } else {
-    print("use sunglasses");
+    std::print("use sunglasses");
 }
 ```
 
@@ -46,13 +46,13 @@ For multiple conditions, use else-if:
 var score: int32 = 85;
 
 if (score >= 90) {
-    print("Grade: A");
+    std::print("Grade: A");
 } else if (score >= 80) {
-    print("Grade: B");
+    std::print("Grade: B");
 } else if (score >= 70) {
-    print("Grade: C");
+    std::print("Grade: C");
 } else {
-    print("Grade: F");
+    std::print("Grade: F");
 }
 ```
 
@@ -66,25 +66,24 @@ var has_license: bool = true;
 
 if (age >= 18) {
     if (has_license) {
-        print("Can drive");
+        std::print("Can drive");
     } else {
-        print("Need a license");
+        std::print("Need a license");
     }
 } else {
-    print("Too young to drive");
+    std::print("Too young to drive");
 }
 ```
 
-## Expression-Based If (Rust-like)
 
-In XVR, `if` can be used as an **expression** that returns a value. This is similar to Rust's ternary-like if expressions.
+In XVR, `if` can be used as an **expression** that returns a value. This is similar to ternary-like if expressions.
 
 ### Basic Expression If
 
 ```xvr
 var x: int32 = 10;
 var result: int32 = if (x > 5) { 100 } else { 0 };
-print("{}", result);  // Output: 100
+std::print("{}", result);  // Output: 100
 ```
 
 ### With Else-If Chains
@@ -100,7 +99,7 @@ var grade: string = if (score >= 90) {
 } else {
     "F"
 };
-print(grade);  // Output: B
+std::print(grade);  // Output: B
 ```
 
 ### Important Notes
@@ -127,18 +126,18 @@ var x: int32 = 10;
 
 // Comparison operators return boolean
 if (x > 5) {
-    print("x is greater than 5");
+    std::print("x is greater than 5");
 }
 
 // Boolean variables work directly
 var is_valid: bool = true;
 if (is_valid) {
-    print("Valid!");
+    std::print("Valid!");
 }
 
 // Logical operators
 if (x > 5 and x < 20) {
-    print("x is between 5 and 20");
+    std::print("x is between 5 and 20");
 }
 ```
 

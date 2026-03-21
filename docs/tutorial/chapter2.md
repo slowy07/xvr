@@ -16,29 +16,29 @@ var isActive = true;
 ### Integers
 
 ```xvr
-print(3);
-print(42);
-print(200_000_000);  // Underscores for readability
+std::print(3);
+std::print(42);
+std::print(200_000_000);  // Underscores for readability
 ```
 
 ### Floats
 
 ```xvr
-print(3.14);
-print(25.3);
+std::print(3.14);
+std::print(25.3);
 ```
 
 ### Strings
 
 ```xvr
-print("Hello, XVR!");
+std::print("Hello, XVR!");
 ```
 
 ### Booleans
 
 ```xvr
-print(true);
-print(false);
+std::print(true);
+std::print(false);
 ```
 
 ## Print with String Interpolation
@@ -50,10 +50,10 @@ var name = "World";
 var age = 25;
 var pi = 3.14159;
 
-print("Hello, {}!", name);              // Hello, World!
-print("Age: {}", age);                  // Age: 25
-print("Pi: {:.2f}", pi);                // Pi: 3.14
-print("{} is {} years old", name, age); // World is 25 years old
+std::print("Hello, {}!", name);              // Hello, World!
+std::print("Age: {}", age);                  // Age: 25
+std::print("Pi: {:.2f}", pi);                // Pi: 3.14
+std::print("{} is {} years old", name, age); // World is 25 years old
 ```
 
 ### Type Inference
@@ -72,7 +72,7 @@ The format string automatically detects types:
 Use `{{` and `}}` for literal braces:
 
 ```xvr
-print("{{hello}}");  // {hello}
+std::print("{{hello}}");  // {hello}
 ```
 
 ## Multiple Values
@@ -80,5 +80,5 @@ print("{{hello}}");  // {hello}
 ```xvr
 var a = 10;
 var b = 20;
-print("{} + {} = {}", a, b, a + b);  // 10 + 20 = 30
+std::print("{} + {} = {}", a, b, a + b);  // 10 + 20 = 30
 ```

@@ -20,7 +20,7 @@ var somEArray: [int] = [1, 2, 3]
 var sOmeData: [string: int] = ["pertama": 1, "kedua": 2]
 
 // write to stdout
-print(someNumber)
+std::print(someNumber)
 ```
 
 ## Data types

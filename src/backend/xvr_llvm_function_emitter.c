@@ -222,6 +222,8 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
     LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(context);
 
     LLVMTypeRef return_type = LLVMInt32TypeInContext(llvm_ctx);
+    bool is_void_function = false;
+    Xvr_LiteralType declared_return_type = XVR_LITERAL_INTEGER;
 
     if (fn_decl->returns &&
         fn_decl->returns->type == XVR_AST_NODE_FN_COLLECTION) {
@@ -231,12 +233,16 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
             if (firstReturn && firstReturn->type == XVR_AST_NODE_LITERAL) {
                 Xvr_Literal typeLiteral = firstReturn->atomic.literal;
                 if (typeLiteral.type == XVR_LITERAL_TYPE) {
-                    Xvr_LiteralType declaredType =
-                        XVR_AS_TYPE(typeLiteral).typeOf;
-                    return_type = Xvr_LLVMTypeMapperGetType(
-                        emitter->type_mapper, declaredType);
-                    if (!return_type) {
-                        return_type = LLVMInt32TypeInContext(llvm_ctx);
+                    declared_return_type = XVR_AS_TYPE(typeLiteral).typeOf;
+                    if (declared_return_type == XVR_LITERAL_VOID) {
+                        is_void_function = true;
+                        return_type = LLVMVoidTypeInContext(llvm_ctx);
+                    } else {
+                        return_type = Xvr_LLVMTypeMapperGetType(
+                            emitter->type_mapper, declared_return_type);
+                        if (!return_type) {
+                            return_type = LLVMInt32TypeInContext(llvm_ctx);
+                        }
                     }
                 }
             }
@@ -325,18 +331,19 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
         }
     }
 
-    if (!return_value) {
-        if (LLVMGetTypeKind(return_type) == LLVMFloatTypeKind) {
-            return_value = LLVMConstReal(return_type, 0.0);
-        } else if (LLVMGetTypeKind(return_type) == LLVMDoubleTypeKind) {
-            return_value = LLVMConstReal(return_type, 0.0);
-        } else if (LLVMGetTypeKind(return_type) == LLVMIntegerTypeKind) {
-            return_value = LLVMConstInt(return_type, 0, false);
-        } else {
+    if (is_void_function) {
+        if (return_value) {
+            Xvr_LLVMContextSetError(context,
+                                    "Void function cannot return a value");
+            return false;
+        }
+        LLVMBuildRetVoid(Xvr_LLVMIRBuilderGetLLVMBuilder(builder));
+    } else {
+        if (!return_value) {
             return_value = LLVMConstInt(return_type, 0, false);
         }
+        LLVMBuildRet(Xvr_LLVMIRBuilderGetLLVMBuilder(builder), return_value);
     }
-    LLVMBuildRet(Xvr_LLVMIRBuilderGetLLVMBuilder(builder), return_value);
 
     return true;
 }

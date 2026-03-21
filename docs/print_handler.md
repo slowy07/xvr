@@ -1,23 +1,31 @@
 # Print Handler
 
-In the XVR AOT compiler, `print()` is implemented as a simple wrapper around C's `printf`.
+In the XVR AOT compiler, printing is provided via `std::print()` from the standard library.
 
-## Print Statement
+## Print Function
+
+**Note:** The standalone `print()` statement is no longer supported. Use `std::print()` instead.
 
 ```xvr
-print("Hello, world!");
-print("Value: {}", 42);
-print("Name: {}, Age: {}", name, age);
+std::print("Hello, world!");
+std::print("Value: {}", 42);
+std::print("Name: {}, Age: {}", name, age);
+```
+
+Using a standalone `print()` will result in a compilation error:
+
+```xvr
+print("Hello");  // Error: print() is not supported, use std::print() instead
 ```
 
 ## String Interpolation
 
-XVR uses `{}` placeholders:
+XVR uses `{}` placeholders for formatted output:
 
 ```xvr
 var x = 10;
 var y = 20;
-print("{} + {} = {}", x, y, x + y);  // 10 + 20 = 30
+std::print("{} + {} = {}", x, y, x + y);  // 10 + 20 = 30
 ```
 
 ### Type Inference
@@ -37,8 +45,8 @@ Only **literal strings** are parsed as format strings:
 
 ```xvr
 var userInput = getInput();
-print(userInput);  // Passed directly to printf (safe)
-print("{}", userInput);  // Also safe - uses %s for strings
+std::print(userInput);  // Passed directly to printf (safe)
+std::print("{}", userInput);  // Also safe - uses %s for strings
 ```
 
 ## Implementation
@@ -62,7 +70,7 @@ int printf(const char *fmt, ...) {
 
 ```xvr
 var name = "world";
-print("Hello, {}!", name);
+std::print("Hello, {}!", name);
 ```
 
 Generates:

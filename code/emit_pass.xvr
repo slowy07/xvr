@@ -2,4 +2,6 @@ if (true) {};
 
 if (true) pass;
 
-print("Pass statement test passed!");
+include std;
+
+std::print("Pass statement test passed!");

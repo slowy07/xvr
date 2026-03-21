@@ -10,7 +10,7 @@ The `for` loop repeats a block of code a specified number of times:
 
 ```xvr
 for (var increment: int = 0; increment < 50; increment++) {
-    print("jane doe you are funtastic");
+    std::print("jane doe you are funtastic");
 }
 ```
 
@@ -55,12 +55,12 @@ for (var i = 0; i < 20; i++) {
 ```xvr
 // Count up
 for (var i: int32 = 0; i < 5; i++) {
-    print("{}", i);  // 0, 1, 2, 3, 4
+    std::print("{}", i);  // 0, 1, 2, 3, 4
 }
 
 // Count down
 for (var i: int32 = 5; i > 0; i--) {
-    print("{}", i);  // 5, 4, 3, 2, 1
+    std::print("{}", i);  // 5, 4, 3, 2, 1
 }
 ```
 
@@ -68,7 +68,7 @@ for (var i: int32 = 5; i > 0; i--) {
 
 ```xvr
 for (var i: int32 = 0; i < 5; i++) {
-    print("Iteration: {}", i);
+    std::print("Iteration: {}", i);
 }
 // Output: 0, 1, 2, 3, 4
 ```
@@ -81,7 +81,7 @@ The `while` loop repeats as long as a condition is true:
 var increment: int = 0;
 
 while (increment < 50) {
-    print("jane doe you are funtastic");
+    std::print("jane doe you are funtastic");
     increment++;
 }
 ```
@@ -113,7 +113,7 @@ while (i < 100) {
     if (i == 10) {
         break;  // Exit the loop when i reaches 10
     }
-    print("{}", i);
+    std::print("{}", i);
     i++;
 }
 // Output: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9
@@ -126,7 +126,7 @@ for (var i: int32 = 0; i < 100; i++) {
     if (i == 20) {
         break;  // Stop at 20
     }
-    print("{}", i);
+    std::print("{}", i);
 }
 // Output: 0 through 19
 ```
@@ -140,7 +140,7 @@ for (var i: int32 = 0; i < 10; i++) {
     if (i % 2 == 0) {
         continue;  // Skip even numbers
     }
-    print("{}", i);  // Only prints odd: 1, 3, 5, 7, 9
+    std::print("{}", i);  // Only prints odd: 1, 3, 5, 7, 9
 }
 ```
 
@@ -153,7 +153,7 @@ while (i < 10) {
     if (i % 2 == 0) {
         continue;  // Skip even
     }
-    print("{}", i);  // Only odd: 1, 3, 5, 7, 9
+    std::print("{}", i);  // Only odd: 1, 3, 5, 7, 9
 }
 ```
 
@@ -174,9 +174,9 @@ for (var i: int32 = 0; i < 5; i++) {
 }
 
 if (found) {
-    print("Found!");
+    std::print("Found!");
 } else {
-    print("Not found");
+    std::print("Not found");
 }
 ```
 
@@ -192,7 +192,7 @@ while (count < 10) {
         continue;  // Skip negative values
     }
     count++;
-    print("Valid: {}", i);
+    std::print("Valid: {}", i);
 }
 ```
 
@@ -203,7 +203,7 @@ var input: int32 = 0;
 
 while (true) {
     if (input == 42) {
-        print("You found the magic number!");
+        std::print("You found the magic number!");
         break;  // Exit infinite loop
     }
     input = input + 1;  // In real code, this would be user input
@@ -215,7 +215,7 @@ while (true) {
 ```xvr
 for (var i: int32 = 0; i < 3; i++) {
     for (var j: int32 = 0; j < 3; j++) {
-        print("({}, {})", i, j);
+        std::print("({}, {})", i, j);
     }
 }
 // Output: (0,0) (0,1) (0,2) (1,0) (1,1) (1,2) (2,0) (2,1) (2,2)
@@ -276,7 +276,7 @@ Loops generate proper LLVM basic blocks:
 ### For Loop IR
 
 ```llvm
-; for (var i = 0; i < 5; i++) { print(i); }
+; for (var i = 0; i < 5; i++) { std::print(i); }
 entry:
   %i = alloca i32
   store i32 0, ptr %i

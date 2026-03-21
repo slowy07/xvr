@@ -71,7 +71,7 @@ out\xvr.exe --version
 Create a file `hello.xvr`:
 
 ```xvr
-print("Hello, World!");
+std::print("Hello, World!");
 ```
 
 ## Running

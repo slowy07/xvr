@@ -85,6 +85,8 @@ LLVMTypeRef Xvr_LLVMTypeMapperGetType(Xvr_LLVMTypeMapper* mapper,
     switch (type) {
     case XVR_LITERAL_NULL:
         return mapper->int8_ptr_type;
+    case XVR_LITERAL_VOID:
+        return mapper->void_type;
     case XVR_LITERAL_BOOLEAN:
         return mapper->int1_type;
     case XVR_LITERAL_INTEGER:

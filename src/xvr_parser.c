@@ -1217,6 +1217,7 @@ ParseRule parseRules[] = {
     // must match the token types
     // types
     {atomic, NULL, PREC_PRIMARY},      // TOKEN_NULL,
+    {atomic, NULL, PREC_PRIMARY},      // TOKEN_VOID,
     {castingPrefix, NULL, PREC_CALL},  // TOKEN_BOOLEAN,
     {castingPrefix, NULL, PREC_CALL},  // TOKEN_INTEGER,
     {castingPrefix, NULL, PREC_CALL},  // TOKEN_FLOAT,
@@ -2004,11 +2005,7 @@ static void statement(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         return;
     }
 
-    // print
-    if (match(parser, XVR_TOKEN_PRINT)) {
-        printStmt(parser, nodeHandle);
-        return;
-    }
+    // print is now handled via std::print() only (not as standalone print)
 
     // assert
     if (match(parser, XVR_TOKEN_ASSERT)) {
@@ -2071,6 +2068,10 @@ static Xvr_Literal readTypeToLiteral(Xvr_Parser* parser) {
     switch (parser->previous.type) {
     case XVR_TOKEN_NULL:
         // NO-OP
+        break;
+
+    case XVR_TOKEN_VOID:
+        XVR_AS_TYPE(literal).typeOf = XVR_LITERAL_VOID;
         break;
 
     case XVR_TOKEN_BOOLEAN:

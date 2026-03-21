@@ -52,6 +52,7 @@ SOFTWARE.
 typedef enum Xvr_TokenType {
     // types
     XVR_TOKEN_NULL,
+    XVR_TOKEN_VOID,
     XVR_TOKEN_BOOLEAN,
     XVR_TOKEN_INTEGER,
     XVR_TOKEN_FLOAT,
