@@ -1018,6 +1018,23 @@ int run_compiler_tests(void) {
         {"int proc with explicit return", "proc get_val(): int { return 42; }",
          "main", 1},
         {"print without std:: should fail", "print(1);", "main", 0},
+        {"string return type", "proc get_str(): string { return \"hi\"; }",
+         "main", 1},
+        {"float return type", "proc get_float(): float { return 3.14; }",
+         "main", 1},
+        {"bool return type", "proc get_bool(): bool { return true; }", "main",
+         1},
+        {"param pass-through", "proc identity(x: int): int { return x; }",
+         "main", 1},
+        {"multiplication", "proc double(x: int): int { x * 2 }", "main", 1},
+        {"variable return", "proc with_var(): int { var x = 10; return x; }",
+         "main", 1},
+        {"wrong return type string->int",
+         "proc wrong(): int { return \"hi\"; }", "main", 0},
+        {"wrong return type int->string", "proc wrong(): string { return 42; }",
+         "main", 0},
+        {"wrong return type float->int", "proc wrong(): int { return 3.14; }",
+         "main", 0},
     };
 
     int num_void_fn_tests = sizeof(void_fn_tests) / sizeof(void_fn_tests[0]);

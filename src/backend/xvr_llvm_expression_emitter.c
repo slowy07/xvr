@@ -651,7 +651,52 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
                     "print() is not supported, use std::print() instead");
                 return NULL;
             }
+
+            LLVMModuleRef module =
+                Xvr_LLVMModuleManagerGetModule(emitter->module);
+            LLVMValueRef callee = LLVMGetNamedFunction(module, fn_name);
+            if (callee) {
+                LLVMBuilderRef llvm_builder =
+                    Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+
+                int arg_count = 0;
+                LLVMValueRef* args = NULL;
+
+                if (binary->right) {
+                    if (binary->right->type == XVR_AST_NODE_COMPOUND) {
+                        arg_count = binary->right->compound.count;
+                        if (arg_count > 0) {
+                            args = (LLVMValueRef*)malloc(sizeof(LLVMValueRef) *
+                                                         arg_count);
+                            for (int i = 0; i < arg_count; i++) {
+                                Xvr_ASTNode* arg =
+                                    &binary->right->compound.nodes[i];
+                                args[i] =
+                                    Xvr_LLVMExpressionEmitterEmit(emitter, arg);
+                                if (!args[i]) {
+                                    args[i] = LLVMConstInt(
+                                        LLVMInt32TypeInContext(
+                                            Xvr_LLVMContextGetLLVMContext(
+                                                emitter->context)),
+                                        0, false);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                LLVMTypeRef callee_type = LLVMTypeOf(callee);
+                LLVMValueRef result = LLVMBuildCall2(
+                    llvm_builder, callee_type, callee, args, arg_count, "");
+
+                if (args) {
+                    free(args);
+                }
+
+                return result;
+            }
         }
+        return NULL;
     }
 
     /* Handle namespace::function calls like std::print */
@@ -1093,12 +1138,74 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitFnCall(
         return NULL;
     }
 
-    /* TODO: Implement proper function call emission
-     * For now, just return NULL to not break the build
-     * The function body will need to be emitted as a call to runtime
-     */
-    (void)fn_call;
-    return NULL;
+    LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+    LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(emitter->module);
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+
+    Xvr_ASTNode* args_node = fn_call->arguments;
+    if (!args_node) {
+        return NULL;
+    }
+
+    const char* fn_name = "unknown";
+    LLVMValueRef callee = NULL;
+
+    if (args_node->type == XVR_AST_NODE_COMPOUND &&
+        args_node->compound.count > 0) {
+        Xvr_ASTNode* first = &args_node->compound.nodes[0];
+        if (first->type == XVR_AST_NODE_BINARY &&
+            first->binary.opcode == XVR_OP_FN_CALL) {
+            Xvr_ASTNode* fn_identifier = first->binary.left;
+            if (fn_identifier->type == XVR_AST_NODE_LITERAL &&
+                fn_identifier->atomic.literal.type == XVR_LITERAL_IDENTIFIER) {
+                fn_name = (const char*)
+                              fn_identifier->atomic.literal.as.string.ptr->data;
+            }
+        }
+    }
+
+    callee = LLVMGetNamedFunction(module, fn_name);
+    if (!callee) {
+        return NULL;
+    }
+
+    int arg_count = 0;
+    LLVMValueRef* args = NULL;
+
+    if (args_node->type == XVR_AST_NODE_COMPOUND) {
+        arg_count = args_node->compound.count;
+        if (arg_count > 0) {
+            args = (LLVMValueRef*)malloc(sizeof(LLVMValueRef) * arg_count);
+            for (int i = 0; i < arg_count; i++) {
+                Xvr_ASTNode* arg = &args_node->compound.nodes[i];
+                if (arg->type == XVR_AST_NODE_BINARY &&
+                    arg->binary.opcode == XVR_OP_FN_CALL) {
+                    args[i] = LLVMConstInt(LLVMInt32TypeInContext(llvm_ctx), 0,
+                                           false);
+                } else {
+                    args[i] = Xvr_LLVMExpressionEmitterEmit(emitter, arg);
+                    if (!args[i]) {
+                        args[i] = LLVMConstInt(LLVMInt32TypeInContext(llvm_ctx),
+                                               0, false);
+                    }
+                }
+            }
+        }
+    }
+
+    LLVMValueRef result = NULL;
+    if (callee) {
+        LLVMTypeRef callee_type = LLVMTypeOf(callee);
+        result = LLVMBuildCall2(llvm_builder, callee_type, callee, args,
+                                arg_count, "");
+    }
+
+    if (args) {
+        free(args);
+    }
+
+    return result;
 }
 
 /**

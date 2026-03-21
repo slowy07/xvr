@@ -205,6 +205,104 @@ static Xvr_LiteralType get_var_type(Xvr_LLVMFunctionEmitter* emitter,
     return XVR_LITERAL_ANY;
 }
 
+static const char* literal_type_name(Xvr_LiteralType type) {
+    switch (type) {
+    case XVR_LITERAL_INTEGER:
+        return "int";
+    case XVR_LITERAL_INT8:
+        return "int8";
+    case XVR_LITERAL_INT16:
+        return "int16";
+    case XVR_LITERAL_INT32:
+        return "int32";
+    case XVR_LITERAL_INT64:
+        return "int64";
+    case XVR_LITERAL_UINT8:
+        return "uint8";
+    case XVR_LITERAL_UINT16:
+        return "uint16";
+    case XVR_LITERAL_UINT32:
+        return "uint32";
+    case XVR_LITERAL_UINT64:
+        return "uint64";
+    case XVR_LITERAL_FLOAT:
+        return "float";
+    case XVR_LITERAL_FLOAT16:
+        return "float16";
+    case XVR_LITERAL_FLOAT32:
+        return "float32";
+    case XVR_LITERAL_FLOAT64:
+        return "float64";
+    case XVR_LITERAL_BOOLEAN:
+        return "bool";
+    case XVR_LITERAL_STRING:
+        return "string";
+    case XVR_LITERAL_ARRAY:
+        return "array";
+    case XVR_LITERAL_DICTIONARY:
+        return "dict";
+    case XVR_LITERAL_VOID:
+        return "void";
+    case XVR_LITERAL_ANY:
+        return "any";
+    default:
+        return "unknown";
+    }
+}
+
+static bool types_match(LLVMTypeRef expected, LLVMTypeRef actual) {
+    if (!expected || !actual) {
+        return false;
+    }
+    LLVMTypeKind expected_kind = LLVMGetTypeKind(expected);
+    LLVMTypeKind actual_kind = LLVMGetTypeKind(actual);
+    return expected_kind == actual_kind;
+}
+
+static bool check_return_type_compatibility(Xvr_LLVMFunctionEmitter* emitter,
+                                            LLVMTypeRef expected_type,
+                                            LLVMValueRef return_value,
+                                            const char* fn_name) {
+    if (!return_value) {
+        return true;
+    }
+
+    LLVMTypeRef actual_type = LLVMTypeOf(return_value);
+    LLVMTypeKind expected_kind = LLVMGetTypeKind(expected_type);
+    LLVMTypeKind actual_kind = LLVMGetTypeKind(actual_type);
+
+    if (expected_kind == LLVMVoidTypeKind) {
+        return true;
+    }
+
+    if (expected_kind != actual_kind) {
+        char error_msg[512];
+        const char* expected_name =
+            LLVMGetTypeKind(expected_type) == LLVMIntegerTypeKind
+                ? "int"
+                : (LLVMGetTypeKind(expected_type) == LLVMFloatTypeKind
+                       ? "float"
+                       : (LLVMGetTypeKind(expected_type) == LLVMPointerTypeKind
+                              ? "ptr"
+                              : "void"));
+        const char* actual_name =
+            LLVMGetTypeKind(actual_type) == LLVMIntegerTypeKind
+                ? "int"
+                : (LLVMGetTypeKind(actual_type) == LLVMFloatTypeKind
+                       ? "float"
+                       : (LLVMGetTypeKind(actual_type) == LLVMPointerTypeKind
+                              ? "ptr"
+                              : "void"));
+        snprintf(error_msg, sizeof(error_msg),
+                 "function '%s': return type mismatch: expected '%s', got '%s'",
+                 fn_name ? fn_name : "unknown", expected_name, actual_name);
+        Xvr_LLVMContextSetError(emitter->context, error_msg);
+        return false;
+    }
+
+    return true;
+}
+
 static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
                                Xvr_NodeFnDecl* fn_decl) {
     Xvr_LLVMIRBuilder* builder = emitter->builder;
@@ -213,6 +311,7 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
     Xvr_LLVMContext* context = emitter->context;
 
     if (!fn_decl->block) {
+        Xvr_LLVMContextSetError(context, "function has no body");
         return false;
     }
 
@@ -223,6 +322,7 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
 
     LLVMTypeRef return_type = LLVMInt32TypeInContext(llvm_ctx);
     bool is_void_function = false;
+    bool has_explicit_return = false;
     Xvr_LiteralType declared_return_type = XVR_LITERAL_INTEGER;
 
     if (fn_decl->returns &&
@@ -237,11 +337,18 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
                     if (declared_return_type == XVR_LITERAL_VOID) {
                         is_void_function = true;
                         return_type = LLVMVoidTypeInContext(llvm_ctx);
+                    } else if (declared_return_type == XVR_LITERAL_ANY) {
+                        return_type = LLVMInt32TypeInContext(llvm_ctx);
                     } else {
                         return_type = Xvr_LLVMTypeMapperGetType(
                             emitter->type_mapper, declared_return_type);
                         if (!return_type) {
-                            return_type = LLVMInt32TypeInContext(llvm_ctx);
+                            char error_msg[256];
+                            snprintf(error_msg, sizeof(error_msg),
+                                     "unsupported return type: %s",
+                                     literal_type_name(declared_return_type));
+                            Xvr_LLVMContextSetError(context, error_msg);
+                            return false;
                         }
                     }
                 }
@@ -268,7 +375,7 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
                 } else {
                     param_names[param_count] = "arg";
                 }
-                Xvr_LiteralType varType = XVR_LITERAL_INTEGER;
+                Xvr_LiteralType varType = XVR_LITERAL_ANY;
                 if (varDecl->typeLiteral.type == XVR_LITERAL_TYPE) {
                     varType = XVR_AS_TYPE(varDecl->typeLiteral).typeOf;
                 }
@@ -300,7 +407,13 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
     for (int i = 0; i < param_count; i++) {
         LLVMValueRef param = LLVMGetParam(function, i);
         LLVMSetValueName(param, param_names[i]);
-        add_local_var(emitter, param_names[i], param, param_types_xvr[i], 0);
+
+        LLVMTypeRef param_type = LLVMTypeOf(param);
+        LLVMValueRef alloca =
+            Xvr_LLVMIRBuilderCreateAlloca(builder, param_type, param_names[i]);
+        Xvr_LLVMIRBuilderCreateStore(builder, param, alloca);
+
+        add_local_var(emitter, param_names[i], alloca, param_types_xvr[i], 0);
     }
 
     LLVMBasicBlockRef entry_block =
@@ -308,13 +421,17 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
     Xvr_LLVMIRBuilderSetInsertPoint(builder, entry_block);
 
     LLVMValueRef return_value = NULL;
+    bool found_return_in_block = false;
+    int last_expr_index = block->count - 1;
+
     for (int i = 0; i < block->count; i++) {
         Xvr_ASTNode* stmt = &block->nodes[i];
 
         if (stmt->type == XVR_AST_NODE_FN_RETURN) {
+            has_explicit_return = true;
+            found_return_in_block = true;
             Xvr_NodeFnReturn* ret = &stmt->returns;
             if (ret->returns) {
-                // Handle FN_COLLECTION - get first element
                 if (ret->returns->type == XVR_AST_NODE_FN_COLLECTION) {
                     Xvr_NodeFnCollection* coll = &ret->returns->fnCollection;
                     if (coll->count > 0) {
@@ -325,22 +442,64 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
                     return_value = Xvr_LLVMExpressionEmitterEmit(expr_emitter,
                                                                  ret->returns);
                 }
+                if (Xvr_LLVMContextHasError(context)) {
+                    return false;
+                }
+            }
+
+            if (is_void_function && return_value) {
+                Xvr_LLVMContextSetError(context,
+                                        "void function cannot return a value");
+                return false;
+            }
+
+            if (return_value &&
+                !check_return_type_compatibility(emitter, return_type,
+                                                 return_value, fn_name)) {
+                return false;
+            }
+        } else if (i == last_expr_index && !has_explicit_return) {
+            LLVMValueRef implicit_val =
+                Xvr_LLVMExpressionEmitterEmit(expr_emitter, stmt);
+            if (Xvr_LLVMContextHasError(context)) {
+                return false;
+            }
+            if (implicit_val) {
+                LLVMTypeRef implicit_type = LLVMTypeOf(implicit_val);
+                LLVMTypeKind implicit_kind = LLVMGetTypeKind(implicit_type);
+                LLVMTypeKind return_kind = LLVMGetTypeKind(return_type);
+                if (implicit_kind == return_kind || is_void_function) {
+                    if (!is_void_function) {
+                        return_value = implicit_val;
+                    }
+                }
             }
         } else {
             Xvr_LLVMExpressionEmitterEmit(expr_emitter, stmt);
+            if (Xvr_LLVMContextHasError(context)) {
+                return false;
+            }
         }
     }
 
     if (is_void_function) {
         if (return_value) {
             Xvr_LLVMContextSetError(context,
-                                    "Void function cannot return a value");
+                                    "void function cannot return a value");
             return false;
         }
         LLVMBuildRetVoid(Xvr_LLVMIRBuilderGetLLVMBuilder(builder));
     } else {
         if (!return_value) {
-            return_value = LLVMConstInt(return_type, 0, false);
+            if (found_return_in_block) {
+                return true;
+            }
+            char error_msg[512];
+            snprintf(error_msg, sizeof(error_msg),
+                     "function '%s': missing return statement",
+                     fn_name ? fn_name : "unknown");
+            Xvr_LLVMContextSetError(context, error_msg);
+            return false;
         }
         LLVMBuildRet(Xvr_LLVMIRBuilderGetLLVMBuilder(builder), return_value);
     }
