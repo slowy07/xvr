@@ -822,9 +822,6 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
     LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(emitter->module);
     LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
 
-    LLVMValueRef format_global =
-        LLVMBuildGlobalStringPtr(llvm_builder, "%s", "fmt_str");
-
     LLVMValueRef printf_fn = LLVMGetNamedFunction(module, "printf");
     if (!printf_fn) {
         LLVMTypeRef printf_type =
@@ -832,38 +829,39 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
         printf_fn = LLVMAddFunction(module, "printf", printf_type);
     }
 
-    if (args->type == XVR_AST_NODE_COMPOUND) {
-        int arg_count = args->compound.count;
-        if (arg_count > 0) {
-            LLVMValueRef* call_args =
-                (LLVMValueRef*)malloc(sizeof(LLVMValueRef) * arg_count);
-            for (int i = 0; i < arg_count; i++) {
-                Xvr_ASTNode* arg = &args->compound.nodes[i];
-                LLVMValueRef arg_val =
-                    Xvr_LLVMExpressionEmitterEmit(emitter, arg);
-                if (arg_val) {
-                    call_args[i] = arg_val;
-                } else {
-                    call_args[i] = LLVMConstInt(
-                        LLVMInt32TypeInContext(llvm_ctx), 0, false);
-                }
-            }
-            LLVMTypeRef printf_type = LLVMFunctionType(
-                LLVMInt32TypeInContext(llvm_ctx), NULL, 0, true);
-            LLVMBuildCall2(llvm_builder, printf_type, printf_fn, call_args,
-                           arg_count, "printf_call");
-            free(call_args);
-        }
-        return NULL;
-    }
+    if ((args->type == XVR_AST_NODE_COMPOUND && args->compound.count >= 1) ||
+        (args->type == XVR_AST_NODE_FN_COLLECTION &&
+         args->fnCollection.count >= 1)) {
+        const char* format_str = NULL;
+        LLVMValueRef* call_args = NULL;
+        int arg_count = 0;
+        bool has_format_string = false;
 
-    if (args->type == XVR_AST_NODE_FN_COLLECTION) {
-        int arg_count = args->fnCollection.count;
+        Xvr_ASTNode* format_node = NULL;
+        if (args->type == XVR_AST_NODE_COMPOUND) {
+            format_node = &args->compound.nodes[0];
+            arg_count = args->compound.count - 1;
+        } else {
+            format_node = &args->fnCollection.nodes[0];
+            arg_count = args->fnCollection.count - 1;
+        }
+
+        if (format_node && format_node->type == XVR_AST_NODE_LITERAL &&
+            format_node->atomic.literal.type == XVR_LITERAL_STRING) {
+            has_format_string = true;
+            format_str =
+                (const char*)format_node->atomic.literal.as.string.ptr->data;
+        }
+
         if (arg_count > 0) {
-            LLVMValueRef* call_args =
-                (LLVMValueRef*)malloc(sizeof(LLVMValueRef) * arg_count);
+            call_args = (LLVMValueRef*)malloc(sizeof(LLVMValueRef) * arg_count);
             for (int i = 0; i < arg_count; i++) {
-                Xvr_ASTNode* arg = &args->fnCollection.nodes[i];
+                Xvr_ASTNode* arg = NULL;
+                if (args->type == XVR_AST_NODE_COMPOUND) {
+                    arg = &args->compound.nodes[i + 1];
+                } else {
+                    arg = &args->fnCollection.nodes[i + 1];
+                }
                 LLVMValueRef arg_val =
                     Xvr_LLVMExpressionEmitterEmit(emitter, arg);
                 if (arg_val) {
@@ -873,13 +871,143 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
                         LLVMInt32TypeInContext(llvm_ctx), 0, false);
                 }
             }
-            LLVMTypeRef printf_type = LLVMFunctionType(
-                LLVMInt32TypeInContext(llvm_ctx), NULL, 0, true);
-            LLVMBuildCall2(llvm_builder, printf_type, printf_fn, call_args,
-                           arg_count, "printf_call");
+        }
+
+        if (has_format_string && arg_count > 0) {
+            XvrFormatString* fmt = XvrFormatStringParse(format_str, arg_count);
+            if (fmt && fmt->is_valid) {
+                XvrFormatArgType* arg_types = (XvrFormatArgType*)malloc(
+                    sizeof(XvrFormatArgType) * arg_count);
+                for (int i = 0; i < arg_count; i++) {
+                    LLVMValueRef arg_val = call_args[i];
+                    LLVMTypeRef arg_type = LLVMTypeOf(arg_val);
+                    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+                    if (kind == LLVMIntegerTypeKind) {
+                        arg_types[i] = XVR_FORMAT_ARG_INT;
+                    } else if (kind == LLVMFloatTypeKind) {
+                        arg_types[i] = XVR_FORMAT_ARG_FLOAT;
+                    } else if (kind == LLVMDoubleTypeKind) {
+                        arg_types[i] = XVR_FORMAT_ARG_DOUBLE;
+                    } else if (kind == LLVMPointerTypeKind) {
+                        arg_types[i] = XVR_FORMAT_ARG_STRING;
+                    } else {
+                        arg_types[i] = XVR_FORMAT_ARG_STRING;
+                    }
+                }
+
+                char* printf_fmt =
+                    XvrFormatStringBuildPrintfFormat(fmt, arg_types, arg_count);
+
+                LLVMValueRef fmt_global = LLVMBuildGlobalStringPtr(
+                    llvm_builder, printf_fmt, "fmt_str");
+
+                LLVMValueRef* all_args = (LLVMValueRef*)malloc(
+                    sizeof(LLVMValueRef) * (arg_count + 1));
+                all_args[0] = fmt_global;
+                for (int i = 0; i < arg_count; i++) {
+                    LLVMValueRef arg = call_args[i];
+                    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+                    if (LLVMGetTypeKind(arg_type) == LLVMFloatTypeKind) {
+                        all_args[i + 1] =
+                            LLVMBuildFPExt(llvm_builder, arg,
+                                           LLVMDoubleTypeInContext(llvm_ctx),
+                                           "float_to_double");
+                    } else {
+                        all_args[i + 1] = arg;
+                    }
+                }
+
+                LLVMTypeRef* param_types =
+                    (LLVMTypeRef*)malloc(sizeof(LLVMTypeRef) * (arg_count + 1));
+                param_types[0] =
+                    LLVMPointerType(LLVMInt8TypeInContext(llvm_ctx), 0);
+                for (int i = 0; i < arg_count; i++) {
+                    LLVMValueRef arg = call_args[i];
+                    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+                    if (LLVMGetTypeKind(arg_type) == LLVMFloatTypeKind) {
+                        param_types[i + 1] = LLVMDoubleTypeInContext(llvm_ctx);
+                    } else {
+                        param_types[i + 1] = arg_type;
+                    }
+                }
+
+                LLVMTypeRef printf_type =
+                    LLVMFunctionType(LLVMInt32TypeInContext(llvm_ctx),
+                                     param_types, arg_count + 1, true);
+                LLVMBuildCall2(llvm_builder, printf_type, printf_fn, all_args,
+                               arg_count + 1, "printf_call");
+
+                free(all_args);
+                free(param_types);
+                free(printf_fmt);
+                free(arg_types);
+                XvrFormatStringFree(fmt);
+            } else {
+                LLVMValueRef fmt_global =
+                    LLVMBuildGlobalStringPtr(llvm_builder, "%s", "fmt_str");
+                LLVMTypeRef printf_type = LLVMFunctionType(
+                    LLVMInt32TypeInContext(llvm_ctx), NULL, 0, true);
+                LLVMBuildCall2(llvm_builder, printf_type, printf_fn,
+                               &fmt_global, 1, "printf_call");
+                if (fmt) {
+                    XvrFormatStringFree(fmt);
+                }
+            }
+        } else {
+            if (arg_count > 0) {
+                LLVMValueRef fmt_global =
+                    LLVMBuildGlobalStringPtr(llvm_builder, "%s", "fmt_str");
+                LLVMValueRef* all_args = (LLVMValueRef*)malloc(
+                    sizeof(LLVMValueRef) * (arg_count + 1));
+                all_args[0] = fmt_global;
+                for (int i = 0; i < arg_count; i++) {
+                    LLVMValueRef arg = call_args[i];
+                    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+                    if (LLVMGetTypeKind(arg_type) == LLVMFloatTypeKind) {
+                        all_args[i + 1] =
+                            LLVMBuildFPExt(llvm_builder, arg,
+                                           LLVMDoubleTypeInContext(llvm_ctx),
+                                           "float_to_double");
+                    } else {
+                        all_args[i + 1] = arg;
+                    }
+                }
+
+                LLVMTypeRef* param_types =
+                    (LLVMTypeRef*)malloc(sizeof(LLVMTypeRef) * (arg_count + 1));
+                param_types[0] =
+                    LLVMPointerType(LLVMInt8TypeInContext(llvm_ctx), 0);
+                for (int i = 0; i < arg_count; i++) {
+                    LLVMValueRef arg = call_args[i];
+                    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+                    if (LLVMGetTypeKind(arg_type) == LLVMFloatTypeKind) {
+                        param_types[i + 1] = LLVMDoubleTypeInContext(llvm_ctx);
+                    } else {
+                        param_types[i + 1] = arg_type;
+                    }
+                }
+
+                LLVMTypeRef printf_type =
+                    LLVMFunctionType(LLVMInt32TypeInContext(llvm_ctx),
+                                     param_types, arg_count + 1, true);
+                LLVMBuildCall2(llvm_builder, printf_type, printf_fn, all_args,
+                               arg_count + 1, "printf_call");
+
+                free(param_types);
+                free(all_args);
+            } else {
+                LLVMValueRef fmt_global = LLVMBuildGlobalStringPtr(
+                    llvm_builder, format_str ? format_str : "%s", "fmt_str");
+                LLVMTypeRef printf_type = LLVMFunctionType(
+                    LLVMInt32TypeInContext(llvm_ctx), NULL, 0, true);
+                LLVMBuildCall2(llvm_builder, printf_type, printf_fn,
+                               &fmt_global, 1, "printf_call");
+            }
+        }
+
+        if (call_args) {
             free(call_args);
         }
-        return NULL;
     }
 
     return NULL;

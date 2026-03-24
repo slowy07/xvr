@@ -26,6 +26,22 @@ std::print("{} + {} = {}", 1, 2, 3);
 
 The `std::print` function uses `{}` placeholders for formatting.
 
+### std::max
+
+Returns the greater of two values:
+
+```xvr
+var a = std::max(10, 20);    // a = 20
+var b = std::max(5, 5);      // b = 5 (returns first if equal)
+var c = std::max(-5, 10);    // c = 10
+var d = std::max(1.5, 2.5);  // d = 2.5 (works with floats)
+```
+
+Supported types:
+- `int` - Integer values
+- `float` - Single precision floating point
+- `double` - Double precision floating point
+
 ### String Concatenation
 
 XVR supports both compile-time and runtime string concatenation:
