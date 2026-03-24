@@ -7,6 +7,9 @@ module std
 export print
 export println
 
+# Re-export from math module
+export max
+
 # Re-export from string module  
 export string
 export string_length

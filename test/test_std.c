@@ -80,6 +80,9 @@ static int run_max_tests(void) {
     int failed = 0;
 
     StdTestCase tests[] = {
+        {"max_single_arg",
+         "include std;\nvar r = std::max(42);\nstd::print(\"{}\\n\", r);", "42",
+         1},
         {"max_int_greater",
          "include std;\nvar r = std::max(10, 20);\nstd::print(\"{}\\n\", r);",
          "20", 1},
@@ -98,6 +101,13 @@ static int run_max_tests(void) {
         {"max_int_zero",
          "include std;\nvar r = std::max(0, 0);\nstd::print(\"{}\\n\", r);",
          "0", 1},
+        {"max_int_three_args",
+         "include std;\nvar r = std::max(3, 1, 2);\nstd::print(\"{}\\n\", r);",
+         "3", 1},
+        {"max_int_many_args",
+         "include std;\nvar r = std::max(10, 20, 30, 5, "
+         "15);\nstd::print(\"{}\\n\", r);",
+         "30", 1},
         {"max_float_greater",
          "include std;\nvar r = std::max(1.5, 2.5);\nstd::print(\"{}\\n\", r);",
          "2.500000", 1},
@@ -111,6 +121,10 @@ static int run_max_tests(void) {
          "include std;\nvar r = std::max(-1.5, 0.5);\nstd::print(\"{}\\n\", "
          "r);",
          "0.500000", 1},
+        {"max_float_three_args",
+         "include std;\nvar r = std::max(1.5, 2.5, "
+         "0.5);\nstd::print(\"{}\\n\", r);",
+         "2.500000", 1},
     };
 
     int test_count = sizeof(tests) / sizeof(tests[0]);
