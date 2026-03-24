@@ -30,10 +30,18 @@ SOFTWARE.
 
 #include "xvr_llvm_context.h"
 
+#define MAX_FUNCTIONS 256
+
+typedef struct {
+    char name[128];
+    LLVMTypeRef type;
+} FunctionEntry;
+
 struct Xvr_LLVMModuleManager {
     Xvr_LLVMContext* context;
     LLVMModuleRef module;
-    void* function_table;
+    FunctionEntry functions[MAX_FUNCTIONS];
+    int function_count;
     void* global_table;
 };
 
@@ -86,7 +94,33 @@ bool Xvr_LLVMModuleManagerAddFunction(Xvr_LLVMModuleManager* mgr,
     }
 
     fn = LLVMAddFunction(mgr->module, name, function_type);
+    if (fn && mgr->function_count < MAX_FUNCTIONS) {
+        strncpy(mgr->functions[mgr->function_count].name, name, 127);
+        mgr->functions[mgr->function_count].name[127] = '\0';
+        mgr->functions[mgr->function_count].type = function_type;
+        mgr->function_count++;
+    }
     return (fn != NULL);
+}
+
+void Xvr_LLVMModuleManagerRegisterFunctionType(Xvr_LLVMModuleManager* mgr,
+                                               const char* name,
+                                               LLVMTypeRef function_type) {
+    if (!mgr || !name || !function_type) {
+        return;
+    }
+    if (mgr->function_count < MAX_FUNCTIONS) {
+        for (int i = 0; i < mgr->function_count; i++) {
+            if (strcmp(mgr->functions[i].name, name) == 0) {
+                mgr->functions[i].type = function_type;
+                return;
+            }
+        }
+        strncpy(mgr->functions[mgr->function_count].name, name, 127);
+        mgr->functions[mgr->function_count].name[127] = '\0';
+        mgr->functions[mgr->function_count].type = function_type;
+        mgr->function_count++;
+    }
 }
 
 LLVMValueRef Xvr_LLVMModuleManagerGetFunction(Xvr_LLVMModuleManager* mgr,
@@ -95,6 +129,19 @@ LLVMValueRef Xvr_LLVMModuleManagerGetFunction(Xvr_LLVMModuleManager* mgr,
         return NULL;
     }
     return LLVMGetNamedFunction(mgr->module, name);
+}
+
+LLVMTypeRef Xvr_LLVMModuleManagerGetFunctionType(Xvr_LLVMModuleManager* mgr,
+                                                 const char* name) {
+    if (!mgr || !name) {
+        return NULL;
+    }
+    for (int i = 0; i < mgr->function_count; i++) {
+        if (strcmp(mgr->functions[i].name, name) == 0) {
+            return mgr->functions[i].type;
+        }
+    }
+    return NULL;
 }
 
 bool Xvr_LLVMModuleManagerAddGlobal(Xvr_LLVMModuleManager* mgr,

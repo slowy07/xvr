@@ -402,7 +402,13 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
     LLVMValueRef function = LLVMAddFunction(
         Xvr_LLVMModuleManagerGetModule(module), fn_name, function_type);
 
+    Xvr_LLVMModuleManagerRegisterFunctionType(module, fn_name, function_type);
+
     emitter->current_function = function;
+
+    LLVMBasicBlockRef entry_block =
+        LLVMAppendBasicBlockInContext(llvm_ctx, function, "entry");
+    Xvr_LLVMIRBuilderSetInsertPoint(builder, entry_block);
 
     for (int i = 0; i < param_count; i++) {
         LLVMValueRef param = LLVMGetParam(function, i);
@@ -415,10 +421,6 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
 
         add_local_var(emitter, param_names[i], alloca, param_types_xvr[i], 0);
     }
-
-    LLVMBasicBlockRef entry_block =
-        LLVMAppendBasicBlockInContext(llvm_ctx, function, "entry");
-    Xvr_LLVMIRBuilderSetInsertPoint(builder, entry_block);
 
     LLVMValueRef return_value = NULL;
     bool found_return_in_block = false;

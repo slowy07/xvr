@@ -345,22 +345,35 @@ static bool ensure_main_function(Xvr_LLVMCodegen* codegen);
 static void finalize_main_function(Xvr_LLVMCodegen* codegen);
 
 static bool ensure_main_function(Xvr_LLVMCodegen* codegen) {
-    if (codegen->main_created) {
-        return true;
-    }
-
     LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(codegen->context);
     LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(codegen->module);
     LLVMBuilderRef builder = Xvr_LLVMIRBuilderGetLLVMBuilder(codegen->builder);
 
-    LLVMTypeRef int32_type = LLVMInt32TypeInContext(llvm_ctx);
-    LLVMTypeRef main_fn_type = LLVMFunctionType(int32_type, NULL, 0, false);
-    LLVMAddFunction(module, "main", main_fn_type);
-
     LLVMValueRef main_fn = LLVMGetNamedFunction(module, "main");
-    LLVMBasicBlockRef entry =
-        LLVMAppendBasicBlockInContext(llvm_ctx, main_fn, "entry");
-    LLVMPositionBuilderAtEnd(builder, entry);
+    if (!main_fn) {
+        LLVMTypeRef int32_type = LLVMInt32TypeInContext(llvm_ctx);
+        LLVMTypeRef main_fn_type = LLVMFunctionType(int32_type, NULL, 0, false);
+        LLVMAddFunction(module, "main", main_fn_type);
+        main_fn = LLVMGetNamedFunction(module, "main");
+
+        LLVMBasicBlockRef entry =
+            LLVMAppendBasicBlockInContext(llvm_ctx, main_fn, "entry");
+        LLVMPositionBuilderAtEnd(builder, entry);
+    } else {
+        LLVMBasicBlockRef entry = LLVMGetEntryBasicBlock(main_fn);
+        if (entry) {
+            LLVMValueRef block_parent = LLVMGetBasicBlockParent(entry);
+            if (!block_parent) {
+                entry =
+                    LLVMAppendBasicBlockInContext(llvm_ctx, main_fn, "entry");
+            }
+            LLVMPositionBuilderAtEnd(builder, entry);
+        } else {
+            LLVMBasicBlockRef new_entry =
+                LLVMAppendBasicBlockInContext(llvm_ctx, main_fn, "entry");
+            LLVMPositionBuilderAtEnd(builder, new_entry);
+        }
+    }
 
     Xvr_LLVMFunctionEmitterSetCurrentFunction(codegen->fn_emitter, main_fn);
 
@@ -382,6 +395,13 @@ static void finalize_main_function(Xvr_LLVMCodegen* codegen) {
 
 static bool emit_main_function(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* stmt) {
     ensure_main_function(codegen);
+
+    LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(codegen->context);
+    LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(codegen->module);
+    LLVMValueRef main_fn = LLVMGetNamedFunction(module, "main");
+
+    LLVMBuilderRef builder = Xvr_LLVMIRBuilderGetLLVMBuilder(codegen->builder);
+    LLVMBasicBlockRef block = LLVMGetInsertBlock(builder);
 
     if (stmt->type == XVR_AST_NODE_VAR_DECL) {
         Xvr_NodeVarDecl* varDecl = &stmt->varDecl;
@@ -461,10 +481,10 @@ static bool emit_main_function(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* stmt) {
                             literal_type_name(declaredType);
                         const char* inferredName =
                             literal_type_name(inferredType);
-                        snprintf(
-                            error_msg, sizeof(error_msg),
-                            "type mismatch: cannot convert from '%s' to '%s'",
-                            inferredName, declaredName);
+                        snprintf(error_msg, sizeof(error_msg),
+                                 "type mismatch: cannot convert from '%s' "
+                                 "to '%s'",
+                                 inferredName, declaredName);
                         set_error(codegen, error_msg);
                         return false;
                     }
@@ -497,11 +517,20 @@ bool Xvr_LLVMCodegenEmitAST(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* ast) {
     }
 
     if (ast->type == XVR_AST_NODE_FN_COLLECTION) {
-        return Xvr_LLVMFunctionEmitterEmitCollection(codegen->fn_emitter, ast);
+        bool result =
+            Xvr_LLVMFunctionEmitterEmitCollection(codegen->fn_emitter, ast);
+        if (result) {
+            ensure_main_function(codegen);
+        }
+        return result;
     }
 
     if (ast->type == XVR_AST_NODE_FN_DECL) {
-        return Xvr_LLVMFunctionEmitterEmit(codegen->fn_emitter, ast);
+        bool result = Xvr_LLVMFunctionEmitterEmit(codegen->fn_emitter, ast);
+        if (result) {
+            ensure_main_function(codegen);
+        }
+        return result;
     }
 
     if (!emit_main_function(codegen, ast)) {

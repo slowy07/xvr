@@ -14,6 +14,7 @@ SRCS = xvr_ast_node.c \
        xvr_parser.c \
        xvr_print_handler.c \
        xvr_refstring.c \
+       xvr_runtime.c \
        xvr_scope.c \
        xvr_semantic.c \
        xvr_type.c \

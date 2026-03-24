@@ -856,6 +856,11 @@ static Xvr_Opcode castingPrefix(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         Xvr_ASTNode* expr = NULL;
         expression(parser, &expr);
 
+        if (parser->panic || !expr) {
+            if (expr) Xvr_freeASTNode(expr);
+            return XVR_OP_EOF;
+        }
+
         consume(parser, XVR_TOKEN_PAREN_RIGHT, "Expected ')' after expression");
 
         Xvr_LiteralType xvrType = getTypeFromToken(tokenType);
@@ -1010,6 +1015,10 @@ static Xvr_Opcode incrementPrefix(Xvr_Parser* parser,
 
     Xvr_ASTNode* tmpNode = NULL;
     identifier(parser, &tmpNode);
+    if (parser->panic || !tmpNode) {
+        if (tmpNode) Xvr_freeASTNode(tmpNode);
+        return XVR_OP_EOF;
+    }
 
     Xvr_emitASTNodePrefixIncrement(nodeHandle, tmpNode->atomic.literal);
 
@@ -1021,6 +1030,10 @@ static Xvr_Opcode incrementPrefix(Xvr_Parser* parser,
 static Xvr_Opcode incrementInfix(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_ASTNode* tmpNode = NULL;
     identifier(parser, &tmpNode);
+    if (parser->panic || !tmpNode) {
+        if (tmpNode) Xvr_freeASTNode(tmpNode);
+        return XVR_OP_EOF;
+    }
 
     advance(parser);
 
@@ -1036,7 +1049,11 @@ static Xvr_Opcode decrementPrefix(Xvr_Parser* parser,
     advance(parser);
 
     Xvr_ASTNode* tmpNode = NULL;
-    identifier(parser, &tmpNode);  // weird
+    identifier(parser, &tmpNode);
+    if (parser->panic || !tmpNode) {
+        if (tmpNode) Xvr_freeASTNode(tmpNode);
+        return XVR_OP_EOF;
+    }
 
     Xvr_emitASTNodePrefixDecrement(nodeHandle, tmpNode->atomic.literal);
 
@@ -1048,6 +1065,10 @@ static Xvr_Opcode decrementPrefix(Xvr_Parser* parser,
 static Xvr_Opcode decrementInfix(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_ASTNode* tmpNode = NULL;
     identifier(parser, &tmpNode);
+    if (parser->panic || !tmpNode) {
+        if (tmpNode) Xvr_freeASTNode(tmpNode);
+        return XVR_OP_EOF;
+    }
 
     advance(parser);
 

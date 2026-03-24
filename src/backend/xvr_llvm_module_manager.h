@@ -41,8 +41,13 @@ LLVMModuleRef Xvr_LLVMModuleManagerGetModule(Xvr_LLVMModuleManager* mgr);
 bool Xvr_LLVMModuleManagerAddFunction(Xvr_LLVMModuleManager* mgr,
                                       const char* name,
                                       LLVMTypeRef function_type);
+void Xvr_LLVMModuleManagerRegisterFunctionType(Xvr_LLVMModuleManager* mgr,
+                                               const char* name,
+                                               LLVMTypeRef function_type);
 LLVMValueRef Xvr_LLVMModuleManagerGetFunction(Xvr_LLVMModuleManager* mgr,
                                               const char* name);
+LLVMTypeRef Xvr_LLVMModuleManagerGetFunctionType(Xvr_LLVMModuleManager* mgr,
+                                                 const char* name);
 bool Xvr_LLVMModuleManagerAddGlobal(Xvr_LLVMModuleManager* mgr,
                                     const char* name, LLVMTypeRef type);
 LLVMValueRef Xvr_LLVMModuleManagerGetGlobal(Xvr_LLVMModuleManager* mgr,
