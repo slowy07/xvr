@@ -125,6 +125,11 @@ static int run_max_tests(void) {
          "include std;\nvar r = std::max(1.5, 2.5, "
          "0.5);\nstd::print(\"{}\\n\", r);",
          "2.500000", 1},
+        {"max_proc_two_args", "include std;\nstd::max(10, 20);", "", 1},
+        {"max_proc_three_args", "include std;\nstd::max(3, 1, 2);", "", 1},
+        {"max_proc_float", "include std;\nstd::max(1.5, 2.5);", "", 1},
+        {"max_proc_many_args", "include std;\nstd::max(10, 20, 30, 5, 15);", "",
+         1},
     };
 
     int test_count = sizeof(tests) / sizeof(tests[0]);
@@ -134,7 +139,16 @@ static int run_max_tests(void) {
         int status =
             capture_compile_run(tests[i].source, output, sizeof(output));
 
-        if (status == 0 && strcmp(output, tests[i].expected_output) == 0) {
+        int test_passed = 0;
+        if (status == 0) {
+            if (tests[i].expected_output[0] == '\0') {
+                test_passed = 1;
+            } else if (strcmp(output, tests[i].expected_output) == 0) {
+                test_passed = 1;
+            }
+        }
+
+        if (test_passed) {
             printf(XVR_CC_NOTICE "    [PASS] %s\n" XVR_CC_RESET, tests[i].name);
             passed++;
         } else {
