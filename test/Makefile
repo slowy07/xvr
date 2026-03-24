@@ -21,7 +21,8 @@ TEST_OBJECTS = $(OBJDIR)/test_all.o \
                $(OBJDIR)/test_literal.o \
                $(OBJDIR)/test_memory.o \
                $(OBJDIR)/test_scope.o \
-               $(OBJDIR)/test_llvm_backend.o
+               $(OBJDIR)/test_llvm_backend.o \
+               $(OBJDIR)/test_std.o
 
 # Compiler tools
 COMPILER_OBJS = ../compiler/compiler_tools.o
@@ -72,6 +73,10 @@ $(OBJDIR)/test_scope.o: test_scope.c
 	$(CC) -c $(CFLAGS) -o $@ $<
 
 $(OBJDIR)/test_llvm_backend.o: test_llvm_backend.c
+	@mkdir -p $(OBJDIR)
+	$(CC) -c $(CFLAGS) -o $@ $<
+
+$(OBJDIR)/test_std.o: test_std.c
 	@mkdir -p $(OBJDIR)
 	$(CC) -c $(CFLAGS) -o $@ $<
 

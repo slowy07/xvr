@@ -28,6 +28,7 @@ int run_literal_tests(void);
 int run_memory_tests(void);
 int run_ast_node_tests(void);
 int run_llvm_backend_tests(void);
+int run_std_tests(void);
 
 void print_header(const char* title) {
     printf("\n" XVR_CC_NOTICE "  %s\n" XVR_CC_RESET, title);
@@ -117,6 +118,11 @@ int main(void) {
     print_header("LLVM Backend Tests");
     run_test_with_crash_protection("llvm_backend", run_llvm_backend_tests,
                                    "LLVM Backend Infrastructure");
+
+    /* Standard Library Tests */
+    print_header("Standard Library Tests");
+    run_test_with_crash_protection("std_lib", run_std_tests,
+                                   "Standard Library Functions");
 
     /* Summary */
     print_header("TEST SUMMARY");

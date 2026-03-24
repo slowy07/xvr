@@ -519,6 +519,12 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
                     "print() is not supported, use std::print() instead");
                 return NULL;
             }
+            if (fn_name && strcmp(fn_name, "max") == 0) {
+                Xvr_LLVMContextSetError(
+                    emitter->context,
+                    "max() is not supported, use std::max() instead");
+                return NULL;
+            }
 
             LLVMModuleRef module =
                 Xvr_LLVMModuleManagerGetModule(emitter->module);
