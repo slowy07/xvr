@@ -49,7 +49,7 @@ var b = std::max(5, 5);                // b = 5 (returns first if equal)
 var c = std::max(-5, 10);              // c = 10
 var d = std::max(1.5, 2.5);            // d = 2.5 (works with floats)
 var e = std::max(3, 1, 2);             // e = 3 (multiple arguments)
-var f = std::max(10, 20, 30, 5, 15);   // f = 30 (many arguments)
+var f = std::max(10, 20, 30, 5);       // f = 30 (up to 4 args O(1), more O(n))
 std::print("max: {}\n", std::max(2221, 2313));  // prints: 2313
 ```
 
@@ -59,10 +59,12 @@ Supported types:
 - `double` - Double precision floating point
 
 Requirements:
-- At least one argument required
+- 1-8 arguments supported
 - All arguments must be the same type (int or float)
 
-Complexity: O(n) time where n is the number of arguments, O(1) auxiliary space
+Complexity:
+- 1-4 arguments: O(1) - constant time with unrolled comparisons
+- 5+ arguments: O(n) - linear time with loop
 
 ### String Concatenation
 

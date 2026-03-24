@@ -1030,21 +1030,19 @@ static LLVMValueRef emit_max(Xvr_LLVMExpressionEmitter* emitter,
     LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
 
     int arg_count = 0;
-    LLVMValueRef* args_list = NULL;
+    LLVMValueRef args_list[8] = {NULL};
 
     if (args->type == XVR_AST_NODE_COMPOUND) {
         arg_count = args->compound.count;
-        if (arg_count < 1) {
+        if (arg_count < 1 || arg_count > 8) {
             Xvr_LLVMContextSetError(emitter->context,
-                                    "max: requires at least one argument");
+                                    "max: requires 1-8 arguments");
             return NULL;
         }
-        args_list = (LLVMValueRef*)malloc(sizeof(LLVMValueRef) * arg_count);
         for (int i = 0; i < arg_count; i++) {
             args_list[i] = Xvr_LLVMExpressionEmitterEmit(
                 emitter, &args->compound.nodes[i]);
             if (!args_list[i]) {
-                free(args_list);
                 Xvr_LLVMContextSetError(emitter->context,
                                         "max: invalid argument");
                 return NULL;
@@ -1052,17 +1050,15 @@ static LLVMValueRef emit_max(Xvr_LLVMExpressionEmitter* emitter,
         }
     } else if (args->type == XVR_AST_NODE_FN_COLLECTION) {
         arg_count = args->fnCollection.count;
-        if (arg_count < 1) {
+        if (arg_count < 1 || arg_count > 8) {
             Xvr_LLVMContextSetError(emitter->context,
-                                    "max: requires at least one argument");
+                                    "max: requires 1-8 arguments");
             return NULL;
         }
-        args_list = (LLVMValueRef*)malloc(sizeof(LLVMValueRef) * arg_count);
         for (int i = 0; i < arg_count; i++) {
             args_list[i] = Xvr_LLVMExpressionEmitterEmit(
                 emitter, &args->fnCollection.nodes[i]);
             if (!args_list[i]) {
-                free(args_list);
                 Xvr_LLVMContextSetError(emitter->context,
                                         "max: invalid argument");
                 return NULL;
@@ -1073,41 +1069,114 @@ static LLVMValueRef emit_max(Xvr_LLVMExpressionEmitter* emitter,
         return NULL;
     }
 
-    LLVMValueRef max_val = args_list[0];
-    LLVMTypeRef max_type = LLVMTypeOf(max_val);
-    LLVMTypeKind max_kind = LLVMGetTypeKind(max_type);
+    LLVMTypeRef type0 = LLVMTypeOf(args_list[0]);
+    LLVMTypeKind kind0 = LLVMGetTypeKind(type0);
 
-    for (int i = 1; i < arg_count; i++) {
-        LLVMValueRef arg = args_list[i];
-        LLVMTypeRef arg_type = LLVMTypeOf(arg);
-        LLVMTypeKind arg_kind = LLVMGetTypeKind(arg_type);
-
-        LLVMValueRef cond = NULL;
-
-        if (max_kind == LLVMIntegerTypeKind &&
-            arg_kind == LLVMIntegerTypeKind) {
-            cond = LLVMBuildICmp(llvm_builder, LLVMIntSGT, max_val, arg,
-                                 "max_cmp");
-        } else if ((max_kind == LLVMFloatTypeKind &&
-                    arg_kind == LLVMFloatTypeKind) ||
-                   (max_kind == LLVMDoubleTypeKind &&
-                    arg_kind == LLVMDoubleTypeKind)) {
-            cond = LLVMBuildFCmp(llvm_builder, LLVMRealOGT, max_val, arg,
-                                 "max_cmp");
-        } else {
-            free(args_list);
-            Xvr_LLVMContextSetError(emitter->context,
-                                    "max: all arguments must be the same "
-                                    "comparable type (int or float)");
-            return NULL;
+    if (kind0 == LLVMIntegerTypeKind) {
+        switch (arg_count) {
+        case 1:
+            return args_list[0];
+        case 2: {
+            LLVMValueRef cond =
+                LLVMBuildICmp(llvm_builder, LLVMIntSGT, args_list[0],
+                              args_list[1], "max_cmp");
+            return LLVMBuildSelect(llvm_builder, cond, args_list[0],
+                                   args_list[1], "max_result");
         }
-
-        max_val =
-            LLVMBuildSelect(llvm_builder, cond, max_val, arg, "max_result");
+        case 3: {
+            LLVMValueRef tmp = args_list[0];
+            LLVMValueRef c1 = LLVMBuildICmp(llvm_builder, LLVMIntSGT, tmp,
+                                            args_list[1], "max_cmp1");
+            tmp = LLVMBuildSelect(llvm_builder, c1, tmp, args_list[1],
+                                  "max_tmp1");
+            LLVMValueRef c2 = LLVMBuildICmp(llvm_builder, LLVMIntSGT, tmp,
+                                            args_list[2], "max_cmp2");
+            return LLVMBuildSelect(llvm_builder, c2, tmp, args_list[2],
+                                   "max_result");
+        }
+        case 4: {
+            LLVMValueRef tmp = args_list[0];
+            LLVMValueRef c1 = LLVMBuildICmp(llvm_builder, LLVMIntSGT, tmp,
+                                            args_list[1], "max_cmp1");
+            tmp = LLVMBuildSelect(llvm_builder, c1, tmp, args_list[1],
+                                  "max_tmp1");
+            LLVMValueRef c2 = LLVMBuildICmp(llvm_builder, LLVMIntSGT, tmp,
+                                            args_list[2], "max_cmp2");
+            tmp = LLVMBuildSelect(llvm_builder, c2, tmp, args_list[2],
+                                  "max_tmp2");
+            LLVMValueRef c3 = LLVMBuildICmp(llvm_builder, LLVMIntSGT, tmp,
+                                            args_list[3], "max_cmp3");
+            return LLVMBuildSelect(llvm_builder, c3, tmp, args_list[3],
+                                   "max_result");
+        }
+        default: {
+            LLVMValueRef max_val = args_list[0];
+            for (int i = 1; i < arg_count; i++) {
+                LLVMValueRef cond = LLVMBuildICmp(
+                    llvm_builder, LLVMIntSGT, max_val, args_list[i], "max_cmp");
+                max_val = LLVMBuildSelect(llvm_builder, cond, max_val,
+                                          args_list[i], "max_result");
+            }
+            return max_val;
+        }
+        }
     }
 
-    free(args_list);
-    return max_val;
+    if (kind0 == LLVMFloatTypeKind || kind0 == LLVMDoubleTypeKind) {
+        switch (arg_count) {
+        case 1:
+            return args_list[0];
+        case 2: {
+            LLVMValueRef cond =
+                LLVMBuildFCmp(llvm_builder, LLVMRealOGT, args_list[0],
+                              args_list[1], "max_cmp");
+            return LLVMBuildSelect(llvm_builder, cond, args_list[0],
+                                   args_list[1], "max_result");
+        }
+        case 3: {
+            LLVMValueRef tmp = args_list[0];
+            LLVMValueRef c1 = LLVMBuildFCmp(llvm_builder, LLVMRealOGT, tmp,
+                                            args_list[1], "max_cmp1");
+            tmp = LLVMBuildSelect(llvm_builder, c1, tmp, args_list[1],
+                                  "max_tmp1");
+            LLVMValueRef c2 = LLVMBuildFCmp(llvm_builder, LLVMRealOGT, tmp,
+                                            args_list[2], "max_cmp2");
+            return LLVMBuildSelect(llvm_builder, c2, tmp, args_list[2],
+                                   "max_result");
+        }
+        case 4: {
+            LLVMValueRef tmp = args_list[0];
+            LLVMValueRef c1 = LLVMBuildFCmp(llvm_builder, LLVMRealOGT, tmp,
+                                            args_list[1], "max_cmp1");
+            tmp = LLVMBuildSelect(llvm_builder, c1, tmp, args_list[1],
+                                  "max_tmp1");
+            LLVMValueRef c2 = LLVMBuildFCmp(llvm_builder, LLVMRealOGT, tmp,
+                                            args_list[2], "max_cmp2");
+            tmp = LLVMBuildSelect(llvm_builder, c2, tmp, args_list[2],
+                                  "max_tmp2");
+            LLVMValueRef c3 = LLVMBuildFCmp(llvm_builder, LLVMRealOGT, tmp,
+                                            args_list[3], "max_cmp3");
+            return LLVMBuildSelect(llvm_builder, c3, tmp, args_list[3],
+                                   "max_result");
+        }
+        default: {
+            LLVMValueRef max_val = args_list[0];
+            for (int i = 1; i < arg_count; i++) {
+                LLVMValueRef cond =
+                    LLVMBuildFCmp(llvm_builder, LLVMRealOGT, max_val,
+                                  args_list[i], "max_cmp");
+                max_val = LLVMBuildSelect(llvm_builder, cond, max_val,
+                                          args_list[i], "max_result");
+            }
+            return max_val;
+        }
+        }
+    }
+
+    Xvr_LLVMContextSetError(
+        emitter->context,
+        "max: unsupported type - only int and float are supported");
+    return NULL;
 }
 
 /**
