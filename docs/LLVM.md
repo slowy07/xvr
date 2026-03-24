@@ -344,6 +344,21 @@ arr[1] = 20;
 std::print(arr[1]);  // prints 20
 ```
 
+### String Concatenation
+
+XVR supports compile-time and runtime string concatenation:
+
+```xvr
+// Compile-time concatenation (both operands are string literals)
+var msg = "Hello, " + "World!";  // "Hello, World!" at compile time
+
+// Runtime concatenation (at least one operand is runtime)
+var name = "John";
+var greeting = "Hello, " + name;  // uses string_concat runtime proc
+```
+
+**Optimization:** When both operands are string literals, the compiler constant-folds them into a single string at compile time. When at least one operand is a runtime value (like a variable or function parameter), it falls back to the `string_concat` runtime procedure.
+
 ## Format String Parser
 
 The `xvr_format_string.c` module handles `{}` interpolation:
@@ -487,10 +502,10 @@ Output: `out/xvr`
 - **Format strings**: Uses `{}` instead of printf `%` syntax
 - **Variables**: Use `var` keyword (not `let`)
 - **Semicolons**: Optional
+- **Procedures**: Use `proc` keyword with optional return type annotation
 
 ## Future Enhancements
 
-- Function declarations
 - Struct types
 - Better optimization passes
 - Multiple return values
