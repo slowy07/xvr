@@ -493,6 +493,8 @@ static LLVMValueRef emit_binary_op(Xvr_LLVMExpressionEmitter* emitter,
 
 static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
                                 Xvr_ASTNode* args);
+static LLVMValueRef emit_max(Xvr_LLVMExpressionEmitter* emitter,
+                             Xvr_ASTNode* args);
 
 LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
     Xvr_LLVMExpressionEmitter* emitter, Xvr_NodeBinary* binary) {
@@ -638,6 +640,10 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
                             /* This is std::print - route to emit_printf */
                             return emit_printf(emitter,
                                                fn_call_node->fnCall.arguments);
+                        }
+                        if (fn_name && strcmp(fn_name, "max") == 0) {
+                            return emit_max(emitter,
+                                            fn_call_node->fnCall.arguments);
                         }
                     }
                 }
@@ -876,6 +882,67 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
         return NULL;
     }
 
+    return NULL;
+}
+
+static LLVMValueRef emit_max(Xvr_LLVMExpressionEmitter* emitter,
+                             Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    Xvr_LLVMIRBuilder* builder = emitter->builder;
+    LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+    LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+
+    LLVMValueRef arg_a = NULL;
+    LLVMValueRef arg_b = NULL;
+
+    if (args->type == XVR_AST_NODE_COMPOUND && args->compound.count >= 2) {
+        arg_a =
+            Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+        arg_b =
+            Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[1]);
+    } else if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+               args->fnCollection.count >= 2) {
+        arg_a = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                              &args->fnCollection.nodes[0]);
+        arg_b = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                              &args->fnCollection.nodes[1]);
+    }
+
+    if (!arg_a || !arg_b) {
+        Xvr_LLVMContextSetError(emitter->context, "max: invalid arguments");
+        return NULL;
+    }
+
+    LLVMTypeRef a_type = LLVMTypeOf(arg_a);
+    LLVMTypeRef b_type = LLVMTypeOf(arg_b);
+
+    if (LLVMGetTypeKind(a_type) == LLVMIntegerTypeKind &&
+        LLVMGetTypeKind(b_type) == LLVMIntegerTypeKind) {
+        LLVMValueRef cond =
+            LLVMBuildICmp(llvm_builder, LLVMIntSGT, arg_a, arg_b, "max_cmp");
+        return LLVMBuildSelect(llvm_builder, cond, arg_a, arg_b, "max_result");
+    }
+
+    if (LLVMGetTypeKind(a_type) == LLVMFloatTypeKind &&
+        LLVMGetTypeKind(b_type) == LLVMFloatTypeKind) {
+        LLVMValueRef cond =
+            LLVMBuildFCmp(llvm_builder, LLVMRealOGT, arg_a, arg_b, "max_cmp");
+        return LLVMBuildSelect(llvm_builder, cond, arg_a, arg_b, "max_result");
+    }
+
+    if (LLVMGetTypeKind(a_type) == LLVMDoubleTypeKind &&
+        LLVMGetTypeKind(b_type) == LLVMDoubleTypeKind) {
+        LLVMValueRef cond =
+            LLVMBuildFCmp(llvm_builder, LLVMRealOGT, arg_a, arg_b, "max_cmp");
+        return LLVMBuildSelect(llvm_builder, cond, arg_a, arg_b, "max_result");
+    }
+
+    Xvr_LLVMContextSetError(
+        emitter->context,
+        "max: unsupported type - only int and float are supported");
     return NULL;
 }
 
