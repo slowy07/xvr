@@ -493,6 +493,8 @@ static LLVMValueRef emit_binary_op(Xvr_LLVMExpressionEmitter* emitter,
 
 static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
                                 Xvr_ASTNode* args);
+static LLVMValueRef emit_printfln(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args);
 static LLVMValueRef emit_max(Xvr_LLVMExpressionEmitter* emitter,
                              Xvr_ASTNode* args);
 
@@ -643,9 +645,12 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
 
                     if (fn_call_node) {
                         if (fn_name && strcmp(fn_name, "print") == 0) {
-                            /* This is std::print - route to emit_printf */
                             return emit_printf(emitter,
                                                fn_call_node->fnCall.arguments);
+                        }
+                        if (fn_name && strcmp(fn_name, "println") == 0) {
+                            return emit_printfln(
+                                emitter, fn_call_node->fnCall.arguments);
                         }
                         if (fn_name && strcmp(fn_name, "max") == 0) {
                             return emit_max(emitter,
@@ -1031,6 +1036,301 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
         if (call_args) {
             free(call_args);
         }
+    }
+
+    return NULL;
+}
+
+static LLVMValueRef emit_printfln(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args) {
+    if (!emitter) {
+        Xvr_LLVMContextSetError(emitter->context, "println: NULL emitter");
+        return NULL;
+    }
+
+    if (!args) {
+        Xvr_LLVMContextSetError(emitter->context, "println: NULL arguments");
+        return NULL;
+    }
+
+    if (args->type != XVR_AST_NODE_COMPOUND &&
+        args->type != XVR_AST_NODE_FN_COLLECTION) {
+        Xvr_LLVMContextSetError(emitter->context,
+                                "println: invalid argument type");
+        return NULL;
+    }
+
+    int total_nodes = (args->type == XVR_AST_NODE_COMPOUND)
+                          ? args->compound.count
+                          : args->fnCollection.count;
+
+    if (total_nodes < 1) {
+        Xvr_LLVMContextSetError(emitter->context,
+                                "println: requires at least one argument");
+        return NULL;
+    }
+
+    Xvr_LLVMIRBuilder* builder = emitter->builder;
+    LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+    LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(emitter->module);
+    LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+
+    LLVMValueRef printf_fn = LLVMGetNamedFunction(module, "printf");
+    if (!printf_fn) {
+        LLVMTypeRef printf_type =
+            LLVMFunctionType(LLVMInt32TypeInContext(llvm_ctx), NULL, 0, true);
+        printf_fn = LLVMAddFunction(module, "printf", printf_type);
+    }
+
+    const char* format_str = NULL;
+    LLVMValueRef* call_args = NULL;
+    int arg_count = 0;
+    bool has_format_string = false;
+
+    Xvr_ASTNode* format_node = NULL;
+    if (args->type == XVR_AST_NODE_COMPOUND) {
+        format_node = &args->compound.nodes[0];
+        arg_count = args->compound.count - 1;
+    } else {
+        format_node = &args->fnCollection.nodes[0];
+        arg_count = args->fnCollection.count - 1;
+    }
+
+    if (format_node && format_node->type == XVR_AST_NODE_LITERAL &&
+        format_node->atomic.literal.type == XVR_LITERAL_STRING) {
+        has_format_string = true;
+        format_str =
+            (const char*)format_node->atomic.literal.as.string.ptr->data;
+    } else if (format_node && format_node->type == XVR_AST_NODE_LITERAL &&
+               format_node->atomic.literal.type != XVR_LITERAL_STRING) {
+        Xvr_LLVMContextSetError(emitter->context,
+                                "println: first argument must be a string");
+        return NULL;
+    }
+
+    if (arg_count > 0) {
+        call_args = (LLVMValueRef*)malloc(sizeof(LLVMValueRef) * arg_count);
+        if (!call_args) {
+            Xvr_LLVMContextSetError(emitter->context,
+                                    "println: memory allocation failed");
+            return NULL;
+        }
+        for (int i = 0; i < arg_count; i++) {
+            Xvr_ASTNode* arg = NULL;
+            if (args->type == XVR_AST_NODE_COMPOUND) {
+                arg = &args->compound.nodes[i + 1];
+            } else {
+                arg = &args->fnCollection.nodes[i + 1];
+            }
+            LLVMValueRef arg_val = Xvr_LLVMExpressionEmitterEmit(emitter, arg);
+            if (arg_val) {
+                call_args[i] = arg_val;
+            } else {
+                call_args[i] =
+                    LLVMConstInt(LLVMInt32TypeInContext(llvm_ctx), 0, false);
+            }
+        }
+    }
+
+    if (has_format_string && arg_count > 0) {
+        XvrFormatString* fmt = XvrFormatStringParse(format_str, arg_count);
+        if (!fmt) {
+            Xvr_LLVMContextSetError(emitter->context,
+                                    "println: failed to parse format string");
+            if (call_args) free(call_args);
+            return NULL;
+        }
+
+        if (!fmt->is_valid) {
+            char error_msg[256];
+            snprintf(error_msg, sizeof(error_msg),
+                     "println: invalid format string: %s",
+                     fmt->error_message ? fmt->error_message : "unknown error");
+            Xvr_LLVMContextSetError(emitter->context, error_msg);
+            XvrFormatStringFree(fmt);
+            if (call_args) free(call_args);
+            return NULL;
+        }
+
+        if (fmt->placeholder_count != (size_t)arg_count) {
+            char error_msg[256];
+            snprintf(error_msg, sizeof(error_msg),
+                     "println: format placeholder count (%zu) does not "
+                     "match argument count (%d)",
+                     (unsigned long)fmt->placeholder_count, arg_count);
+            Xvr_LLVMContextSetError(emitter->context, error_msg);
+            XvrFormatStringFree(fmt);
+            if (call_args) free(call_args);
+            return NULL;
+        }
+
+        char* printf_fmt_with_newline = NULL;
+        if (asprintf(&printf_fmt_with_newline, "%s\n",
+                     fmt->printf_format ? fmt->printf_format : "%s") == -1) {
+            Xvr_LLVMContextSetError(emitter->context,
+                                    "println: memory allocation failed");
+            XvrFormatStringFree(fmt);
+            if (call_args) free(call_args);
+            return NULL;
+        }
+
+        XvrFormatArgType* arg_types =
+            (XvrFormatArgType*)malloc(sizeof(XvrFormatArgType) * arg_count);
+        if (!arg_types) {
+            Xvr_LLVMContextSetError(emitter->context,
+                                    "println: memory allocation failed");
+            free(printf_fmt_with_newline);
+            XvrFormatStringFree(fmt);
+            if (call_args) free(call_args);
+            return NULL;
+        }
+
+        for (int i = 0; i < arg_count; i++) {
+            LLVMValueRef arg_val = call_args[i];
+            LLVMTypeRef arg_type = LLVMTypeOf(arg_val);
+            LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+            if (kind == LLVMIntegerTypeKind) {
+                arg_types[i] = XVR_FORMAT_ARG_INT;
+            } else if (kind == LLVMFloatTypeKind) {
+                arg_types[i] = XVR_FORMAT_ARG_FLOAT;
+            } else if (kind == LLVMDoubleTypeKind) {
+                arg_types[i] = XVR_FORMAT_ARG_DOUBLE;
+            } else if (kind == LLVMPointerTypeKind) {
+                arg_types[i] = XVR_FORMAT_ARG_STRING;
+            } else {
+                arg_types[i] = XVR_FORMAT_ARG_STRING;
+            }
+        }
+
+        char* printf_fmt =
+            XvrFormatStringBuildPrintfFormat(fmt, arg_types, arg_count);
+        char* printf_fmt_final = NULL;
+        if (asprintf(&printf_fmt_final, "%s\n", printf_fmt) == -1) {
+            Xvr_LLVMContextSetError(emitter->context,
+                                    "println: memory allocation failed");
+            free(printf_fmt_with_newline);
+            free(arg_types);
+            XvrFormatStringFree(fmt);
+            if (call_args) free(call_args);
+            return NULL;
+        }
+
+        LLVMValueRef fmt_global =
+            LLVMBuildGlobalStringPtr(llvm_builder, printf_fmt_final, "fmt_str");
+
+        LLVMValueRef* all_args =
+            (LLVMValueRef*)malloc(sizeof(LLVMValueRef) * (arg_count + 1));
+        if (!all_args) {
+            Xvr_LLVMContextSetError(emitter->context,
+                                    "println: memory allocation failed");
+            free(printf_fmt_final);
+            free(printf_fmt_with_newline);
+            free(arg_types);
+            XvrFormatStringFree(fmt);
+            if (call_args) free(call_args);
+            return NULL;
+        }
+
+        all_args[0] = fmt_global;
+        for (int i = 0; i < arg_count; i++) {
+            LLVMValueRef arg = call_args[i];
+            LLVMTypeRef arg_type = LLVMTypeOf(arg);
+            if (LLVMGetTypeKind(arg_type) == LLVMFloatTypeKind) {
+                all_args[i + 1] = LLVMBuildFPExt(
+                    llvm_builder, arg, LLVMDoubleTypeInContext(llvm_ctx),
+                    "float_to_double");
+            } else {
+                all_args[i + 1] = arg;
+            }
+        }
+
+        LLVMTypeRef* param_types =
+            (LLVMTypeRef*)malloc(sizeof(LLVMTypeRef) * (arg_count + 1));
+        if (!param_types) {
+            Xvr_LLVMContextSetError(emitter->context,
+                                    "println: memory allocation failed");
+            free(all_args);
+            free(printf_fmt_final);
+            free(printf_fmt_with_newline);
+            free(arg_types);
+            XvrFormatStringFree(fmt);
+            if (call_args) free(call_args);
+            return NULL;
+        }
+
+        param_types[0] = LLVMPointerType(LLVMInt8TypeInContext(llvm_ctx), 0);
+        for (int i = 0; i < arg_count; i++) {
+            LLVMValueRef arg = call_args[i];
+            LLVMTypeRef arg_type = LLVMTypeOf(arg);
+            if (LLVMGetTypeKind(arg_type) == LLVMFloatTypeKind) {
+                param_types[i + 1] = LLVMDoubleTypeInContext(llvm_ctx);
+            } else {
+                param_types[i + 1] = arg_type;
+            }
+        }
+
+        LLVMTypeRef printf_type = LLVMFunctionType(
+            LLVMInt32TypeInContext(llvm_ctx), param_types, arg_count + 1, true);
+        LLVMBuildCall2(llvm_builder, printf_type, printf_fn, all_args,
+                       arg_count + 1, "printf_call");
+
+        free(all_args);
+        free(param_types);
+        free(printf_fmt);
+        free(printf_fmt_final);
+        free(printf_fmt_with_newline);
+        free(arg_types);
+        XvrFormatStringFree(fmt);
+    } else if (!has_format_string) {
+        Xvr_LLVMContextSetError(emitter->context,
+                                "println: format string required");
+        if (call_args) free(call_args);
+        return NULL;
+    } else {
+        char* final_fmt = NULL;
+        if (format_str) {
+            if (asprintf(&final_fmt, "%s\n", format_str) == -1) {
+                Xvr_LLVMContextSetError(emitter->context,
+                                        "println: memory allocation failed");
+                if (call_args) free(call_args);
+                return NULL;
+            }
+        } else {
+            final_fmt = strdup("%s\n");
+            if (!final_fmt) {
+                Xvr_LLVMContextSetError(emitter->context,
+                                        "println: memory allocation failed");
+                if (call_args) free(call_args);
+                return NULL;
+            }
+        }
+        LLVMValueRef fmt_global =
+            LLVMBuildGlobalStringPtr(llvm_builder, final_fmt, "fmt_str");
+        if (has_format_string || !format_node) {
+            LLVMTypeRef printf_type = LLVMFunctionType(
+                LLVMInt32TypeInContext(llvm_ctx), NULL, 0, true);
+            LLVMBuildCall2(llvm_builder, printf_type, printf_fn, &fmt_global, 1,
+                           "printf_call");
+        } else if (arg_count > 0 && call_args) {
+            LLVMValueRef arg_val =
+                Xvr_LLVMExpressionEmitterEmit(emitter, format_node);
+            if (arg_val) {
+                LLVMValueRef all_args[2] = {fmt_global, arg_val};
+                LLVMTypeRef printf_type = LLVMFunctionType(
+                    LLVMInt32TypeInContext(llvm_ctx),
+                    (LLVMTypeRef[]){
+                        LLVMPointerType(LLVMInt8TypeInContext(llvm_ctx), 0),
+                        LLVMTypeOf(arg_val)},
+                    2, true);
+                LLVMBuildCall2(llvm_builder, printf_type, printf_fn, all_args,
+                               2, "printf_call");
+            }
+        }
+        free(final_fmt);
+    }
+
+    if (call_args) {
+        free(call_args);
     }
 
     return NULL;

@@ -208,6 +208,101 @@ static int run_print_tests(void) {
     return failed > 0 ? 1 : 0;
 }
 
+static int run_println_tests(void) {
+    printf("\n" XVR_CC_NOTICE "  std::println Tests\n" XVR_CC_RESET);
+
+    int passed = 0;
+    int failed = 0;
+
+    StdTestCase tests[] = {
+        {"println_basic", "include std;\nstd::println(\"hello\");", "hello", 1},
+        {"println_with_newline", "include std;\nstd::println(\"test\");",
+         "test", 1},
+        {"println_int", "include std;\nstd::println(\"{}\", 42);", "42", 1},
+        {"println_negative_int", "include std;\nstd::println(\"{}\", -123);",
+         "-123", 1},
+        {"println_float", "include std;\nstd::println(\"{}\", 3.14);",
+         "3.140000", 1},
+        {"println_string", "include std;\nstd::println(\"{}\", \"hello\");",
+         "hello", 1},
+        {"println_multiple_args",
+         "include std;\nstd::println(\"a: {} b: {}\", 1, 2);", "a: 1 b: 2", 1},
+        {"println_no_args", "include std;\nstd::println(\"hello world\");",
+         "hello world", 1},
+        {"println_zero", "include std;\nstd::println(\"{}\", 0);", "0", 1},
+        {"println_large_number", "include std;\nstd::println(\"{}\", 999999);",
+         "999999", 1},
+        {"println_mixed_types",
+         "include std;\nstd::println(\"int: {} float: {} str: {}\", 42, 3.14, "
+         "\"test\");",
+         "int: 42 float: 3.140000 str: test", 1},
+        {"println_variable",
+         "include std;\nvar x = 10;\nstd::println(\"value: {}\", x);",
+         "value: 10", 1},
+        {"println_two_variables",
+         "include std;\nvar name: string = \"arfy\";\nvar other = "
+         "\"slowy\";\nstd::println(\"{} {}\", name, other);",
+         "arfy slowy", 1},
+        {"println_empty", "include std;\nstd::println(\"\");", "", 1},
+    };
+
+    StdTestCase error_tests[] = {
+        {"println_non_string_first_arg", "include std;\nstd::println(42);",
+         "println: first argument must be a string", 0},
+        {"println_mismatched_placeholders",
+         "include std;\nstd::println(\"{} {}\", 42);",
+         "println: format placeholder count", 0},
+    };
+
+    int test_count = sizeof(tests) / sizeof(tests[0]);
+    int error_test_count = sizeof(error_tests) / sizeof(error_tests[0]);
+
+    for (int i = 0; i < test_count; i++) {
+        char output[4096] = {0};
+        int status =
+            capture_compile_run(tests[i].source, output, sizeof(output));
+
+        if (status == 0 && strcmp(output, tests[i].expected_output) == 0) {
+            printf(XVR_CC_NOTICE "    [PASS] %s\n" XVR_CC_RESET, tests[i].name);
+            passed++;
+        } else {
+            printf(XVR_CC_ERROR "    [FAIL] %s\n" XVR_CC_RESET, tests[i].name);
+            printf("          expected: '%s', got: '%s'\n",
+                   tests[i].expected_output, output);
+            failed++;
+        }
+    }
+
+    printf("\n" XVR_CC_NOTICE
+           "  std::println Error Handling Tests\n" XVR_CC_RESET);
+    for (int i = 0; i < error_test_count; i++) {
+        char output[4096] = {0};
+        int status =
+            capture_compile_run(error_tests[i].source, output, sizeof(output));
+
+        int test_passed = 0;
+        if (status != 0 &&
+            strstr(output, error_tests[i].expected_output) != NULL) {
+            test_passed = 1;
+        }
+
+        if (test_passed) {
+            printf(XVR_CC_NOTICE "    [PASS] %s\n" XVR_CC_RESET,
+                   error_tests[i].name);
+            passed++;
+        } else {
+            printf(XVR_CC_ERROR "    [FAIL] %s\n" XVR_CC_RESET,
+                   error_tests[i].name);
+            printf("          expected error containing: '%s', got: '%s'\n",
+                   error_tests[i].expected_output, output);
+            failed++;
+        }
+    }
+
+    printf("\n  std::println: %d passed, %d failed\n", passed, failed);
+    return failed > 0 ? 1 : 0;
+}
+
 static int run_format_string_tests(void) {
     printf("\n" XVR_CC_NOTICE "  Format String Tests\n" XVR_CC_RESET);
 
@@ -258,6 +353,7 @@ int run_std_tests(void) {
 
     total_failed += run_max_tests();
     total_failed += run_print_tests();
+    total_failed += run_println_tests();
     total_failed += run_format_string_tests();
 
     return total_failed;

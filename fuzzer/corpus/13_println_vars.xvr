@@ -1,0 +1,4 @@
+include std;
+var name: string = "arfy";
+var other_name = "slowy";
+std::println("{} {}", name, other_name);
