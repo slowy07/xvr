@@ -50,7 +50,7 @@ run_test() {
     return 1
 }
 
-echo "=== XVR Compiler Fuzzing Test Suite ==="
+echo "XVR Compiler Fuzzing Test Suite"
 echo ""
 
 # Test 1: Empty input
@@ -195,7 +195,7 @@ run_test "for_negative" "for(var i = 0; i > 10; i = i + 1) { }"
 
 # Summary
 echo ""
-echo "=== Test Summary ==="
+echo "Test Summary"
 echo "Passed: $PASS"
 echo "Failed: $FAIL"
 echo "Crashes: $CRASH"

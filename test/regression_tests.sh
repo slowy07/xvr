@@ -40,7 +40,7 @@ run_test() {
     return 1
 }
 
-echo "=== XVR Compiler Regression Tests ==="
+echo "XVR Compiler Regression Tests"
 echo ""
 
 # Regression Test 1: Function calls with arguments at module level
@@ -99,7 +99,7 @@ run_test "array_index" 'var arr = [10, 20, 30]; std::print(arr[1]);'
 
 # Summary
 echo ""
-echo "=== Regression Test Summary ==="
+echo "Regression Test Summary"
 echo "Passed: $PASS"
 echo "Failed: $FAIL"
 

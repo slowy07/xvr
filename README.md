@@ -1,5 +1,3 @@
-![image_banner](.github/images/banner_xvr.png)
-
 ## Feature
 
 - AOT (Ahead-of-Time) compilation using LLVM IR
