@@ -184,6 +184,16 @@ static int run_print_tests(void) {
         {"print_zero", "include std;\nstd::print(\"{}\\n\", 0);", "0", 1},
         {"print_large_number", "include std;\nstd::print(\"{}\\n\", 999999);",
          "999999", 1},
+        {"print_int_literal", "include std;\nstd::print(42);", "42", 1},
+        {"print_float_literal", "include std;\nstd::print(3.14);", "3.140000",
+         1},
+        {"print_string_literal", "include std;\nstd::print(\"hello\");",
+         "hello", 1},
+        {"print_var_int", "include std;\nvar x = 42;\nstd::print(x);", "42", 1},
+        {"print_var_float", "include std;\nvar f = 3.14;\nstd::print(f);",
+         "3.140000", 1},
+        {"print_var_string", "include std;\nvar s = \"world\";\nstd::print(s);",
+         "world", 1},
     };
 
     int test_count = sizeof(tests) / sizeof(tests[0]);
@@ -244,11 +254,20 @@ static int run_println_tests(void) {
          "\"slowy\";\nstd::println(\"{} {}\", name, other);",
          "arfy slowy", 1},
         {"println_empty", "include std;\nstd::println(\"\");", "", 1},
+        {"println_int_literal", "include std;\nstd::println(42);", "42", 1},
+        {"println_float_literal", "include std;\nstd::println(3.14);",
+         "3.140000", 1},
+        {"println_string_literal", "include std;\nstd::println(\"hello\");",
+         "hello", 1},
+        {"println_var_int", "include std;\nvar x = 42;\nstd::println(x);", "42",
+         1},
+        {"println_var_float", "include std;\nvar f = 3.14;\nstd::println(f);",
+         "3.140000", 1},
+        {"println_var_string",
+         "include std;\nvar s = \"world\";\nstd::println(s);", "world", 1},
     };
 
     StdTestCase error_tests[] = {
-        {"println_non_string_first_arg", "include std;\nstd::println(42);",
-         "println: first argument must be a string", 0},
         {"println_mismatched_placeholders",
          "include std;\nstd::println(\"{} {}\", 42);",
          "println: invalid format string", 0},

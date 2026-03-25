@@ -29,6 +29,7 @@ SOFTWARE.
 #include <string.h>
 
 #include "xvr_ast_node.h"
+#include "xvr_cast_emit.h"
 #include "xvr_format_string.h"
 #include "xvr_literal.h"
 #include "xvr_llvm_context.h"
@@ -39,6 +40,7 @@ SOFTWARE.
 #include "xvr_llvm_type_mapper.h"
 #include "xvr_opcodes.h"
 #include "xvr_refstring.h"
+#include "xvr_type.h"
 
 /**
  * @brief Internal structure for expression emitter
@@ -52,6 +54,7 @@ struct Xvr_LLVMExpressionEmitter {
     Xvr_LLVMIRBuilder* builder;
     Xvr_LLVMTypeMapper* type_mapper;
     Xvr_LLVMControlFlow* control_flow;
+    Xvr_LLVMCastEmitter* cast_emitter;
     void* fn_emitter;
 };
 
@@ -80,6 +83,11 @@ Xvr_LLVMExpressionEmitter* Xvr_LLVMExpressionEmitterCreate(
     emitter->builder = builder;
     emitter->type_mapper = type_mapper;
     emitter->fn_emitter = NULL;
+
+    LLVMModuleRef llvm_module = Xvr_LLVMModuleManagerGetModule(module);
+    LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+    emitter->cast_emitter =
+        Xvr_LLVMCastEmitterCreate(llvm_module, llvm_builder);
 
     return emitter;
 }
@@ -114,7 +122,11 @@ void Xvr_LLVMExpressionEmitterDestroy(Xvr_LLVMExpressionEmitter* emitter) {
     if (!emitter) {
         return;
     }
-    /* Note: We don't destroy the referenced objects as we don't own them */
+    if (emitter->cast_emitter) {
+        Xvr_LLVMCastEmitterDestroy(emitter->cast_emitter);
+    }
+    /* Note: We don't destroy the other referenced objects as we don't own them
+     */
     free(emitter);
 }
 
@@ -1916,6 +1928,57 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
 
     case XVR_AST_NODE_FN_CALL:
         return Xvr_LLVMExpressionEmitterEmitFnCall(emitter, &node->fnCall);
+
+    case XVR_AST_NODE_CAST: {
+        Xvr_ASTNode* expr = node->cast.expression;
+        Xvr_Literal target_type_literal = node->cast.targetType;
+
+        LLVMValueRef value = Xvr_LLVMExpressionEmitterEmit(emitter, expr);
+        if (!value || !emitter->cast_emitter) {
+            return NULL;
+        }
+
+        LLVMTypeRef llvm_type = LLVMTypeOf(value);
+        Xvr_LiteralType source_literal_type = XVR_LITERAL_INTEGER;
+        LLVMTypeKind kind = LLVMGetTypeKind(llvm_type);
+        if (kind == LLVMIntegerTypeKind) {
+            unsigned bits = LLVMGetIntTypeWidth(llvm_type);
+            if (bits == 1) {
+                source_literal_type = XVR_LITERAL_BOOLEAN;
+            } else if (bits == 8) {
+                source_literal_type = XVR_LITERAL_INT8;
+            } else if (bits == 16) {
+                source_literal_type = XVR_LITERAL_INT16;
+            } else if (bits == 32) {
+                source_literal_type = XVR_LITERAL_INT32;
+            } else if (bits == 64) {
+                source_literal_type = XVR_LITERAL_INT64;
+            }
+        } else if (kind == LLVMFloatTypeKind) {
+            source_literal_type = XVR_LITERAL_FLOAT32;
+        } else if (kind == LLVMDoubleTypeKind) {
+            source_literal_type = XVR_LITERAL_FLOAT64;
+        } else if (kind == LLVMPointerTypeKind) {
+            source_literal_type = XVR_LITERAL_STRING;
+        }
+
+        Xvr_Type* from_type = Xvr_TypeGetFromLiteral(source_literal_type);
+
+        Xvr_LiteralType target_type;
+        if (target_type_literal.type == XVR_LITERAL_TYPE) {
+            target_type = target_type_literal.as.type.typeOf;
+        } else {
+            target_type = target_type_literal.type;
+        }
+        Xvr_Type* to_type = Xvr_TypeGetFromLiteral(target_type);
+
+        if (!from_type || !to_type) {
+            return NULL;
+        }
+
+        return Xvr_EmitCast(emitter->cast_emitter, value, from_type, to_type,
+                            "cast");
+    }
 
     case XVR_AST_NODE_IF:
         if (emitter->control_flow) {
