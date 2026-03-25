@@ -82,7 +82,7 @@ out-dirs:
 lib: out-dirs
 	$(MAKE) -C src
 
-compiler: out-dirs
+compiler: lib
 	$(MAKE) -C compiler
 
 test: clean out-dirs
