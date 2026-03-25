@@ -214,15 +214,20 @@ jobs:
             for f in fuzzer/corpus/*.xvr; do
               if [ -f "$f" ]; then
                 if timeout 5 ./out/xvr "$f" >/dev/null 2>&1; then
-                  ((PASSED++))
+                  PASSED=$((PASSED + 1))
                 else
-                  echo "Failed: $f"
-                  ((FAILED++))
+                  EXIT_CODE=$?
+                  # Exit code 1 is expected for syntax/semantic errors
+                  if [ $EXIT_CODE -eq 1 ]; then
+                    echo "Expected failure (syntax error): $f"
+                  else
+                    echo "Unexpected failure: $f (exit $EXIT_CODE)"
+                    FAILED=$((FAILED + 1))
+                  fi
                 fi
               fi
             done
-            echo "Corpus tests: $PASSED passed, $FAILED failed"
-            # Exit 0 even if some fail - corpus may contain intentionally invalid files
+            echo "Corpus tests: $PASSED passed, $FAILED unexpected failures"
           fi
 
   stress-test:

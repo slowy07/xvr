@@ -67,7 +67,7 @@ export XVR_PLATFORM XVR_OUTDIR XVR_OBJDIR
 export XVR_SHLIB_NAME XVR_STATIC_NAME XVR_EXE_NAME
 export XVR_SHLIB_EXT XVR_STATIC_EXT XVR_EXE_EXT
 export CFLAGS_BASE XVR_BUILD_TYPE XVR_STRIP
-.PHONY: all release clean test install uninstall rebuild
+.PHONY: all release clean test install uninstall rebuild lib compiler out-dirs
 
 all: out-dirs lib compiler
 	@echo "Build complete: $(XVR_EXE_NAME), $(XVR_SHLIB_NAME), $(XVR_STATIC_NAME)"
