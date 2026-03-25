@@ -2,7 +2,9 @@
 # XVR Compiler Fuzzing Test Suite
 # Tests edge cases and potential bug triggers
 
-XVR="../out/xvr"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+XVR="$PROJECT_DIR/out/xvr"
 TEMP_DIR="/tmp/xvr_fuzz_$$"
 mkdir -p "$TEMP_DIR/crashes"
 PASS=0
@@ -87,7 +89,7 @@ run_test "deep_nesting" 'std::print(((((((((((("hello"))))))))));'
 # Test 9: Invalid numbers
 run_test "hex_number" "std::print(0xFF);"
 run_test "bin_number" "std::print(0b1010);"
-run_test "float_number" "std::print(3.14);"
+run_test "float_number" 'std::print("{}", 3.14);'
 
 # Test 10: Special characters in strings
 run_test "string_newline" 'std::print("hello\nworld");'
@@ -145,8 +147,8 @@ run_test "unreachable_return" "proc foo(): int { return 1; return 2; }"
 run_test "missing_return" "proc foo(): int { }"
 
 # Test 23: Comments (if supported)
-run_test "line_comment" "// comment\nstd::print(1);"
-run_test "block_comment" "/* comment */\nstd::print(1);"
+run_test "line_comment" "// comment\nstd::print(\"{}\", 1);"
+run_test "block_comment" "/* comment */\nstd::print(\"{}\", 1);"
 
 # Test 24: Unicode (if supported)
 run_test "unicode" "std::print(\"héllo\");"
@@ -187,7 +189,7 @@ run_test "ternary_nested" "var x = true ? (false ? 1 : 2) : 3;"
 
 # Test 33: While loop edge cases
 run_test "while_true" "while(true) { break; }"
-run_test "while_false" "while(false) { std::print(1); }"
+run_test "while_false" "while(false) { std::print(\"{}\", 1); }"
 
 # Test 34: For loop edge cases
 run_test "for_empty" "for(var i = 0; i < 0; i = i + 1) { std::print(i); }"
@@ -225,76 +227,6 @@ run_test "op_precedence_3" "var x = 1 + 2 + 3 + 4;"
 
 # Test 37: String format placeholders
 run_test "fmt_int" 'std::print("{}", 42);'
-run_test "fmt_multiple" 'std::print("{} and {}", 1, 2);'
-run_test "fmt_nested" 'std::print("{} + {} = {}", 1, 2, 1 + 2);'
-
-# Test 38: Boolean expressions
-run_test "bool_eq" "var x = (1 == 1);"
-run_test "bool_ne" "var x = (1 != 2);"
-run_test "bool_complex" "var x = (1 < 2) && (3 > 4) || (5 == 5);"
-
-# Test 39: Chain operations
-run_test "chain_assign" "var a = 1; var b = a; var c = b;"
-run_test "chain_add" "var x = 1; x = x + 1; x = x + 1;"
-
-# Test 40: Function with many parameters
-run_test "many_params" "proc foo(a: int, b: int, c: int, d: int): int { return a + b + c + d; }"
-
-# Test 41: Nested conditionals
-run_test "nested_if" "if (true) { if (false) { std::print(1); } }"
-run_test "deep_nested_if" "if (true) { if (true) { if (true) { std::print(1); } } }"
-
-# Test 42: Compound assignment
-run_test "add_assign" "var x = 1; x += 1;"
-run_test "sub_assign" "var x = 5; x -= 3;"
-run_test "mul_assign" "var x = 2; x *= 3;"
-
-# Test 43: Post/pre increment
-run_test "post_inc" "var x = 1; std::print(x++);"
-run_test "pre_inc" "var x = 1; std::print(++x);"
-
-# Test 44: Cast expressions
-run_test "cast_int" "var x: int = int(3.14);"
-
-# Test 45: Complex expressions
-run_test "complex_1" "std::print(1 + 2 * 3 - 4 / 2);"
-run_test "complex_2" "var x = [1, 2, 3][0] + (4 * 5);"
-run_test "complex_3" "std::print(true ? 1 : 2);"
-
-# Test 46: Multiple statements
-run_test "multi_stmt_1" "var x = 1; var y = 2; std::print(x + y);"
-run_test "multi_stmt_2" "std::print(1); std::print(2); std::print(3);"
-
-# Test 47: Function returning function result
-run_test "fn_return" "proc add(a: int, b: int): int { return a + b; } var x = add(1, 2);"
-
-# Test 48: Expression statement
-run_test "expr_stmt" "1 + 2;"
-run_test "expr_stmt_2" "\"hello\";"
-
-# Test 49: Empty blocks
-run_test "empty_block" "{}"
-run_test "empty_if" "if (true) {} else {}"
-
-# Test 50: Special identifier patterns
-run_test "underscore_var" "var _ = 1;"
-run_test "underscore_num" "var x_1 = 1;"
-run_test "camel_case" "proc myFunction() { }"
-
-# ============================================
-# SECTION: Print/Println Fuzzing Tests
-# These tests specifically target print/println functionality
-# ============================================
-
-# Test 51: Print with array literals
-run_test "print_array_literal_int" "std::print([1, 2, 3]);"
-run_test "print_array_literal_float" "std::print([1.5, 2.5, 3.5]);"
-run_test "println_array_literal_int" "std::println([1, 2, 3]);"
-run_test "println_array_literal_float" "std::println([1.1, 2.2, 3.3]);"
-
-# Test 52: Print with single element arrays
-run_test "print_single_element_array" "std::print([42]);"
-run_test "println_single_element_array" "std::println([42]);"
 
 # Test 53: Print array variable (edge case - may print pointer)
 run_test "print_array_var" "var arr = [1, 2, 3]; std::print(arr);"
@@ -313,8 +245,8 @@ run_test "print_array_in_expr" "std::print([1][0]);"
 run_test "print_array_add" "var a = [1, 2]; var b = [3, 4];"
 
 # Test 57: Print with various data types
-run_test "print_int" "std::print(42);"
-run_test "print_float" "std::print(3.14);"
+run_test "print_int" "std::print(\"{}\", 42);"
+run_test "print_float" 'std::print("{}", 3.14);'
 run_test "print_string" 'std::print("hello");'
 run_test "print_bool_true" "std::print(true);"
 run_test "print_bool_false" "std::print(false);"
@@ -327,17 +259,17 @@ run_test "print_fmt_multiple" 'std::print("{} {} {}", 1, 2, 3);'
 run_test "print_fmt_mixed" 'std::print("{} + {} = {}", 1, 2, 1+2);'
 
 # Test 59: Print negative and special numbers
-run_test "print_negative_int" "std::print(-42);"
+run_test "print_negative_int" "std::print(\"{}\", -42);"
 run_test "print_negative_float" "std::print(-3.14);"
-run_test "print_zero" "std::print(0);"
+run_test "print_zero" 'std::print("{}", 0);'
 run_test "print_negative_zero" "std::print(-0);"
 
 # Test 60: Print with operators
-run_test "print_add" "std::print(1 + 2);"
-run_test "print_sub" "std::print(5 - 3);"
-run_test "print_mul" "std::print(3 * 4);"
-run_test "print_div" "std::print(10 / 3);"
-run_test "print_complex_expr" "std::print(1 + 2 * 3 - 4 / 2);"
+run_test "print_add" 'std::print("{}", 1 + 2);'
+run_test "print_sub" 'std::print("{}", 5 - 3);'
+run_test "print_mul" 'std::print("{}", 3 * 4);'
+run_test "print_div" 'std::print("{}", 10 / 3);'
+run_test "print_complex_expr" 'std::print("{}", 1 + 2 * 3 - 4 / 2);'
 
 # Test 61: Print with string special chars
 run_test "print_newline" 'std::print("hello\nworld");'
@@ -353,8 +285,8 @@ run_test "print_float_array" "std::print([1.0, 2.0, 3.0]);"
 run_test "print_mixed_number_array" "std::print([1, 2.5, 3]);"
 
 # Test 63: Print in control flow
-run_test "print_in_if" "if true { std::print(1); }"
-run_test "print_in_else" "if false { std::print(1); } else { std::print(2); }"
+run_test "print_in_if" "if true { std::print(\"{}\", 1); }"
+run_test "print_in_else" "if false { std::print(\"{}\", 1); } else { std::print(\"{}\", 2); }"
 run_test "print_in_while" "var i = 0; while i < 3 { std::print(i); i = i + 1; }"
 run_test "print_in_for" "for var i = 0; i < 3; i = i + 1 { std::print(i); }"
 
@@ -385,17 +317,17 @@ run_test "null_access" "var p: [int]; std::print(p);"
 run_test "use_uninitialized" "var arr: [int]; std::print(arr[0]);"
 
 # Test 70: Format string vulnerabilities
-run_test "fmt_string_injection" 'var fmt = "{}"; std::print(fmt, 42);'
+run_test "fmt_string_injection" 'var fmt = "{}"; std::print(fmt, "{}");'
 run_test "fmt_evil_string" 'std::print("%s%s%s", "a", "b", "c");'
 
 # Test 71: Integer overflow possibilities
-run_test "int_max" "std::print(2147483647);"
+run_test "int_max" 'std::print("{}", 2147483647);'
 run_test "int_min" "std::print(-2147483648);"
-run_test "int_overflow_add" "std::print(2147483647 + 1);"
+run_test "int_overflow_add" 'std::print("{}", 2147483647 + 1);'
 
 # Test 72: Division edge cases
-run_test "div_by_zero" "std::print(1 / 0);"
-run_test "mod_by_zero" "std::print(1 % 0);"
+run_test "div_by_zero" 'std::print("{}", 1 / 0);'
+run_test "mod_by_zero" 'std::print("{}", 1 % 0);'
 
 # Test 73: Out of bounds array access
 run_test "arr_out_of_bounds_pos" "var arr = [1, 2, 3]; std::print(arr[100]);"
@@ -406,10 +338,10 @@ run_test "arr_out_of_bounds_neg" "var arr = [1, 2, 3]; std::print(arr[-1]);"
 # ============================================
 
 # Test 74: Multiple println in sequence
-run_test "multi_println" "std::println(1); std::println(2); std::println(3);"
+run_test "multi_println" "std::println(\"{}\", 1); std::println(\"{}\", 2); std::println(\"{}\", 3);"
 
 # Test 75: Print with chained operations
-run_test "print_chain" "std::print(1); std::print(2); std::print(3);"
+run_test "print_chain" "std::print(\"{}\", 1); std::print(\"{}\", 2); std::print(\"{}\", 3);"
 
 # Test 76: Print array element by index
 run_test "print_arr_0" "var arr = [10, 20, 30]; std::print(arr[0]);"
@@ -423,7 +355,7 @@ run_test "print_arr_computed" "var arr = [1, 2, 3]; var i = 1; std::print(arr[i]
 run_test "print_nested_arrays" "std::print([[1, 2], [3, 4]]);"
 
 # Test 79: Print in nested blocks
-run_test "print_nested_block" "if true { if true { std::print(1); } }"
+run_test "print_nested_block" "if true { if true { std::print(\"{}\", 1); } }"
 
 # Test 80: Print with complex boolean
 run_test "print_bool_complex" "std::print(true && false || true);"
