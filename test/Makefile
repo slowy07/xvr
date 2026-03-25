@@ -4,7 +4,8 @@ OUT = ../out
 OBJDIR = obj
 
 # LLVM configuration
-LLVM_CONFIG := $(shell command -v llvm-config-21 || command -v llvm-config)
+LLVM_CONFIG ?= $(shell command -v llvm-config-21 || command -v llvm-config)
+LLVM_CONFIG := $(LLVM_CONFIG)
 LLVM_CFLAGS = $(shell $(LLVM_CONFIG) --cflags)
 LLVM_LIBS = $(shell $(LLVM_CONFIG) --libs core bitwriter)
 

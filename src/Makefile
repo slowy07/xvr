@@ -32,7 +32,9 @@ SRCS = xvr_ast_node.c \
 
 OBJS = $(SRCS:.c=.o)
 
-LLVM_CONFIG := $(shell command -v llvm-config-21 || command -v llvm-config)
+LLVM_CONFIG ?= $(shell command -v llvm-config-21 || command -v llvm-config)
+LLVM_CONFIG := $(LLVM_CONFIG)
+
 CFLAGS = $(CFLAGS_BASE) -I. -Ibackend -fPIC $(shell $(LLVM_CONFIG) --cflags)
 
 LDFLAGS = $(shell $(LLVM_CONFIG) --libs core bitwriter)
