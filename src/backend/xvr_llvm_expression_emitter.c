@@ -881,6 +881,27 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
                              : args->fnCollection.count;
 
         if (!has_format_string && total_args == 1 && format_node) {
+            Xvr_ASTNode* array_node = NULL;
+            if (args->type == XVR_AST_NODE_COMPOUND &&
+                args->compound.literalType == XVR_LITERAL_ARRAY) {
+                array_node = args;
+            } else if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+                       args->fnCollection.count > 0 &&
+                       args->fnCollection.nodes[0].type ==
+                           XVR_AST_NODE_COMPOUND &&
+                       args->fnCollection.nodes[0].compound.literalType ==
+                           XVR_LITERAL_ARRAY) {
+                array_node = &args->fnCollection.nodes[0];
+            }
+
+            if (array_node) {
+                Xvr_LLVMContextSetError(
+                    emitter->context,
+                    "print: cannot print array directly. Use format string: "
+                    "std::print(\"{}\", array)");
+                return NULL;
+            }
+
             LLVMValueRef arg_val =
                 Xvr_LLVMExpressionEmitterEmit(emitter, format_node);
             if (arg_val) {
@@ -889,15 +910,29 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
                 LLVMValueRef print_arg = arg_val;
                 LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
                 if (kind == LLVMIntegerTypeKind) {
-                    fmt_str = "%d";
+                    Xvr_LLVMContextSetError(
+                        emitter->context,
+                        "print: use format string for non-string types: "
+                        "std::print(\"{}\", value)");
+                    return NULL;
                 } else if (kind == LLVMFloatTypeKind) {
-                    fmt_str = "%f";
-                    print_arg = LLVMBuildFPExt(
-                        llvm_builder, arg_val,
-                        LLVMDoubleTypeInContext(llvm_ctx), "float_to_double");
-                    arg_type = LLVMDoubleTypeInContext(llvm_ctx);
+                    Xvr_LLVMContextSetError(
+                        emitter->context,
+                        "print: use format string for non-string types: "
+                        "std::print(\"{}\", value)");
+                    return NULL;
                 } else if (kind == LLVMDoubleTypeKind) {
-                    fmt_str = "%lf";
+                    Xvr_LLVMContextSetError(
+                        emitter->context,
+                        "print: use format string for non-string types: "
+                        "std::print(\"{}\", value)");
+                    return NULL;
+                } else if (kind == LLVMArrayTypeKind) {
+                    Xvr_LLVMContextSetError(emitter->context,
+                                            "print: cannot print array "
+                                            "directly. Use format string: "
+                                            "std::print(\"{}\", array)");
+                    return NULL;
                 } else if (kind == LLVMPointerTypeKind) {
                     fmt_str = "%s";
                 }
@@ -952,7 +987,29 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
                     } else if (kind == LLVMDoubleTypeKind) {
                         arg_types[i] = XVR_FORMAT_ARG_DOUBLE;
                     } else if (kind == LLVMPointerTypeKind) {
+                        LLVMTypeRef pointee = LLVMGetElementType(arg_type);
+                        if (pointee &&
+                            LLVMGetTypeKind(pointee) == LLVMArrayTypeKind) {
+                            Xvr_LLVMContextSetError(
+                                emitter->context,
+                                "print: cannot use array with format string. "
+                                "Use std::print(array) without format string, "
+                                "or "
+                                "print elements individually");
+                            free(arg_types);
+                            XvrFormatStringFree(fmt);
+                            return NULL;
+                        }
                         arg_types[i] = XVR_FORMAT_ARG_STRING;
+                    } else if (kind == LLVMArrayTypeKind) {
+                        Xvr_LLVMContextSetError(
+                            emitter->context,
+                            "print: cannot use array with format string. "
+                            "Use std::print(array) without format string, or "
+                            "print elements individually");
+                        free(arg_types);
+                        XvrFormatStringFree(fmt);
+                        return NULL;
                     } else {
                         arg_types[i] = XVR_FORMAT_ARG_STRING;
                     }
@@ -1160,6 +1217,26 @@ static LLVMValueRef emit_printfln(Xvr_LLVMExpressionEmitter* emitter,
                          : args->fnCollection.count;
 
     if (!has_format_string && total_args == 1 && format_node) {
+        Xvr_ASTNode* array_node = NULL;
+        if (args->type == XVR_AST_NODE_COMPOUND &&
+            args->compound.literalType == XVR_LITERAL_ARRAY) {
+            array_node = args;
+        } else if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+                   args->fnCollection.count > 0 &&
+                   args->fnCollection.nodes[0].type == XVR_AST_NODE_COMPOUND &&
+                   args->fnCollection.nodes[0].compound.literalType ==
+                       XVR_LITERAL_ARRAY) {
+            array_node = &args->fnCollection.nodes[0];
+        }
+
+        if (array_node) {
+            Xvr_LLVMContextSetError(
+                emitter->context,
+                "println: cannot print array directly. Use format string: "
+                "std::println(\"{}\", array)");
+            return NULL;
+        }
+
         LLVMValueRef arg_val =
             Xvr_LLVMExpressionEmitterEmit(emitter, format_node);
         if (arg_val) {
@@ -1168,15 +1245,29 @@ static LLVMValueRef emit_printfln(Xvr_LLVMExpressionEmitter* emitter,
             LLVMValueRef print_arg = arg_val;
             LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
             if (kind == LLVMIntegerTypeKind) {
-                fmt_str = "%d\n";
+                Xvr_LLVMContextSetError(
+                    emitter->context,
+                    "println: use format string for non-string types: "
+                    "std::println(\"{}\", value)");
+                return NULL;
             } else if (kind == LLVMFloatTypeKind) {
-                fmt_str = "%f\n";
-                print_arg = LLVMBuildFPExt(llvm_builder, arg_val,
-                                           LLVMDoubleTypeInContext(llvm_ctx),
-                                           "float_to_double");
-                arg_type = LLVMDoubleTypeInContext(llvm_ctx);
+                Xvr_LLVMContextSetError(
+                    emitter->context,
+                    "println: use format string for non-string types: "
+                    "std::println(\"{}\", value)");
+                return NULL;
             } else if (kind == LLVMDoubleTypeKind) {
-                fmt_str = "%lf\n";
+                Xvr_LLVMContextSetError(
+                    emitter->context,
+                    "println: use format string for non-string types: "
+                    "std::println(\"{}\", value)");
+                return NULL;
+            } else if (kind == LLVMArrayTypeKind) {
+                Xvr_LLVMContextSetError(
+                    emitter->context,
+                    "println: cannot print array directly. Use format string: "
+                    "std::println(\"{}\", array)");
+                return NULL;
             } else if (kind == LLVMPointerTypeKind) {
                 fmt_str = "%s\n";
             }
@@ -1283,7 +1374,31 @@ static LLVMValueRef emit_printfln(Xvr_LLVMExpressionEmitter* emitter,
             } else if (kind == LLVMDoubleTypeKind) {
                 arg_types[i] = XVR_FORMAT_ARG_DOUBLE;
             } else if (kind == LLVMPointerTypeKind) {
+                LLVMTypeRef pointee = LLVMGetElementType(arg_type);
+                if (pointee && LLVMGetTypeKind(pointee) == LLVMArrayTypeKind) {
+                    Xvr_LLVMContextSetError(
+                        emitter->context,
+                        "println: cannot use array with format string. "
+                        "Use std::println(array) without format string, or "
+                        "print elements individually");
+                    free(arg_types);
+                    free(printf_fmt_with_newline);
+                    XvrFormatStringFree(fmt);
+                    if (call_args) free(call_args);
+                    return NULL;
+                }
                 arg_types[i] = XVR_FORMAT_ARG_STRING;
+            } else if (kind == LLVMArrayTypeKind) {
+                Xvr_LLVMContextSetError(
+                    emitter->context,
+                    "println: cannot use array with format string. "
+                    "Use std::println(array) without format string, or "
+                    "print elements individually");
+                free(arg_types);
+                free(printf_fmt_with_newline);
+                XvrFormatStringFree(fmt);
+                if (call_args) free(call_args);
+                return NULL;
             } else {
                 arg_types[i] = XVR_FORMAT_ARG_STRING;
             }

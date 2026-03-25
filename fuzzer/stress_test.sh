@@ -2,7 +2,7 @@
 # XVR Compiler Stress Test - LibFuzzer-style
 # Generates random XVR code and tests for crashes
 
-XVR="./out/xvr"
+XVR="../out/xvr"
 TEMP_DIR="/tmp/xvr_stress_$$"
 mkdir -p "$TEMP_DIR"
 PASS=0
@@ -148,6 +148,39 @@ patterns=(
     
     # Comments in expressions
     'std::print(/* comment */ 42);'
+    
+    # ===== NEW: Array print tests =====
+    'std::println([1, 2, 3]);'
+    'std::println([1.5, 2.5]);'
+    'std::print([1, 2, 3]);'
+    'var arr = [1, 2, 3]; std::println(arr);'
+    'std::print([42]);'
+    'var arr = [1]; std::print(arr[0]);'
+    
+    # ===== NEW: Format string tests =====
+    'std::print("{}", 42);'
+    'std::print("{} + {} = {}", 1, 2, 3);'
+    'std::println("Value: {}", 3.14);'
+    
+    # ===== NEW: Edge case print tests =====
+    'std::print(-42);'
+    'std::print(0);'
+    'std::print("");'
+    'std::print(2147483647);'
+    
+    # ===== NEW: Print in control flow =====
+    'if true { std::print(1); }'
+    'var i = 0; while i < 3 { std::print(i); i = i + 1; }'
+    
+    # ===== NEW: Print with operators =====
+    'std::print(1 + 2);'
+    'std::print(10 / 3);'
+    'std::print(5 % 3);'
+    
+    # ===== NEW: Print with special chars =====
+    'std::print("hello\nworld");'
+    'std::print("hello\tworld");'
+    'std::print("hello\"world");'
 )
 
 # Run predefined patterns multiple times

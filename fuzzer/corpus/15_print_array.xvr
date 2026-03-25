@@ -1,0 +1,5 @@
+# Array print tests - discovering array printing bugs
+std::println([1, 2, 3]);
+std::println([1.5, 2.5, 3.5]);
+std::print([1, 2, 3]);
+std::print([1.1, 2.2]);
