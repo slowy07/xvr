@@ -1,0 +1,37 @@
+.PHONY: all clean instrument run
+
+AFL_CC ?= afl-clang
+AFL_CXX ?= afl-clang++
+AFL_LDFLAGS ?= -Wl,-z,now,-z,relro,-z,noexecstack
+
+CFLAGS_BASE = -std=c18 -pedantic -Werror -Wall -Wextra
+CFLAGS_BASE += -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
+CFLAGS_BASE += -Wstrict-prototypes -g -O1
+
+XVR_OUTDIR = ../out
+XVR_OBJDIR = ../obj
+XVR_SHLIB_NAME = libxvr.so
+XVR_STATIC_NAME = libxvr.a
+XVR_EXE_NAME = xvr
+
+CC ?= $(AFL_CC)
+CXX ?= $(AFL_CXX)
+
+all: instrument-lib instrument-compiler
+
+instrument-lib:
+	$(MAKE) -C ../src CC="$(CC)" CFLAGS_BASE="$(CFLAGS_BASE)" XVR_SHLIB_NAME="$(XVR_SHLIB_NAME)"
+
+instrument-compiler:
+	$(MAKE) -C ../compiler CC="$(CC)" CFLAGS_BASE="$(CFLAGS_BASE)" XVR_SHLIB_NAME="$(XVR_SHLIB_NAME)"
+
+run: all
+	afl-fuzz -i corpus -o output -M main -- ./out/xvr @@
+
+run-secondary: all
+	afl-fuzz -i corpus -o output -S secondary -- ./out/xvr @@
+
+clean:
+	$(MAKE) -C ../src clean
+	$(MAKE) -C ../compiler clean
+	rm -rf output corpus_seed

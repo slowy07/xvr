@@ -61,3 +61,19 @@ dkms.conf
 # object file on tests
 tests/obj/*
 tests/out/*
+
+# Fuzzer artifacts
+fuzzer/harness/fuzz_asan
+fuzzer/harness/fuzz_ubsan
+fuzzer/harness/fuzz_cov
+fuzzer/corpus/crashes/
+fuzzer/corpus/hangs/
+fuzzer/corpus/leaks/
+fuzzer/crash_log.txt
+fuzzer/coverage/
+fuzzer/coverage.info
+fuzzer/coverage.filtered.info
+
+# Fuzzer temporary files
+*.fuzz.tmp
+*.fuzz_out

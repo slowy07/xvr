@@ -1,0 +1,32 @@
+# Fuzzer - LibFuzzer artifacts
+harness/fuzz_asan
+harness/fuzz_ubsan
+harness/fuzz_cov
+
+# Fuzzer - Build artifacts
+corpus/crashes/
+corpus/hangs/
+corpus/leaks/
+
+# Fuzzer - Generated crash logs
+crashes/
+crash_log.txt
+
+# Fuzzer - Coverage reports
+coverage/
+coverage.info
+coverage.filtered.info
+
+# Fuzzer - Temporary files
+*.xvr.tmp
+/tmp/fuzz_*.xvr
+/tmp/xvr_fuzz_*.xvr
+/tmp/xvr_*.xvr
+/tmp/test*.xvr
+/tmp/regression_test.xvr
+/tmp/stress_*.xvr
+
+# Fuzzer - Build directories (if any)
+build/*.o
+build/*.a
+build/fuzz_*

@@ -1,0 +1,30 @@
+.PHONY: all clean run
+
+CC ?= clang
+CXX ?= clang++
+
+CFLAGS_BASE = -std=c18 -pedantic -Werror -Wall -Wextra
+CFLAGS_BASE += -Wno-unused-parameter -Wno-unused-function -Wno-unused-variable
+CFLAGS_BASE += -Wstrict-prototypes -g -O1
+
+XVR_OUTDIR = ../out
+XVR_OBJDIR = ../obj
+XVR_SHLIB_NAME = libxvr.so
+XVR_STATIC_NAME = libxvr.a
+XVR_EXE_NAME = xvr
+
+all: lib compiler
+
+lib:
+	$(MAKE) -C ../src CC="$(CC)" CFLAGS_BASE="$(CFLAGS_BASE)" XVR_SHLIB_NAME="$(XVR_SHLIB_NAME)"
+
+compiler:
+	$(MAKE) -C ../compiler CC="$(CC)" CFLAGS_BASE="$(CFLAGS_BASE)" XVR_SHLIB_NAME="$(XVR_SHLIB_NAME)"
+
+run: all
+	./harness/fuzz_libfuzzer ../corpus
+
+clean:
+	$(MAKE) -C ../src clean
+	$(MAKE) -C ../compiler clean
+	rm -rf corpus
