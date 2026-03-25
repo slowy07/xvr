@@ -251,7 +251,7 @@ static int run_println_tests(void) {
          "println: first argument must be a string", 0},
         {"println_mismatched_placeholders",
          "include std;\nstd::println(\"{} {}\", 42);",
-         "println: format placeholder count", 0},
+         "println: invalid format string", 0},
     };
 
     int test_count = sizeof(tests) / sizeof(tests[0]);
