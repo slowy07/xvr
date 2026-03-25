@@ -4,9 +4,8 @@ set -e
 FUZZER_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$FUZZER_DIR"
 
-echo "========================================="
 echo "XVR Compiler Fuzzer Build System"
-echo "========================================="
+
 echo ""
 
 usage() {

@@ -34,9 +34,15 @@ jobs:
           sudo apt-get install -y llvm-22 llvm-22-dev clang-22
 
       - name: Build compiler
+        env:
+          LLVM_CONFIG: llvm-config-22
         run: |
           make clean || true
           make -j$(nproc)
+
+      - name: Verify build
+        run: |
+          test -f out/xvr && echo "Build successful" || exit 1
 
       - name: Run fuzzing test suite
         run: |
@@ -85,9 +91,15 @@ jobs:
           sudo apt-get install -y llvm-22 llvm-22-dev clang-22
 
       - name: Build compiler
+        env:
+          LLVM_CONFIG: llvm-config-22
         run: |
           make clean || true
           make -j$(nproc)
+
+      - name: Verify build
+        run: |
+          test -f out/xvr && echo "Build successful" || exit 1
 
       - name: Run regression tests
         run: |
@@ -125,9 +137,15 @@ jobs:
           sudo apt-get install -y llvm-22 llvm-22-dev clang-22 binutils
 
       - name: Build compiler
+        env:
+          LLVM_CONFIG: llvm-config-22
         run: |
           make clean || true
           make -j$(nproc)
+
+      - name: Verify build
+        run: |
+          test -f out/xvr && echo "Build successful" || exit 1
 
       - name: Build LibFuzzer harness
         run: |
@@ -140,9 +158,9 @@ jobs:
 
       - name: Run LibFuzzer
         run: |
+          FUZZ_TIME="${inputs.fuzz_time:-60}"
           if [ -f fuzzer/harness/fuzz_asan ]; then
             cd fuzzer
-            FUZZ_TIME=${${{ inputs.fuzz_time }} || '60'}
             timeout $FUZZ_TIME ./harness/fuzz_asan corpus -max_total_time=$FUZZ_TIME -print_final_stats=1 2>&1 || true
           else
             echo "LibFuzzer ASAN build skipped, using corpus-based tests"
@@ -177,9 +195,15 @@ jobs:
           sudo apt-get install -y llvm-22 llvm-22-dev clang-22
 
       - name: Build compiler
+        env:
+          LLVM_CONFIG: llvm-config-22
         run: |
           make clean || true
           make -j$(nproc)
+
+      - name: Verify build
+        run: |
+          test -f out/xvr && echo "Build successful" || exit 1
 
       - name: Test corpus files
         run: |
@@ -218,9 +242,15 @@ jobs:
           sudo apt-get install -y llvm-22 llvm-22-dev clang-22
 
       - name: Build compiler
+        env:
+          LLVM_CONFIG: llvm-config-22
         run: |
           make clean || true
           make -j$(nproc)
+
+      - name: Verify build
+        run: |
+          test -f out/xvr && echo "Build successful" || exit 1
 
       - name: Run stress tests
         run: |
@@ -278,9 +308,9 @@ jobs:
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "| Test Suite | Status |" >> $GITHUB_STEP_SUMMARY
           echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Fuzzing Tests | [NICE] Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Regression Tests | [NICE] Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| LibFuzzer | [NICE] Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Corpus Tests | [NICE] Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| Stress Tests | [NICE] Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Fuzzing Tests | Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Regression Tests | Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| LibFuzzer | Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Corpus Tests | Passed |" >> $GITHUB_STEP_SUMMARY
+          echo "| Stress Tests | Passed |" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
