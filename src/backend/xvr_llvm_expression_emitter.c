@@ -1004,10 +1004,27 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
             } else {
                 LLVMValueRef fmt_global = LLVMBuildGlobalStringPtr(
                     llvm_builder, format_str ? format_str : "%s", "fmt_str");
-                LLVMTypeRef printf_type = LLVMFunctionType(
-                    LLVMInt32TypeInContext(llvm_ctx), NULL, 0, true);
-                LLVMBuildCall2(llvm_builder, printf_type, printf_fn,
-                               &fmt_global, 1, "printf_call");
+                if (has_format_string || !format_node) {
+                    LLVMTypeRef printf_type = LLVMFunctionType(
+                        LLVMInt32TypeInContext(llvm_ctx), NULL, 0, true);
+                    LLVMBuildCall2(llvm_builder, printf_type, printf_fn,
+                                   &fmt_global, 1, "printf_call");
+                } else {
+                    LLVMValueRef arg_val =
+                        Xvr_LLVMExpressionEmitterEmit(emitter, format_node);
+                    if (arg_val) {
+                        LLVMValueRef all_args[2] = {fmt_global, arg_val};
+                        LLVMTypeRef printf_type = LLVMFunctionType(
+                            LLVMInt32TypeInContext(llvm_ctx),
+                            (LLVMTypeRef[]){
+                                LLVMPointerType(LLVMInt8TypeInContext(llvm_ctx),
+                                                0),
+                                LLVMTypeOf(arg_val)},
+                            2, true);
+                        LLVMBuildCall2(llvm_builder, printf_type, printf_fn,
+                                       all_args, 2, "printf_call");
+                    }
+                }
             }
         }
 
@@ -1739,8 +1756,14 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
         return phi;
     }
 
-    /* Unsupported expression types */
+    /* Grouping expression - unwrap and emit the child */
     case XVR_AST_NODE_GROUPING:
+        if (node->grouping.child) {
+            return Xvr_LLVMExpressionEmitterEmit(emitter, node->grouping.child);
+        }
+        return NULL;
+
+    /* Unsupported expression types */
     case XVR_AST_NODE_INDEX:
     case XVR_AST_NODE_ERROR:
     case XVR_AST_NODE_PAIR:
