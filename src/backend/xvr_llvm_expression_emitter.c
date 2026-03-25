@@ -1152,13 +1152,7 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
 
 static LLVMValueRef emit_printfln(Xvr_LLVMExpressionEmitter* emitter,
                                   Xvr_ASTNode* args) {
-    if (!emitter) {
-        Xvr_LLVMContextSetError(emitter->context, "println: NULL emitter");
-        return NULL;
-    }
-
-    if (!args) {
-        Xvr_LLVMContextSetError(emitter->context, "println: NULL arguments");
+    if (!emitter || !args) {
         return NULL;
     }
 
