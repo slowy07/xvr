@@ -74,6 +74,7 @@ The corpus contains minimal XVR programs covering:
 - Strings and arrays
 - Control flow (if/else, while, for)
 - Functions
+- Print functions (print, println with format strings)
 
 ## Tips for Effective Fuzzing
 
