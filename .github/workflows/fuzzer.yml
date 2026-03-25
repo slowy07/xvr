@@ -158,7 +158,7 @@ jobs:
 
       - name: Run LibFuzzer
         run: |
-          FUZZ_TIME="${inputs.fuzz_time:-60}"
+          FUZZ_TIME="${{ inputs.fuzz_time || '60' }}"
           if [ -f fuzzer/harness/fuzz_asan ]; then
             cd fuzzer
             timeout $FUZZ_TIME ./harness/fuzz_asan corpus -max_total_time=$FUZZ_TIME -print_final_stats=1 2>&1 || true
