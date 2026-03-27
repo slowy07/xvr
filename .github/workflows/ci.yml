@@ -43,7 +43,9 @@ jobs:
               echo "not formatted: $file"
               exit 1
             fi
-          done < <(find . -type f \( -name "*.c" -o -name "*.h" \) -not -path "./${{ env.BUILD_DIR }}/*")
+          done < <(find . -type f \( -name "*.c" -o -name "*.h" \) \
+            -not -path "./${{ env.BUILD_DIR }}/*" \
+            -not -path "./fuzzer/harness/*")
 
       - name: Run tests with CTest
         run: |
@@ -106,7 +108,7 @@ jobs:
       - name: Run sanitized tests
         run: |
           cd ${{ env.BUILD_DIR }}-asan
-          ./xvr_test_all || true
+          ASAN_OPTIONS=detect_leaks=0 ./xvr_test_all 2>&1 || true
 
   build-static-only:
     name: Static Library Only

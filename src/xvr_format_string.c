@@ -295,7 +295,8 @@ char* XvrFormatStringBuildPrintfFormat(const XvrFormatString* fmt,
     }
 
     size_t src_len = strlen(src);
-    char* result = malloc(src_len + 1);
+    size_t result_size = src_len * 2 + 1;
+    char* result = malloc(result_size);
     if (!result) return NULL;
 
     size_t result_pos = 0;
@@ -318,8 +319,16 @@ char* XvrFormatStringBuildPrintfFormat(const XvrFormatString* fmt,
                     i++;
                 }
 
-                if (placeholder_idx < arg_count &&
-                    arg_types[placeholder_idx] != XVR_FORMAT_ARG_INT) {
+                if (i >= src_len ||
+                    (src[i] != 'd' && src[i] != 'i' && src[i] != 'u' &&
+                     src[i] != 'o' && src[i] != 'x' && src[i] != 'X' &&
+                     src[i] != 'f' && src[i] != 'F' && src[i] != 'e' &&
+                     src[i] != 'E' && src[i] != 'g' && src[i] != 'G' &&
+                     src[i] != 'c' && src[i] != 's' && src[i] != 'p' &&
+                     src[i] != 'n')) {
+                    result[result_pos++] = '%';
+                } else if (placeholder_idx < arg_count &&
+                           arg_types[placeholder_idx] != XVR_FORMAT_ARG_INT) {
                     const char* replacement =
                         format_type_to_printf(arg_types[placeholder_idx]);
                     size_t repl_len = strlen(replacement);
