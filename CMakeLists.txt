@@ -175,7 +175,7 @@ if(WIN32)
     endif()
 else()
     find_program(LLVM_CONFIG_PROGRAM 
-        NAMES llvm-config llvm-config-21 llvm-config-20 llvm-config-19 
+        NAMES llvm-config llvm-config-22 llvm-config-21 llvm-config-20 llvm-config-19 
                llvm-config-18 llvm-config-17 llvm-config-16 llvm-config-15
         DOC "Path to llvm-config"
     )
@@ -186,6 +186,13 @@ else()
         execute_process(
             COMMAND ${LLVM_CONFIG_PROGRAM} --cflags
             OUTPUT_VARIABLE LLVM_CFLAGS
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            RESULT_VARIABLE LLVM_CONFIG_RESULT
+        )
+        
+        execute_process(
+            COMMAND ${LLVM_CONFIG_PROGRAM} --includedir
+            OUTPUT_VARIABLE LLVM_INCLUDE_DIR
             OUTPUT_STRIP_TRAILING_WHITESPACE
             RESULT_VARIABLE LLVM_CONFIG_RESULT
         )
@@ -207,6 +214,10 @@ else()
         if(LLVM_CONFIG_RESULT EQUAL 0 AND LLVM_CFLAGS)
             set(LLVM_FOUND TRUE)
             add_compile_options(${LLVM_CFLAGS})
+            if(LLVM_INCLUDE_DIR)
+                include_directories(${LLVM_INCLUDE_DIR})
+                message(STATUS "LLVM include dir: ${LLVM_INCLUDE_DIR}")
+            endif()
             separate_arguments(LLVM_LIBS UNIX_COMMAND "${LLVM_CONFIG_LIBS}")
             separate_arguments(LLVM_SYSTEM_LIBS UNIX_COMMAND "${LLVM_SYSTEM_LIBS}")
             list(APPEND LLVM_LIBS ${LLVM_SYSTEM_LIBS})
@@ -219,8 +230,10 @@ else()
         find_package(LLVM QUIET)
         if(LLVM_FOUND)
             include_directories(${LLVM_INCLUDE_DIRS})
+            link_directories(${LLVM_LIBRARY_DIRS})
             list(APPEND LLVM_LIBS ${LLVM_AVAILABLE_LIBS})
             message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION} via CMake")
+            message(STATUS "LLVM include dirs: ${LLVM_INCLUDE_DIRS}")
         endif()
     endif()
 endif()
