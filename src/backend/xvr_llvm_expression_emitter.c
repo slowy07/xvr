@@ -1327,9 +1327,9 @@ static LLVMValueRef emit_printfln(Xvr_LLVMExpressionEmitter* emitter,
         if (fmt->placeholder_count != (size_t)arg_count) {
             char error_msg[256];
             snprintf(error_msg, sizeof(error_msg),
-                     "println: format placeholder count (%zu) does not "
+                     "println: format placeholder count (%u) does not "
                      "match argument count (%d)",
-                     (unsigned long)fmt->placeholder_count, arg_count);
+                     (unsigned int)fmt->placeholder_count, arg_count);
             Xvr_LLVMContextSetError(emitter->context, error_msg);
             XvrFormatStringFree(fmt);
             free(call_args);
