@@ -2,7 +2,14 @@
 # XVR Compiler Regression Tests
 # Tests for bugs that have been fixed
 
-XVR="./out/xvr"
+if [ -x "./build/bin/xvr" ]; then
+    XVR="./build/bin/xvr"
+elif [ -x "./out/xvr" ]; then
+    XVR="./out/xvr"
+else
+    XVR="./out/xvr"
+fi
+
 PASS=0
 FAIL=0
 

@@ -45,8 +45,21 @@ static int capture_compile_run(const char* source, char* output,
     fputs(source, tmp);
     fclose(tmp);
 
+    const char* xvr_path = getenv("XVR_BINARY");
+    if (!xvr_path) {
+        if (access("./out/xvr", X_OK) == 0) {
+            xvr_path = "./out/xvr";
+        } else if (access("./build/bin/xvr", X_OK) == 0) {
+            xvr_path = "./build/bin/xvr";
+        } else if (access("../build/bin/xvr", X_OK) == 0) {
+            xvr_path = "../build/bin/xvr";
+        } else {
+            xvr_path = "./out/xvr";
+        }
+    }
+
     char cmd[1024];
-    snprintf(cmd, sizeof(cmd), "./out/xvr /tmp/xvr_std_test.xvr 2>&1");
+    snprintf(cmd, sizeof(cmd), "%s /tmp/xvr_std_test.xvr 2>&1", xvr_path);
 
     FILE* proc = popen(cmd, "r");
     if (!proc) {
@@ -363,11 +376,7 @@ static int run_format_string_tests(void) {
 }
 
 int run_std_tests(void) {
-    printf("\n" XVR_CC_NOTICE
-           "===============================================\n" XVR_CC_RESET);
     printf(XVR_CC_NOTICE "  XVR Standard Library Test Suite\n" XVR_CC_RESET);
-    printf(XVR_CC_NOTICE
-           "===============================================\n" XVR_CC_RESET);
 
     int total_failed = 0;
 

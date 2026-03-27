@@ -33,7 +33,7 @@ int run_compiler_tests(void) {
 
     /* Test 2: Parse and compile simple source */
     printf("  [RUN ] Parse and compile simple source...\n");
-    const char* source = "var x = 42;\nstd::print(x);\n";
+    const char* source = "var x = 42;\nstd::print(\"{}\", x);\n";
 
     Xvr_Lexer lexer;
     Xvr_Parser parser;

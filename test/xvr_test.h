@@ -179,11 +179,9 @@ typedef int (*Xvr_TestFn)(void);
         int total_tests = 0;                                                 \
                                                                              \
         printf("\n");                                                        \
-        printf("%s===============================================%s\n",      \
                XVR_TEST_BLUE, XVR_TEST_RESET);                               \
         printf("%s  XVR Compiler Test Suite%s\n", XVR_TEST_BLUE,             \
                XVR_TEST_RESET);                                              \
-        printf("%s===============================================%s\n",      \
                XVR_TEST_BLUE, XVR_TEST_RESET);                               \
         printf("\n");                                                        \
                                                                              \
