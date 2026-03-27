@@ -54,28 +54,59 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install LLVM
+      - name: Check LLVM installation
+        id: check_llvm
+        shell: pwsh
         run: |
-          winget install LLVM.LLVM --version 18.1.8 --silent --accept-package-agreements --accept-source-agreements
+          $llvmPath = "C:\Program Files\LLVM"
+          if (Test-Path "$llvmPath\bin\clang.exe") {
+            Write-Host "LLVM already installed"
+            echo "llvm_installed=true" >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Host "LLVM not found, will install"
+            echo "llvm_installed=false" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Install LLVM
+        if: steps.check_llvm.outputs.llvm_installed == 'false'
+        shell: pwsh
+        run: |
+          winget install LLVM.LLVM --version 18.1.8 --silent --accept-package-agreements --accept-source-agreements || echo "LLVM may already be installed"
+
+      - name: Find LLVM
+        shell: pwsh
+        run: |
+          $llvmPaths = @(
+            "C:\Program Files\LLVM",
+            "C:\Program Files (x86)\LLVM",
+            "$env:LLVM_DIR"
+          )
+          foreach ($path in $llvmPaths) {
+            if ($path -and (Test-Path "$path\bin\clang.exe")) {
+              Write-Host "Found LLVM at: $path"
+              echo "LLVM_PATH=$path" >> $env:GITHUB_ENV
+              break
+            }
+          }
 
       - name: Configure CMake
         shell: pwsh
         run: |
-          $env:Path = "C:\Program Files\LLVM\bin;$env:Path"
+          $env:Path = "$env:LOCALAPPDATA\LLVM\bin;C:\Program Files\LLVM\bin;$env:Path"
           mkdir build
           cd build
-          cmake .. -G "Ninja" -DXVR_BUILD_TESTS=ON -DXVR_BUILD_TYPE=release
+          cmake .. -G "Ninja" -DXVR_BUILD_TESTS=ON -DXVR_BUILD_TYPE=release -DCMAKE_C_COMPILER=clang
 
       - name: Build
         shell: pwsh
         run: |
-          $env:Path = "C:\Program Files\LLVM\bin;$env:Path"
+          $env:Path = "$env:LOCALAPPDATA\LLVM\bin;C:\Program Files\LLVM\bin;$env:Path"
           cmake --build build -j$env:NUMBER_OF_PROCESSORS
 
       - name: Run Tests
         shell: pwsh
         run: |
-          $env:Path = "C:\Program Files\LLVM\bin;$env:Path"
+          $env:Path = "$env:LOCALAPPDATA\LLVM\bin;C:\Program Files\LLVM\bin;$env:Path"
           cd build
           ctest --output-on-failure --timeout 60
 
