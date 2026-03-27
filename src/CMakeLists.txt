@@ -69,15 +69,23 @@ add_library(xvr_objects OBJECT ${XVR_SOURCES} ${XVR_HEADERS})
 target_include_directories(xvr_objects PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(xvr_objects PRIVATE ${XVR_COMPILE_FLAGS})
 
+if(XVR_SANITIZER)
+    target_compile_options(xvr_objects PRIVATE -fno-omit-frame-pointer)
+endif()
+
 set(LLVM_LIBS -lLLVM-22)
+
+add_library(xvr_llvm_libs INTERFACE)
+target_link_libraries(xvr_llvm_libs INTERFACE ${LLVM_LIBS})
 
 if(XVR_BUILD_STATIC)
     add_library(xvr_static STATIC $<TARGET_OBJECTS:xvr_objects>)
     target_compile_options(xvr_static PRIVATE ${XVR_COMPILE_FLAGS})
-    target_link_libraries(xvr_static PRIVATE ${LLVM_LIBS})
+    target_link_libraries(xvr_static PRIVATE xvr_llvm_libs)
     set_target_properties(xvr_static PROPERTIES
         OUTPUT_NAME xvr
         PREFIX lib
+        POSITION_INDEPENDENT_CODE ON
     )
     add_dependencies(xvr_static xvr_objects)
 endif()
@@ -85,7 +93,7 @@ endif()
 if(XVR_BUILD_SHARED)
     add_library(xvr_shared SHARED $<TARGET_OBJECTS:xvr_objects>)
     target_compile_options(xvr_shared PRIVATE ${XVR_COMPILE_FLAGS} -fPIC -DXVR_IMPORT)
-    target_link_libraries(xvr_shared PRIVATE ${LLVM_LIBS})
+    target_link_libraries(xvr_shared PRIVATE xvr_llvm_libs)
     set_target_properties(xvr_shared PROPERTIES
         OUTPUT_NAME xvr
         PREFIX lib

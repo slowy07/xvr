@@ -28,10 +28,12 @@ target_compile_options(xvr_test_all PRIVATE
     -DXVR_EXPORT_LLVM
 )
 
-if(XVR_BUILD_STATIC)
-    target_link_libraries(xvr_test_all PRIVATE xvr_static ${LLVM_LIBS})
+if(XVR_SANITIZER)
+    target_link_libraries(xvr_test_all PRIVATE xvr_objects -fsanitize=${XVR_SANITIZER} xvr_llvm_libs)
+elseif(XVR_BUILD_STATIC)
+    target_link_libraries(xvr_test_all PRIVATE xvr_static xvr_llvm_libs)
 else()
-    target_link_libraries(xvr_test_all PRIVATE xvr_shared ${LLVM_LIBS})
+    target_link_libraries(xvr_test_all PRIVATE xvr_shared xvr_llvm_libs)
 endif()
 
 set_target_properties(xvr_test_all PROPERTIES
