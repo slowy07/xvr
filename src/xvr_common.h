@@ -29,6 +29,31 @@ SOFTWARE.
 #include <stddef.h>
 #include <stdint.h>
 
+#if defined(_WIN32) || defined(_WIN64)
+#    include <stdio.h>
+#    include <stdlib.h>
+#    ifdef _MSC_VER
+#        define XVR_SNPRINTF _snprintf
+#    else
+#        define XVR_SNPRINTF snprintf
+#    endif
+#    define XVR_STRDUP _strdup
+#    ifdef __cplusplus
+extern "C" {
+#    endif
+int Xvr_asprintf(char** strp, const char* fmt, ...);
+int Xvr_vasprintf(char** strp, const char* fmt, va_list ap);
+#    define asprintf Xvr_asprintf
+#    define vasprintf Xvr_vasprintf
+#    define strdup XVR_STRDUP
+#    ifdef __cplusplus
+}
+#    endif
+#else
+#    define XVR_SNPRINTF snprintf
+#    include <stdio.h>
+#endif
+
 /**
  * @def XVR_API
  * @brief control symbol visibilty / declaration linkage fro the XVR library

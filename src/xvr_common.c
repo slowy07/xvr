@@ -25,6 +25,7 @@ SOFTWARE.
 #include "xvr_common.h"
 
 #include <assert.h>
+#include <stdarg.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -38,6 +39,36 @@ char* Xvr_strdup(const char* str) {
     }
     return dup;
 }
+
+#if defined(_WIN32) || defined(_WIN64)
+int Xvr_vasprintf(char** strp, const char* fmt, va_list ap) {
+    va_list ap_copy;
+    va_copy(ap_copy, ap);
+    int len = vsnprintf(NULL, 0, fmt, ap_copy);
+    va_end(ap_copy);
+
+    if (len < 0) {
+        *strp = NULL;
+        return -1;
+    }
+
+    *strp = malloc(len + 1);
+    if (!*strp) {
+        return -1;
+    }
+
+    vsnprintf(*strp, len + 1, fmt, ap);
+    return len;
+}
+
+int Xvr_asprintf(char** strp, const char* fmt, ...) {
+    va_list ap;
+    va_start(ap, fmt);
+    int result = Xvr_vasprintf(strp, fmt, ap);
+    va_end(ap);
+    return result;
+}
+#endif
 
 #define STATIC_ASSERT(test_for_true) \
     static_assert((test_for_true), "(" #test_for_true ") failed")

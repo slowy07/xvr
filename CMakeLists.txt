@@ -62,9 +62,41 @@ if(WIN32)
     endif()
     
     if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
-        set(COMPILER_FLAGS_BASE "-Wall -Wextra -Wpedantic -Wno-unused-parameter")
+        set(COMPILER_FLAGS_BASE "-Wall -Wextra -Wpedantic -Wno-unused-parameter -Wno-deprecated-declarations")
         set(COMPILER_FLAGS_DEBUG "-g -O0")
         set(COMPILER_FLAGS_RELEASE "-O2")
+        
+        find_program(LLVM_CONFIG_PROGRAM 
+            NAMES llvm-config clang-config
+            PATHS "C:/Program Files/LLVM/bin" "C:/LLVM/bin"
+            NO_DEFAULT_PATH
+        )
+        
+        if(LLVM_CONFIG_PROGRAM)
+            message(STATUS "Found llvm-config: ${LLVM_CONFIG_PROGRAM}")
+            execute_process(
+                COMMAND ${LLVM_CONFIG_PROGRAM} --cflags
+                OUTPUT_VARIABLE LLVM_CFLAGS
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+            execute_process(
+                COMMAND ${LLVM_CONFIG_PROGRAM} --includedir
+                OUTPUT_VARIABLE LLVM_INCLUDE_DIR
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+            if(LLVM_INCLUDE_DIR)
+                include_directories(${LLVM_INCLUDE_DIR})
+                message(STATUS "LLVM include: ${LLVM_INCLUDE_DIR}")
+            endif()
+            execute_process(
+                COMMAND ${LLVM_CONFIG_PROGRAM} --libs core bitwriter
+                OUTPUT_VARIABLE LLVM_CONFIG_LIBS
+                OUTPUT_STRIP_TRAILING_WHITESPACE
+            )
+            if(LLVM_CONFIG_LIBS)
+                separate_arguments(LLVM_LIBS UNIX_COMMAND "${LLVM_CONFIG_LIBS}")
+            endif()
+        endif()
     else()
         set(COMPILER_FLAGS_BASE "/W4")
         set(COMPILER_FLAGS_DEBUG "/WX-")
