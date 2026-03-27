@@ -24,7 +24,12 @@ SOFTWARE.
 
 #include "xvr_llvm_codegen.h"
 
-#include <dlfcn.h>
+#if defined(_WIN32) || defined(_WIN64)
+#    include <windows.h>
+#else
+#    include <dlfcn.h>
+#endif
+
 #include <llvm-c/Target.h>
 #include <llvm-c/TargetMachine.h>
 #include <stdio.h>

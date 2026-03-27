@@ -1,7 +1,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
+
+#if defined(_WIN32) || defined(_WIN64)
+#    include <windows.h>
+#else
+#    include <unistd.h>
+#endif
 
 #include "backend/xvr_llvm_codegen.h"
 #include "compiler_tools.h"
@@ -167,9 +172,16 @@ int main(int argc, const char* argv[]) {
 
     bool shouldRun = !Xvr_commandLine.compileOnly && !Xvr_commandLine.dumpLLVM;
     char* outFile = NULL;
+    char* tempDir = Xvr_getTempDir();
+
+    if (!tempDir) {
+        tempDir = (char*)".";
+    }
 
     if (shouldRun) {
-        outFile = strdup("/tmp/xvr_compile.o");
+        char tempPath[512];
+        snprintf(tempPath, sizeof(tempPath), "%s/xvr_compile.o", tempDir);
+        outFile = strdup(tempPath);
     } else {
         outFile = Xvr_commandLine.outFile ? strdup(Xvr_commandLine.outFile)
                                           : strdup("a.out");
@@ -192,6 +204,7 @@ int main(int argc, const char* argv[]) {
             for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
             free(nodes);
             free(outFile);
+            free(tempDir);
             return 1;
         }
         printf("Compiled to: %s\n", outFile);
@@ -202,7 +215,13 @@ int main(int argc, const char* argv[]) {
     free(nodes);
 
     if (shouldRun) {
-        const char* runtime_src = "/tmp/xvr_runtime.c";
+        char runtime_src[512];
+        char runtime_o[512];
+        char xvr_bin[512];
+        snprintf(runtime_src, sizeof(runtime_src), "%s/xvr_runtime.c", tempDir);
+        snprintf(runtime_o, sizeof(runtime_o), "%s/xvr_runtime.o", tempDir);
+        snprintf(xvr_bin, sizeof(xvr_bin), "%s/xvr_bin.exe", tempDir);
+
         const char* runtime_code =
             "#include <stdio.h>\n"
             "#include <stdarg.h>\n"
@@ -235,25 +254,41 @@ int main(int argc, const char* argv[]) {
             fclose(rf);
         }
 
+#if defined(_WIN32) || defined(_WIN64)
         char* cmd;
-        asprintf(&cmd, "gcc -c %s -o /tmp/xvr_runtime.o", runtime_src);
+        asprintf(&cmd, "clang -c %s -o %s", runtime_src, runtime_o);
         system(cmd);
         free(cmd);
 
-        asprintf(&cmd, "gcc %s /tmp/xvr_runtime.o -o /tmp/xvr_bin", outFile);
+        asprintf(&cmd, "clang %s %s -o %s", outFile, runtime_o, xvr_bin);
         int rc = system(cmd);
         free(cmd);
 
         if (rc == 0) {
-            system("/tmp/xvr_bin");
+            system(xvr_bin);
         }
+#else
+        char* cmd;
+        asprintf(&cmd, "gcc -c %s -o %s", runtime_src, runtime_o);
+        system(cmd);
+        free(cmd);
 
-        unlink(runtime_src);
-        unlink("/tmp/xvr_runtime.o");
-        unlink(outFile);
-        unlink("/tmp/xvr_bin");
+        asprintf(&cmd, "gcc %s %s -o %s", outFile, runtime_o, xvr_bin);
+        int rc = system(cmd);
+        free(cmd);
+
+        if (rc == 0) {
+            system(xvr_bin);
+        }
+#endif
+
+        Xvr_unlink(runtime_src);
+        Xvr_unlink(runtime_o);
+        Xvr_unlink(outFile);
+        Xvr_unlink(xvr_bin);
     }
 
     free(outFile);
+    free(tempDir);
     return 0;
 }

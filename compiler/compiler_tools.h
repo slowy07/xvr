@@ -34,6 +34,9 @@ extern "C" {
 
 const unsigned char* Xvr_readFile(const char* path, size_t* fileSize);
 
+char* Xvr_getTempDir(void);
+int Xvr_unlink(const char* path);
+
 #ifdef XVR_EXPORT_LLVM
 Xvr_ASTNode** parse_to_ast(const char* source, int* out_count);
 #endif

@@ -11,6 +11,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+#if defined(_WIN32) || defined(_WIN64)
+#    include <windows.h>
+#else
+#    include <unistd.h>
+#endif
+
 #include "xvr_ast_node.h"
 #include "xvr_lexer.h"
 #include "xvr_parser.h"
@@ -51,6 +57,34 @@ const unsigned char* Xvr_readFile(const char* path, size_t* fileSize) {
 
     return buffer;
 }
+
+#if defined(_WIN32) || defined(_WIN64)
+char* Xvr_getTempDir(void) {
+    char* tmpdir = (char*)malloc(MAX_PATH);
+    if (!tmpdir) return NULL;
+
+    DWORD ret = GetTempPathA(MAX_PATH, tmpdir);
+    if (ret == 0 || ret >= MAX_PATH) {
+        free(tmpdir);
+        tmpdir = (char*)malloc(4);
+        if (tmpdir) strcpy(tmpdir, ".");
+        return tmpdir;
+    }
+
+    return tmpdir;
+}
+
+int Xvr_unlink(const char* path) { return DeleteFileA(path) ? 0 : -1; }
+#else
+char* Xvr_getTempDir(void) {
+    const char* tmpdir = "/tmp";
+    char* result = (char*)malloc(strlen(tmpdir) + 1);
+    if (result) strcpy(result, tmpdir);
+    return result;
+}
+
+int Xvr_unlink(const char* path) { return unlink(path); }
+#endif
 
 #ifdef XVR_EXPORT_LLVM
 Xvr_ASTNode** parse_to_ast(const char* source, int* out_count) {

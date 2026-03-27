@@ -18,8 +18,7 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  fuzz-test:
-    name: Fuzzing Tests
+  build:
     runs-on: ubuntu-latest
     
     steps:
@@ -33,21 +32,53 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y llvm-22 llvm-22-dev clang-22
 
-      - name: Build compiler
-        env:
-          LLVM_CONFIG: llvm-config-22
+      - name: Configure CMake
         run: |
-          make clean || true
-          make -j$(nproc)
+          mkdir build
+          cd build
+          cmake .. \
+            -DCMAKE_C_COMPILER=clang-22 \
+            -DXVR_BUILD_TESTS=ON \
+            -DXVR_BUILD_TYPE=release
+
+      - name: Build compiler
+        run: cmake --build build -j$(nproc)
 
       - name: Verify build
+        run: test -f build/bin/xvr && echo "Build successful" || exit 1
+
+  fuzz-test:
+    name: Fuzzing Tests
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install LLVM 22
         run: |
-          test -f out/xvr && echo "Build successful" || exit 1
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update -qq
+          sudo apt-get install -y llvm-22 llvm-22-dev clang-22
+
+      - name: Configure CMake
+        run: |
+          mkdir build
+          cd build
+          cmake .. \
+            -DCMAKE_C_COMPILER=clang-22 \
+            -DXVR_BUILD_TESTS=ON
+
+      - name: Build
+        run: cmake --build build -j$(nproc)
 
       - name: Run fuzzing test suite
         run: |
           chmod +x fuzzer/fuzz_test_suite.sh
           ./fuzzer/fuzz_test_suite.sh
+        working-directory: build
 
       - name: Generate fuzzing report
         if: always()
@@ -77,7 +108,7 @@ jobs:
   regression-test:
     name: Regression Tests
     runs-on: ubuntu-latest
-    needs: fuzz-test
+    needs: build
     
     steps:
       - name: Checkout code
@@ -90,21 +121,22 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y llvm-22 llvm-22-dev clang-22
 
-      - name: Build compiler
-        env:
-          LLVM_CONFIG: llvm-config-22
+      - name: Configure CMake
         run: |
-          make clean || true
-          make -j$(nproc)
+          mkdir build
+          cd build
+          cmake .. \
+            -DCMAKE_C_COMPILER=clang-22 \
+            -DXVR_BUILD_TESTS=ON
 
-      - name: Verify build
-        run: |
-          test -f out/xvr && echo "Build successful" || exit 1
+      - name: Build
+        run: cmake --build build -j$(nproc)
 
       - name: Run regression tests
         run: |
           chmod +x test/regression_tests.sh
           ./test/regression_tests.sh
+        working-directory: build
 
       - name: Generate regression report
         if: always()
@@ -123,7 +155,7 @@ jobs:
   libfuzzer:
     name: LibFuzzer Extended
     runs-on: ubuntu-latest
-    needs: regression-test
+    needs: build
     
     steps:
       - name: Checkout code
@@ -136,25 +168,24 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y llvm-22 llvm-22-dev clang-22 binutils
 
-      - name: Build compiler
-        env:
-          LLVM_CONFIG: llvm-config-22
+      - name: Configure CMake
         run: |
-          make clean || true
-          make -j$(nproc)
+          mkdir build
+          cd build
+          cmake .. \
+            -DCMAKE_C_COMPILER=clang-22 \
+            -DXVR_BUILD_TESTS=ON
 
-      - name: Verify build
-        run: |
-          test -f out/xvr && echo "Build successful" || exit 1
+      - name: Build
+        run: cmake --build build -j$(nproc)
 
       - name: Build LibFuzzer harness
         run: |
           cd fuzzer/harness
-          # Build the fuzzer with sanitizers
           clang-22 -fsanitize=address,fuzzer -fno-omit-frame-pointer -g -O1 -std=c18 \
             -I../../src -I../../src/backend \
             fuzz_libfuzzer.c -o fuzz_asan \
-            ../../out/libxvr.a -lLLVM-22 -lasan -lpthread 2>&1 || echo "ASAN build skipped (version mismatch)"
+            ../../build/libxvr.a -lLLVM-22 -lasan -lpthread 2>&1 || echo "ASAN build skipped (version mismatch)"
 
       - name: Run LibFuzzer
         run: |
@@ -166,7 +197,7 @@ jobs:
             echo "LibFuzzer ASAN build skipped, using corpus-based tests"
             for f in corpus/*.xvr; do
               if [ -f "$f" ]; then
-                timeout 5 ../../out/xvr "$f" 2>/dev/null || echo "Issue with: $f"
+                timeout 5 ../../build/bin/xvr "$f" 2>/dev/null || echo "Issue with: $f"
               fi
             done
           fi
@@ -181,7 +212,7 @@ jobs:
   corpus-test:
     name: Corpus Tests
     runs-on: ubuntu-latest
-    needs: libfuzzer
+    needs: build
     
     steps:
       - name: Checkout code
@@ -194,16 +225,16 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y llvm-22 llvm-22-dev clang-22
 
-      - name: Build compiler
-        env:
-          LLVM_CONFIG: llvm-config-22
+      - name: Configure CMake
         run: |
-          make clean || true
-          make -j$(nproc)
+          mkdir build
+          cd build
+          cmake .. \
+            -DCMAKE_C_COMPILER=clang-22 \
+            -DXVR_BUILD_TESTS=ON
 
-      - name: Verify build
-        run: |
-          test -f out/xvr && echo "Build successful" || exit 1
+      - name: Build
+        run: cmake --build build -j$(nproc)
 
       - name: Test corpus files
         run: |
@@ -213,11 +244,10 @@ jobs:
             FAILED=0
             for f in fuzzer/corpus/*.xvr; do
               if [ -f "$f" ]; then
-                if timeout 5 ./out/xvr "$f" >/dev/null 2>&1; then
+                if timeout 5 ./build/bin/xvr "$f" >/dev/null 2>&1; then
                   PASSED=$((PASSED + 1))
                 else
                   EXIT_CODE=$?
-                  # Exit code 1 is expected for syntax/semantic errors
                   if [ $EXIT_CODE -eq 1 ]; then
                     echo "Expected failure (syntax error): $f"
                   else
@@ -233,7 +263,7 @@ jobs:
   stress-test:
     name: Stress Tests
     runs-on: ubuntu-latest
-    needs: corpus-test
+    needs: build
     
     steps:
       - name: Checkout code
@@ -246,32 +276,29 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y llvm-22 llvm-22-dev clang-22
 
-      - name: Build compiler
-        env:
-          LLVM_CONFIG: llvm-config-22
+      - name: Configure CMake
         run: |
-          make clean || true
-          make -j$(nproc)
+          mkdir build
+          cd build
+          cmake .. \
+            -DCMAKE_C_COMPILER=clang-22 \
+            -DXVR_BUILD_TESTS=ON
 
-      - name: Verify build
-        run: |
-          test -f out/xvr && echo "Build successful" || exit 1
+      - name: Build
+        run: cmake --build build -j$(nproc)
 
       - name: Run stress tests
         run: |
           echo "Running stress tests..."
           
-          # Test with sequential variations
           for i in $(seq 1 100); do
             echo "proc p${i}(a${i}: int): int { return a${i} + ${i}; } p${i}(${i});" > /tmp/stress_$i.xvr
           done
           
-          # Compile all
           for f in /tmp/stress_*.xvr; do
-            timeout 5 ./out/xvr "$f" >/dev/null 2>&1 || echo "Failed: $f"
+            timeout 5 ./build/bin/xvr "$f" >/dev/null 2>&1 || echo "Failed: $f"
           done
           
-          # Clean up
           rm -f /tmp/stress_*.xvr
           
           echo "Stress tests completed"
@@ -280,21 +307,18 @@ jobs:
         run: |
           echo "Running edge case tests..."
           
-          # Test deeply nested expressions
           for depth in 5 10 20 50; do
             parens=$(printf '(((((%s)))));' "$(printf '%.0s(' $(seq 1 $depth))" | head -c $((depth * 2)))
             echo "std::print(${parens}42" > /tmp/nest_$depth.xvr
-            timeout 5 ./out/xvr /tmp/nest_$depth.xvr >/dev/null 2>&1 || echo "Nested $depth failed"
+            timeout 5 ./build/bin/xvr /tmp/nest_$depth.xvr >/dev/null 2>&1 || echo "Nested $depth failed"
           done
           
-          # Test long strings
           for len in 100 500 1000; do
             str=$(printf 'a%.0s' $(seq 1 $len))
             echo "std::print(\"$str\");" > /tmp/long_$len.xvr
-            timeout 5 ./out/xvr /tmp/long_$len.xvr >/dev/null 2>&1 || echo "Long string $len failed"
+            timeout 5 ./build/bin/xvr /tmp/long_$len.xvr >/dev/null 2>&1 || echo "Long string $len failed"
           done
           
-          # Clean up
           rm -f /tmp/nest_*.xvr /tmp/long_*.xvr
           
           echo "Edge case tests completed"
