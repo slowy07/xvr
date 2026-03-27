@@ -11,28 +11,66 @@
 > [!NOTE]
 > For Windows using (mingw32 & Cygwin), For linux or Unix already support compiler
 
-Build the compiler:
-```sh
-# Build the xvr compiler (default target)
-make
+### Prerequisites
+- CMake 3.16+
+- LLVM 22+ (with llvm-config)
+- C compiler (gcc/clang)
 
-# The compiler output is in ./out/xvr
+### Build with CMake
+```sh
+# Create build directory
+mkdir build && cd build
+
+# Configure (Debug build by default)
+cmake ..
+
+# Build the project
+cmake --build .
+
+# The compiler output is in ./build/xvr
 ```
+
+### Build Options
+
+```sh
+# Release build with optimizations
+cmake -DCMAKE_BUILD_TYPE=Release ..
+
+# Debug build with sanitizers
+cmake -DXVR_SANITIZE=address ..
+
+# Build without tests
+cmake -DXVR_BUILD_TESTS=OFF ..
+
+# Build without shared library
+cmake -DXVR_BUILD_SHARED=OFF ..
+```
+
+### Quick Reference
+
+| Command | Description |
+|---------|-------------|
+| `cmake ..` | Debug build |
+| `cmake -DCMAKE_BUILD_TYPE=Release ..` | Release build |
+| `cmake -DXVR_SANITIZE=address ..` | Build with AddressSanitizer |
+| `cmake --build .` | Compile |
+| `ctest --output-on-failure` | Run tests |
+| `cmake --install . --prefix /usr/local` | Install |
 
 ## Usage
 
 ```sh
 # Compile and run a .xvr file (default)
-./out/xvr source.xvr
+./build/xvr source.xvr
 
 # Compile to executable
-./out/xvr source.xvr -o output
+./build/xvr source.xvr -o output
 
 # Compile to object file only
-./out/xvr source.xvr -c output.o
+./build/xvr source.xvr -c output.o
 
 # Dump LLVM IR to stdout
-./out/xvr source.xvr -l
+./build/xvr source.xvr -l
 ```
 
 ## Say hello with Xvr

@@ -8,10 +8,11 @@ Thank you for contributing to XVR Programming Language!
 # Clone and build
 git clone https://github.com/anomalyco/xvr.git
 cd xvr
-make
+mkdir build && cd build
+cmake .. && cmake --build .
 
 # Run the compiler
-./out/xvr your_program.xvr
+./build/xvr your_program.xvr
 ```
 
 ## Code Style
@@ -45,6 +46,7 @@ set expandtab
 ```
 xvr/
 ├── src/                    # Core source files
+│   ├── CMakeLists.txt      # Library build config
 │   ├── backend/            # LLVM AOT backend
 │   │   ├── xvr_llvm_codegen.c       # Main code generator
 │   │   ├── xvr_llvm_control_flow.c # If/while/for handling
@@ -53,49 +55,65 @@ xvr/
 │   ├── xvr_*.c              # Parser, lexer, AST, etc.
 │   └── xvr_common.h        # Version info, common definitions
 ├── compiler/               # Compiler executable source
+│   └── CMakeLists.txt      # Compiler build config
 ├── test/                   # Unit tests
+│   └── CMakeLists.txt      # Test build config
 ├── fuzzer/                 # Fuzz testing scripts
 │   ├── fuzz_test_suite.sh  # Edge case tests
 │   ├── stress_test.sh      # Random input tests
 │   └── corpus/            # Valid test inputs
 ├── code/                   # Example XVR programs
 ├── docs/                   # Documentation
-└── out/                    # Build output (generated)
+├── CMakeLists.txt          # Root build config
+└── build/                  # Build output (generated)
 ```
 
 ## Building
 
 ```sh
-# Build everything (compiler, library, tests)
-make
+# Create build directory
+mkdir build && cd build
 
-# Build just the compiler
-make -C compiler
+# Configure (Debug build by default)
+cmake ..
+
+# Build everything (compiler, library, tests)
+cmake --build .
 
 # Clean build artifacts
-make clean
+rm -rf build
 ```
 
-### Debug Build Options
+### Build Options
+
+| Option | Values | Default | Description |
+|--------|--------|---------|-------------|
+| `CMAKE_BUILD_TYPE` | Debug, Release | Debug | Build type |
+| `XVR_BUILD_TESTS` | ON, OFF | ON | Build test suite |
+| `XVR_BUILD_SHARED` | ON, OFF | ON | Build shared library |
+| `XVR_BUILD_STATIC` | ON, OFF | ON | Build static library |
+| `XVR_SANITIZE` | address, undefined, thread, all | - | Enable sanitizers |
+
+### Build Examples
 
 ```sh
+# Release build with optimizations
+cmake -DCMAKE_BUILD_TYPE=Release ..
+
 # Enable debug mode with assertions
-make DEBUG=1
+cmake -DCMAKE_BUILD_TYPE=Debug ..
 
 # Enable AddressSanitizer (detect memory errors)
-make DEBUG=1 SANITIZE=address
+cmake -DXVR_SANITIZE=address ..
 
 # Enable UBSan (undefined behavior)
-make DEBUG=1 SANITIZE=undefined
+cmake -DXVR_SANITIZE=undefined ..
 
 # Enable both ASan and UBSan
-make DEBUG=1 SANITIZE=address SANITIZE=undefined
+cmake -DXVR_SANITIZE=all ..
 
-# Enable profiling support
-make PROFILE=1
-
-# Show all build commands
-make VERBOSE=1
+# Build without tests
+cmake -DXVR_BUILD_TESTS=OFF ..
 ```
 
 ## Testing
@@ -103,8 +121,14 @@ make VERBOSE=1
 ### Running Tests
 
 ```sh
-# Run unit tests
-make -C test
+# Run unit tests (from build directory)
+ctest --output-on-failure
+
+# Run all tests verbosely
+ctest -V
+
+# Run specific test
+./build/xvr_test_all
 
 # Run fuzzer test suite (finds edge case bugs)
 bash fuzzer/fuzz_test_suite.sh
@@ -149,8 +173,8 @@ The `code/` directory contains example XVR programs demonstrating features:
 
 ```sh
 # Run an example
-./out/xvr code/conditional.xvr
-./out/xvr code/loop_while.xvr
+./build/xvr code/conditional.xvr
+./build/xvr code/loop_while.xvr
 ```
 
 ## Error Handling
@@ -171,9 +195,11 @@ fprintf(stderr, XVR_CC_NOTICE "Notice: %s\n" XVR_CC_RESET, message);
 3. **Make** your changes following the code style
 4. **Test** your changes:
    ```sh
-   make                           # Build
-   bash fuzzer/fuzz_test_suite.sh # Run fuzzer
-   bash fuzzer/stress_test.sh     # Run stress tests
+   rm -rf build && mkdir build && cd build
+   cmake .. && cmake --build .    # Build
+   ctest --output-on-failure     # Run tests
+   bash ../fuzzer/fuzz_test_suite.sh # Run fuzzer
+   bash ../fuzzer/stress_test.sh     # Run stress tests
    ```
 5. **Commit** with clear messages
 6. **Push** to your fork

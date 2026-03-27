@@ -2,7 +2,18 @@
 # XVR Compiler Regression Tests
 # Tests for bugs that have been fixed
 
-XVR="./out/xvr"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+
+if [ -n "${REGRESSION_XVR_PATH:-}" ]; then
+    XVR="$REGRESSION_XVR_PATH"
+elif [ -n "${XVR_PATH:-}" ]; then
+    XVR="$XVR_PATH"
+elif [ -x "$PROJECT_DIR/build/xvr" ]; then
+    XVR="$PROJECT_DIR/build/xvr"
+else
+    XVR="$PROJECT_DIR/out/xvr"
+fi
 PASS=0
 FAIL=0
 

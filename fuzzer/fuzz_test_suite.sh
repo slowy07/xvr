@@ -4,7 +4,16 @@
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
-XVR="$PROJECT_DIR/out/xvr"
+
+if [ -n "${FUZZ_XVR_PATH:-}" ]; then
+    XVR="$FUZZ_XVR_PATH"
+elif [ -n "${XVR_PATH:-}" ]; then
+    XVR="$XVR_PATH"
+elif [ -x "$PROJECT_DIR/build/xvr" ]; then
+    XVR="$PROJECT_DIR/build/xvr"
+else
+    XVR="$PROJECT_DIR/out/xvr"
+fi
 TEMP_DIR="/tmp/xvr_fuzz_$$"
 mkdir -p "$TEMP_DIR/crashes"
 PASS=0

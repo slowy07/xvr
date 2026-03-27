@@ -1,59 +1,135 @@
-name: testing xvr programming lang
+name: CI - CMake Build and Test
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+env:
+  BUILD_DIR: build
+  LLVM_VERSION: "22"
 
 jobs:
-  test-ubuntu-latest:
+  build-and-test:
+    name: Build and Test (CMake)
     runs-on: ubuntu-latest
-
+    
     steps:
       - uses: actions/checkout@v4
 
-      - name: install clang-format
-        run: sudo apt-get update && sudo apt-get install -y clang-format
-
-      - name: install LLVM 22
+      - name: Install LLVM ${{ env.LLVM_VERSION }}
         run: |
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update
-          sudo apt-get install -y llvm-22 llvm-22-dev
+          sudo apt-get install -y llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev clang-format
 
-      - name: find C source files
-        run: find . -type f \( -name "*.c" -o -name "*.h" \) > c_files.txt
-        
-      - name: check formatting
+      - name: Configure CMake
         run: |
-          while IFS= read - r file; do
-            if ! clang-format --dry-run -Werror "$file"; then
+          mkdir -p ${{ env.BUILD_DIR }}
+          cd ${{ env.BUILD_DIR }}
+          cmake .. -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          cmake --build . -j$(nproc)
+
+      - name: Check formatting
+        run: |
+          while IFS= read -r file; do
+            if ! clang-format --dry-run -Werror "$file" 2>/dev/null; then
               echo "not formatted: $file"
               exit 1
             fi
-          done < c_files.txt
-        shell: bash
+          done < <(find . -type f \( -name "*.c" -o -name "*.h" \) -not -path "./${{ env.BUILD_DIR }}/*")
 
-      - name: run tests
+      - name: Run tests with CTest
         run: |
-          echo ""
-          echo "  Running Test Suite"
-          echo ""
-          failed=0
-          for f in out/test_all; do
-            if [ -x "$f" ] && [ -f "$f" ]; then
-              echo ""
-              echo "Running: $f"
-              if "$f"; then
-                echo "PASS: $f"
-              else
-                echo "FAIL: $f (exit code: $?)"
-                failed=1
-              fi
-            fi
-          done
-          echo ""
-          if [ $failed -eq 0 ]; then
-            echo "  ALL TESTS PASSED!"
-          else
-            echo "  SOME TESTS FAILED!"
-            exit 1
-          fi
+          cd ${{ env.BUILD_DIR }}
+          ctest --output-on-failure
+
+      - name: Verify build outputs
+        run: |
+          test -f ${{ env.BUILD_DIR }}/xvr && echo "xvr binary found"
+          test -f ${{ env.BUILD_DIR }}/xvr_test_all && echo "test binary found"
+          test -f ${{ env.BUILD_DIR }}/src/libxvr.a && echo "static lib found"
+          test -f ${{ env.BUILD_DIR }}/src/libxvr.so && echo "shared lib found"
+
+  build-release:
+    name: Release Build
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM ${{ env.LLVM_VERSION }}
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+
+      - name: Configure and build Release
+        run: |
+          mkdir -p ${{ env.BUILD_DIR }}
+          cd ${{ env.BUILD_DIR }}
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake --build . -j$(nproc)
+
+      - name: Verify Release build
+        run: |
+          test -f ${{ env.BUILD_DIR }}/xvr && echo "Release build successful"
+
+  build-sanitized:
+    name: Build with Sanitizers
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM ${{ env.LLVM_VERSION }}
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+
+      - name: Build with AddressSanitizer
+        run: |
+          mkdir -p ${{ env.BUILD_DIR }}-asan
+          cd ${{ env.BUILD_DIR }}-asan
+          cmake .. -DXVR_SANITIZE=address -DCMAKE_BUILD_TYPE=Debug
+          cmake --build . -j$(nproc)
+
+      - name: Run sanitized tests
+        run: |
+          cd ${{ env.BUILD_DIR }}-asan
+          ./xvr_test_all || true
+
+  build-static-only:
+    name: Static Library Only
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM ${{ env.LLVM_VERSION }}
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update
+          sudo apt-get install -y llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+
+      - name: Build static only
+        run: |
+          mkdir -p ${{ env.BUILD_DIR }}-static
+          cd ${{ env.BUILD_DIR }}-static
+          cmake .. -DXVR_BUILD_SHARED=OFF -DCMAKE_BUILD_TYPE=Release
+          cmake --build . -j$(nproc)
+
+      - name: Verify static build
+        run: |
+          test -f ${{ env.BUILD_DIR }}-static/src/libxvr.a && echo "Static build successful"
+          test -f ${{ env.BUILD_DIR }}-static/xvr && echo "Executable built"

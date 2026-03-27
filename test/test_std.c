@@ -38,6 +38,16 @@ static void normalize_output(char* output) {
     }
 }
 
+static const char* get_xvr_path(void) {
+    const char* env_path = getenv("XVR_TEST_PATH");
+    if (env_path) return env_path;
+
+    if (access("./xvr", X_OK) == 0) return "./xvr";
+    if (access("../xvr", X_OK) == 0) return "../xvr";
+
+    return "./xvr";
+}
+
 static int capture_compile_run(const char* source, char* output,
                                size_t output_size) {
     FILE* tmp = fopen("/tmp/xvr_std_test.xvr", "w");
@@ -46,7 +56,8 @@ static int capture_compile_run(const char* source, char* output,
     fclose(tmp);
 
     char cmd[1024];
-    snprintf(cmd, sizeof(cmd), "./out/xvr /tmp/xvr_std_test.xvr 2>&1");
+    const char* xvr_path = get_xvr_path();
+    snprintf(cmd, sizeof(cmd), "%s /tmp/xvr_std_test.xvr 2>&1", xvr_path);
 
     FILE* proc = popen(cmd, "r");
     if (!proc) {

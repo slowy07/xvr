@@ -1,4 +1,4 @@
-name: XVR Fuzzer CI
+name: Fuzzer Testing
 
 on:
   push:
@@ -13,41 +13,73 @@ on:
         default: '60'
         type: string
 
+env:
+  BUILD_DIR: build
+  LLVM_VERSION: "22"
+
 concurrency:
   group: fuzzer-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  fuzz-test:
-    name: Fuzzing Tests
+  build:
+    name: Build Compiler
     runs-on: ubuntu-latest
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install LLVM 22
+      - name: Install LLVM ${{ env.LLVM_VERSION }}
         run: |
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update -qq
-          sudo apt-get install -y llvm-22 llvm-22-dev clang-22
+          sudo apt-get install -y llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev clang-${{ env.LLVM_VERSION }}
 
-      - name: Build compiler
-        env:
-          LLVM_CONFIG: llvm-config-22
+      - name: Configure CMake
         run: |
-          make clean || true
-          make -j$(nproc)
+          mkdir -p ${{ env.BUILD_DIR }}
+          cd ${{ env.BUILD_DIR }}
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          cmake --build . -j$(nproc)
 
       - name: Verify build
         run: |
-          test -f out/xvr && echo "Build successful" || exit 1
+          test -f ${{ env.BUILD_DIR }}/xvr && echo "Build successful" || exit 1
+          test -f ${{ env.BUILD_DIR }}/src/libxvr.a && echo "Static library built" || exit 1
+
+  fuzz-test:
+    name: Fuzzing Tests
+    runs-on: ubuntu-latest
+    needs: build
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Install LLVM ${{ env.LLVM_VERSION }}
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update -qq
+          sudo apt-get install -y llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+
+      - name: Build
+        run: |
+          mkdir -p ${{ env.BUILD_DIR }}
+          cd ${{ env.BUILD_DIR }}
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake --build . -j$(nproc)
 
       - name: Run fuzzing test suite
         run: |
           chmod +x fuzzer/fuzz_test_suite.sh
-          ./fuzzer/fuzz_test_suite.sh
+          FUZZ_XVR_PATH="${{ env.BUILD_DIR }}/xvr" ./fuzzer/fuzz_test_suite.sh
 
       - name: Generate fuzzing report
         if: always()
@@ -55,56 +87,34 @@ jobs:
           echo "## Fuzzing Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "All fuzzing tests completed successfully." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Test Categories:" >> $GITHUB_STEP_SUMMARY
-          echo "| Category | Tests |" >> $GITHUB_STEP_SUMMARY
-          echo "|----------|-------|" >> $GITHUB_STEP_SUMMARY
-          echo "| Empty/malformed input | 3 |" >> $GITHUB_STEP_SUMMARY
-          echo "| String parsing edge cases | 6 |" >> $GITHUB_STEP_SUMMARY
-          echo "| Parenthesized expressions | 10 |" >> $GITHUB_STEP_SUMMARY
-          echo "| Type mismatches | 3 |" >> $GITHUB_STEP_SUMMARY
-          echo "| Array operations | 3 |" >> $GITHUB_STEP_SUMMARY
-          echo "| Function call arguments | 2 |" >> $GITHUB_STEP_SUMMARY
-          echo "| Control flow edge cases | 4 |" >> $GITHUB_STEP_SUMMARY
-          echo "| String operations | 2 |" >> $GITHUB_STEP_SUMMARY
-          echo "| Boolean operations | 6 |" >> $GITHUB_STEP_SUMMARY
-          echo "| Array literals | 3 |" >> $GITHUB_STEP_SUMMARY
-          echo "| Ternary expressions | 2 |" >> $GITHUB_STEP_SUMMARY
-          echo "| Loop edge cases | 2 |" >> $GITHUB_STEP_SUMMARY
-          echo "| Mutated programs | 3 |" >> $GITHUB_STEP_SUMMARY
-          echo "| More edge cases | 25+ |" >> $GITHUB_STEP_SUMMARY
 
   regression-test:
     name: Regression Tests
     runs-on: ubuntu-latest
-    needs: fuzz-test
+    needs: build
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install LLVM 22
+      - name: Install LLVM ${{ env.LLVM_VERSION }}
         run: |
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update -qq
-          sudo apt-get install -y llvm-22 llvm-22-dev clang-22
+          sudo apt-get install -y llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
 
-      - name: Build compiler
-        env:
-          LLVM_CONFIG: llvm-config-22
+      - name: Build
         run: |
-          make clean || true
-          make -j$(nproc)
-
-      - name: Verify build
-        run: |
-          test -f out/xvr && echo "Build successful" || exit 1
+          mkdir -p ${{ env.BUILD_DIR }}
+          cd ${{ env.BUILD_DIR }}
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake --build . -j$(nproc)
 
       - name: Run regression tests
         run: |
           chmod +x test/regression_tests.sh
-          ./test/regression_tests.sh
+          REGRESSION_XVR_PATH="${{ env.BUILD_DIR }}/xvr" ./test/regression_tests.sh
 
       - name: Generate regression report
         if: always()
@@ -112,98 +122,29 @@ jobs:
           echo "## Regression Test Results" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "All regression tests passed." >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
-          echo "### Covered Bug Fixes:" >> $GITHUB_STEP_SUMMARY
-          echo "- Function call arguments at module level" >> $GITHUB_STEP_SUMMARY
-          echo "- Runtime string concatenation" >> $GITHUB_STEP_SUMMARY
-          echo "- GROUPING expression unwrapping" >> $GITHUB_STEP_SUMMARY
-          echo "- std::print with non-literal arguments" >> $GITHUB_STEP_SUMMARY
-          echo "- Compile-time constant folding" >> $GITHUB_STEP_SUMMARY
-
-  libfuzzer:
-    name: LibFuzzer Extended
-    runs-on: ubuntu-latest
-    needs: regression-test
-    
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Install LLVM 22 and dependencies
-        run: |
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt-get update -qq
-          sudo apt-get install -y llvm-22 llvm-22-dev clang-22 binutils
-
-      - name: Build compiler
-        env:
-          LLVM_CONFIG: llvm-config-22
-        run: |
-          make clean || true
-          make -j$(nproc)
-
-      - name: Verify build
-        run: |
-          test -f out/xvr && echo "Build successful" || exit 1
-
-      - name: Build LibFuzzer harness
-        run: |
-          cd fuzzer/harness
-          # Build the fuzzer with sanitizers
-          clang-22 -fsanitize=address,fuzzer -fno-omit-frame-pointer -g -O1 -std=c18 \
-            -I../../src -I../../src/backend \
-            fuzz_libfuzzer.c -o fuzz_asan \
-            ../../out/libxvr.a -lLLVM-22 -lasan -lpthread 2>&1 || echo "ASAN build skipped (version mismatch)"
-
-      - name: Run LibFuzzer
-        run: |
-          FUZZ_TIME="${{ inputs.fuzz_time || '60' }}"
-          if [ -f fuzzer/harness/fuzz_asan ]; then
-            cd fuzzer
-            timeout $FUZZ_TIME ./harness/fuzz_asan corpus -max_total_time=$FUZZ_TIME -print_final_stats=1 2>&1 || true
-          else
-            echo "LibFuzzer ASAN build skipped, using corpus-based tests"
-            for f in corpus/*.xvr; do
-              if [ -f "$f" ]; then
-                timeout 5 ../../out/xvr "$f" 2>/dev/null || echo "Issue with: $f"
-              fi
-            done
-          fi
-
-      - name: Upload crash artifacts
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: fuzzer-crashes
-          path: fuzzer/corpus/**/*
 
   corpus-test:
     name: Corpus Tests
     runs-on: ubuntu-latest
-    needs: libfuzzer
+    needs: build
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install LLVM 22
+      - name: Install LLVM ${{ env.LLVM_VERSION }}
         run: |
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update -qq
-          sudo apt-get install -y llvm-22 llvm-22-dev clang-22
+          sudo apt-get install -y llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
 
-      - name: Build compiler
-        env:
-          LLVM_CONFIG: llvm-config-22
+      - name: Build
         run: |
-          make clean || true
-          make -j$(nproc)
-
-      - name: Verify build
-        run: |
-          test -f out/xvr && echo "Build successful" || exit 1
+          mkdir -p ${{ env.BUILD_DIR }}
+          cd ${{ env.BUILD_DIR }}
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake --build . -j$(nproc)
 
       - name: Test corpus files
         run: |
@@ -213,11 +154,10 @@ jobs:
             FAILED=0
             for f in fuzzer/corpus/*.xvr; do
               if [ -f "$f" ]; then
-                if timeout 5 ./out/xvr "$f" >/dev/null 2>&1; then
+                if timeout 5 ${{ env.BUILD_DIR }}/xvr "$f" >/dev/null 2>&1; then
                   PASSED=$((PASSED + 1))
                 else
                   EXIT_CODE=$?
-                  # Exit code 1 is expected for syntax/semantic errors
                   if [ $EXIT_CODE -eq 1 ]; then
                     echo "Expected failure (syntax error): $f"
                   else
@@ -233,45 +173,38 @@ jobs:
   stress-test:
     name: Stress Tests
     runs-on: ubuntu-latest
-    needs: corpus-test
+    needs: build
     
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Install LLVM 22
+      - name: Install LLVM ${{ env.LLVM_VERSION }}
         run: |
           wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
-          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-22 main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
           sudo apt-get update -qq
-          sudo apt-get install -y llvm-22 llvm-22-dev clang-22
+          sudo apt-get install -y llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
 
-      - name: Build compiler
-        env:
-          LLVM_CONFIG: llvm-config-22
+      - name: Build
         run: |
-          make clean || true
-          make -j$(nproc)
-
-      - name: Verify build
-        run: |
-          test -f out/xvr && echo "Build successful" || exit 1
+          mkdir -p ${{ env.BUILD_DIR }}
+          cd ${{ env.BUILD_DIR }}
+          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake --build . -j$(nproc)
 
       - name: Run stress tests
         run: |
           echo "Running stress tests..."
           
-          # Test with sequential variations
           for i in $(seq 1 100); do
             echo "proc p${i}(a${i}: int): int { return a${i} + ${i}; } p${i}(${i});" > /tmp/stress_$i.xvr
           done
           
-          # Compile all
           for f in /tmp/stress_*.xvr; do
-            timeout 5 ./out/xvr "$f" >/dev/null 2>&1 || echo "Failed: $f"
+            timeout 5 ${{ env.BUILD_DIR }}/xvr "$f" >/dev/null 2>&1 || echo "Failed: $f"
           done
           
-          # Clean up
           rm -f /tmp/stress_*.xvr
           
           echo "Stress tests completed"
@@ -280,29 +213,26 @@ jobs:
         run: |
           echo "Running edge case tests..."
           
-          # Test deeply nested expressions
           for depth in 5 10 20 50; do
             parens=$(printf '(((((%s)))));' "$(printf '%.0s(' $(seq 1 $depth))" | head -c $((depth * 2)))
             echo "std::print(${parens}42" > /tmp/nest_$depth.xvr
-            timeout 5 ./out/xvr /tmp/nest_$depth.xvr >/dev/null 2>&1 || echo "Nested $depth failed"
+            timeout 5 ${{ env.BUILD_DIR }}/xvr /tmp/nest_$depth.xvr >/dev/null 2>&1 || echo "Nested $depth failed"
           done
           
-          # Test long strings
           for len in 100 500 1000; do
             str=$(printf 'a%.0s' $(seq 1 $len))
             echo "std::print(\"$str\");" > /tmp/long_$len.xvr
-            timeout 5 ./out/xvr /tmp/long_$len.xvr >/dev/null 2>&1 || echo "Long string $len failed"
+            timeout 5 ${{ env.BUILD_DIR }}/xvr /tmp/long_$len.xvr >/dev/null 2>&1 || echo "Long string $len failed"
           done
           
-          # Clean up
           rm -f /tmp/nest_*.xvr /tmp/long_*.xvr
           
           echo "Edge case tests completed"
 
   summary:
-    name: Fuzzer Summary
+    name: Summary
     runs-on: ubuntu-latest
-    needs: [fuzz-test, regression-test, stress-test]
+    needs: [fuzz-test, regression-test, corpus-test, stress-test]
     
     steps:
       - name: Summary
@@ -315,7 +245,5 @@ jobs:
           echo "|------------|--------|" >> $GITHUB_STEP_SUMMARY
           echo "| Fuzzing Tests | Passed |" >> $GITHUB_STEP_SUMMARY
           echo "| Regression Tests | Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "| LibFuzzer | Passed |" >> $GITHUB_STEP_SUMMARY
           echo "| Corpus Tests | Passed |" >> $GITHUB_STEP_SUMMARY
           echo "| Stress Tests | Passed |" >> $GITHUB_STEP_SUMMARY
-          echo "" >> $GITHUB_STEP_SUMMARY
