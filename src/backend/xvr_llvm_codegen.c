@@ -362,6 +362,10 @@ static bool ensure_main_function(Xvr_LLVMCodegen* codegen) {
     } else {
         LLVMBasicBlockRef entry = LLVMGetEntryBasicBlock(main_fn);
         if (entry) {
+            LLVMBasicBlockRef current = LLVMGetInsertBlock(builder);
+            if (current && LLVMGetBasicBlockParent(current) == main_fn) {
+                return true;
+            }
             LLVMValueRef block_parent = LLVMGetBasicBlockParent(entry);
             if (!block_parent) {
                 entry =

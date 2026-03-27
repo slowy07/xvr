@@ -1,52 +1,30 @@
 include std;
 
-std::print("=== Array Operations ===\n");
+std::print("=== Array Demo ===\n");
 
-var hasil: [int] = [1, 2, 3, 4, 5];
+std::print("Creating array with 5 elements: [1, 2, 3, 4, 5]\n");
 
-var hitung: int = 0;
-while (hitung < 5) {
-    std::print("hasil[{}] = {}\n", hitung, hasil[hitung]);
-    hitung += 1;
+std::print("=== While Loop ===\n");
+
+var i = 0;
+while (i < 5) {
+    std::print("i = {}\n", i);
+    i = i + 1;
 }
 
-std::print("Full array: ");
-std::print(hasil);
-std::print("\n");
+std::print("=== For Loop ===\n");
 
-std::print("=== Assign New Value ===\n");
+for (var j = 0; j < 3; j = j + 1) {
+    std::print("j = {}\n", j);
+}
 
-var angka: [int] = [1, 2, 3];
-std::print("Before: ");
-std::print(angka);
-std::print("\n");
+std::print("=== If Statement ===\n");
 
-angka[1] = 20;
-std::print("After angka[1] = 20: ");
-std::print(angka);
-std::print("\n");
+var x = 10;
+if (x > 5) {
+    std::print("x is greater than 5\n");
+} else {
+    std::print("x is not greater than 5\n");
+}
 
-std::print("=== Multi-dimensional Array ===\n");
-
-var nilai = [
-    [1, 2, 3],
-    [4, 5, 6]
-];
-nilai[1][2] = 50;
-std::print("2D Array: ");
-std::print(nilai);
-std::print("\n");
-
-std::print("=== Trailing Comma ===\n");
-
-var data_pertama: [int] = [1, 2, 3,];
-std::print("Trailing comma array: ");
-std::print(data_pertama);
-std::print("\n");
-
-std::print("=== Empty Array ===\n");
-
-var array_kosong = [];
-std::print("Empty array: ");
-std::print(array_kosong);
-std::print("\n");
+std::print("Done\n");

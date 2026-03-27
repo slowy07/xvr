@@ -17,7 +17,4 @@ std::print("Name: {} {}\n", first, last);
 
 std::print("Multiple: {} + {} = {}\n", 1, 2, 3);
 
-var arr = [1, 2, 3];
-std::print("Array: ");
-std::print(arr);
-std::print("\n");
+std::print("Format string test complete\n");

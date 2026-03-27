@@ -2294,8 +2294,78 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
         }
         return NULL;
 
+    /* Array index access */
+    case XVR_AST_NODE_INDEX: {
+        Xvr_NodeIndex* index_node = &node->index;
+        if (!index_node->first || !index_node->second) {
+            return NULL;
+        }
+
+        /* Handle array indexing for identifiers like arr[0] */
+        if (index_node->first->type == XVR_AST_NODE_LITERAL &&
+            index_node->first->atomic.literal.type == XVR_LITERAL_IDENTIFIER) {
+            const char* var_name =
+                (const char*)
+                    index_node->first->atomic.literal.as.string.ptr->data;
+
+            Xvr_LiteralType var_type_xvr = XVR_LITERAL_ANY;
+            LLVMValueRef var_ptr =
+                lookup_var_with_type(emitter, var_name, &var_type_xvr);
+            if (!var_ptr) {
+                return NULL;
+            }
+
+            LLVMValueRef index =
+                Xvr_LLVMExpressionEmitterEmit(emitter, index_node->second);
+            if (!index) {
+                return NULL;
+            }
+
+            LLVMBuilderRef llvm_builder =
+                Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+            LLVMTypeRef ptr_type = LLVMTypeOf(var_ptr);
+            LLVMTypeRef elem_type = LLVMGetElementType(ptr_type);
+
+            LLVMValueRef indices[] = {
+                LLVMConstInt(
+                    LLVMInt32TypeInContext(
+                        Xvr_LLVMContextGetLLVMContext(emitter->context)),
+                    0, false),
+                index};
+            LLVMValueRef elem_ptr = LLVMBuildInBoundsGEP2(
+                llvm_builder, elem_type, var_ptr, indices, 2, "array_idx");
+            return Xvr_LLVMIRBuilderCreateLoad(emitter->builder, elem_type,
+                                               elem_ptr, "array_elem");
+        }
+
+        /* Handle general index expressions */
+        LLVMValueRef base =
+            Xvr_LLVMExpressionEmitterEmit(emitter, index_node->first);
+        if (!base) {
+            return NULL;
+        }
+        LLVMValueRef index =
+            Xvr_LLVMExpressionEmitterEmit(emitter, index_node->second);
+        if (!index) {
+            return NULL;
+        }
+        LLVMBuilderRef llvm_builder =
+            Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+        LLVMTypeRef ptr_type = LLVMTypeOf(base);
+        LLVMTypeRef elem_type = LLVMGetElementType(ptr_type);
+
+        LLVMValueRef indices[] = {
+            LLVMConstInt(LLVMInt32TypeInContext(
+                             Xvr_LLVMContextGetLLVMContext(emitter->context)),
+                         0, false),
+            index};
+        LLVMValueRef elem_ptr = LLVMBuildInBoundsGEP2(
+            llvm_builder, elem_type, base, indices, 2, "array_idx");
+        return Xvr_LLVMIRBuilderCreateLoad(emitter->builder, elem_type,
+                                           elem_ptr, "array_elem");
+    }
+
     /* Unsupported expression types */
-    case XVR_AST_NODE_INDEX:
     case XVR_AST_NODE_ERROR:
     case XVR_AST_NODE_PAIR:
     case XVR_AST_NODE_FN_DECL:

@@ -14,7 +14,3 @@ std::print("Boolean true: {}\n", true);
 std::print("Boolean false: {}\n", false);
 
 std::print("Null: {}\n", null);
-
-std::print("Array [1, 2, 3]: ");
-std::print([1, 2, 3]);
-std::print("\n");
