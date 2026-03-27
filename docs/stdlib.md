@@ -39,6 +39,52 @@ Supported types in format placeholders:
 - `string` - Prints the string content
 - `double` - Prints as double precision float
 
+### std::println
+
+Print output to the console with automatic newline. Similar to `std::print` but always appends a newline character:
+
+```xvr
+std::println("Hello, World!");                    // Hello, World!
+std::println("Value: {}", 42);                     // Value: 42
+std::println("int: {} float: {}", 42, 3.14);       // int: 42 float: 3.140000
+std::println("{} + {} = {}", 1, 2, 3);             // 1 + 2 = 3
+std::println("my name is {} {}", "arfy", "slowy"); // my name is arfy slowy
+```
+
+The `std::println` function uses `{}` placeholders for formatting:
+- `{}` - Auto-detects type (int, float, string)
+- Automatically appends `\n` to the output
+
+**Variables:**
+```xvr
+var name: string = "arfy";
+var other_name = "slowy";
+std::println("my name is {} {}", name, other_name); // my name is arfy slowy
+```
+
+Supported types in format placeholders:
+- `int` - Prints as decimal integer
+- `float` - Prints as floating point number
+- `string` - Prints the string content
+- `double` - Prints as double precision float
+
+**Error Handling:**
+
+`std::println` includes comprehensive error handling:
+
+| Error | Description |
+|-------|-------------|
+| First argument must be a string | First argument must be a string, not int/float |
+| Format placeholder count mismatch | Number of `{}` placeholders must match arguments |
+| Invalid format string | Malformed format string |
+| Memory allocation failed | Out of memory |
+
+Example error:
+```xvr
+std::println(42);              // error: println: first argument must be a string
+std::println("{} {}", 42);      // error: println: format placeholder count (2) does not match argument count (1)
+```
+
 ### std::max
 
 Returns the greater of two or more values:

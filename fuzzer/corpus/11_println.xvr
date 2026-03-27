@@ -1,0 +1,2 @@
+include std;
+std::println("fuzzer_test_basic");

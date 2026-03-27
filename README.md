@@ -37,7 +37,7 @@ make
 
 ## Say hello with Xvr
 ```xvr
-std::print("Hello, World!");
+std::println("Hello, World!");
 ```
 
 ## Print with Format Specifiers
@@ -51,6 +51,15 @@ std::print("{} is {} years old", "arfy", 25);  // arfy is 25 years old
 var data: [int] = [1, 2, 3];
 std::print("array: {}", data);               // array: 1 2 3
 ```
+
+## Print with Newline (println)
+```xvr
+std::println("Hello, World!");               // Hello, World! (with newline)
+std::println("Name: {} {}", "arfy", "slowy"); // Name: arfy slowy
+std::println("Value: {}", 42);                // Value: 42
+```
+
+The `std::println` function automatically appends a newline character to the output.
 
 XVR uses `{}` placeholders. Supported types: integers, floats, strings, arrays.
 

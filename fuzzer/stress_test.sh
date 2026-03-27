@@ -2,7 +2,9 @@
 # XVR Compiler Stress Test - LibFuzzer-style
 # Generates random XVR code and tests for crashes
 
-XVR="./out/xvr"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+XVR="$PROJECT_DIR/out/xvr"
 TEMP_DIR="/tmp/xvr_stress_$$"
 mkdir -p "$TEMP_DIR"
 PASS=0
@@ -138,16 +140,49 @@ patterns=(
     'std::print(1 + 2 * 3 - 4 / 2 + (5 % 3) - 1);'
     
     # Nested blocks
-    'if true { if true { if true { std::print(1); } } }'
+    'if true { if true { if true { std::print("{}", 1); } } }'
     
     # Empty blocks
-    '{} if false { std::print(1); } else {}'
+    '{} if false { std::print("{}", 1); } else {}'
     
     # Multiple semicolons
-    'std::print(1);;;;std::print(2);'
+    'std::print("{}", 1);;;;std::print("{}", 2);'
     
     # Comments in expressions
-    'std::print(/* comment */ 42);'
+    'std::print("{}", /* comment */ 42);'
+    
+    # ===== NEW: Array print tests =====
+    'std::println("Array: {}", [1, 2, 3]);'
+    'std::println("Float: {}", [1.5, 2.5]);'
+    'std::print("Array: {}", [1, 2, 3]);'
+    'var arr = [1, 2, 3]; std::println("Arr: {}", arr);'
+    'std::print("Single: {}", [42]);'
+    'var arr = [1]; std::print("{}", arr[0]);'
+    
+    # ===== NEW: Format string tests =====
+    'std::print("{}", 42);'
+    'std::print("{} + {} = {}", 1, 2, 3);'
+    'std::println("Value: {}", 3.14);'
+    
+    # ===== NEW: Edge case print tests =====
+    'std::print("{}", -42);'
+    'std::print("{}", 0);'
+    'std::print("");'
+    'std::print("{}", 2147483647);'
+    
+    # ===== NEW: Print in control flow =====
+    'if true { std::print("{}", 1); }'
+    'var i = 0; while i < 3 { std::print("{}", i); i = i + 1; }'
+    
+    # ===== NEW: Print with operators =====
+    'std::print("{}", 1 + 2);'
+    'std::print("{}", 10 / 3);'
+    'std::print("{}", 5 % 3);'
+    
+    # ===== NEW: Print with special chars =====
+    'std::print("hello\nworld");'
+    'std::print("hello\tworld");'
+    'std::print("hello\"world");'
 )
 
 # Run predefined patterns multiple times
@@ -183,16 +218,16 @@ done
 # Test edge cases
 edge_cases=(
     # Zero division (runtime error)
-    'std::print(1 / 0);'
+    'std::print("{}", 1 / 0);'
     
     # Modulo by zero
-    'std::print(1 % 0);'
+    'std::print("{}", 1 % 0);'
     
     # Array out of bounds
-    'var arr = [1, 2, 3]; std::print(arr[100]);'
+    'var arr = [1, 2, 3]; std::print("{}", arr[100]);'
     
     # Negative array index
-    'var arr = [1, 2, 3]; std::print(arr[-1]);'
+    'var arr = [1, 2, 3]; std::print("{}", arr[-1]);'
     
     # Undefined variable
     'std::print(undefined_var);'

@@ -184,6 +184,17 @@ static int run_print_tests(void) {
         {"print_zero", "include std;\nstd::print(\"{}\\n\", 0);", "0", 1},
         {"print_large_number", "include std;\nstd::print(\"{}\\n\", 999999);",
          "999999", 1},
+        {"print_int_literal", "include std;\nstd::print(\"{}\", 42);", "42", 1},
+        {"print_float_literal", "include std;\nstd::print(\"{}\", 3.14);",
+         "3.140000", 1},
+        {"print_string_literal", "include std;\nstd::print(\"hello\");",
+         "hello", 1},
+        {"print_var_int", "include std;\nvar x = 42;\nstd::print(\"{}\", x);",
+         "42", 1},
+        {"print_var_float",
+         "include std;\nvar f = 3.14;\nstd::print(\"{}\", f);", "3.140000", 1},
+        {"print_var_string", "include std;\nvar s = \"world\";\nstd::print(s);",
+         "world", 1},
     };
 
     int test_count = sizeof(tests) / sizeof(tests[0]);
@@ -205,6 +216,110 @@ static int run_print_tests(void) {
     }
 
     printf("\n  std::print: %d passed, %d failed\n", passed, failed);
+    return failed > 0 ? 1 : 0;
+}
+
+static int run_println_tests(void) {
+    puts("  std::println Tests");
+
+    int passed = 0;
+    int failed = 0;
+
+    StdTestCase tests[] = {
+        {"println_basic", "include std;\nstd::println(\"hello\");", "hello", 1},
+        {"println_with_newline", "include std;\nstd::println(\"test\");",
+         "test", 1},
+        {"println_int", "include std;\nstd::println(\"{}\", 42);", "42", 1},
+        {"println_negative_int", "include std;\nstd::println(\"{}\", -123);",
+         "-123", 1},
+        {"println_float", "include std;\nstd::println(\"{}\", 3.14);",
+         "3.140000", 1},
+        {"println_string", "include std;\nstd::println(\"{}\", \"hello\");",
+         "hello", 1},
+        {"println_multiple_args",
+         "include std;\nstd::println(\"a: {} b: {}\", 1, 2);", "a: 1 b: 2", 1},
+        {"println_no_args", "include std;\nstd::println(\"hello world\");",
+         "hello world", 1},
+        {"println_zero", "include std;\nstd::println(\"{}\", 0);", "0", 1},
+        {"println_large_number", "include std;\nstd::println(\"{}\", 999999);",
+         "999999", 1},
+        {"println_mixed_types",
+         "include std;\nstd::println(\"int: {} float: {} str: {}\", 42, 3.14, "
+         "\"test\");",
+         "int: 42 float: 3.140000 str: test", 1},
+        {"println_variable",
+         "include std;\nvar x = 10;\nstd::println(\"value: {}\", x);",
+         "value: 10", 1},
+        {"println_two_variables",
+         "include std;\nvar name: string = \"arfy\";\nvar other = "
+         "\"slowy\";\nstd::println(\"{} {}\", name, other);",
+         "arfy slowy", 1},
+        {"println_empty", "include std;\nstd::println(\"\");", "", 1},
+        {"println_int_literal", "include std;\nstd::println(\"{}\", 42);", "42",
+         1},
+        {"println_float_literal", "include std;\nstd::println(\"{}\", 3.14);",
+         "3.140000", 1},
+        {"println_string_literal", "include std;\nstd::println(\"hello\");",
+         "hello", 1},
+        {"println_var_int",
+         "include std;\nvar x = 42;\nstd::println(\"{}\", x);", "42", 1},
+        {"println_var_float",
+         "include std;\nvar f = 3.14;\nstd::println(\"{}\", f);", "3.140000",
+         1},
+        {"println_var_string",
+         "include std;\nvar s = \"world\";\nstd::println(s);", "world", 1},
+    };
+
+    StdTestCase error_tests[] = {
+        {"println_mismatched_placeholders",
+         "include std;\nstd::println(\"{} {}\", 42);",
+         "println: invalid format string", 0},
+    };
+
+    int test_count = sizeof(tests) / sizeof(tests[0]);
+    int error_test_count = sizeof(error_tests) / sizeof(error_tests[0]);
+
+    for (int i = 0; i < test_count; i++) {
+        char output[4096] = {0};
+        int status =
+            capture_compile_run(tests[i].source, output, sizeof(output));
+
+        if (status == 0 && strcmp(output, tests[i].expected_output) == 0) {
+            printf(XVR_CC_NOTICE "    [PASS] %s\n" XVR_CC_RESET, tests[i].name);
+            passed++;
+        } else {
+            printf(XVR_CC_ERROR "    [FAIL] %s\n" XVR_CC_RESET, tests[i].name);
+            printf("          expected: '%s', got: '%s'\n",
+                   tests[i].expected_output, output);
+            failed++;
+        }
+    }
+
+    printf("\n" XVR_CC_NOTICE
+           "  std::println Error Handling Tests\n" XVR_CC_RESET);
+    for (int i = 0; i < error_test_count; i++) {
+        char output[4096] = {0};
+        int status =
+            capture_compile_run(error_tests[i].source, output, sizeof(output));
+
+        int test_passed = 0;
+        if (status != 0 &&
+            strstr(output, error_tests[i].expected_output) != NULL) {
+            test_passed = 1;
+        }
+
+        if (test_passed) {
+            printf("    [PASS] %s\n", error_tests[i].name);
+            passed++;
+        } else {
+            printf("    [FAIL] %s\n", error_tests[i].name);
+            printf("          expected error containing: '%s', got: '%s'\n",
+                   error_tests[i].expected_output, output);
+            failed++;
+        }
+    }
+
+    printf("\n  std::println: %d passed, %d failed\n", passed, failed);
     return failed > 0 ? 1 : 0;
 }
 
@@ -258,6 +373,7 @@ int run_std_tests(void) {
 
     total_failed += run_max_tests();
     total_failed += run_print_tests();
+    total_failed += run_println_tests();
     total_failed += run_format_string_tests();
 
     return total_failed;
