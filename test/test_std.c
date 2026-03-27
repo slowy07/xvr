@@ -220,7 +220,7 @@ static int run_print_tests(void) {
 }
 
 static int run_println_tests(void) {
-    printf("\n" XVR_CC_NOTICE "  std::println Tests\n" XVR_CC_RESET);
+    puts("  std::println Tests");
 
     int passed = 0;
     int failed = 0;
@@ -309,12 +309,10 @@ static int run_println_tests(void) {
         }
 
         if (test_passed) {
-            printf(XVR_CC_NOTICE "    [PASS] %s\n" XVR_CC_RESET,
-                   error_tests[i].name);
+            printf("    [PASS] %s\n", error_tests[i].name);
             passed++;
         } else {
-            printf(XVR_CC_ERROR "    [FAIL] %s\n" XVR_CC_RESET,
-                   error_tests[i].name);
+            printf("    [FAIL] %s\n", error_tests[i].name);
             printf("          expected error containing: '%s', got: '%s'\n",
                    error_tests[i].expected_output, output);
             failed++;
