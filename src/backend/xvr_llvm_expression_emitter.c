@@ -2315,6 +2315,11 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
                 return NULL;
             }
 
+            /* Verify this is an array type */
+            if (var_type_xvr != XVR_LITERAL_ARRAY) {
+                return NULL;
+            }
+
             LLVMValueRef index =
                 Xvr_LLVMExpressionEmitterEmit(emitter, index_node->second);
             if (!index) {
@@ -2324,7 +2329,13 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
             LLVMBuilderRef llvm_builder =
                 Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
             LLVMTypeRef ptr_type = LLVMTypeOf(var_ptr);
+            if (!ptr_type || LLVMGetTypeKind(ptr_type) != LLVMPointerTypeKind) {
+                return NULL;
+            }
             LLVMTypeRef elem_type = LLVMGetElementType(ptr_type);
+            if (!elem_type) {
+                return NULL;
+            }
 
             LLVMValueRef indices[] = {
                 LLVMConstInt(
@@ -2352,7 +2363,13 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
         LLVMBuilderRef llvm_builder =
             Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
         LLVMTypeRef ptr_type = LLVMTypeOf(base);
+        if (!ptr_type || LLVMGetTypeKind(ptr_type) != LLVMPointerTypeKind) {
+            return NULL;
+        }
         LLVMTypeRef elem_type = LLVMGetElementType(ptr_type);
+        if (!elem_type) {
+            return NULL;
+        }
 
         LLVMValueRef indices[] = {
             LLVMConstInt(LLVMInt32TypeInContext(
