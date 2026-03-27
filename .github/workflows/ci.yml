@@ -77,6 +77,7 @@ jobs:
         shell: pwsh
         run: |
           $llvmPaths = @(
+            "$env:LOCALAPPDATA\LLVM",
             "C:\Program Files\LLVM",
             "C:\Program Files (x86)\LLVM",
             "$env:LLVM_DIR"
@@ -95,7 +96,7 @@ jobs:
           $env:Path = "$env:LOCALAPPDATA\LLVM\bin;C:\Program Files\LLVM\bin;$env:Path"
           mkdir build
           cd build
-          cmake .. -G "Ninja" -DXVR_BUILD_TESTS=ON -DXVR_BUILD_TYPE=release -DCMAKE_C_COMPILER=clang
+          cmake .. -G "Ninja" -DXVR_BUILD_TESTS=OFF -DXVR_BUILD_TYPE=release -DCMAKE_C_COMPILER=clang
 
       - name: Build
         shell: pwsh

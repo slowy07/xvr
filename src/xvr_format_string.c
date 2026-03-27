@@ -7,7 +7,10 @@
 #include "xvr_format_string.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
+
+#include "xvr_common.h"
 
 #define MAX_PLACEHOLDERS 64
 

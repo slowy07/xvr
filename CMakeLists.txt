@@ -66,36 +66,64 @@ if(WIN32)
         set(COMPILER_FLAGS_DEBUG "-g -O0")
         set(COMPILER_FLAGS_RELEASE "-O2")
         
-        find_program(LLVM_CONFIG_PROGRAM 
-            NAMES llvm-config clang-config
-            PATHS "C:/Program Files/LLVM/bin" "C:/LLVM/bin"
-            NO_DEFAULT_PATH
+        set(LLVM_FOUND_ON_WINDOWS FALSE)
+        
+        set(LLVM_WINDOWS_PATHS
+            "$ENV{LOCALAPPDATA}\\LLVM"
+            "C:/Program Files/LLVM"
+            "C:/LLVM"
+            "C:/Program Files (x86)/LLVM"
         )
         
-        if(LLVM_CONFIG_PROGRAM)
-            message(STATUS "Found llvm-config: ${LLVM_CONFIG_PROGRAM}")
-            execute_process(
-                COMMAND ${LLVM_CONFIG_PROGRAM} --cflags
-                OUTPUT_VARIABLE LLVM_CFLAGS
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-            )
-            execute_process(
-                COMMAND ${LLVM_CONFIG_PROGRAM} --includedir
-                OUTPUT_VARIABLE LLVM_INCLUDE_DIR
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-            )
-            if(LLVM_INCLUDE_DIR)
-                include_directories(${LLVM_INCLUDE_DIR})
-                message(STATUS "LLVM include: ${LLVM_INCLUDE_DIR}")
+        foreach(LLVM_PATH ${LLVM_WINDOWS_PATHS})
+            if(EXISTS "${LLVM_PATH}")
+                list(APPEND LLVM_SEARCH_PATHS "${LLVM_PATH}")
+                if(EXISTS "${LLVM_PATH}/lib/cmake/llvm")
+                    list(APPEND LLVM_CMAKE_DIRS "${LLVM_PATH}/lib/cmake/llvm")
+                endif()
             endif()
-            execute_process(
-                COMMAND ${LLVM_CONFIG_PROGRAM} --libs core bitwriter
-                OUTPUT_VARIABLE LLVM_CONFIG_LIBS
-                OUTPUT_STRIP_TRAILING_WHITESPACE
-            )
-            if(LLVM_CONFIG_LIBS)
-                separate_arguments(LLVM_LIBS UNIX_COMMAND "${LLVM_CONFIG_LIBS}")
+        endforeach()
+        
+        foreach(CMAKE_DIR ${LLVM_CMAKE_DIRS})
+            find_package(LLVM CONFIG PATHS "${CMAKE_DIR}" QUIET)
+            if(LLVM_FOUND)
+                message(STATUS "Found LLVM via CMake: ${CMAKE_DIR}")
+                include_directories(${LLVM_INCLUDE_DIRS})
+                list(APPEND LLVM_LIBS ${LLVM_AVAILABLE_LIBS})
+                set(LLVM_FOUND_ON_WINDOWS TRUE)
+                break()
             endif()
+        endforeach()
+        
+        if(NOT LLVM_FOUND_ON_WINDOWS)
+            set(LLVM_INCLUDE_DEFAULT "$ENV{LOCALAPPDATA}/LLVM/lib/clang/18/include")
+            if(NOT EXISTS "${LLVM_INCLUDE_DEFAULT}")
+                set(LLVM_INCLUDE_DEFAULT "C:/Program Files/LLVM/lib/clang/18/include")
+            endif()
+            if(EXISTS "${LLVM_INCLUDE_DEFAULT}")
+                include_directories("${LLVM_INCLUDE_DEFAULT}")
+                message(STATUS "Using LLVM include: ${LLVM_INCLUDE_DEFAULT}")
+            endif()
+            
+            find_library(LLVM_CORE_LIB NAMES LLVMCore PATHS 
+                "$ENV{LOCALAPPDATA}/LLVM/lib" 
+                "C:/Program Files/LLVM/lib"
+                NO_DEFAULT_PATH
+            )
+            find_library(LLVM_BITWRITER_LIB NAMES LLVMBitWriter PATHS 
+                "$ENV{LOCALAPPDATA}/LLVM/lib" 
+                "C:/Program Files/LLVM/lib"
+                NO_DEFAULT_PATH
+            )
+            if(LLVM_CORE_LIB AND LLVM_BITWRITER_LIB)
+                list(APPEND LLVM_LIBS ${LLVM_CORE_LIB} ${LLVM_BITWRITER_LIB})
+                set(LLVM_FOUND_ON_WINDOWS TRUE)
+                message(STATUS "Found LLVM libraries directly")
+            endif()
+        endif()
+        
+        if(NOT LLVM_FOUND_ON_WINDOWS)
+            message(WARNING "LLVM not found on Windows. Build may fail.")
         endif()
     else()
         set(COMPILER_FLAGS_BASE "/W4")
