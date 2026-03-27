@@ -58,9 +58,26 @@ dkms.conf
 *.json
 .cache
 
-# object file on tests
-tests/obj/*
-tests/out/*
+# Build directories
+build/
+out/
+obj/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+CTestTestfile.cmake
+*.cmake
+
+# Compiler build artifacts
+src/*.o
+compiler/*.o
+test/obj/
+
+# Keep test source files, ignore compiled binaries
+test/test_*.c
+test/test_*.h
+!test/test_all
 
 # Fuzzer artifacts
 fuzzer/harness/fuzz_asan
@@ -77,3 +94,14 @@ fuzzer/coverage.filtered.info
 # Fuzzer temporary files
 *.fuzz.tmp
 *.fuzz_out
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS files
+.DS_Store
+Thumbs.db
