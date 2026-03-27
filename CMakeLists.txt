@@ -89,6 +89,7 @@ if(WIN32)
             if(LLVM_FOUND)
                 message(STATUS "Found LLVM via CMake: ${CMAKE_DIR}")
                 include_directories(${LLVM_INCLUDE_DIRS})
+                link_directories(${LLVM_LIBRARY_DIRS})
                 list(APPEND LLVM_LIBS ${LLVM_AVAILABLE_LIBS})
                 set(LLVM_FOUND_ON_WINDOWS TRUE)
                 break()
@@ -96,30 +97,27 @@ if(WIN32)
         endforeach()
         
         if(NOT LLVM_FOUND_ON_WINDOWS)
-            set(LLVM_INCLUDE_DEFAULT "$ENV{LOCALAPPDATA}/LLVM/lib/clang/18/include")
-            if(NOT EXISTS "${LLVM_INCLUDE_DEFAULT}")
-                set(LLVM_INCLUDE_DEFAULT "C:/Program Files/LLVM/lib/clang/18/include")
-            endif()
-            if(EXISTS "${LLVM_INCLUDE_DEFAULT}")
-                include_directories("${LLVM_INCLUDE_DEFAULT}")
-                message(STATUS "Using LLVM include: ${LLVM_INCLUDE_DEFAULT}")
-            endif()
-            
-            find_library(LLVM_CORE_LIB NAMES LLVMCore PATHS 
-                "$ENV{LOCALAPPDATA}/LLVM/lib" 
-                "C:/Program Files/LLVM/lib"
-                NO_DEFAULT_PATH
-            )
-            find_library(LLVM_BITWRITER_LIB NAMES LLVMBitWriter PATHS 
-                "$ENV{LOCALAPPDATA}/LLVM/lib" 
-                "C:/Program Files/LLVM/lib"
-                NO_DEFAULT_PATH
-            )
-            if(LLVM_CORE_LIB AND LLVM_BITWRITER_LIB)
-                list(APPEND LLVM_LIBS ${LLVM_CORE_LIB} ${LLVM_BITWRITER_LIB})
-                set(LLVM_FOUND_ON_WINDOWS TRUE)
-                message(STATUS "Found LLVM libraries directly")
-            endif()
+            foreach(LLVM_PATH ${LLVM_WINDOWS_PATHS})
+                if(EXISTS "${LLVM_PATH}/lib/clang/18/include")
+                    include_directories("${LLVM_PATH}/lib/clang/18/include")
+                    message(STATUS "Using LLVM clang include: ${LLVM_PATH}/lib/clang/18/include")
+                endif()
+                
+                if(EXISTS "${LLVM_PATH}/lib/clang/18/include/llvm-c")
+                    include_directories("${LLVM_PATH}/lib/clang/18/include")
+                    message(STATUS "Using llvm-c include: ${LLVM_PATH}/lib/clang/18/include")
+                endif()
+                
+                find_library(LLVM_CORE_LIB NAMES LLVMCore PATHS "${LLVM_PATH}/lib" NO_DEFAULT_PATH)
+                find_library(LLVM_BITWRITER_LIB NAMES LLVMBitWriter PATHS "${LLVM_PATH}/lib" NO_DEFAULT_PATH)
+                if(LLVM_CORE_LIB AND LLVM_BITWRITER_LIB)
+                    link_directories("${LLVM_PATH}/lib")
+                    list(APPEND LLVM_LIBS ${LLVM_CORE_LIB} ${LLVM_BITWRITER_LIB})
+                    set(LLVM_FOUND_ON_WINDOWS TRUE)
+                    message(STATUS "Found LLVM libraries in: ${LLVM_PATH}/lib")
+                    break()
+                endif()
+            endforeach()
         endif()
         
         if(NOT LLVM_FOUND_ON_WINDOWS)

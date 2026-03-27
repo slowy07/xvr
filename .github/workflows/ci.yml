@@ -94,14 +94,16 @@ jobs:
         shell: pwsh
         run: |
           $env:Path = "$env:LOCALAPPDATA\LLVM\bin;C:\Program Files\LLVM\bin;$env:Path"
+          $env:LIBRARY_PATH = "$env:LOCALAPPDATA\LLVM\lib;C:\Program Files\LLVM\lib;$env:LIBRARY_PATH"
           mkdir build
           cd build
-          cmake .. -G "Ninja" -DXVR_BUILD_TESTS=OFF -DXVR_BUILD_TYPE=release -DCMAKE_C_COMPILER=clang
+          cmake .. -G "Ninja" -DXVR_BUILD_TESTS=OFF -DXVR_BUILD_TYPE=release -DCMAKE_C_COMPILER=clang -DLLVM_DIR="$env:LOCALAPPDATA\LLVM\lib\cmake\llvm"
 
       - name: Build
         shell: pwsh
         run: |
           $env:Path = "$env:LOCALAPPDATA\LLVM\bin;C:\Program Files\LLVM\bin;$env:Path"
+          $env:LIBRARY_PATH = "$env:LOCALAPPDATA\LLVM\lib;C:\Program Files\LLVM\lib;$env:LIBRARY_PATH"
           cmake --build build --parallel
 
       - name: Run Tests
