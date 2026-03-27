@@ -122,23 +122,29 @@ jobs:
         run: |
           brew install llvm@18
           echo "LLVM_PATH=$(brew --prefix llvm@18)" >> $GITHUB_ENV
-          echo "/opt/homebrew/opt/llvm@18/bin" >> $GITHUB_PATH
 
       - name: Configure CMake
         run: |
+          export PATH="/opt/homebrew/opt/llvm@18/bin:$PATH"
+          export LIBRARY_PATH="/opt/homebrew/opt/llvm@18/lib:$LIBRARY_PATH"
           mkdir build
           cd build
           cmake .. \
             -DCMAKE_C_COMPILER=clang \
             -DCMAKE_CXX_COMPILER=clang++ \
+            -DLLVM_DIR=/opt/homebrew/opt/llvm@18/lib/cmake/llvm \
             -DXVR_BUILD_TESTS=ON \
             -DXVR_BUILD_TYPE=release
 
       - name: Build
-        run: cmake --build build -j$(sysctl -n hw.ncpu)
+        run: |
+          export PATH="/opt/homebrew/opt/llvm@18/bin:$PATH"
+          export LIBRARY_PATH="/opt/homebrew/opt/llvm@18/lib:$LIBRARY_PATH"
+          cmake --build build -j$(sysctl -n hw.ncpu)
 
       - name: Run Tests
         run: |
+          export PATH="/opt/homebrew/opt/llvm@18/bin:$PATH"
           cd build
           ctest --output-on-failure --timeout 60
 
