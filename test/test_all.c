@@ -75,9 +75,8 @@ int run_test_with_crash_protection(const char* name, int (*test_func)(void),
 
 int main(void) {
     print_header("XVR LLVM AOT COMPILER TEST SUITE");
-    printf("\n" XVR_CC_NOTICE "Testing Version: %d.%d.%d\n" XVR_CC_RESET, 0, 4,
-           7);
-    printf(XVR_CC_NOTICE "Build: " __DATE__ " " __TIME__ "\n\n" XVR_CC_RESET);
+    printf("\nTesting Version: 0.5.9\n");
+    printf("Build: " __DATE__ " " __TIME__ "\n\n");
 
     /* AST Node Tests */
     print_header("AST Node Tests");

@@ -1,10 +1,26 @@
-# INFO:
+# XVR Compiler Build System
+#
+# BUILD OPTIONS:
 #   make              - Build debug version (default)
-#   make release      - Build optimized release version
-#   make test         - Run tests
+#   make release      - Build optimized release version (O2)
+#   make debug        - Build with debug symbols and sanitizers
+#   make test         - Run all tests
 #   make install      - Install libraries and binaries
 #   make uninstall    - Remove installed files
 #   make clean        - Remove build artifacts
+#
+# DEBUG OPTIONS:
+#   make DEBUG=1                          - Enable debug output (-DDEBUG)
+#   make SANITIZE=address                 - Enable AddressSanitizer
+#   make SANITIZE=undefined              - Enable UBSan
+#   make PROFILE=1                        - Enable profiling support
+#   make VERBOSE=1                        - Show all build commands
+#
+# EXAMPLE:
+#   make                                  # Normal debug build
+#   make release                          # Optimized release build
+#   make DEBUG=1 SANITIZE=address         # Debug with ASan
+#   make VERBOSE=1                        # Show all gcc commands
 
 XVR_UNAME := $(shell uname -s 2>/dev/null)
 
@@ -54,6 +70,54 @@ CFLAGS_BASE += -Wstrict-prototypes -g
 
 XVR_BUILD_TYPE ?= debug
 
+# Debug Build Options
+# DEBUG=1          - Enable debug macros and assertions
+# SANITIZE=...    - Enable sanitizers (address, undefined, thread, memory)
+# PROFILE=1       - Enable profiling support (-pg)
+# VERBOSE=1       - Show all build commands (set -x)
+
+DEBUG_FLAGS :=
+SANITIZER_FLAGS :=
+
+ifeq ($(DEBUG),1)
+    DEBUG_FLAGS += -DDEBUG -DXVR_DEBUG=1
+    DEBUG_FLAGS += -DDEBUG_ASSERTIONS=1
+    $(info XVR: Building with DEBUG mode enabled)
+endif
+
+ifeq ($(PROFILE),1)
+    DEBUG_FLAGS += -pg
+    $(info XVR: Profiling enabled)
+endif
+
+ifneq ($(SANITIZE),)
+    ifeq ($(SANITIZE),address)
+        SANITIZER_FLAGS += -fsanitize=address -fno-omit-frame-pointer
+        $(info XVR: AddressSanitizer enabled)
+    else ifeq ($(SANITIZE),undefined)
+        SANITIZER_FLAGS += -fsanitize=undefined -fno-omit-frame-pointer
+        $(info XVR: UndefinedBehaviorSanitizer enabled)
+    else ifeq ($(SANITIZE),thread)
+        SANITIZER_FLAGS += -fsanitize=thread
+        $(info XVR: ThreadSanitizer enabled)
+    else ifeq ($(SANITIZE),memory)
+        SANITIZER_FLAGS += -fsanitize=memory -fno-omit-frame-pointer
+        $(info XVR: MemorySanitizer enabled)
+    else ifeq ($(SANITIZE),all)
+        SANITIZER_FLAGS += -fsanitize=address,undefined,thread -fno-omit-frame-pointer
+        $(info XVR: All sanitizers enabled)
+    endif
+    DEBUG_FLAGS += $(SANITIZER_FLAGS)
+    CFLAGS_BASE += -g
+endif
+
+ifeq ($(VERBOSE),1)
+    $(info XVR: Verbose build enabled - showing all commands)
+endif
+
+# Apply debug flags to base
+CFLAGS_BASE += $(DEBUG_FLAGS)
+
 ifeq ($(XVR_BUILD_TYPE),release)
     CFLAGS_BASE := $(filter-out -g,$(CFLAGS_BASE))
     CFLAGS_BASE += -O2
@@ -67,7 +131,7 @@ export XVR_PLATFORM XVR_OUTDIR XVR_OBJDIR
 export XVR_SHLIB_NAME XVR_STATIC_NAME XVR_EXE_NAME
 export XVR_SHLIB_EXT XVR_STATIC_EXT XVR_EXE_EXT
 export CFLAGS_BASE XVR_BUILD_TYPE XVR_STRIP
-.PHONY: all release clean test install uninstall rebuild lib compiler out-dirs
+.PHONY: all release debug clean test install uninstall rebuild lib compiler out-dirs verbose
 
 all: out-dirs lib compiler
 	@echo "Build complete: $(XVR_EXE_NAME), $(XVR_SHLIB_NAME), $(XVR_STATIC_NAME)"
@@ -75,6 +139,11 @@ all: out-dirs lib compiler
 release: XVR_BUILD_TYPE = release
 release: out-dirs lib compiler
 	@echo "Release build complete"
+
+debug: XVR_BUILD_TYPE = debug
+debug: DEBUG = 1
+debug: out-dirs lib compiler
+	@echo "Debug build complete"
 
 out-dirs:
 	mkdir -p $(XVR_OUTDIR)

@@ -298,10 +298,8 @@ run_test "print_fn_return_array" "proc get_arr(): [int] { return [1, 2]; }"
 run_test "print_ternary" "std::print(true ? 1 : 2);"
 run_test "print_nested_ternary" "std::print(true ? (false ? 1 : 2) : 3);"
 
-# ============================================
 # SECTION: Security-Related Fuzzing Tests
 # These tests look for potential security issues
-# ============================================
 
 # Test 66: Stack overflow from deep recursion
 run_test "deep_recursion" "proc foo() { foo(); } foo();"
@@ -333,9 +331,7 @@ run_test "mod_by_zero" 'std::print("{}", 1 % 0);'
 run_test "arr_out_of_bounds_pos" "var arr = [1, 2, 3]; std::print(arr[100]);"
 run_test "arr_out_of_bounds_neg" "var arr = [1, 2, 3]; std::print(arr[-1]);"
 
-# ============================================
 # SECTION: Edge Case Fuzzing Tests
-# ============================================
 
 # Test 74: Multiple println in sequence
 run_test "multi_println" "std::println(\"{}\", 1); std::println(\"{}\", 2); std::println(\"{}\", 3);"
