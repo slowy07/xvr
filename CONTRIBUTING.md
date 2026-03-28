@@ -19,7 +19,24 @@ cmake .. && cmake --build .
 
 - **Indentation**: Use **4 spaces** for all indentation
 - **Line Length**: Keep lines under 100 characters when possible
-- **Editor Config**: Configure your editor to insert 4 spaces when pressing `tab`
+- **Formatter**: Use `clang-format` for automatic formatting
+- **Pre-commit Hook**: Automatically formats staged files on commit
+
+### Automatic Formatting
+
+The project includes a pre-commit hook that automatically formats C files:
+
+```sh
+# Install clang-format (if not already installed)
+# Ubuntu/Debian:
+sudo apt install clang-format
+
+# macOS:
+brew install clang-format
+
+# The pre-commit hook runs automatically on git commit
+# Unformatted files will be auto-formatted and re-staged
+```
 
 ### Editor Examples
 
@@ -65,6 +82,8 @@ xvr/
 ├── code/                   # Example XVR programs
 ├── docs/                   # Documentation
 ├── CMakeLists.txt          # Root build config
+├── .clang-format           # Code formatting rules
+├── .git/hooks/pre-commit   # Auto-format on commit
 └── build/                  # Build output (generated)
 ```
 
@@ -201,9 +220,11 @@ fprintf(stderr, XVR_CC_NOTICE "Notice: %s\n" XVR_CC_RESET, message);
    bash ../fuzzer/fuzz_test_suite.sh # Run fuzzer
    bash ../fuzzer/stress_test.sh     # Run stress tests
    ```
-5. **Commit** with clear messages
+5. **Commit** - The pre-commit hook will auto-format your staged files
 6. **Push** to your fork
 7. **Submit** a pull request
+
+> **Note**: The pre-commit hook automatically formats C files with `clang-format`. If your files are reformatted, simply commit again after the hook re-stages them.
 
 ### Commit Messages
 
