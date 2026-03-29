@@ -328,11 +328,13 @@ bool Xvr_LLVMControlFlowEmitIf(Xvr_LLVMControlFlow* cf, Xvr_NodeIf* if_node) {
     }
 
     if (!is_boolean_type(condition)) {
+        char* type_str = LLVMPrintTypeToString(LLVMTypeOf(condition));
         set_error_hint(cf,
                        "condition of if statement must be boolean, got '%s'",
                        "use a comparison operator (e.g., 'x > 0') or wrap the "
                        "condition with 'bool()'",
-                       LLVMPrintTypeToString(LLVMTypeOf(condition)));
+                       type_str);
+        LLVMDisposeMessage(type_str);
         return false;
     }
 

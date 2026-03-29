@@ -299,7 +299,7 @@ static int test_full_compilation_pipeline(void) {
     printf("\n  --- Full Compilation Pipeline ---\n");
 
     /* Test compiling a simple program */
-    const char* source = "var x = 42;\nstd::print(x);\n";
+    const char* source = "var x = 42;\nstd::print(\"{}\", x);\n";
 
     /* Parse the source */
     Xvr_Lexer lexer;

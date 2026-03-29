@@ -33,7 +33,7 @@ int run_compiler_tests(void) {
 
     /* Test 2: Parse and compile simple source */
     printf("  [RUN ] Parse and compile simple source...\n");
-    const char* source = "var x = 42;\nstd::print(x);\n";
+    const char* source = "var x = 42;\nstd::print(\"{}\", x);\n";
 
     Xvr_Lexer lexer;
     Xvr_Parser parser;
@@ -120,70 +120,76 @@ int run_compiler_tests(void) {
     } cast_tests[] = {
         /* int to int casts */
         {"int32 to int32",
-         "var x: int32 = 10; var y: int32 = int32(x);          std::print(y);",
+         "var x: int32 = 10; var y: int32 = int32(x);          "
+         "std::print(\"{}\", y);",
          "i32", 1},
         {"int32 to int16",
-         "var x: int32 = 10; var y: int16 = int16(x);          std::print(y);",
+         "var x: int32 = 10; var y: int16 = int16(x);          "
+         "std::print(\"{}\", y);",
          "trunc", 1},
         {"int16 to int32",
-         "var x: int16 = 10; var y: int32 = int32(x);          std::print(y);",
+         "var x: int16 = 10; var y: int32 = int32(x);          "
+         "std::print(\"{}\", y);",
          "sext", 1},
         {"int64 to int32",
-         "var x: int64 = 10; var y: int32 = int32(x);          std::print(y);",
+         "var x: int64 = 10; var y: int32 = int32(x);          "
+         "std::print(\"{}\", y);",
          "trunc", 1},
         {"int32 to int64",
-         "var x: int32 = 10; var y: int64 = int64(x);          std::print(y);",
+         "var x: int32 = 10; var y: int64 = int64(x);          "
+         "std::print(\"{}\", y);",
          "sext", 1},
 
         /* int to float casts */
         {"int32 to float32",
          "var x: int32 = 10; var y: float32 = float32(x);          "
-         "std::print(y);",
+         "std::print(\"{}\", y);",
          "sitofp", 1},
         {"int32 to float64",
          "var x: int32 = 10; var y: float64 = float64(x);          "
-         "std::print(y);",
+         "std::print(\"{}\", y);",
          "sitofp", 1},
 
         /* float to int casts */
         {"float32 to int32",
          "var x: float32 = 10.0; var y: int32 = int32(x);          "
-         "std::print(y);",
+         "std::print(\"{}\", y);",
          "fptosi", 1},
         {"float64 to int32",
          "var x: float64 = 10.0; var y: int32 = int32(x);          "
-         "std::print(y);",
+         "std::print(\"{}\", y);",
          "fptosi", 1},
 
         /* float to float casts */
         {"float32 to float64",
          "var x: float32 = 10.0; var y: float64 = float64(x);          "
-         "std::print(y);",
+         "std::print(\"{}\", y);",
          "fpext", 1},
         {"float64 to float32",
          "var x: float64 = 10.0; var y: float32 = float32(x);          "
-         "std::print(y);",
+         "std::print(\"{}\", y);",
          "fptrunc", 1},
 
         /* bool casts */
         {"int32 to bool",
-         "var x: int32 = 10; var y: bool = bool(x);          std::print(y);",
+         "var x: int32 = 10; var y: bool = bool(x);          "
+         "std::print(\"{}\", y);",
          "icmp ne i32", 1},
         {"float32 to bool",
          "var x: float32 = 10.0; var y: bool = bool(x);          "
-         "std::print(y);",
+         "std::print(\"{}\", y);",
          "fcmp one", 1},
 
         /* chained casts */
         {"chained int to float to int",
          "var x: int32 = 10; var y: int32 = int32(float64(x));          "
-         "std::print(y);",
+         "std::print(\"{}\", y);",
          "sitofp", 1},
 
         /* uint casts */
         {"int32 to uint32",
          "var x: int32 = 10; var y: uint32 = uint32(x);          "
-         "std::print(y);",
+         "std::print(\"{}\", y);",
          "i32", 1},
     };
 
@@ -307,15 +313,18 @@ int run_compiler_tests(void) {
         /* String casts require runtime helper functions - codegen succeeds but
            runtime will fail */
         {"string to int",
-         "var s = \"42\"; var n: int32 = int32(s);          std::print(n);", 0,
-         "Requires runtime helper: str_to_int32"},
+         "var s = \"42\"; var n: int32 = int32(s);          std::print(\"{}\", "
+         "n)"
+         ";",
+         0, "Requires runtime helper: str_to_int32"},
         {"string to float",
          "var s = \"3.14\"; var f: float32 = float32(s);          "
-         "std::print(f);",
+         "std::print(\"{}\", f);",
          0, "Requires runtime helper: str_to_float32"},
         {"int to string",
-         "var n: int32 = 42; var s = string(n);          std::print(s);", 0,
-         "Requires runtime helper: int_to_str"},
+         "var n: int32 = 42; var s = string(n);          std::print(\"{}\", "
+         "s);",
+         0, "Requires runtime helper: int_to_str"},
     };
 
     int num_error_tests = sizeof(error_tests) / sizeof(error_tests[0]);
@@ -404,19 +413,24 @@ int run_compiler_tests(void) {
         const char* expected_ir_pattern;
     } literal_tests[] = {
         {"int literal to int32",
-         "var x = 42; var n = int32(x);          std::print(n);", "i32"},
+         "var x = 42; var n = int32(x);          std::print(\"{}\", n);",
+         "i32"},
         {"int literal to float32",
-         "var x = 42; var f = float32(x);          std::print(f);", "sitofp"},
+         "var x = 42; var f = float32(x);          std::print(\"{}\", f);",
+         "sitofp"},
         {"float literal to int32",
-         "var x = 3.14; var n = int32(x);          std::print(n);", "fptosi"},
+         "var x = 3.14; var n = int32(x);          std::print(\"{}\", n);",
+         "fptosi"},
         {"float literal to float64",
-         "var x = 3.14; var d = float64(x);          std::print(d);", "fpext"},
+         "var x = 3.14; var d = float64(x);          std::print(\"{}\", d);",
+         "fpext"},
         {"literal 0 to bool",
-         "var x = 0; var b = bool(x);          std::print(b);", "icmp"},
+         "var x = 0; var b = bool(x);          std::print(\"{}\", b);", "icmp"},
         {"literal 1 to bool",
-         "var x = 1; var b = bool(x);          std::print(b);", "icmp"},
+         "var x = 1; var b = bool(x);          std::print(\"{}\", b);", "icmp"},
         {"literal true to int32",
-         "var x = true; var n = int32(x);          std::print(n);", "zext"},
+         "var x = true; var n = int32(x);          std::print(\"{}\", n);",
+         "zext"},
     };
 
     int num_literal_tests = sizeof(literal_tests) / sizeof(literal_tests[0]);
@@ -501,37 +515,40 @@ int run_compiler_tests(void) {
         int expect_success;
     } if_tests[] = {
         /* Basic if statements */
-        {"simple if", "if (true) { std::print(1); }", "br i1", 1},
-        {"if-else", "if (true) { std::print(1); } else { std::print(2); }",
+        {"simple if", "if (true) { std::print(\"{}\", 1); }", "br i1", 1},
+        {"if-else",
+         "if (true) { std::print(\"{}\", 1); } else { std::print(\"{}\", 2); }",
          "br i1", 1},
         {"if-else-if chain",
-         "if (true) { std::print(1); } else if (false) { std::print(2); } else "
+         "if (true) { std::print(\"{}\", 1); } else if (false) { "
+         "std::print(\"{}\", 2); } else "
          "{ "
-         "std::print(3); }",
+         "std::print(\"{}\", 3); }",
          "br i1", 1},
 
         /* Nested if */
-        {"nested if", "if (true) { if (false) { std::print(1); } }", "br i1",
-         1},
+        {"nested if", "if (true) { if (false) { std::print(\"{}\", 1); } }",
+         "br i1", 1},
 
         /* If with comparison */
-        {"if with gt", "var x = 5; if (x > 10) { std::print(1); }", "icmp sgt",
-         1},
-        {"if with lt", "var x = 5; if (x < 10) { std::print(1); }", "icmp slt",
-         1},
-        {"if with eq", "var x = 5; if (x == 5) { std::print(1); }", "icmp eq",
-         1},
-        {"if with neq", "var x = 5; if (x != 5) { std::print(1); }", "icmp ne",
-         1},
+        {"if with gt", "var x = 5; if (x > 10) { std::print(\"{}\", 1); }",
+         "icmp sgt", 1},
+        {"if with lt", "var x = 5; if (x < 10) { std::print(\"{}\", 1); }",
+         "icmp slt", 1},
+        {"if with eq", "var x = 5; if (x == 5) { std::print(\"{}\", 1); }",
+         "icmp eq", 1},
+        {"if with neq", "var x = 5; if (x != 5) { std::print(\"{}\", 1); }",
+         "icmp ne", 1},
 
         /* If with logical operators - removed because LLVM optimizes these away
          * when the condition is constant. Use comparisons instead. */
 
         /* Complex else-if chain */
         {"chained else-if",
-         "var x = 5; if (x > 10) { std::print(1); } else if (x > 5) { "
-         "std::print(2); } "
-         "else if (x > 0) { std::print(3); } else { std::print(4); }",
+         "var x = 5; if (x > 10) { std::print(\"{}\", 1); } else if (x > 5) { "
+         "std::print(\"{}\", 2); } "
+         "else if (x > 0) { std::print(\"{}\", 3); } else { std::print(\"{}\", "
+         "4); }",
          "icmp", 1},
     };
 
@@ -644,19 +661,21 @@ int run_compiler_tests(void) {
         const char* expected_ir_pattern;
         int expect_success;
     } while_tests[] = {
-        {"simple while true", "while (true) { std::print(1); }", "br i1", 1},
-        {"simple while false", "while (false) { std::print(1); }", "br i1", 1},
+        {"simple while true", "while (true) { std::print(\"{}\", 1); }",
+         "br i1", 1},
+        {"simple while false", "while (false) { std::print(\"{}\", 1); }",
+         "br i1", 1},
         {"while with variable condition",
-         "var x = 5; while (x > 0) { std::print(x); x = x - 1; }", "icmp sgt",
-         1},
-        {"while with gt", "var x = 5; while (x > 10) { std::print(1); }",
+         "var x = 5; while (x > 0) { std::print(\"{}\", x); x = x - 1; }",
          "icmp sgt", 1},
+        {"while with gt",
+         "var x = 5; while (x > 10) { std::print(\"{}\", 1); }", "icmp sgt", 1},
         {"while with lt",
-         "var x = 5; while (x < 10) { std::print(1); x = x + 1; }", "icmp slt",
-         1},
+         "var x = 5; while (x < 10) { std::print(\"{}\", 1); x = x + 1; }",
+         "icmp slt", 1},
         {"while with eq",
-         "var x = 5; while (x == 5) { std::print(1); x = x + 1; }", "icmp eq",
-         1},
+         "var x = 5; while (x == 5) { std::print(\"{}\", 1); x = x + 1; }",
+         "icmp eq", 1},
         {"nested while",
          "var x = 0; while (x < 3) { var y = 0; while (y < 3) { y = y + 1; } "
          "x = x + 1; }",
@@ -781,23 +800,26 @@ int run_compiler_tests(void) {
         const char* expected_ir_pattern;
         int expect_success;
     } for_tests[] = {
-        {"simple for loop", "for (var i = 0; i < 5; i++) { std::print(i); }",
-         "for_cond", 1},
+        {"simple for loop",
+         "for (var i = 0; i < 5; i++) { std::print(\"{}\", i); }", "for_cond",
+         1},
         {"for with std print",
-         "for (var i = 0; i < 20; i++) { std::print(i); }", "for_cond", 1},
+         "for (var i = 0; i < 20; i++) { std::print(\"{}\", i); }", "for_cond",
+         1},
         {"for with break",
          "for (var i = 0; i < 100; i++) { if (i == 10) { break; } "
-         "std::print(i); }",
+         "std::print(\"{}\", i); }",
          "for_cond", 1},
         {"for with continue",
          "for (var i = 0; i < 5; i++) { if (i == 2) { continue; } "
-         "std::print(i); }",
+         "std::print(\"{}\", i); }",
          "for_cond", 1},
-        {"for with decrement", "for (var i = 5; i > 0; i--) { std::print(i); }",
-         "for_cond", 1},
+        {"for with decrement",
+         "for (var i = 5; i > 0; i--) { std::print(\"{}\", i); }", "for_cond",
+         1},
         {"nested for loops",
          "for (var i = 0; i < 3; i++) { for (var j = 0; j < 3; j++) { "
-         "std::print(i); } }",
+         "std::print(\"{}\", i); } }",
          "for_cond", 1},
         {"for with complex body",
          "var sum = 0; for (var i = 0; i < 10; i++) { sum = sum + i; }",
@@ -916,13 +938,14 @@ int run_compiler_tests(void) {
         /* Non-boolean condition tests - these print errors to stderr but don't
          * fail codegen Note: This is a known limitation - errors should be
          * tracked in codegen */
-        {"int condition", "var x = 5; if (x) { std::print(1); }", 0,
+        {"int condition", "var x = 5; if (x) { std::print(\"{}\", 1); }", 0,
          "Error printed to stderr, not tracked in codegen API"},
-        {"string condition", "var s = \"hello\"; if (s) { std::print(1); }", 0,
+        {"string condition",
+         "var s = \"hello\"; if (s) { std::print(\"{}\", 1); }", 0,
          "Error printed to stderr, not tracked in codegen API"},
-        {"float condition", "var f = 3.14; if (f) { std::print(1); }", 0,
-         "Error printed to stderr, not tracked in codegen API"},
-        {"null condition", "var n = null; if (n) { std::print(1); }", 0,
+        {"float condition", "var f = 3.14; if (f) { std::print(\"{}\", 1); }",
+         0, "Error printed to stderr, not tracked in codegen API"},
+        {"null condition", "var n = null; if (n) { std::print(\"{}\", 1); }", 0,
          "Error printed to stderr, not tracked in codegen API"},
     };
 
@@ -1008,11 +1031,11 @@ int run_compiler_tests(void) {
         const char* expected_ir_pattern;
         int expect_success;
     } void_fn_tests[] = {
-        {"void proc declaration", "proc greet(): void { std::print(1); }",
-         "main", 1},
+        {"void proc declaration",
+         "proc greet(): void { std::print(\"{}\", 1); }", "main", 1},
         {"void proc with return;", "proc done(): void { return; }", "main", 1},
-        {"void proc call", "proc foo(): void { std::print(1); } foo();", "main",
-         1},
+        {"void proc call", "proc foo(): void { std::print(\"{}\", 1); } foo();",
+         "main", 1},
         {"int proc with implicit return", "proc get_val(): int { 42 }", "main",
          1},
         {"int proc with explicit return", "proc get_val(): int { return 42; }",

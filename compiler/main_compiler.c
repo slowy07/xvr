@@ -108,6 +108,7 @@ int main(int argc, const char* argv[]) {
     if (!nodes) {
         print_compiler_error(Xvr_commandLine.sourceFile, 0, "error",
                              "parsing failed - check syntax", NULL);
+        free((void*)source);
         return 1;
     }
 
@@ -125,6 +126,7 @@ int main(int argc, const char* argv[]) {
             Xvr_freeASTNode(nodes[i]);
         }
         free(nodes);
+        free((void*)source);
         return 1;
     }
     Xvr_freeUnusedChecker(&checker);
@@ -136,6 +138,7 @@ int main(int argc, const char* argv[]) {
                              "This may indicate an out-of-memory condition");
         for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
         free(nodes);
+        free((void*)source);
         return 1;
     }
 
@@ -152,6 +155,7 @@ int main(int argc, const char* argv[]) {
         Xvr_LLVMCodegenDestroy(codegen);
         for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
         free(nodes);
+        free((void*)source);
         return 1;
     }
 
@@ -192,6 +196,7 @@ int main(int argc, const char* argv[]) {
             for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
             free(nodes);
             free(outFile);
+            free((void*)source);
             return 1;
         }
         printf("Compiled to: %s\n", outFile);
@@ -200,6 +205,7 @@ int main(int argc, const char* argv[]) {
     Xvr_LLVMCodegenDestroy(codegen);
     for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
     free(nodes);
+    free((void*)source);
 
     if (shouldRun) {
         const char* runtime_src = "/tmp/xvr_runtime.c";

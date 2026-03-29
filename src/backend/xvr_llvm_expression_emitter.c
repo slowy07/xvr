@@ -987,19 +987,6 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
                     } else if (kind == LLVMDoubleTypeKind) {
                         arg_types[i] = XVR_FORMAT_ARG_DOUBLE;
                     } else if (kind == LLVMPointerTypeKind) {
-                        LLVMTypeRef pointee = LLVMGetElementType(arg_type);
-                        if (pointee &&
-                            LLVMGetTypeKind(pointee) == LLVMArrayTypeKind) {
-                            Xvr_LLVMContextSetError(
-                                emitter->context,
-                                "print: cannot use array with format string. "
-                                "Use std::print(array) without format string, "
-                                "or "
-                                "print elements individually");
-                            free(arg_types);
-                            XvrFormatStringFree(fmt);
-                            return NULL;
-                        }
                         arg_types[i] = XVR_FORMAT_ARG_STRING;
                     } else if (kind == LLVMArrayTypeKind) {
                         Xvr_LLVMContextSetError(
@@ -1368,19 +1355,6 @@ static LLVMValueRef emit_printfln(Xvr_LLVMExpressionEmitter* emitter,
             } else if (kind == LLVMDoubleTypeKind) {
                 arg_types[i] = XVR_FORMAT_ARG_DOUBLE;
             } else if (kind == LLVMPointerTypeKind) {
-                LLVMTypeRef pointee = LLVMGetElementType(arg_type);
-                if (pointee && LLVMGetTypeKind(pointee) == LLVMArrayTypeKind) {
-                    Xvr_LLVMContextSetError(
-                        emitter->context,
-                        "println: cannot use array with format string. "
-                        "Use std::println(array) without format string, or "
-                        "print elements individually");
-                    free(arg_types);
-                    free(printf_fmt_with_newline);
-                    XvrFormatStringFree(fmt);
-                    free(call_args);
-                    return NULL;
-                }
                 arg_types[i] = XVR_FORMAT_ARG_STRING;
             } else if (kind == LLVMArrayTypeKind) {
                 Xvr_LLVMContextSetError(

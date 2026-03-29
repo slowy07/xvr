@@ -128,9 +128,11 @@ Xvr_LLVMTargetMachine* Xvr_LLVMTargetMachineCreate(
                 free(error);
             } else {
                 free(error);
+                LLVMDisposeMessage((char*)defaultTriple);
                 return NULL;
             }
         }
+        LLVMDisposeMessage((char*)defaultTriple);
     } else {
         LLVMInitializeAllTargetInfos();
         LLVMInitializeAllTargets();
