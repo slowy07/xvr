@@ -32,12 +32,15 @@ std::print("{} + {} = {}\n", 1, 2, 3);
 The `std::print` function uses `{}` placeholders for formatting:
 - `{}` - Auto-detects type (int, float, string)
 - Use `\n` in the format string for newlines
+- String literals can be printed directly (e.g., `std::print("hello")`)
+- Variables require format specifiers (e.g., `std::print("{}", myVar)`)
 
 Supported types in format placeholders:
 - `int` - Prints as decimal integer
 - `float` - Prints as floating point number
 - `string` - Prints the string content
 - `double` - Prints as double precision float
+- `array` - Prints all elements separated by spaces
 
 ### std::println
 
@@ -54,6 +57,8 @@ std::println("my name is {} {}", "arfy", "slowy"); // my name is arfy slowy
 The `std::println` function uses `{}` placeholders for formatting:
 - `{}` - Auto-detects type (int, float, string)
 - Automatically appends `\n` to the output
+- String literals can be printed directly
+- Variables require format specifiers
 
 **Variables:**
 ```xvr
@@ -67,6 +72,7 @@ Supported types in format placeholders:
 - `float` - Prints as floating point number
 - `string` - Prints the string content
 - `double` - Prints as double precision float
+- `array` - Prints all elements separated by spaces
 
 **Error Handling:**
 

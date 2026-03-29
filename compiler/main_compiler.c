@@ -1,6 +1,9 @@
+#include <llvm-c/Core.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 #include "backend/xvr_llvm_codegen.h"
@@ -10,6 +13,20 @@
 #include "xvr_console_colors.h"
 #include "xvr_parser.h"
 #include "xvr_unused.h"
+
+static double get_time_ms(void) {
+    struct timespec ts;
+    clock_gettime(CLOCK_MONOTONIC, &ts);
+    return ts.tv_sec * 1000.0 + ts.tv_nsec / 1000000.0;
+}
+
+static long get_file_size(const char* path) {
+    struct stat st;
+    if (stat(path, &st) == 0) {
+        return st.st_size;
+    }
+    return 0;
+}
 
 static void print_error(const char* filename, int line, const char* error_type,
                         const char* message) {
@@ -91,6 +108,8 @@ int main(int argc, const char* argv[]) {
     snprintf(module_name, sizeof(module_name), "%s", srcBase);
     char* dot = strrchr(module_name, '.');
     if (dot) *dot = '\0';
+
+    double start_time = get_time_ms();
 
     size_t size = 0;
     const char* source =
@@ -199,13 +218,14 @@ int main(int argc, const char* argv[]) {
             free((void*)source);
             return 1;
         }
-        printf("Compiled to: %s\n", outFile);
     }
 
     Xvr_LLVMCodegenDestroy(codegen);
     for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
     free(nodes);
     free((void*)source);
+
+    double total_time = get_time_ms() - start_time;
 
     if (shouldRun) {
         const char* runtime_src = "/tmp/xvr_runtime.c";
@@ -242,13 +262,29 @@ int main(int argc, const char* argv[]) {
         }
 
         char* cmd;
-        asprintf(&cmd, "gcc -c %s -o /tmp/xvr_runtime.o", runtime_src);
+        asprintf(&cmd, "gcc -c %s -o /tmp/xvr_runtime.o 2>/dev/null",
+                 runtime_src);
         system(cmd);
         free(cmd);
 
-        asprintf(&cmd, "gcc %s /tmp/xvr_runtime.o -o /tmp/xvr_bin", outFile);
+        asprintf(&cmd, "gcc %s /tmp/xvr_runtime.o -o /tmp/xvr_bin 2>/dev/null",
+                 outFile);
         int rc = system(cmd);
         free(cmd);
+
+        long bin_size = get_file_size("/tmp/xvr_bin");
+
+        if (Xvr_commandLine.verbose) {
+            const char* target = LLVMGetDefaultTargetTriple();
+            printf("\n");
+            printf("  " XVR_CC_NOTICE "Target:" XVR_CC_RESET " %s\n", target);
+            printf("  " XVR_CC_NOTICE "Size:" XVR_CC_RESET " %.1f KB\n",
+                   bin_size / 1024.0);
+            printf("  " XVR_CC_NOTICE "Time:" XVR_CC_RESET " %.2f ms\n",
+                   total_time);
+            printf("\n");
+            LLVMDisposeMessage((char*)target);
+        }
 
         if (rc == 0) {
             system("/tmp/xvr_bin");
@@ -258,6 +294,19 @@ int main(int argc, const char* argv[]) {
         unlink("/tmp/xvr_runtime.o");
         unlink(outFile);
         unlink("/tmp/xvr_bin");
+    } else {
+        long obj_size = get_file_size(outFile);
+        if (Xvr_commandLine.verbose) {
+            const char* target = LLVMGetDefaultTargetTriple();
+            printf("\n");
+            printf("  " XVR_CC_NOTICE "Target:" XVR_CC_RESET " %s\n", target);
+            printf("  " XVR_CC_NOTICE "Size:" XVR_CC_RESET " %.1f KB\n",
+                   obj_size / 1024.0);
+            printf("  " XVR_CC_NOTICE "Time:" XVR_CC_RESET " %.2f ms\n",
+                   total_time);
+            printf("\n");
+            LLVMDisposeMessage((char*)target);
+        }
     }
 
     free(outFile);

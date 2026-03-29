@@ -36,8 +36,14 @@ cmake --build .
 # Release build with optimizations
 cmake -DCMAKE_BUILD_TYPE=Release ..
 
-# Debug build with sanitizers
-cmake -DXVR_SANITIZE=address ..
+# Debug build
+cmake -DCMAKE_BUILD_TYPE=Debug ..
+
+# Build with AddressSanitizer
+cmake -DXVR_SANITIZER=address ..
+
+# Build with UndefinedBehaviorSanitizer
+cmake -DXVR_SANITIZER=undefined ..
 
 # Build without tests
 cmake -DXVR_BUILD_TESTS=OFF ..
@@ -50,12 +56,11 @@ cmake -DXVR_BUILD_SHARED=OFF ..
 
 | Command | Description |
 |---------|-------------|
-| `cmake ..` | Debug build |
-| `cmake -DCMAKE_BUILD_TYPE=Release ..` | Release build |
-| `cmake -DXVR_SANITIZE=address ..` | Build with AddressSanitizer |
-| `cmake --build .` | Compile |
-| `ctest --output-on-failure` | Run tests |
-| `cmake --install . --prefix /usr/local` | Install |
+| `cmake -B build && cmake --build build` | Debug build |
+| `cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build` | Release build |
+| `cmake -B build -DXVR_SANITIZER=address && cmake --build build` | Build with AddressSanitizer |
+| `ctest --test-dir build` | Run tests |
+| `cmake --install build --prefix /usr/local` | Install |
 
 ## Usage
 
@@ -71,6 +76,29 @@ cmake -DXVR_BUILD_SHARED=OFF ..
 
 # Dump LLVM IR to stdout
 ./build/xvr source.xvr -l
+
+# Verbose compilation (show build stages)
+./build/xvr -d source.xvr
+```
+
+### Verbose Output
+
+Use `-d` or `--debug` flag to see compilation information:
+
+```sh
+./build/xvr -d source.xvr
+```
+
+Output shows:
+- Target architecture
+- Output file size
+- Total compilation time
+
+Example:
+```
+  Target: x86_64-unknown-linux-gnu
+  Size: 15.8 KB
+  Time: 36.22 ms
 ```
 
 ## Say hello with Xvr
@@ -82,24 +110,24 @@ std::println("Hello, World!");
 ```xvr
 std::print("Hello, {}", "World");           // Hello, World
 std::print("Number: {}", 42);                // Number: 42
-std::print("Float: {}", 3.14);               // Float: 3.14
+std::print("Float: {}", 3.14);              // Float: 3.14
 std::print("{} is {} years old", "arfy", 25);  // arfy is 25 years old
 
-// Arrays
+// Arrays (print elements individually)
 var data: [int] = [1, 2, 3];
-std::print("array: {}", data);               // array: 1 2 3
+std::print(data);                            // 1 2 3
 ```
 
 ## Print with Newline (println)
 ```xvr
-std::println("Hello, World!");               // Hello, World! (with newline)
+std::println("Hello, World!");              // Hello, World! (with newline)
 std::println("Name: {} {}", "arfy", "slowy"); // Name: arfy slowy
-std::println("Value: {}", 42);                // Value: 42
+std::println("Value: {}", 42);              // Value: 42
 ```
 
 The `std::println` function automatically appends a newline character to the output.
 
-XVR uses `{}` placeholders. Supported types: integers, floats, strings, arrays.
+XVR uses `{}` placeholders for non-string arguments. Supported types: integers, floats, strings, arrays.
 
 ## Need Tutorial?
 

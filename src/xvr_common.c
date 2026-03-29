@@ -54,15 +54,21 @@ STATIC_ASSERT(sizeof(unsigned int) == 4);
 
 Xvr_CommandLine Xvr_commandLine;
 
-Xvr_CommandLine Xvr_commandLine = {
-    // default values
-    .error = false,       .help = false,
-    .version = false,     .binaryFile = NULL,
-    .sourceFile = NULL,   .compileFile = NULL,
-    .outFile = NULL,      .source = NULL,
-    .initialfile = NULL,  .enablePrintNewline = true,
-    .verbose = false,     .dumpLLVM = false,
-    .compileOnly = false, .emitType = NULL};
+Xvr_CommandLine Xvr_commandLine = {.error = false,
+                                   .help = false,
+                                   .version = false,
+                                   .sourceFile = NULL,
+                                   .compileFile = NULL,
+                                   .outFile = NULL,
+                                   .source = NULL,
+                                   .initialfile = NULL,
+                                   .enablePrintNewline = true,
+                                   .verbose = false,
+                                   .dumpLLVM = false,
+                                   .compileOnly = false,
+                                   .compileAndRun = true,
+                                   .emitType = NULL,
+                                   .optimizationLevel = 0};
 
 void Xvr_initCommandLine(int argc, const char* argv[]) {
     for (int i = 1; i < argc; i++) {  // start at 1 to skip the program name
@@ -149,6 +155,18 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
             continue;
         }
 
+        if (strlen(argv[i]) >= 2 && argv[i][0] == '-' && argv[i][1] == 'O') {
+            int optLevel = atoi(argv[i] + 2);
+            if (optLevel < 0 || optLevel > 3) {
+                fprintf(stderr, "error: optimization level must be 0-3\n");
+                Xvr_commandLine.error = true;
+                return;
+            }
+            Xvr_commandLine.optimizationLevel = optLevel;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
         if (!strcmp(argv[i], "-c")) {
             Xvr_commandLine.compileOnly = true;
             Xvr_commandLine.error = false;
@@ -162,11 +180,6 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
                 Xvr_commandLine.error = false;
                 continue;
             }
-            if (strncmp(&argv[i][len - 3], ".xb", 3) == 0) {
-                Xvr_commandLine.binaryFile = (char*)argv[i];
-                Xvr_commandLine.error = false;
-                continue;
-            }
         }
 
         // don't keep reading in an error state
@@ -176,32 +189,83 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
 
 void Xvr_usageCommandLine(int argc, const char* argv[]) {
     (void)argc;
-    printf("usage: %s [file.xvr] [-h] [-v] [-o outfile] [-l] [-c out.o]\n\n",
-           argv[0]);
+    printf("usage: %s [options] [file.xvr] [-o output]\n\n", argv[0]);
+    printf("Try '%s --help' for more information.\n", argv[0]);
 }
 
 void Xvr_helpCommandLine(int argc, const char* argv[]) {
-    Xvr_usageCommandLine(argc, argv);
+    (void)argc;
+    (void)argv;
 
-    printf("XVR AOT Compiler - Compile .xvr files to native executables\n\n");
-
-    printf("Usage:\n");
-    printf("  xvr file.xvr              Compile and run the program\n");
+    printf("XVR Programming Language Compiler v%d.%d.%d\n\n", XVR_VERSION_MAJOR,
+           XVR_VERSION_MINOR, XVR_VERSION_PATCH);
     printf(
-        "  xvr file.xvr -o out      Compile to executable (default: a.out)\n");
-    printf("  xvr file.xvr -l          Dump LLVM IR to stdout\n");
-    printf("  xvr file.xvr -c out.o    Compile to object file only\n");
-    printf("  xvr -h                   Show this help\n");
-    printf("  xvr -v                   Show version\n\n");
+        "Ahead-of-time compiler for .xvr source files to native "
+        "executables\n\n");
 
-    printf("Options:\n");
-    printf("  -h, --help         Show this help\n");
-    printf("  -v, --version      Show version and exit\n");
-    printf("  -o, --output FILE  Output file name\n");
-    printf("  -l, --llvm         Dump LLVM IR (implies -c)\n");
+    printf("USAGE:\n");
     printf(
-        "  -c, --compile      Compile to object file (don't link/execute)\n");
-    printf("  -n                 Disable trailing newline in print\n");
+        "  xvr <source.xvr>              Compile and run (produces temp "
+        "binary)\n");
+    printf("  xvr <source.xvr> -o <output>   Compile to executable\n");
+    printf("  xvr <source.xvr> -c <output.o> Compile to object file only\n");
+    printf("  xvr <source.xvr> -S             Output LLVM IR to stdout\n");
+    printf("  xvr <source.xvr> -l             Output LLVM IR to stdout\n");
+    printf("  xvr -i '<code>'                Compile and run inline code\n\n");
+
+    printf("OPTIONS:\n");
+    printf("  -h, --help               Display this help message and exit\n");
+    printf("  -v, --version            Display version information and exit\n");
+    printf("  -o, --output <file>      Output file name (default: a.out)\n");
+    printf("  -c, --compile <file>     Compile to object file (don't link)\n");
+    printf("  -S, -l, --llvm           Output LLVM IR to stdout\n");
+    printf(
+        "  -r                        Compile and immediately run (default)\n");
+    printf("  -d, --debug               Enable verbose debug output\n");
+    printf(
+        "  -i, --input <code>       Compile and run inline XVR code string\n");
+    printf(
+        "  -e, --emit <type>        Emit specific output (llvm-ir, asm, "
+        "obj)\n");
+    printf("  -t, --initial <file>     Set entry source file\n");
+    printf(
+        "  -n                        Disable trailing newline in print "
+        "statements\n");
+    printf("  -O<0|1|2|3>               Optimization level (default: -O0)\n\n");
+
+    printf("ARGUMENTS:\n");
+    printf("  <source.xvr>              XVR source file to compile\n");
+    printf(
+        "  <output>                  Output executable or object file name\n");
+    printf("  <code>                     Inline XVR source code string\n\n");
+
+    printf("EXAMPLES:\n");
+    printf("  Compile and run a source file:\n");
+    printf("    $ xvr hello.xvr\n\n");
+    printf("  Compile to executable with custom name:\n");
+    printf("    $ xvr hello.xvr -o myprogram\n");
+    printf("    $ ./myprogram\n\n");
+    printf("  Compile to object file for later linking:\n");
+    printf("    $ xvr hello.xvr -c hello.o\n\n");
+    printf("  Output LLVM IR for inspection:\n");
+    printf("    $ xvr hello.xvr -l\n");
+    printf("    $ xvr hello.xvr -S\n\n");
+    printf("  Compile with optimization:\n");
+    printf("    $ xvr -O2 hello.xvr -o hello\n\n");
+    printf("  Compile inline code and run:\n");
+    printf("    $ xvr -i 'print(\"Hello World\")'\n\n");
+    printf("  Show compiler version:\n");
+    printf("    $ xvr --version\n\n");
+
+    printf("EMIT TYPES:\n");
+    printf("  llvm-ir    Emit LLVM IR (human-readable .ll file)\n");
+    printf("  asm        Emit native assembly (.s file)\n");
+    printf("  obj        Emit object file (.o file)\n\n");
+
+    printf("REPORT BUGS TO:\n");
+    printf("  https://github.com/anomalyco/xvrlang/issues\n\n");
+
+    Xvr_copyrightCommandLine(0, NULL);
 }
 
 void Xvr_copyrightCommandLine(int argc, const char* argv[]) {

@@ -254,18 +254,24 @@ Use clear, descriptive commit messages:
 ### Print/Println Behavior
 
 When adding print functionality, note the language design:
-- Only strings can be printed directly: `std::print("hello")`
-- All other types require format specifiers: `std::print("{}", 42)`
-- Arrays cannot be printed directly (use indexing or loops)
+- String literals can be printed directly: `std::print("hello")`
+- Non-string types require format specifiers: `std::print("{}", 42)`
+- Variables of any type require format specifiers: `std::print("{}", myVar)`
+- Arrays can be printed directly (elements printed with spaces)
 
 ```xvr
 // Valid
-std::print("hello\n");
-std::print("value: {}\n", 42);
+std::print("hello\n");              // Direct string
+std::print("value: {}\n", 42);     // With format specifier
+var x = 10;
+std::print("{}", x);               // Variable requires {}
+var arr = [1, 2, 3];
+std::print(arr);                   // Arrays OK directly
 
 // Invalid - will cause compile error
-std::print(42);
-std::print([1, 2, 3]);
+std::print(42);                    // Non-string literal without format
+var name = "arfy";
+std::print(name);                  // Variable needs format: std::print("{}", name)
 ```
 
 ## Reporting Bugs

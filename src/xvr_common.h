@@ -138,7 +138,6 @@ typedef struct {
     bool error;
     bool help;
     bool version;
-    char* binaryFile;
     char* sourceFile;
     char* compileFile;
     char* outFile;
@@ -150,6 +149,7 @@ typedef struct {
     bool compileOnly;
     bool compileAndRun;
     char* emitType;
+    int optimizationLevel;
 } Xvr_CommandLine;
 
 /**
@@ -196,7 +196,7 @@ void Xvr_helpCommandLine(int argc, const char* argv[]);
 
 /**
  * @defgroup version XVR versioning constant
- * @brief Embedded bytecode and runtime version metadata
+ * @brief XVR compiler and runtime version metadata
  */
 #define XVR_VERSION_MAJOR 0
 #define XVR_VERSION_MINOR 5
