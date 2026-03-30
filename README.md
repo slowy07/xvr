@@ -129,6 +129,27 @@ The `std::println` function automatically appends a newline character to the out
 
 XVR uses `{}` placeholders for non-string arguments. Supported types: integers, floats, strings, arrays.
 
+## Builtin Functions
+
+XVR includes compiler-level builtin functions:
+
+### sizeof(T)
+
+Returns the size in bits of a type:
+
+```xvr
+var int_size = sizeof(int);      // 32
+var float_size = sizeof(float);  // 32
+var double_size = sizeof(double); // 64
+```
+
+### Module System
+
+```xvr
+include std;  // Load standard library
+std::println("Hello!");
+```
+
 ## Need Tutorial?
 
 You can check on [tutorial](docs/tutorial) for explore some tutorials.

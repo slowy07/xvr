@@ -30,6 +30,8 @@ SOFTWARE.
 #include <stdio.h>
 #include <string.h>
 
+#include "../sema/xvr_builtin.h"
+
 static const char* literal_type_name(Xvr_LiteralType type) {
     switch (type) {
     case XVR_LITERAL_BOOLEAN:
@@ -114,6 +116,7 @@ struct Xvr_LLVMCodegen {
     Xvr_LLVMControlFlow* control_flow;
     Xvr_LLVMOptimizer* optimizer;
     Xvr_LLVMTargetMachine* target_machine;
+    Xvr_ModuleResolver* module_resolver;
 
     bool has_error;
     char* error_message;
@@ -256,6 +259,8 @@ Xvr_LLVMCodegen* Xvr_LLVMCodegenCreate(const char* module_name) {
     codegen->has_error = false;
     codegen->error_message = NULL;
 
+    codegen->module_resolver = Xvr_ModuleResolverCreate("./lib/std");
+
     return codegen;
 }
 
@@ -287,6 +292,9 @@ void Xvr_LLVMCodegenDestroy(Xvr_LLVMCodegen* codegen) {
     }
     if (codegen->module) {
         Xvr_LLVMModuleManagerDestroy(codegen->module);
+    }
+    if (codegen->module_resolver) {
+        Xvr_ModuleResolverDestroy(codegen->module_resolver);
     }
     if (codegen->context) {
         Xvr_LLVMContextDestroy(codegen->context);
@@ -518,6 +526,39 @@ bool Xvr_LLVMCodegenEmitAST(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* ast) {
     if (Xvr_LLVMContextHasError(codegen->context)) {
         set_error(codegen, Xvr_LLVMContextGetErrorMessage(codegen->context));
         return false;
+    }
+
+    if (ast->type == XVR_AST_NODE_IMPORT) {
+        Xvr_Literal* ident = &ast->import.identifier;
+        if (ident->type == XVR_LITERAL_IDENTIFIER && ident->as.identifier.ptr) {
+            const char* module_name = ident->as.identifier.ptr->data;
+            char* module_path = NULL;
+            if (Xvr_ModuleResolverResolve(codegen->module_resolver, module_name,
+                                          &module_path)) {
+                Xvr_ASTNode** module_nodes = NULL;
+                int module_node_count = 0;
+                if (Xvr_ModuleResolverLoadModule(codegen->module_resolver,
+                                                 module_path, &module_nodes,
+                                                 &module_node_count)) {
+                    for (int i = 0; i < module_node_count; i++) {
+                        if (!Xvr_LLVMCodegenEmitAST(codegen, module_nodes[i])) {
+                            for (int j = i; j < module_node_count; j++) {
+                                Xvr_freeASTNode(module_nodes[j]);
+                            }
+                            free(module_nodes);
+                            free(module_path);
+                            return false;
+                        }
+                    }
+                    for (int i = 0; i < module_node_count; i++) {
+                        Xvr_freeASTNode(module_nodes[i]);
+                    }
+                    free(module_nodes);
+                }
+                free(module_path);
+            }
+        }
+        return true;
     }
 
     if (ast->type == XVR_AST_NODE_FN_COLLECTION) {
