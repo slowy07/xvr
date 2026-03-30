@@ -110,8 +110,12 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
             continue;
         }
 
-        if (!strcmp(argv[i], "-c")) {
+        if (!strcmp(argv[i], "-c") || !strcmp(argv[i], "--compile")) {
             Xvr_commandLine.compileOnly = true;
+            if (i + 1 < argc && argv[i + 1][0] != '-') {
+                Xvr_commandLine.outFile = (char*)argv[i + 1];
+                i++;
+            }
             Xvr_commandLine.error = false;
             continue;
         }
@@ -187,12 +191,6 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
         if (!strcmp(argv[i], "--timing")) {
             Xvr_commandLine.showTiming = true;
             Xvr_commandLine.verbose = true;
-            Xvr_commandLine.error = false;
-            continue;
-        }
-
-        if (!strcmp(argv[i], "-c")) {
-            Xvr_commandLine.compileOnly = true;
             Xvr_commandLine.error = false;
             continue;
         }

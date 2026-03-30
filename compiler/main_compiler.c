@@ -89,43 +89,49 @@ int main(int argc, const char* argv[]) {
                XVR_VERSION_BUILD);
     }
 
-    if (!Xvr_commandLine.sourceFile) {
+    const char* source = NULL;
+    size_t size = 0;
+    char module_name[256] = "inline";
+
+    if (Xvr_commandLine.source) {
+        source = Xvr_commandLine.source;
+        size = strlen(source);
+    } else if (Xvr_commandLine.sourceFile) {
+        const char* srcExt = strrchr(Xvr_commandLine.sourceFile, '.');
+        if (!srcExt || strcmp(srcExt, ".xvr")) {
+            print_compiler_error(Xvr_commandLine.sourceFile, 0, "error",
+                                 "input file must have .xvr extension",
+                                 "Example: xvr program.xvr");
+            return -1;
+        }
+
+        const char* srcBase = strrchr(Xvr_commandLine.sourceFile, '/');
+        srcBase = srcBase ? srcBase + 1 : Xvr_commandLine.sourceFile;
+        snprintf(module_name, sizeof(module_name), "%s", srcBase);
+        char* dot = strrchr(module_name, '.');
+        if (dot) *dot = '\0';
+
+        source = (const char*)Xvr_readFile(Xvr_commandLine.sourceFile, &size);
+        if (!source) {
+            print_compiler_error(
+                Xvr_commandLine.sourceFile, 0, "error",
+                "could not read source file",
+                "Check that the file exists and you have read permissions");
+            return 1;
+        }
+    } else {
         Xvr_helpCommandLine(argc, argv);
         return 0;
     }
 
-    const char* srcExt = strrchr(Xvr_commandLine.sourceFile, '.');
-    if (!srcExt || strcmp(srcExt, ".xvr")) {
-        print_compiler_error(Xvr_commandLine.sourceFile, 0, "error",
-                             "input file must have .xvr extension",
-                             "Example: xvr program.xvr");
-        return -1;
-    }
-
-    const char* srcBase = strrchr(Xvr_commandLine.sourceFile, '/');
-    srcBase = srcBase ? srcBase + 1 : Xvr_commandLine.sourceFile;
-    char module_name[256];
-    snprintf(module_name, sizeof(module_name), "%s", srcBase);
-    char* dot = strrchr(module_name, '.');
-    if (dot) *dot = '\0';
-
     double start_time = get_time_ms();
 
-    size_t size = 0;
-    const char* source =
-        (const char*)Xvr_readFile(Xvr_commandLine.sourceFile, &size);
-    if (!source) {
-        print_compiler_error(
-            Xvr_commandLine.sourceFile, 0, "error",
-            "could not read source file",
-            "Check that the file exists and you have read permissions");
-        return 1;
-    }
-
     int nodeCount = 0;
+    const char* srcForError =
+        Xvr_commandLine.sourceFile ? Xvr_commandLine.sourceFile : "<inline>";
     Xvr_ASTNode** nodes = parse_to_ast(source, &nodeCount);
     if (!nodes) {
-        print_compiler_error(Xvr_commandLine.sourceFile, 0, "error",
+        print_compiler_error(srcForError, 0, "error",
                              "parsing failed - check syntax", NULL);
         free((void*)source);
         return 1;
@@ -155,19 +161,19 @@ int main(int argc, const char* argv[]) {
             Xvr_freeASTNode(nodes[i]);
         }
         free(nodes);
-        free((void*)source);
+        if (Xvr_commandLine.sourceFile) free((void*)source);
         return 1;
     }
     Xvr_freeUnusedChecker(&checker);
 
     Xvr_LLVMCodegen* codegen = Xvr_LLVMCodegenCreate(module_name);
     if (!codegen) {
-        print_compiler_error(Xvr_commandLine.sourceFile, 0, "error",
+        print_compiler_error(srcForError, 0, "error",
                              "failed to initialize code generator",
                              "This may indicate an out-of-memory condition");
         for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
         free(nodes);
-        free((void*)source);
+        if (Xvr_commandLine.sourceFile) free((void*)source);
         return 1;
     }
 
@@ -178,13 +184,12 @@ int main(int argc, const char* argv[]) {
     if (Xvr_LLVMCodegenHasError(codegen)) {
         const char* err = Xvr_LLVMCodegenGetError(codegen);
         print_compiler_error(
-            Xvr_commandLine.sourceFile, 0, "error",
-            err ? err : "unknown compilation error",
+            srcForError, 0, "error", err ? err : "unknown compilation error",
             "Check your code for type errors or unsupported features");
         Xvr_LLVMCodegenDestroy(codegen);
         for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
         free(nodes);
-        free((void*)source);
+        if (Xvr_commandLine.sourceFile) free((void*)source);
         return 1;
     }
 
@@ -218,14 +223,13 @@ int main(int argc, const char* argv[]) {
     } else {
         if (!Xvr_LLVMCodegenWriteObjectFile(codegen, outFile)) {
             print_compiler_error(
-                Xvr_commandLine.sourceFile, 0, "error",
-                "failed to write object file",
+                srcForError, 0, "error", "failed to write object file",
                 "Check write permissions in the output directory");
             Xvr_LLVMCodegenDestroy(codegen);
             for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
             free(nodes);
             free(outFile);
-            free((void*)source);
+            if (Xvr_commandLine.sourceFile) free((void*)source);
             return 1;
         }
     }
@@ -233,7 +237,7 @@ int main(int argc, const char* argv[]) {
     Xvr_LLVMCodegenDestroy(codegen);
     for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
     free(nodes);
-    free((void*)source);
+    if (Xvr_commandLine.sourceFile) free((void*)source);
 
     double total_time = get_time_ms() - start_time;
 
@@ -284,7 +288,7 @@ int main(int argc, const char* argv[]) {
 
         long bin_size = get_file_size("/tmp/xvr_bin");
 
-        if (Xvr_commandLine.verbose) {
+        if (Xvr_commandLine.showTiming) {
             const char* target = LLVMGetDefaultTargetTriple();
             printf("\n");
             printf("  " XVR_CC_NOTICE "Target:" XVR_CC_RESET " %s\n", target);
@@ -306,7 +310,7 @@ int main(int argc, const char* argv[]) {
         unlink("/tmp/xvr_bin");
     } else {
         long obj_size = get_file_size(outFile);
-        if (Xvr_commandLine.verbose) {
+        if (Xvr_commandLine.showTiming) {
             const char* target = LLVMGetDefaultTargetTriple();
             printf("\n");
             printf("  " XVR_CC_NOTICE "Target:" XVR_CC_RESET " %s\n", target);
