@@ -155,7 +155,7 @@ static Xvr_Token makeErrorToken(Xvr_Lexer* lexer, char* msg) {
     token.line = lexer->line;
 
 #ifndef XVR_EXPORT
-    if (Xvr_commandLine.verbose) {
+    if (Xvr_commandLine.dumpTokens) {
         printf("err:");
         Xvr_private_printToken(&token);
     }
@@ -173,7 +173,7 @@ static Xvr_Token makeToken(Xvr_Lexer* lexer, Xvr_TokenType type) {
     token.line = lexer->line;
 
 #ifndef XVR_EXPORT
-    if (Xvr_commandLine.verbose) {
+    if (Xvr_commandLine.dumpTokens) {
         printf("tok:");
         Xvr_private_printToken(&token);
     }

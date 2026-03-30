@@ -64,9 +64,12 @@ Xvr_CommandLine Xvr_commandLine = {.error = false,
                                    .initialfile = NULL,
                                    .enablePrintNewline = true,
                                    .verbose = false,
+                                   .dumpTokens = false,
+                                   .dumpAST = false,
                                    .dumpLLVM = false,
                                    .compileOnly = false,
                                    .compileAndRun = true,
+                                   .showTiming = false,
                                    .emitType = NULL,
                                    .optimizationLevel = 0};
 
@@ -167,6 +170,27 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
             continue;
         }
 
+        if (!strcmp(argv[i], "--dump-tokens") || !strcmp(argv[i], "-Z")) {
+            Xvr_commandLine.dumpTokens = true;
+            Xvr_commandLine.verbose = true;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
+        if (!strcmp(argv[i], "--dump-ast")) {
+            Xvr_commandLine.dumpAST = true;
+            Xvr_commandLine.verbose = true;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
+        if (!strcmp(argv[i], "--timing")) {
+            Xvr_commandLine.showTiming = true;
+            Xvr_commandLine.verbose = true;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
         if (!strcmp(argv[i], "-c")) {
             Xvr_commandLine.compileOnly = true;
             Xvr_commandLine.error = false;
@@ -231,7 +255,10 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
     printf(
         "  -n                        Disable trailing newline in print "
         "statements\n");
-    printf("  -O<0|1|2|3>               Optimization level (default: -O0)\n\n");
+    printf("  -O<0|1|2|3>               Optimization level (default: -O0)\n");
+    printf("  -Z, --dump-tokens        Dump all lexer tokens to stderr\n");
+    printf("  --dump-ast               Dump parsed AST to stderr\n");
+    printf("  --timing                 Show compilation timing breakdown\n\n");
 
     printf("ARGUMENTS:\n");
     printf("  <source.xvr>              XVR source file to compile\n");
@@ -256,6 +283,13 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
     printf("    $ xvr -i 'print(\"Hello World\")'\n\n");
     printf("  Show compiler version:\n");
     printf("    $ xvr --version\n\n");
+    printf("  Dump all tokens for debugging:\n");
+    printf("    $ xvr -Z hello.xvr\n");
+    printf("    $ xvr --dump-tokens hello.xvr\n\n");
+    printf("  Dump AST for debugging:\n");
+    printf("    $ xvr --dump-ast hello.xvr\n\n");
+    printf("  Show compilation timing:\n");
+    printf("    $ xvr --timing hello.xvr\n\n");
 
     printf("EMIT TYPES:\n");
     printf("  llvm-ir    Emit LLVM IR (human-readable .ll file)\n");

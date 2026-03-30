@@ -131,6 +131,16 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
+    if (Xvr_commandLine.dumpAST) {
+        fprintf(stderr,
+                "\n" XVR_CC_NOTICE "AST:" XVR_CC_RESET " %d top-level nodes\n",
+                nodeCount);
+        for (int i = 0; i < nodeCount; i++) {
+            fprintf(stderr, "  [%d] node type %d\n", i, nodes[i]->type);
+        }
+        fprintf(stderr, "\n");
+    }
+
     Xvr_UnusedChecker checker;
     Xvr_initUnusedChecker(&checker);
     Xvr_checkUnusedBegin(&checker);

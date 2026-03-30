@@ -145,9 +145,12 @@ typedef struct {
     char* initialfile;
     bool enablePrintNewline;
     bool verbose;
+    bool dumpTokens;
+    bool dumpAST;
     bool dumpLLVM;
     bool compileOnly;
     bool compileAndRun;
+    bool showTiming;
     char* emitType;
     int optimizationLevel;
 } Xvr_CommandLine;
