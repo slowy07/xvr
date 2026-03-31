@@ -177,6 +177,8 @@ Xvr_LLVMCodegen* Xvr_LLVMCodegenCreate(const char* module_name) {
         return NULL;
     }
 
+    codegen->module_resolver = Xvr_ModuleResolverCreate("./lib/std");
+
     codegen->fn_emitter = Xvr_LLVMFunctionEmitterCreate(
         codegen->context, codegen->module, codegen->builder,
         codegen->type_mapper, codegen->expr_emitter);
@@ -258,8 +260,6 @@ Xvr_LLVMCodegen* Xvr_LLVMCodegenCreate(const char* module_name) {
 
     codegen->has_error = false;
     codegen->error_message = NULL;
-
-    codegen->module_resolver = Xvr_ModuleResolverCreate("./lib/std");
 
     return codegen;
 }

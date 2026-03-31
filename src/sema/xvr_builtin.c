@@ -29,57 +29,60 @@ static LLVMValueRef handle_sizeof(void* context, LLVMBuilderRef builder,
                                   Xvr_ASTNode** arguments, int arg_count) {
     (void)builder;
     (void)call_node;
+    (void)context;
 
     if (arg_count != 1) {
         return NULL;
     }
 
     Xvr_ASTNode* type_arg = arguments[0];
-    if (!type_arg || type_arg->type != XVR_AST_NODE_LITERAL) {
+    if (!type_arg) {
         return NULL;
     }
 
-    Xvr_Literal lit = type_arg->atomic.literal;
-    int size_bits = 0;
-
-    if (lit.type == XVR_LITERAL_TYPE) {
-        Xvr_LiteralType type_val = XVR_AS_TYPE(lit).typeOf;
-        switch (type_val) {
-        case XVR_LITERAL_VOID:
-            size_bits = 0;
-            break;
-        case XVR_LITERAL_BOOLEAN:
-        case XVR_LITERAL_INT8:
-        case XVR_LITERAL_UINT8:
-            size_bits = 8;
-            break;
-        case XVR_LITERAL_INT16:
-        case XVR_LITERAL_UINT16:
-            size_bits = 16;
-            break;
-        case XVR_LITERAL_INTEGER:
-        case XVR_LITERAL_INT32:
-        case XVR_LITERAL_UINT32:
-        case XVR_LITERAL_FLOAT32:
-            size_bits = 32;
-            break;
-        case XVR_LITERAL_INT64:
-        case XVR_LITERAL_UINT64:
-        case XVR_LITERAL_FLOAT64:
-            size_bits = 64;
-            break;
-        case XVR_LITERAL_FLOAT16:
-            size_bits = 16;
-            break;
-        default:
-            size_bits = 0;
-            break;
+    if (type_arg->type == XVR_AST_NODE_LITERAL) {
+        Xvr_Literal lit = type_arg->atomic.literal;
+        if (lit.type == XVR_LITERAL_TYPE) {
+            Xvr_LiteralType type_val = XVR_AS_TYPE(lit).typeOf;
+            int size_bits = 0;
+            switch (type_val) {
+            case XVR_LITERAL_VOID:
+                size_bits = 0;
+                break;
+            case XVR_LITERAL_BOOLEAN:
+            case XVR_LITERAL_INT8:
+            case XVR_LITERAL_UINT8:
+                size_bits = 8;
+                break;
+            case XVR_LITERAL_INT16:
+            case XVR_LITERAL_UINT16:
+                size_bits = 16;
+                break;
+            case XVR_LITERAL_INTEGER:
+            case XVR_LITERAL_INT32:
+            case XVR_LITERAL_UINT32:
+            case XVR_LITERAL_FLOAT32:
+                size_bits = 32;
+                break;
+            case XVR_LITERAL_INT64:
+            case XVR_LITERAL_UINT64:
+            case XVR_LITERAL_FLOAT64:
+                size_bits = 64;
+                break;
+            case XVR_LITERAL_FLOAT16:
+                size_bits = 16;
+                break;
+            default:
+                size_bits = 0;
+                break;
+            }
+            LLVMContextRef ctx =
+                context ? *(LLVMContextRef*)context : LLVMContextCreate();
+            return LLVMConstInt(LLVMInt32TypeInContext(ctx), size_bits, false);
         }
     }
 
-    LLVMContextRef ctx =
-        context ? *(LLVMContextRef*)context : LLVMContextCreate();
-    return LLVMConstInt(LLVMInt32TypeInContext(ctx), size_bits, false);
+    return NULL;
 }
 
 static LLVMValueRef handle_len(void* context, LLVMBuilderRef builder,
