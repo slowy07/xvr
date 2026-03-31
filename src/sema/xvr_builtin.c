@@ -254,8 +254,15 @@ bool Xvr_ModuleResolverResolve(Xvr_ModuleResolver* resolver,
         }
     }
 
-    size_t stdlib_len = strlen(resolver->stdlib_path);
-    if (stdlib_len == 0 || stdlib_len > 4096) {
+    if (!resolver->stdlib_path || resolver->stdlib_path[0] == '\0') {
+        return false;
+    }
+
+    size_t stdlib_len = 0;
+    while (resolver->stdlib_path[stdlib_len] != '\0' && stdlib_len < 4096) {
+        stdlib_len++;
+    }
+    if (stdlib_len == 0 || stdlib_len >= 4096) {
         return false;
     }
 
