@@ -1,0 +1,30 @@
+include std;
+
+std::println("=== Potential Bug: Signed vs Unsigned Cast ===");
+
+var u_val: uint32 = 4294967295;
+var conv_int = int32(u_val);
+std::println("uint32(4294967295) as int32: {}", conv_int);
+
+var u_to_i64 = int64(u_val);
+std::println("uint32->int64: {}", u_to_i64);
+
+std::println("=== Bug: Float to Int Precision Loss ===");
+
+var big_float: float32 = 16777216.0;
+var result = int32(big_float);
+std::println("int32(16777216) = {} (should be 16777216)", result);
+
+var bigger_float: float32 = 16777217.0;
+var result2 = int32(bigger_float);
+std::println("int32(16777217) = {} (precision loss!)", result2);
+
+std::println("=== Large Values ===");
+
+var large_i64: int64 = 9223372036854775807;
+var large_i32 = int32(large_i64);
+std::println("int32(9223372036854775807) = {} (overflow expected)", large_i32);
+
+var large_u64: uint64 = 18446744073709551615;
+var large_u32 = uint32(large_u64);
+std::println("uint32(18446744073709551615) = {} (overflow expected)", large_u32);

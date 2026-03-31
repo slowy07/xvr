@@ -1,0 +1,30 @@
+include std;
+
+std::println("=== Edge Cases ===");
+
+var zero_int: int32 = 0;
+var zero_float: float32 = 0.0;
+
+std::print("int(0.9) = {}, int(0.1) = {}\n", int32(0.9), int32(0.1));
+std::print("float(0) = {}, int(0.0) = {}\n", float(zero_int), int(zero_float));
+
+var neg_int: int32 = -50;
+var neg_float: float32 = -25.5;
+
+std::print("int(-25.5) = {}, float(-50) = {}\n", int32(neg_float), float(neg_int));
+
+std::println("=== Mixed Operations with Casts ===");
+
+var a: int32 = 10;
+var b: float32 = 5.5;
+var c = int32(a) + int32(b);
+std::print("int32(10) + int32(5.5) = {}\n", c);
+
+var d: float32 = float(a) + b;
+std::print("float(10) + 5.5 = {}\n", d);
+
+std::println("=== Double Cast ===");
+
+var val: int8 = 42;
+var extended = int64(int32(int16(val)));
+std::print("int64(int32(int16(42))) = {}\n", extended);

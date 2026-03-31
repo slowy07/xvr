@@ -1,0 +1,34 @@
+include std;
+
+std::println("=== Int to Float Casts ===");
+
+var i8_val: int8 = 100;
+var i16_val: int16 = 32000;
+var i32_val: int32 = 2000000000;
+var i64_val: int64 = 9000000000000000000;
+
+std::print("int8->float32: {}, int16->float32: {}\n", float32(i8_val), float32(i16_val));
+std::print("int32->float32: {}, int64->float64: {}\n", float32(i32_val), float64(i64_val));
+
+std::println("=== Float to Int Casts ===");
+
+var f32_val: float32 = 3.14;
+var f64_val: float64 = 1234567890.123;
+
+std::print("float32->int8: {}, float32->int16: {}\n", int8(f32_val), int16(f32_val));
+std::print("float32->int32: {}, float64->int64: {}\n", int32(f64_val), int64(f64_val));
+
+std::println("=== Float to Float Casts ===");
+
+var f32_to_f64 = float64(f32_val);
+var f64_to_f32 = float32(f64_val);
+
+std::print("float32->float64: {}, float64->float32: {}\n", f32_to_f64, f64_to_f32);
+
+std::println("=== Chained Casts ===");
+
+var chain = int64(float32(42));
+std::print("int64(float32(42)) = {}\n", chain);
+
+var chain2 = float32(int16(300));
+std::print("float32(int16(300)) = {}\n", chain2);

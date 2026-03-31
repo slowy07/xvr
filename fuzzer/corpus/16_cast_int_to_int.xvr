@@ -1,0 +1,35 @@
+include std;
+
+std::println("=== Int to Int Casts ===");
+
+var i8_val: int8 = 127;
+var i16_val: int16 = 1000;
+var i32_val: int32 = 100000;
+var i64_val: int64 = 10000000000;
+
+std::print("i8={}, i16={}, i32={}, i64={}\n", i8_val, i16_val, i32_val, i64_val);
+
+var i8_to_i16 = int16(i8_val);
+var i16_to_i32 = int32(i16_val);
+var i32_to_i64 = int64(i32_val);
+var i64_to_i32 = int32(i64_val);
+var i32_to_i16 = int16(i32_val);
+var i16_to_i8 = int8(i16_val);
+
+std::print("int8->int16: {}, int16->int32: {}, int32->int64: {}\n", i8_to_i16, i16_to_i32, i32_to_i64);
+std::print("int64->int32: {}, int32->int16: {}, int16->int8: {}\n", i64_to_i32, i32_to_i16, i16_to_i8);
+
+std::println("=== UInt to UInt Casts ===");
+
+var u8_val: uint8 = 200;
+var u16_val: uint16 = 60000;
+var u32_val: uint32 = 4000000000;
+var u64_val: uint64 = 18000000000000000000;
+
+std::print("u8={}, u16={}, u32={}, u64={}\n", u8_val, u16_val, u32_val, u64_val);
+
+var u8_to_u16 = uint16(u8_val);
+var u16_to_u32 = uint32(u16_val);
+var u32_to_u64 = uint64(u32_val);
+
+std::print("uint8->uint16: {}, uint16->uint32: {}, uint32->uint64: {}\n", u8_to_u16, u16_to_u32, u32_to_u64);

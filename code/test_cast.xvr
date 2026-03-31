@@ -1,0 +1,14 @@
+include std;
+
+var data = 20;
+var other = float(data);
+std::print("data = {}, other = {}\n", data, other);
+
+var x: int32 = 10;
+var y: float32 = float(x);
+var z: int8 = int8(y);
+std::print("x = {}, y = {}, z = {}\n", x, y, z);
+
+var a: float64 = 3.14159;
+var b: int32 = int32(a);
+std::print("a = {}, b = {}\n", a, b);

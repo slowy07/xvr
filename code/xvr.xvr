@@ -1,58 +1,70 @@
 include std;
 
-std::print("=== XVR Language Demo ===\n");
+std::print("=== XVR Type Casting Demo ===\n");
 
-std::print("--- Variables & Arithmetic ---\n");
-var a = 10;
-var b = 3;
-std::print("a = {}, b = {}\n", a, b);
-std::print("a + b = {}\n", a + b);
-std::print("a - b = {}\n", a - b);
-std::print("a * b = {}\n", a * b);
-std::print("a / b = {}\n", a / b);
+std::print("--- Integer to Integer Casts ---\n");
+var small: int8 = 127;
+var medium: int16 = int16(small);
+var large: int32 = int32(medium);
+var huge: int64 = int64(large);
 
-std::print("--- len() Function ---\n");
-std::print("len(\"hello\") = {}\n", len("hello"));
-var arr = [1, 2, 3, 4, 5];
-std::print("len([1,2,3,4,5]) = {}\n", len(arr));
+std::print("int8({}) -> int16({}) -> int32({}) -> int64({})\n", small, medium, large, huge);
 
-std::print("--- If/Else Statements ---\n");
-var score = 85;
-if (score >= 90) {
-    std::print("Grade: A\n");
-} else if (score >= 80) {
-    std::print("Grade: B\n");
-} else if (score >= 70) {
-    std::print("Grade: C\n");
-} else {
-    std::print("Grade: F\n");
-}
+var narrow_back: int16 = int16(huge);
+var narrow_more: int8 = int8(narrow_back);
+std::print("int64({}) -> int16({}) -> int8({})\n", huge, narrow_back, narrow_more);
 
-std::print("--- While Loop ---\n");
-var count = 1;
-while (count <= 3) {
-    std::print("count = {}\n", count);
-    count = count + 1;
-}
+std::print("--- Unsigned Integer Casts ---\n");
+var u8_val: uint8 = 250;
+var u16_val: uint16 = uint16(u8_val);
+var u32_val: uint32 = uint32(u16_val);
+var u64_val: uint64 = uint64(u32_val);
 
-std::print("--- For Loop ---\n");
-var sum = 0;
-for (var i = 1; i <= 5; i = i + 1) {
-    sum = sum + i;
-}
-std::print("sum of 1..5 = {}\n", sum);
+std::print("uint8({}) -> uint16({}) -> uint32({}) -> uint64({})\n", u8_val, u16_val, u32_val, u64_val);
 
-std::print("--- Break/Continue ---\n");
-var result = 0;
-for (var j = 0; j < 10; j = j + 1) {
-    if (j == 5) {
-        break;
-    }
-    if (j == 2) {
-        continue;
-    }
-    result = result + j;
-}
-std::print("result (skip 2, stop at 5) = {}\n", result);
+std::print("--- Integer to Float Casts ---\n");
+var int_val: int32 = 42;
+var f32_val = float32(int_val);
+var f64_val = float64(int_val);
+
+std::print("int32({}) -> float32({}) -> float64({})\n", int_val, f32_val, f64_val);
+
+var big_int: int64 = 999999999;
+var big_float = float64(big_int);
+std::print("int64({}) -> float64({})\n", big_int, big_float);
+
+std::print("--- Float to Integer Casts ---\n");
+var flt: float32 = 3.14;
+var as_int = int32(flt);
+std::print("float32({}) -> int32({})\n", flt, as_int);
+
+var precise = 123456.789;
+var int_from_precise = int64(precise);
+std::print("float64({}) -> int64({})\n", precise, int_from_precise);
+
+std::print("--- Float to Float Casts ---\n");
+var f32_small: float32 = 1.234567890;
+var f64_precise = float64(f32_small);
+var f32_back = float32(f64_precise);
+
+std::print("float32({}) -> float64({}) -> float32({})\n", f32_small, f64_precise, f32_back);
+
+std::print("--- Chained Casts ---\n");
+var start: int8 = 100;
+var chained = int64(float32(start));
+std::print("int64(float32(int8({}))) = {}\n", start, chained);
+
+std::print("--- Type Aliases ---\n");
+var aliased_int = 123;
+var aliased_float = float(aliased_int);
+std::print("int -> float: {} -> {}\n", aliased_int, aliased_float);
+
+std::print("--- Complex Expression with Casts ---\n");
+var a: int32 = 10;
+var b: float32 = 5.5;
+var c = int32(a) + int32(b);
+var d = float(a) + b;
+std::print("int32({}) + int32({}) = {}\n", a, 5.5, c);
+std::print("float({}) + {} = {}\n", a, 5.5, d);
 
 std::print("=== Demo Complete ===\n");

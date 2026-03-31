@@ -1,0 +1,44 @@
+include std;
+
+std::println("=== All Cast Combinations Test ===");
+
+std::println("int8 conversions:");
+var i8: int8 = 100;
+std::println("  int8->int16: {}", int16(i8));
+std::println("  int8->int32: {}", int32(i8));
+std::println("  int8->int64: {}", int64(i8));
+std::println("  int8->uint8: {}", uint8(i8));
+std::println("  int8->uint16: {}", uint16(i8));
+std::println("  int8->float32: {}", float32(i8));
+std::println("  int8->float64: {}", float64(i8));
+
+std::println("uint8 conversions:");
+var u8: uint8 = 200;
+std::println("  uint8->int8: {}", int8(u8));
+std::println("  uint8->int16: {}", int16(u8));
+std::println("  uint8->uint16: {}", uint16(u8));
+std::println("  uint8->uint32: {}", uint32(u8));
+std::println("  uint8->float32: {}", float32(u8));
+
+std::println("float32 conversions:");
+var f32: float32 = 3.14;
+std::println("  float32->int8: {}", int8(f32));
+std::println("  float32->int16: {}", int16(f32));
+std::println("  float32->int32: {}", int32(f32));
+std::println("  float32->int64: {}", int64(f32));
+std::println("  float32->uint8: {}", uint8(f32));
+std::println("  float32->uint16: {}", uint16(f32));
+std::println("  float32->float64: {}", float64(f32));
+
+std::println("float64 conversions:");
+var f64: float64 = 2.718281828;
+std::println("  float64->float32: {}", float32(f64));
+std::println("  float64->int32: {}", int32(f64));
+std::println("  float64->int64: {}", int64(f64));
+
+std::println("=== Aliases Test ===");
+var aliased_int = 42;
+var as_float = float(aliased_int);
+std::println("int (alias) -> float: {}", as_float);
+
+std::println("All cast tests completed!");
