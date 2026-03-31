@@ -1,1 +1,3 @@
-var x = [1, "hello", 3.14];
+include std;
+var x = [1, 2, 3];
+std::println(x);

@@ -180,15 +180,26 @@ static bool is_boolean_type(LLVMValueRef value) {
 
 static void emit_block_statements(Xvr_LLVMControlFlow* cf,
                                   Xvr_ASTNode* block_node) {
-    if (!block_node || block_node->type != XVR_AST_NODE_BLOCK) return;
+    if (!block_node) return;
 
-    Xvr_LLVMExpressionEmitter* expr_emitter = cf->expr_emitter;
-    Xvr_NodeBlock* block = &block_node->block;
+    if (block_node->type == XVR_AST_NODE_BLOCK) {
+        Xvr_LLVMExpressionEmitter* expr_emitter = cf->expr_emitter;
+        Xvr_NodeBlock* block = &block_node->block;
 
-    if (!block->nodes || block->count == 0) return;
+        if (!block->nodes || block->count == 0) return;
 
-    for (int i = 0; i < block->count; i++) {
-        Xvr_LLVMExpressionEmitterEmit(expr_emitter, &block->nodes[i]);
+        for (int i = 0; i < block->count; i++) {
+            Xvr_LLVMExpressionEmitterEmit(expr_emitter, &block->nodes[i]);
+        }
+    } else if (block_node->type == XVR_AST_NODE_IF) {
+        Xvr_LLVMControlFlowEmitIf(cf, &block_node->pathIf);
+    } else if (block_node->type == XVR_AST_NODE_WHILE) {
+        Xvr_LLVMControlFlowEmitWhile(cf, &block_node->pathWhile);
+    } else if (block_node->type == XVR_AST_NODE_FOR) {
+        Xvr_LLVMControlFlowEmitFor(cf, &block_node->pathFor);
+    } else {
+        Xvr_LLVMExpressionEmitter* expr_emitter = cf->expr_emitter;
+        Xvr_LLVMExpressionEmitterEmit(expr_emitter, block_node);
     }
 }
 
@@ -348,12 +359,22 @@ bool Xvr_LLVMControlFlowEmitIf(Xvr_LLVMControlFlow* cf, Xvr_NodeIf* if_node) {
     Xvr_LLVMIRBuilderCreateCondBr(builder, condition, then_block, else_block);
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, then_block);
-    emit_block_statements(cf, if_node->thenPath);
-    Xvr_LLVMIRBuilderCreateBr(builder, merge_block);
+    if (if_node->thenPath) {
+        Xvr_LLVMExpressionEmitterEmit(expr_emitter, if_node->thenPath);
+    }
+    LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+    if (LLVMGetInsertBlock(llvm_builder)) {
+        Xvr_LLVMIRBuilderCreateBr(builder, merge_block);
+    }
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, else_block);
-    emit_block_statements(cf, if_node->elsePath);
-    Xvr_LLVMIRBuilderCreateBr(builder, merge_block);
+    if (if_node->elsePath) {
+        Xvr_LLVMExpressionEmitterEmit(expr_emitter, if_node->elsePath);
+    }
+    llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+    if (LLVMGetInsertBlock(llvm_builder)) {
+        Xvr_LLVMIRBuilderCreateBr(builder, merge_block);
+    }
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, merge_block);
 
@@ -422,8 +443,13 @@ bool Xvr_LLVMControlFlowEmitWhile(Xvr_LLVMControlFlow* cf,
     Xvr_LLVMIRBuilderCreateCondBr(builder, condition, body_block, end_block);
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, body_block);
-    emit_block_statements(cf, while_node->thenPath);
-    Xvr_LLVMIRBuilderCreateBr(builder, cond_block);
+    if (while_node->thenPath) {
+        Xvr_LLVMExpressionEmitterEmit(expr_emitter, while_node->thenPath);
+    }
+    LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+    if (LLVMGetInsertBlock(llvm_builder)) {
+        Xvr_LLVMIRBuilderCreateBr(builder, cond_block);
+    }
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, end_block);
 
@@ -500,14 +526,22 @@ bool Xvr_LLVMControlFlowEmitFor(Xvr_LLVMControlFlow* cf,
     Xvr_LLVMIRBuilderCreateCondBr(builder, condition, body_block, end_block);
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, body_block);
-    emit_block_statements(cf, for_node->thenPath);
-    Xvr_LLVMIRBuilderCreateBr(builder, inc_block);
+    if (for_node->thenPath) {
+        Xvr_LLVMExpressionEmitterEmit(expr_emitter, for_node->thenPath);
+    }
+    LLVMBuilderRef llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+    if (LLVMGetInsertBlock(llvm_builder)) {
+        Xvr_LLVMIRBuilderCreateBr(builder, inc_block);
+    }
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, inc_block);
     if (for_node->postClause) {
         Xvr_LLVMExpressionEmitterEmit(expr_emitter, for_node->postClause);
     }
-    Xvr_LLVMIRBuilderCreateBr(builder, cond_block);
+    llvm_builder = Xvr_LLVMIRBuilderGetLLVMBuilder(builder);
+    if (LLVMGetInsertBlock(llvm_builder)) {
+        Xvr_LLVMIRBuilderCreateBr(builder, cond_block);
+    }
 
     Xvr_LLVMIRBuilderSetInsertPoint(builder, end_block);
 

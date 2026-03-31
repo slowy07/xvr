@@ -1,2 +1,9 @@
+include std;
+
 var arr = [1, 2, 3];
-print("{}", arr);
+std::print("arr[0] = {}\n", arr[0]);
+std::print("arr[1] = {}\n", arr[1]);
+std::print("arr[2] = {}\n", arr[2]);
+
+var matrix = [[1, 2], [3, 4]];
+std::print("matrix[0][0] = {}\n", matrix[0][0]);

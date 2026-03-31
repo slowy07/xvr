@@ -1,4 +1,8 @@
+include std;
+
 var i = 0;
-while i < 3 {
+while (i < 3) {
+    std::print("i = {}\n", i);
     i = i + 1;
 }
+std::print("done\n");

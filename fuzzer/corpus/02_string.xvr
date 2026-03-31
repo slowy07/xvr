@@ -1,2 +1,8 @@
+include std;
+
 var s = "hello";
-print("{}", s);
+std::print("string: {}\n", s);
+var combined = s + " world";
+std::print("combined: {}\n", combined);
+var len = 5;
+std::print("length: {}\n", len);

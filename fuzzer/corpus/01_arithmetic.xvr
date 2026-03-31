@@ -1,3 +1,16 @@
+include std;
+
 var a = 10;
-var b = 20;
-print("{}", a + b);
+var b = 3;
+std::print("a = {}, b = {}\n", a, b);
+std::print("a + b = {}\n", a + b);
+std::print("a - b = {}\n", a - b);
+std::print("a * b = {}\n", a * b);
+std::print("a / b = {}\n", a / b);
+std::print("a % b = {}\n", a % b);
+std::print("a == b = {}\n", a == b);
+std::print("a != b = {}\n", a != b);
+std::print("a > b = {}\n", a > b);
+std::print("a < b = {}\n", a < b);
+std::print("a >= b = {}\n", a >= b);
+std::print("a <= b = {}\n", a <= b);

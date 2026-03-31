@@ -1,1 +1,4 @@
-var x = 1;
+include std;
+std::println("hello");
+std::println("{}", 42);
+std::println("{}", 3.14);

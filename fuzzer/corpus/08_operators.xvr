@@ -1,3 +1,5 @@
+include std;
 var x = 0 - 1;
 var y = 1 * 2;
 var z = 10 / 2;
+std::print("x={}, y={}, z={}\n", x, y, z);

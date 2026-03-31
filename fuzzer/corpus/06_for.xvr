@@ -1,3 +1,7 @@
-for i in [1, 2, 3] {
-    print("{}", i);
+include std;
+
+var sum = 0;
+for (var i = 1; i <= 5; i = i + 1) {
+    sum = sum + i;
 }
+std::print("sum = {}\n", sum);

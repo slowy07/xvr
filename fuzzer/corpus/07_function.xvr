@@ -1,4 +1,12 @@
-func add(a: int, b: int) -> int {
+include std;
+
+proc add(a: int32, b: int32): int32 {
     return a + b;
 }
-print("{}", add(1, 2));
+
+proc greet(name: string): void {
+    std::print("Hello, {}!\n", name);
+}
+
+std::print("add(3, 4) = {}\n", add(3, 4));
+greet("XVR");
