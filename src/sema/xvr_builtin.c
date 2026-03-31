@@ -76,9 +76,10 @@ static LLVMValueRef handle_sizeof(void* context, LLVMBuilderRef builder,
                 size_bits = 0;
                 break;
             }
-            LLVMContextRef ctx =
-                context ? *(LLVMContextRef*)context : LLVMContextCreate();
-            return LLVMConstInt(LLVMInt32TypeInContext(ctx), size_bits, false);
+            LLVMContextRef ctx = LLVMGetGlobalContext();
+            LLVMValueRef result =
+                LLVMConstInt(LLVMInt32TypeInContext(ctx), size_bits, false);
+            return result;
         }
     }
 
@@ -237,6 +238,13 @@ bool Xvr_ModuleResolverResolve(Xvr_ModuleResolver* resolver,
         return false;
     }
 
+    for (size_t i = 0; i < strlen(module_name); i++) {
+        if (module_name[i] == '/' || module_name[i] == '\\' ||
+            module_name[i] == '.' && (i == 0 || module_name[i - 1] == '/')) {
+            return false;
+        }
+    }
+
     size_t path_len = strlen(resolver->stdlib_path) + strlen(module_name) + 16;
     char* path = malloc(path_len);
     if (!path) {
@@ -285,6 +293,12 @@ bool Xvr_ModuleResolverLoadModule(Xvr_ModuleResolver* resolver,
     if (!resolver || !module_path || !out_nodes || !out_count) {
         return false;
     }
+
+    FILE* test = fopen(module_path, "r");
+    if (!test) {
+        return false;
+    }
+    fclose(test);
 
     size_t file_size = 0;
     const unsigned char* source = read_file(module_path, &file_size);
