@@ -14,9 +14,100 @@ include std;
 
 This loads the stdlib module for use in your program. Built-in functions like `std::print` and `std::max` are automatically available.
 
+## Module System
+
+XVR has a module system that allows you to include external code:
+
+### Module Resolution
+
+When you use `include std;`, the compiler resolves the module path:
+
+```
+┌──────────────────────────────────────────────────────────────────────┐
+│                      Module Resolution Flow                           │
+└──────────────────────────────────────────────────────────────────────┘
+
+  1. Parser encounters:  include std;
+                         │
+                         ▼
+  2. ModuleResolver.resolve("std")
+                         │
+                         ▼
+  3. Construct path:  {stdlib_path}/std.xvr
+                     Default: ./lib/std/std.xvr
+                         │
+                         ▼
+  4. LoadModule() reads and parses the .xvr file
+                         │
+                         ▼
+  5. AST nodes merged into main compilation
+```
+
+### Module Loading
+
+The module resolver:
+1. Resolves the module name to a file path
+2. Parses the module's `.xvr` source file
+3. Merges the module's AST nodes into the main compilation
+
+Example:
+```xvr
+include std;  // Loads ./lib/std/io.xvr
+std::println("Hello!");
+```
+
+## File Structure
+
+```
+lib/std/
+├── std.xvr          # Main std module (redirects to io)
+├── std.mod          # Module metadata
+├── io.xvr           # IO functions (print, println, etc.)
+└── io.mod           # Module metadata
+```
+
 ## Built-in Functions
 
 These functions are built into the compiler and available without any additional setup:
+
+### Builtin Functions (Compiler-level)
+
+These are implemented in the compiler itself:
+
+#### sizeof(T)
+
+Returns the size in bits of a type:
+
+```xvr
+var int_size = sizeof(int);      // 32
+var float_size = sizeof(float);  // 32
+var double_size = sizeof(double); // 64
+var bool_size = sizeof(bool);    // 8
+```
+
+Supported types:
+- `void` - 0 bits
+- `bool`, `int8`, `uint8` - 8 bits
+- `int16`, `uint16` - 16 bits
+- `int`, `int32`, `uint32`, `float32` - 32 bits
+- `int64`, `uint64`, `float64` - 64 bits
+
+#### len(x)
+
+Returns the length of a collection (array, string):
+
+```xvr
+var arr = [1, 2, 3, 4, 5];
+var length = len(arr);  // 5
+```
+
+#### panic(msg)
+
+Causes the program to terminate with an error message:
+
+```xvr
+panic("XVR there's something wrong right here");
+```
 
 ### std::print
 

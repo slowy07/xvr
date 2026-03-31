@@ -34,6 +34,7 @@ SOFTWARE.
 #include "xvr_llvm_type_mapper.h"
 
 typedef struct Xvr_LLVMControlFlow Xvr_LLVMControlFlow;
+typedef struct Xvr_BuiltinRegistry Xvr_BuiltinRegistry;
 
 /**
  * @brief Opaque structure for expression emitter
@@ -76,6 +77,14 @@ void Xvr_LLVMExpressionEmitterSetFnEmitter(Xvr_LLVMExpressionEmitter* emitter,
  */
 void Xvr_LLVMExpressionEmitterSetControlFlow(Xvr_LLVMExpressionEmitter* emitter,
                                              Xvr_LLVMControlFlow* cf);
+
+/**
+ * @brief Sets the builtin registry reference
+ * @param emitter Expression emitter
+ * @param registry Builtin registry
+ */
+void Xvr_LLVMExpressionEmitterSetBuiltinRegistry(
+    Xvr_LLVMExpressionEmitter* emitter, Xvr_BuiltinRegistry* registry);
 
 LLVMValueRef Xvr_LLVMExpressionEmitterGetCurrentFunction(
     Xvr_LLVMExpressionEmitter* emitter);

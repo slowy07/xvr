@@ -540,6 +540,64 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
                 return NULL;
             }
 
+            if (fn_name && strcmp(fn_name, "sizeof") == 0) {
+                if (binary->right &&
+                    binary->right->type == XVR_AST_NODE_FN_CALL) {
+                    Xvr_ASTNode* args_node = binary->right->fnCall.arguments;
+                    if (args_node &&
+                        args_node->type == XVR_AST_NODE_FN_COLLECTION &&
+                        args_node->fnCollection.count == 1) {
+                        Xvr_ASTNode* type_arg =
+                            &args_node->fnCollection.nodes[0];
+                        if (type_arg->type == XVR_AST_NODE_LITERAL &&
+                            type_arg->atomic.literal.type == XVR_LITERAL_TYPE) {
+                            Xvr_LiteralType type_val =
+                                XVR_AS_TYPE(type_arg->atomic.literal).typeOf;
+                            int size_bits = 0;
+                            switch (type_val) {
+                            case XVR_LITERAL_VOID:
+                                size_bits = 0;
+                                break;
+                            case XVR_LITERAL_BOOLEAN:
+                            case XVR_LITERAL_INT8:
+                            case XVR_LITERAL_UINT8:
+                                size_bits = 8;
+                                break;
+                            case XVR_LITERAL_INT16:
+                            case XVR_LITERAL_UINT16:
+                                size_bits = 16;
+                                break;
+                            case XVR_LITERAL_INTEGER:
+                            case XVR_LITERAL_FLOAT:
+                            case XVR_LITERAL_INT32:
+                            case XVR_LITERAL_UINT32:
+                            case XVR_LITERAL_FLOAT32:
+                                size_bits = 32;
+                                break;
+                            case XVR_LITERAL_INT64:
+                            case XVR_LITERAL_UINT64:
+                            case XVR_LITERAL_FLOAT64:
+                                size_bits = 64;
+                                break;
+                            case XVR_LITERAL_FLOAT16:
+                                size_bits = 16;
+                                break;
+                            default:
+                                size_bits = 0;
+                                break;
+                            }
+                            LLVMContextRef ctx =
+                                Xvr_LLVMContextGetLLVMContext(emitter->context);
+                            return LLVMConstInt(LLVMInt32TypeInContext(ctx),
+                                                size_bits, false);
+                        }
+                    }
+                }
+                Xvr_LLVMContextSetError(emitter->context,
+                                        "sizeof expects a type argument");
+                return NULL;
+            }
+
             LLVMModuleRef module =
                 Xvr_LLVMModuleManagerGetModule(emitter->module);
             LLVMValueRef callee = LLVMGetNamedFunction(module, fn_name);

@@ -17,6 +17,7 @@ set(XVR_SOURCES
     xvr_semantic.c
     xvr_type.c
     xvr_unused.c
+    sema/xvr_builtin.c
     backend/xvr_llvm_codegen.c
     backend/xvr_llvm_context.c
     backend/xvr_llvm_control_flow.c
@@ -51,6 +52,7 @@ set(XVR_HEADERS
     xvr_token_types.h
     xvr_type.h
     xvr_unused.h
+    sema/xvr_builtin.h
     backend/xvr_llvm_backend.h
     backend/xvr_llvm_codegen.h
     backend/xvr_llvm_context.h

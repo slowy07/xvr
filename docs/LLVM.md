@@ -9,24 +9,30 @@ The XVR language uses an AOT (Ahead-of-Time) compiler that generates native exec
 │  .xvr File  │───▶│    Lexer    │───▶│   Parser    │───▶│  AST Nodes  │───▶│    LLVM     │
 │  (Source)   │    │  (Tokens)   │    │  (Errors)   │    │   (Tree)    │    │     IR      │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
-                                                                                    │
-                                                                                    ▼
-                                                                           ┌─────────────────┐
-                                                                           │  LLVM Optimizer │
-                                                                           │   (Optional)    │
-                                                                           └─────────────────┘
-                                                                                    │
-                                                                                    ▼
-      ┌──────────────────────────────────────────────────────────────────────────────────┐
-      │                                                                                  │
-      ▼                                                                                  ▼
+                                                                                     │
+                                                                                     ▼
+                                                                        ┌─────────────────┐
+                                                                        │  LLVM Optimizer │
+                                                                        │   (Optional)    │
+                                                                        └─────────────────┘
+                                                                                     │
+                                                                                     ▼
+       ┌──────────────────────────────────────────────────────────────────────────────────┐
+       │                                                                                  │
+       ▼                                                                                  ▼
 ┌─────────────┐                                                          ┌─────────────────┐
 │  Executable │◀─── Link ───┐                                   ┌───────▶│    Object File  │
 │   (a.out)   │             │                                   │        │    (.o/.obj)    │
 └─────────────┘             │        ┌─────────────────┐        │        └─────────────────┘
-                            └───────▶│    LLVM MCJIT   │────────┘
-                                     │   or JIT (dev)  │
+                            └───────▶│    Linker       │────────┘
+                                     │   (system ld)   │
                                      └─────────────────┘
+
+Module Loading Flow:
+┌─────────────┐    ┌──────────────────┐    ┌─────────────┐    ┌──────────────────┐
+│ include std;│───▶│ ModuleResolver   │───▶│ Load .xvr   │───▶│ Merge AST Nodes  │
+│  (Import)   │    │ (path resolution)│    │ (parse)     │    │ (into codegen)   │
+└─────────────┘    └──────────────────┘    └─────────────┘    └──────────────────┘
 ```
 
 ## Overview
@@ -43,35 +49,48 @@ The XVR compiler translates `.xvr` source files into:
 │                                    XVR Compiler                                         │
 ├─────────────────────────────────────────────────────────────────────────────────────────┤
 │                                                                                         │
-│  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────────────────────────────┐  │
-│  │   Lexer     │───▶│   Parser    │───▶│              LLVM Backend                   │  │
-│  │ xvr_lexer.c │    │xvr_parser.c │    │                                             │  │
-│  └─────────────┘    └─────────────┘    │  ┌─────────────────────────────────────────┐│  │
-│                                        │  │         xvr_llvm_codegen.c              ││  │
-│                                        │  │              (Coordinator)              ││  │
-│                                        │  └──────────────────┬──────────────────────┘│  │
-│                                        │                     │                       │  │
-│                                        │    ┌────────────────┼────────────────────┐  │  │
-│                                        │    │                │                    │  │  │
-│                                        │    ▼                ▼                    |  ▼  │  
-│                                        │  ┌──────────┐ ┌──────────┐ ┌──────────────┐ │  │
-│                                        │  │Context   │ │Type      │ │Module        │ │  │
-│                                        │  │Manager   │ │Mapper    │ │Manager       │ │  │
-│                                        │  │.c        │ │.c        │ │.c            │ │  │
-│                                        │  └──────────┘ └──────────┘ └──────────────┘ │  │
-│                                        │  ┌──────────┐ ┌──────────┐ ┌──────────────┐ │  │
-│                                        │  │IR        │ │Expression │ │Function     │ │  │
-│                                        │  │Builder   │ │Emitter   │ │Emitter       │ │  │
-│                                        │  │.c        │ │.c        │ │.c            │ │  │
-│                                        │  └──────────┘ └──────────┘ └──────────────┘ │  │
-│                                        │  ┌──────────┐ ┌──────────┐ ┌──────────────┐ │  │
-│                                        │  │Control   │ │Optimizer │ │Target        │ │  │
-│                                        │  │Flow      │ │.c        │ │.c            │ │  │
-│                                        │  │.c        │ │          │ │              │ │  │
-│                                        │  └──────────┘ └──────────┘ └──────────────┘ │  │
-│                                        │                                             │  │
-│                                        └─────────────────────────────────────────────┘  │
-│                                                                                         │
+│  ┌─────────────────────────────────────────────────────────────────────────────────┐    │
+│  │                              Frontend                                           │    │
+│  │  ┌─────────────┐    ┌─────────────┐    ┌─────────────────────────────────────┐ │     │
+│  │  │   Lexer     │───▶│   Parser    │───▶│           Semantic Analysis          │ │    │
+│  │  │ xvr_lexer.c │    │xvr_parser.c │    │  ┌─────────────────────────────────┐ │ │    │
+│  │  └─────────────┘    └─────────────┘    │  │     BuiltinRegistry            │ │ │     │
+│  │                                        │  │  (sizeof, len, panic)          │ │ │     │
+│  │                                        │  └─────────────────────────────────┘ │ │    │
+│  │                                        │  ┌─────────────────────────────────┐ │ │    │
+│  │                                        │  │     ModuleResolver             │ │ │     │
+│  │                                        │  │  (include std; module loading)│ │ │      │
+│  │                                        │  └─────────────────────────────────┘ │ │    │
+│  │                                        └─────────────────────────────────────┘ │     │
+│  └─────────────────────────────────────────────────────────────────────────────────┘    │
+│                                         │                                               │
+│                                         ▼                                               │
+│  ┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│  │                                    LLVM Backend                                      │
+│  │                                                                                         │
+│  │  ┌─────────────────────────────────────────┐                                          │
+│  │  │         xvr_llvm_codegen.c               │                                          │
+│  │  │              (Coordinator)               │                                          │
+│  │  └──────────────────┬──────────────────────┘                                          │
+│  │                     │                                                                │
+│  │    ┌────────────────┼────────────────┐                                                │
+│  │    ▼                ▼                ▼                                                │
+│  │ ┌──────────┐ ┌──────────┐ ┌──────────────┐                                             │
+│  │ │Context   │ │Type      │ │Module        │                                             │
+│  │ │Manager   │ │Mapper    │ │Manager       │                                             │
+│  │ │.c        │ │.c        │ │.c            │                                             │
+│  │ └──────────┘ └──────────┘ └──────────────┘                                             │
+│  │ ┌──────────┐ ┌──────────┐ ┌──────────────┐                                             │
+│  │ │IR        │ │Expression │ │Function     │                                             │
+│  │ │Builder   │ │Emitter   │ │Emitter       │                                             │
+│  │ │.c        │ │.c        │ │.c            │                                             │
+│  │ └──────────┘ └──────────┘ └──────────────┘                                             │
+│  │ ┌──────────┐ ┌──────────┐ ┌──────────────┐                                             │
+│  │ │Control   │ │Optimizer │ │Target        │                                             │
+│  │ │Flow      │ │.c        │ │.c            │                                             │
+│  │ │.c        │ │          │ │              │                                             │
+│  │ └──────────┘ └──────────┘ └──────────────┘                                             │
+│  └─────────────────────────────────────────────────────────────────────────────────────────┘
 └─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -89,22 +108,22 @@ The XVR compiler translates `.xvr` source files into:
   │ VAR_DECL │────────▶│ xvr_llvm_    │──────▶│ %x =      │
   │ var x=42 │         │ codegen.c    │       │ alloca i32│
   └──────────┘         └──────────────┘       └───────────┘
-                                    │
-                                    ▼
+                                  │
+                                  ▼
                          ┌──────────────────┐
                          │ xvr_llvm_type_   │
                          │ mapper.c         │────────▶ i32, i8*, float, etc.
                          └──────────────────┘
-                                    │
-                                    ▼
+                                  │
+                                  ▼
                          ┌──────────────────┐
                          │ xvr_llvm_ir_     │
                          │ builder.c        │────────▶ LLVMBuildAlloca, LLVMBuildStore
                          └──────────────────┘
 
   ┌──────────┐         ┌──────────────┐       ┌───────────┐
-  │  BINARY   │────────▶│ xvr_llvm_    │──────▶│ %add =    │
-  │ x + y     │         │ expression   │       │ add i32   │
+  │  BINARY  │────────▶│ xvr_llvm_    │──────▶│ %add =    │
+  │ x + y    │         │ expression   │       │ add i32   │
   └──────────┘         │ emitter.c    │       │ %x, %y    │
                        └──────────────┘       └───────────┘
 
@@ -114,23 +133,39 @@ The XVR compiler translates `.xvr` source files into:
   │          │         │ .c           │       │ label,    │
   └──────────┘         └──────────────┘       │ label     │
                                               └───────────┘
+
+Module Loading Flow:
+  ┌────────────┐         ┌──────────────────┐       ┌────────────┐
+  │ XVR_AST_   │────────▶│ ModuleResolver   │──────▶│ Parse .xvr │
+  │ NODE_IMPORT│         │ Resolve(module)  │       │ file       │
+  └────────────┘         └──────────────────┘       └─────┬──────┘
+                                                          │
+                                                          ▼
+                                               ┌──────────────────┐
+                                               │ Merge AST into   │
+                                               │ main program     │
+                                               └──────────────────┘
 ```
 
 ## Source File Organization
 
 ```
-src/backend/
-├── xvr_llvm_codegen.h/.c         # Main coordinator, entry points
-├── xvr_llvm_context.h/.c         # LLVM context management
-├── xvr_llvm_type_mapper.h/.c    # Type mapping (XVR → LLVM types)
-├── xvr_llvm_module_manager.h/.c # Module creation & IR printing
-├── xvr_llvm_ir_builder.h/.c    # IR building (alloca, store, load, etc.)
-├── xvr_llvm_expression_emitter.h/.c # Expressions, arrays, indexing
-├── xvr_llvm_function_emitter.h/.c   # Function definitions
-├── xvr_llvm_control_flow.h/.c      # If/while/for generation
-├── xvr_llvm_optimizer.h/.c       # Optimization passes
-├── xvr_llvm_target.h/.c          # Target machine configuration
-└── xvr_format_string.h/.c        # Format string {} parser
+src/
+├── backend/                      # LLVM code generation
+│   ├── xvr_llvm_codegen.h/.c         # Main coordinator, entry points
+│   ├── xvr_llvm_context.h/.c         # LLVM context management
+│   ├── xvr_llvm_type_mapper.h/.c    # Type mapping (XVR → LLVM types)
+│   ├── xvr_llvm_module_manager.h/.c # Module creation & IR printing
+│   ├── xvr_llvm_ir_builder.h/.c    # IR building (alloca, store, load, etc.)
+│   ├── xvr_llvm_expression_emitter.h/.c # Expressions, arrays, indexing
+│   ├── xvr_llvm_function_emitter.h/.c   # Function definitions
+│   ├── xvr_llvm_control_flow.h/.c      # If/while/for generation
+│   ├── xvr_llvm_optimizer.h/.c       # Optimization passes
+│   ├── xvr_llvm_target.h/.c          # Target machine configuration
+│   └── xvr_format_string.h/.c        # Format string {} parser
+│
+└── sema/                          # Semantic analysis & builtins
+    └── xvr_builtin.h/.c           # Builtin registry & module resolver
 ```
 
 ## Usage
@@ -359,6 +394,110 @@ var greeting = "Hello, " + name;  // uses string_concat runtime proc
 
 **Optimization:** When both operands are string literals, the compiler constant-folds them into a single string at compile time. When at least one operand is a runtime value (like a variable or function parameter), it falls back to the `string_concat` runtime procedure.
 
+## Builtin Registry System
+
+XVR implements a builtin function registry for compiler-level functions:
+
+```
+┌────────────────────────────────────────────────────────────────────────────────────────┐
+│                          BuiltinRegistry & ModuleResolver                               │
+└────────────────────────────────────────────────────────────────────────────────────────┘
+
+                         ┌─────────────────────┐
+                         │  BuiltinRegistry    │
+                         ├─────────────────────┤
+                         │ sizeof(T)           │────┐
+                         │ len(x)              │    │
+                         │ panic(msg)          │    │
+                         └─────────────────────┘    │
+                                                   ▼
+                                      ┌─────────────────────┐
+                                      │  Codegen Handler    │
+                                      │  (callback for each)│
+                                      └─────────────────────┘
+
+                         ┌─────────────────────┐
+                         │  ModuleResolver     │
+                         ├─────────────────────┤
+                         │ stdlib_path: ./lib/std/
+                         └─────────────────────┘
+                                │
+           ┌────────────────────┼────────────────────┐
+           │                    │                    │
+           ▼                    ▼                    ▼
+    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+    │ include std; │    │ include io;  │    │include math; │
+    │   (import)   │    │   (import)   │    │   (import)   │
+    └──────┬───────┘    └──────┬───────┘    └──────┬───────┘
+           │                   │                   │
+           ▼                   ▼                   ▼
+    ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
+    │ lib/std/io   │    │ lib/std/io   │    │ lib/std/math │
+    │   .xvr      │    │   .xvr       │    │   .xvr       │
+    └──────────────┘    └──────────────┘    └──────────────┘
+```
+
+### Module Resolution Flow
+
+```
+Source Code                      Compiler                    Filesystem
+────────────                     ────────                    ─────────
+
+include std;            ─────▶  ModuleResolver
+   │                          Resolve("std")
+   │                          └─ path: ./lib/std/std.xvr
+   │                                │
+   │                                ▼
+   │                          read_file()  ─────────────────────▶ ./lib/std/std.xvr
+   │                                │
+   │                                ▼ 
+   │                          parse_to_ast()
+   │                                │
+   │                                ▼ 
+   │                          merge AST nodes into 
+   │                          main compilation
+   │                                │
+   ▼                                ▼
+┌──────────────┐              ┌──────────────┐
+│ std::println │    ─────▶    │ Compiled     │
+│   "Hello"    │              │   Output     │
+└──────────────┘              └──────────────┘
+```
+
+#### BuiltinRegistry API
+
+```c
+// Create/destroy registry
+Xvr_BuiltinRegistry* Xvr_BuiltinRegistryCreate(void);
+void Xvr_BuiltinRegistryDestroy(Xvr_BuiltinRegistry* registry);
+
+// Register a builtin function
+bool Xvr_BuiltinRegistryRegister(Xvr_BuiltinRegistry* registry,
+    const char* name, Xvr_BuiltinType type,
+    Xvr_BuiltinHandler handler, const char* llvm_name,
+    int min_args, int max_args);
+
+// Lookup builtin
+Xvr_BuiltinInfo* Xvr_BuiltinRegistryLookup(Xvr_BuiltinRegistry* registry,
+    const char* name);
+```
+
+#### ModuleResolver API
+
+```c
+// Create/destroy resolver
+Xvr_ModuleResolver* Xvr_ModuleResolverCreate(const char* stdlib_path);
+void Xvr_ModuleResolverDestroy(Xvr_ModuleResolver* resolver);
+
+// Resolve module name to file path
+bool Xvr_ModuleResolverResolve(Xvr_ModuleResolver* resolver,
+    const char* module_name, char** out_path);
+
+// Load module AST nodes
+bool Xvr_ModuleResolverLoadModule(Xvr_ModuleResolver* resolver,
+    const char* module_path, Xvr_ASTNode*** out_nodes, int* out_count);
+```
+
 ## Format String Parser
 
 The `xvr_format_string.c` module handles `{}` interpolation:
@@ -509,3 +648,6 @@ Output: `out/xvr`
 - Struct types
 - Better optimization passes
 - Multiple return values
+- Additional builtin functions (len, panic)
+- Module caching for faster compilation
+- Standard library expansion (math, string, memory, fs modules)
