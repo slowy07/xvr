@@ -1,0 +1,5 @@
+include std;
+
+var arr = [1, 2, 3];
+var arr_len = len(arr);
+std::print("len([1,2,3]) = {}\n", arr_len);

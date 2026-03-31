@@ -509,6 +509,9 @@ static LLVMValueRef emit_printfln(Xvr_LLVMExpressionEmitter* emitter,
                                   Xvr_ASTNode* args);
 static LLVMValueRef emit_max(Xvr_LLVMExpressionEmitter* emitter,
                              Xvr_ASTNode* args);
+static LLVMValueRef lookup_var_with_type(Xvr_LLVMExpressionEmitter* emitter,
+                                         const char* name,
+                                         Xvr_LiteralType* out_type);
 
 LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
     Xvr_LLVMExpressionEmitter* emitter, Xvr_NodeBinary* binary) {
@@ -595,6 +598,138 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
                 }
                 Xvr_LLVMContextSetError(emitter->context,
                                         "sizeof expects a type argument");
+                return NULL;
+            }
+
+            if (fn_name && strcmp(fn_name, "len") == 0) {
+                if (binary->right &&
+                    binary->right->type == XVR_AST_NODE_FN_CALL) {
+                    Xvr_ASTNode* args_node = binary->right->fnCall.arguments;
+                    if (args_node &&
+                        args_node->type == XVR_AST_NODE_FN_COLLECTION &&
+                        args_node->fnCollection.count >= 1) {
+                        Xvr_ASTNode* target = &args_node->fnCollection.nodes[0];
+
+                        /* Check if target is an identifier - look up its type
+                         */
+                        Xvr_LiteralType var_type_xvr = XVR_LITERAL_ANY;
+                        if (target->type == XVR_AST_NODE_LITERAL &&
+                            target->atomic.literal.type ==
+                                XVR_LITERAL_IDENTIFIER) {
+                            const char* var_name =
+                                (const char*)
+                                    target->atomic.literal.as.string.ptr->data;
+                            LLVMValueRef var_ptr = lookup_var_with_type(
+                                emitter, var_name, &var_type_xvr);
+
+                            if (var_ptr && var_type_xvr == XVR_LITERAL_ARRAY) {
+                                /* Try to get array count from local_vars */
+                                Xvr_LLVMFunctionEmitter* fn_emitter =
+                                    (Xvr_LLVMFunctionEmitter*)
+                                        emitter->fn_emitter;
+                                if (fn_emitter) {
+                                    int array_count =
+                                        Xvr_LLVMFunctionEmitterLookupVarArrayCount(
+                                            fn_emitter, var_name);
+                                    if (array_count > 0) {
+                                        LLVMContextRef ctx =
+                                            Xvr_LLVMContextGetLLVMContext(
+                                                emitter->context);
+                                        return LLVMConstInt(
+                                            LLVMInt32TypeInContext(ctx),
+                                            array_count, false);
+                                    }
+                                }
+                                /* Fallback to LLVM types */
+                                LLVMTypeRef ptr_type = LLVMTypeOf(var_ptr);
+                                if (ptr_type && LLVMGetTypeKind(ptr_type) ==
+                                                    LLVMPointerTypeKind) {
+                                    LLVMTypeRef elem_type =
+                                        LLVMGetElementType(ptr_type);
+                                    if (elem_type &&
+                                        LLVMGetTypeKind(elem_type) ==
+                                            LLVMArrayTypeKind) {
+                                        unsigned elem_count =
+                                            LLVMGetArrayLength(elem_type);
+                                        LLVMContextRef ctx =
+                                            Xvr_LLVMContextGetLLVMContext(
+                                                emitter->context);
+                                        return LLVMConstInt(
+                                            LLVMInt32TypeInContext(ctx),
+                                            elem_count, false);
+                                    }
+                                    LLVMTypeRef alloc_type =
+                                        LLVMGetAllocatedType(var_ptr);
+                                    if (alloc_type &&
+                                        LLVMGetTypeKind(alloc_type) ==
+                                            LLVMArrayTypeKind) {
+                                        unsigned elem_count =
+                                            LLVMGetArrayLength(alloc_type);
+                                        LLVMContextRef ctx =
+                                            Xvr_LLVMContextGetLLVMContext(
+                                                emitter->context);
+                                        return LLVMConstInt(
+                                            LLVMInt32TypeInContext(ctx),
+                                            elem_count, false);
+                                    }
+                                }
+                            }
+                        }
+
+                        /* For non-identifiers or other types, emit normally */
+                        LLVMValueRef target_value =
+                            Xvr_LLVMExpressionEmitterEmit(emitter, target);
+                        if (!target_value) {
+                            return NULL;
+                        }
+
+                        LLVMContextRef ctx =
+                            Xvr_LLVMContextGetLLVMContext(emitter->context);
+                        LLVMTypeRef target_type = LLVMTypeOf(target_value);
+                        LLVMTypeKind kind = LLVMGetTypeKind(target_type);
+
+                        if (kind == LLVMPointerTypeKind) {
+                            LLVMTypeRef elem_type =
+                                LLVMGetElementType(target_type);
+                            if (elem_type && LLVMGetTypeKind(elem_type) ==
+                                                 LLVMArrayTypeKind) {
+                                unsigned elem_count =
+                                    LLVMGetArrayLength(elem_type);
+                                return LLVMConstInt(LLVMInt32TypeInContext(ctx),
+                                                    elem_count, false);
+                            }
+                            LLVMModuleRef m =
+                                Xvr_LLVMModuleManagerGetModule(emitter->module);
+                            LLVMBuilderRef b = Xvr_LLVMIRBuilderGetLLVMBuilder(
+                                emitter->builder);
+                            const char* len_fn_name = "xvr_str_len";
+                            LLVMTypeRef len_fn_type = LLVMFunctionType(
+                                LLVMInt32TypeInContext(ctx),
+                                (LLVMTypeRef[]){LLVMInt8TypeInContext(ctx)}, 1,
+                                false);
+                            LLVMValueRef len_fn =
+                                LLVMGetNamedFunction(m, len_fn_name);
+                            if (!len_fn) {
+                                len_fn = LLVMAddFunction(m, len_fn_name,
+                                                         len_fn_type);
+                            }
+                            return LLVMBuildCall2(b, len_fn_type, len_fn,
+                                                  &target_value, 1, "");
+                        } else if (kind == LLVMArrayTypeKind) {
+                            unsigned elem_count =
+                                LLVMGetArrayLength(target_type);
+                            return LLVMConstInt(LLVMInt32TypeInContext(ctx),
+                                                elem_count, false);
+                        } else {
+                            Xvr_LLVMContextSetError(
+                                emitter->context,
+                                "len() only works on strings and arrays");
+                            return NULL;
+                        }
+                    }
+                }
+                Xvr_LLVMContextSetError(emitter->context,
+                                        "len() expects one argument");
                 return NULL;
             }
 
@@ -2172,15 +2307,25 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
                 Xvr_LLVMIRBuilderCreateStore(emitter->builder, init_value,
                                              alloca);
                 Xvr_LiteralType varType = XVR_LITERAL_INTEGER;
+                int array_count = 0;
                 if (varDecl->typeLiteral.type == XVR_LITERAL_TYPE) {
                     varType = XVR_AS_TYPE(varDecl->typeLiteral).typeOf;
+                }
+                /* Detect array type from expression */
+                if (varDecl->expression->type == XVR_AST_NODE_COMPOUND) {
+                    Xvr_NodeCompound* comp = &varDecl->expression->compound;
+                    if (comp->literalType == XVR_LITERAL_ARRAY ||
+                        comp->literalType == XVR_LITERAL_ANY) {
+                        varType = XVR_LITERAL_ARRAY;
+                        array_count = comp->count;
+                    }
                 }
                 /* Add to function emitter's variable table */
                 Xvr_LLVMFunctionEmitter* fn_emitter =
                     (Xvr_LLVMFunctionEmitter*)emitter->fn_emitter;
                 if (fn_emitter) {
-                    Xvr_LLVMFunctionEmitterAddLocalVar(fn_emitter, var_name,
-                                                       alloca, varType, 0);
+                    Xvr_LLVMFunctionEmitterAddLocalVar(
+                        fn_emitter, var_name, alloca, varType, array_count);
                 }
             }
         }

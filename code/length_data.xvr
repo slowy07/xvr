@@ -1,0 +1,8 @@
+include std;
+
+var str_len = len("arfy");
+std::print("len(\"arfy\") = {}\n", str_len);
+
+var arr = [1, 2, 3, 4, 5];
+var arr_len = len(arr);
+std::print("len([1,2,3,4,5]) = {}\n", arr_len);

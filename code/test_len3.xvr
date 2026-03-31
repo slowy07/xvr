@@ -1,0 +1,4 @@
+include std;
+var arr = [1, 2, 3];
+std::print("len var: {}\n", len(arr));
+std::print("len literal: {}\n", len([1, 2, 3]));

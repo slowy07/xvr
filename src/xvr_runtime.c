@@ -25,3 +25,10 @@ char* xvr_string_concat(const char* lhs, const char* rhs) {
 
     return result;
 }
+
+int xvr_str_len(const char* str) {
+    if (!str) return 0;
+    return (int)strlen(str);
+}
+
+int xvr_array_len(void* arr) { return 0; }

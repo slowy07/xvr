@@ -267,6 +267,13 @@ int main(int argc, const char* argv[]) {
             "    memcpy(result + lhs_len, rhs, rhs_len);\n"
             "    result[total_len] = '\\0';\n"
             "    return result;\n"
+            "}\n"
+            "int xvr_str_len(const char* str) {\n"
+            "    if (!str) return 0;\n"
+            "    return (int)strlen(str);\n"
+            "}\n"
+            "int xvr_array_len(void* arr, int size) {\n"
+            "    return size;\n"
             "}\n";
 
         FILE* rf = fopen(runtime_src, "w");
