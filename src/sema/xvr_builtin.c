@@ -238,20 +238,39 @@ bool Xvr_ModuleResolverResolve(Xvr_ModuleResolver* resolver,
         return false;
     }
 
-    for (size_t i = 0; i < strlen(module_name); i++) {
-        if (module_name[i] == '/' || module_name[i] == '\\' ||
-            module_name[i] == '.' && (i == 0 || module_name[i - 1] == '/')) {
+    size_t name_len = strlen(module_name);
+    if (name_len == 0 || name_len > 256) {
+        return false;
+    }
+
+    for (size_t i = 0; i < name_len; i++) {
+        char c = module_name[i];
+        if (c == '/' || c == '\\') {
+            return false;
+        }
+        if (c == '.' &&
+            (i == 0 || module_name[i - 1] == '/' || i == name_len - 1)) {
             return false;
         }
     }
 
-    size_t path_len = strlen(resolver->stdlib_path) + strlen(module_name) + 16;
+    size_t stdlib_len = strlen(resolver->stdlib_path);
+    if (stdlib_len == 0 || stdlib_len > 4096) {
+        return false;
+    }
+
+    size_t path_len = stdlib_len + name_len + 16;
     char* path = malloc(path_len);
     if (!path) {
         return false;
     }
 
-    snprintf(path, path_len, "%s/%s.xvr", resolver->stdlib_path, module_name);
+    int written = snprintf(path, path_len, "%s/%s.xvr", resolver->stdlib_path,
+                           module_name);
+    if (written < 0 || (size_t)written >= path_len) {
+        free(path);
+        return false;
+    }
 
     *out_path = path;
     return true;
@@ -333,7 +352,20 @@ bool Xvr_ModuleResolverLoadModule(Xvr_ModuleResolver* resolver,
 
         if (node_count >= node_capacity) {
             node_capacity = node_capacity < 8 ? 8 : node_capacity * 2;
-            nodes = realloc(nodes, sizeof(Xvr_ASTNode*) * node_capacity);
+            Xvr_ASTNode** new_nodes =
+                realloc(nodes, sizeof(Xvr_ASTNode*) * node_capacity);
+            if (!new_nodes) {
+                for (int i = 0; i < node_count; i++) {
+                    Xvr_freeASTNode(nodes[i]);
+                }
+                free(nodes);
+                Xvr_freeParser(&parser);
+                free((void*)source);
+                *out_nodes = NULL;
+                *out_count = 0;
+                return false;
+            }
+            nodes = new_nodes;
         }
         nodes[node_count++] = node;
         node = Xvr_scanParser(&parser);

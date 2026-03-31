@@ -549,8 +549,7 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
                         args_node->fnCollection.count == 1) {
                         Xvr_ASTNode* type_arg =
                             &args_node->fnCollection.nodes[0];
-                        if (type_arg &&
-                            type_arg->type == XVR_AST_NODE_LITERAL &&
+                        if (type_arg->type == XVR_AST_NODE_LITERAL &&
                             type_arg->atomic.literal.type == XVR_LITERAL_TYPE) {
                             Xvr_LiteralType type_val =
                                 XVR_AS_TYPE(type_arg->atomic.literal).typeOf;
