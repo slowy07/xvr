@@ -238,8 +238,11 @@ bool Xvr_ModuleResolverResolve(Xvr_ModuleResolver* resolver,
         return false;
     }
 
-    size_t name_len = strlen(module_name);
-    if (name_len == 0 || name_len > 256) {
+    size_t name_len = 0;
+    while (module_name[name_len] != '\0' && name_len < 256) {
+        name_len++;
+    }
+    if (name_len == 0 || name_len >= 256) {
         return false;
     }
 
