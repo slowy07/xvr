@@ -53,28 +53,62 @@ static void log_test(const char* test_name, const char* status,
 
 static const char* compile_only(const char* code) {
     static char buffer[MAX_OUTPUT_SIZE];
-    char cmd[1024 + MAX_CODE_SIZE];
 
-    if (strlen(code) > MAX_CODE_SIZE) {
-        return "ERROR: code too large";
+    if (!code) {
+        return NULL;
     }
 
-    snprintf(cmd, sizeof(cmd),
-             "cd /home/arfyslowy/Documents/project/xvrlang/xvr && "
-             "./build/xvr -l - 2>&1 <<'XVRCODE'\n%s\nXVRCODE",
-             code);
+    size_t code_len = strnlen(code, MAX_CODE_SIZE + 1);
+    if (code_len > MAX_CODE_SIZE) {
+        snprintf(buffer, sizeof(buffer), "ERROR: code too large");
+        return buffer;
+    }
+
+    for (size_t i = 0; i < code_len; i++) {
+        char c = code[i];
+        if (c == ';' || c == '\n' || c == '\r') {
+            continue;
+        }
+        if (c == '`' || c == '$' || c == '(' || c == ')' || c == '|' ||
+            c == '&' || c == '<' || c == '>' || c == '\\' || c == '\'') {
+            snprintf(buffer, sizeof(buffer),
+                     "ERROR: dangerous character in code");
+            return buffer;
+        }
+    }
+
+    char cmd[1024 + MAX_CODE_SIZE];
+    int written =
+        snprintf(cmd, sizeof(cmd),
+                 "cd /home/arfyslowy/Documents/project/xvrlang/xvr && "
+                 "./build/xvr -l - 2>&1 <<'XVRCODE'\n%.*s\nXVRCODE",
+                 (int)code_len, code);
+    if (written < 0 || (size_t)written >= sizeof(cmd)) {
+        snprintf(buffer, sizeof(buffer), "ERROR: command too long");
+        return buffer;
+    }
 
     FILE* fp = popen(cmd, "r");
     if (!fp) {
-        return NULL;
+        snprintf(buffer, sizeof(buffer), "ERROR: popen failed");
+        return buffer;
     }
 
     size_t len = 0;
     buffer[0] = '\0';
-    while (fgets(buffer + len, sizeof(buffer) - len - 1, fp) &&
-           len < MAX_OUTPUT_SIZE - 1) {
-        len += strlen(buffer + len);
+    while (len < MAX_OUTPUT_SIZE - 1) {
+        char* dest = buffer + len;
+        size_t remaining = MAX_OUTPUT_SIZE - len - 1;
+        if (fgets(dest, remaining, fp) == NULL) {
+            break;
+        }
+        size_t read_len = strnlen(dest, remaining);
+        len += read_len;
+        if (read_len < remaining - 1 || dest[read_len - 1] == '\n') {
+            break;
+        }
     }
+    buffer[MAX_OUTPUT_SIZE - 1] = '\0';
 
     pclose(fp);
     return buffer;

@@ -9,283 +9,273 @@ const E: float64 = 2.71828182845904523536
 # sqrt(float32): float32 - Returns the square root of x (32-bit)
 proc math_sqrt_f32(x: float32): float32
     return 0.0
-end
+
 
 # sqrt(float64): float64 - Returns the square root of x (64-bit)
 proc math_sqrt_f64(x: float64): float64
     return 0.0
-end
+
 
 # Power functions
 # pow(float32, float32): float32 - Returns x raised to the power of y (32-bit)
 proc math_pow_f32(x: float32, y: float32): float32
     return 0.0
-end
+
 
 # pow(float64, float64): float64 - Returns x raised to the power of y (64-bit)
 proc math_pow_f64(x: float64, y: float64): float64
     return 0.0
-end
+
 
 # Trigonometric functions
 # sin(float32): float32 - Returns the sine of x (32-bit)
 proc math_sin_f32(x: float32): float32
     return 0.0
-end
+
 
 # sin(float64): float64 - Returns the sine of x (64-bit)
 proc math_sin_f64(x: float64): float64
     return 0.0
-end
+
 
 # cos(float32): float32 - Returns the cosine of x (32-bit)
 proc math_cos_f32(x: float32): float32
     return 0.0
-end
+
 
 # cos(float64): float64 - Returns the cosine of x (64-bit)
 proc math_cos_f64(x: float64): float64
     return 0.0
-end
+
 
 # Absolute value functions for integers
 # abs(int32): int32 - Returns the absolute value of x (32-bit)
 proc math_abs_i32(x: int32): int32
     return 0
-end
+
 
 # abs(int64): int64 - Returns the absolute value of x (64-bit)
 proc math_abs_i64(x: int64): int64
     return 0
-end
+
 
 # Absolute value functions for floats
 # abs(float32): float32 - Returns the absolute value of x (32-bit)
 proc math_abs_f32(x: float32): float32
     return 0.0
-end
+
 
 # abs(float64): float64 - Returns the absolute value of x (64-bit)
 proc math_abs_f64(x: float64): float64
     return 0.0
-end
+
 
 # Floor functions
 # floor(float32): float32 - Returns the largest integer not greater than x (32-bit)
 proc math_floor_f32(x: float32): float32
     return 0.0
-end
+
 
 # floor(float64): float64 - Returns the largest integer not greater than x (64-bit)
 proc math_floor_f64(x: float64): float64
     return 0.0
-end
+
 
 # Ceiling functions
 # ceil(float32): float32 - Returns the smallest integer not less than x (32-bit)
 proc math_ceil_f32(x: float32): float32
     return 0.0
-end
+
 
 # ceil(float64): float64 - Returns the smallest integer not less than x (64-bit)
 proc math_ceil_f64(x: float64): float64
     return 0.0
-end
+
 
 # Round functions
 # round(float32): float32 - Returns x rounded to nearest integer (32-bit)
 proc math_round_f32(x: float32): float32
     return 0.0
-end
+
 
 # round(float64): float64 - Returns x rounded to nearest integer (64-bit)
 proc math_round_f64(x: float64): float64
     return 0.0
-end
+
 
 # Natural logarithm
 # log(float32): float32 - Returns the natural logarithm of x (32-bit)
 proc math_log_f32(x: float32): float32
     return 0.0
-end
+
 
 # log(float64): float64 - Returns the natural logarithm of x (64-bit)
 proc math_log_f64(x: float64): float64
     return 0.0
-end
+
 
 # Exponential function
 # exp(float32): float32 - Returns e raised to the power of x (32-bit)
 proc math_exp_f32(x: float32): float32
     return 0.0
-end
+
 
 # exp(float64): float64 - Returns e raised to the power of x (64-bit)
 proc math_exp_f64(x: float64): float64
     return 0.0
-end
+
 
 # Tangent function
 # tan(float32): float32 - Returns the tangent of x (32-bit)
 proc math_tan_f32(x: float32): float32
     return 0.0
-end
+
 
 # tan(float64): float64 - Returns the tangent of x (64-bit)
 proc math_tan_f64(x: float64): float64
     return 0.0
-end
+
 
 # Arctangent function
 # atan(float32): float32 - Returns the arctangent of x (32-bit)
 proc math_atan_f32(x: float32): float32
     return 0.0
-end
+
 
 # atan(float64): float64 - Returns the arctangent of x (64-bit)
 proc math_atan_f64(x: float64): float64
     return 0.0
-end
+
 
 # Two-argument arctangent
 # atan2(float32, float32): float32 - Returns arctangent of y/x (32-bit)
 proc math_atan2_f32(y: float32, x: float32): float32
     return 0.0
-end
+
 
 # atan2(float64, float64): float64 - Returns arctangent of y/x (64-bit)
 proc math_atan2_f64(y: float64, x: float64): float64
     return 0.0
-end
+
 
 # Arc sine function
 # asin(float32): float32 - Returns the arcsine of x (32-bit)
 proc math_asin_f32(x: float32): float32
     return 0.0
-end
+
 
 # asin(float64): float64 - Returns the arcsine of x (64-bit)
 proc math_asin_f64(x: float64): float64
     return 0.0
-end
+
 
 # Arc cosine function
 # acos(float32): float32 - Returns the arccosine of x (32-bit)
 proc math_acos_f32(x: float32): float32
     return 0.0
-end
+
 
 # acos(float64): float64 - Returns the arccosine of x (64-bit)
 proc math_acos_f64(x: float64): float64
     return 0.0
-end
+
 
 # Base-10 logarithm
 # log10(float32): float32 - Returns the base-10 logarithm of x (32-bit)
 proc math_log10_f32(x: float32): float32
     return 0.0
-end
+
 
 # log10(float64): float64 - Returns the base-10 logarithm of x (64-bit)
 proc math_log10_f64(x: float64): float64
     return 0.0
-end
+
 
 # Base-2 logarithm
 # log2(float32): float32 - Returns the base-2 logarithm of x (32-bit)
 proc math_log2_f32(x: float32): float32
     return 0.0
-end
+
 
 # log2(float64): float64 - Returns the base-2 logarithm of x (64-bit)
 proc math_log2_f64(x: float64): float64
     return 0.0
-end
+
 
 # Floating-point modulo
 # fmod(float32, float32): float32 - Returns remainder of x/y (32-bit)
 proc math_fmod_f32(x: float32, y: float32): float32
     return 0.0
-end
+
 
 # fmod(float64, float64): float64 - Returns remainder of x/y (64-bit)
 proc math_fmod_f64(x: float64, y: float64): float64
     return 0.0
-end
+
 
 # Hyperbolic sine
 # sinh(float32): float32 - Returns the hyperbolic sine of x (32-bit)
 proc math_sinh_f32(x: float32): float32
     return 0.0
-end
+
 
 # sinh(float64): float64 - Returns the hyperbolic sine of x (64-bit)
 proc math_sinh_f64(x: float64): float64
     return 0.0
-end
+
 
 # Hyperbolic cosine
 # cosh(float32): float32 - Returns the hyperbolic cosine of x (32-bit)
 proc math_cosh_f32(x: float32): float32
     return 0.0
-end
+
 
 # cosh(float64): float64 - Returns the hyperbolic cosine of x (64-bit)
 proc math_cosh_f64(x: float64): float64
     return 0.0
-end
+
 
 # Hyperbolic tangent
 # tanh(float32): float32 - Returns the hyperbolic tangent of x (32-bit)
 proc math_tanh_f32(x: float32): float32
     return 0.0
-end
 
 # tanh(float64): float64 - Returns the hyperbolic tangent of x (64-bit)
 proc math_tanh_f64(x: float64): float64
     return 0.0
-end
 
 # Inverse hyperbolic sine
 # asinh(float32): float32 - Returns the inverse hyperbolic sine of x (32-bit)
 proc math_asinh_f32(x: float32): float32
     return 0.0
-end
 
 # asinh(float64): float64 - Returns the inverse hyperbolic sine of x (64-bit)
 proc math_asinh_f64(x: float64): float64
     return 0.0
-end
 
 # Inverse hyperbolic cosine
 # acosh(float32): float32 - Returns the inverse hyperbolic cosine of x (32-bit)
 proc math_acosh_f32(x: float32): float32
     return 0.0
-end
 
 # acosh(float64): float64 - Returns the inverse hyperbolic cosine of x (64-bit)
 proc math_acosh_f64(x: float64): float64
     return 0.0
-end
 
 # Inverse hyperbolic tangent
 # atanh(float32): float32 - Returns the inverse hyperbolic tangent of x (32-bit)
 proc math_atanh_f32(x: float32): float32
     return 0.0
-end
 
 # atanh(float64): float64 - Returns the inverse hyperbolic tangent of x (64-bit)
 proc math_atanh_f64(x: float64): float64
     return 0.0
-end
 
 # Truncate function
 # trunc(float32): float32 - Returns the integer part of x (32-bit)
 proc math_trunc_f32(x: float32): float32
     return 0.0
-end
 
 # trunc(float64): float64 - Returns the integer part of x (64-bit)
 proc math_trunc_f64(x: float64): float64
     return 0.0
-end

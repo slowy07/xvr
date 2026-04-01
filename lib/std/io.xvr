@@ -7,10 +7,9 @@
 proc std_print(msg: string): int
     # This will be replaced by native printf call
     return 0
-end
 
 # println function - prints string with newline
-# Similar to print but automatically appends newline
+# Similar to print but automatically apps newline
 # Supports format placeholders: {} for int, float, string
 # Error handling:
 #   - First argument must be a string
@@ -18,4 +17,3 @@ end
 proc std_println(msg: string): int
     # This will be replaced by native printf call
     return 0
-end

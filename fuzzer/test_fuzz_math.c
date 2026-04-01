@@ -46,10 +46,39 @@ static int skipped_tests = 0;
 static const char* compile_and_run(const char* code, int* exit_code) {
     static char buffer[16384];
     char cmd[8192];
-    snprintf(cmd, sizeof(cmd),
-             "cd /home/arfyslowy/Documents/project/xvrlang/xvr && "
-             "./build/xvr -l - 2>&1 <<'XVRCODE'\n%s\nXVRCODE",
-             code);
+
+    if (!code) {
+        return NULL;
+    }
+
+    size_t code_len = strnlen(code, 4096);
+    if (code_len >= 4096) {
+        snprintf(buffer, sizeof(buffer), "ERROR: code too large");
+        return buffer;
+    }
+
+    for (size_t i = 0; i < code_len; i++) {
+        char c = code[i];
+        if (c == ';' || c == '\n' || c == '\r') {
+            continue;
+        }
+        if (c == '`' || c == '$' || c == '(' || c == ')' || c == '|' ||
+            c == '&' || c == '<' || c == '>' || c == '\\' || c == '\'') {
+            snprintf(buffer, sizeof(buffer),
+                     "ERROR: dangerous character in code");
+            return buffer;
+        }
+    }
+
+    int written =
+        snprintf(cmd, sizeof(cmd),
+                 "cd /home/arfyslowy/Documents/project/xvrlang/xvr && "
+                 "./build/xvr -l - 2>&1 <<'XVRCODE'\n%.*s\nXVRCODE",
+                 (int)code_len, code);
+    if (written < 0 || (size_t)written >= sizeof(cmd)) {
+        snprintf(buffer, sizeof(buffer), "ERROR: command too long");
+        return buffer;
+    }
 
     FILE* fp = popen(cmd, "r");
     if (!fp) {
@@ -58,10 +87,19 @@ static const char* compile_and_run(const char* code, int* exit_code) {
 
     size_t len = 0;
     buffer[0] = '\0';
-    while (fgets(buffer + len, sizeof(buffer) - len - 1, fp)) {
-        len += strlen(buffer + len);
-        if (len >= sizeof(buffer) - 1) break;
+    while (len < sizeof(buffer) - 1) {
+        char* dest = buffer + len;
+        size_t remaining = sizeof(buffer) - len - 1;
+        if (fgets(dest, remaining, fp) == NULL) {
+            break;
+        }
+        size_t read_len = strnlen(dest, remaining);
+        len += read_len;
+        if (read_len < remaining - 1 || dest[read_len - 1] == '\n') {
+            break;
+        }
     }
+    buffer[sizeof(buffer) - 1] = '\0';
 
     int status = pclose(fp);
     if (exit_code) {
