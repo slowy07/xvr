@@ -1,0 +1,23 @@
+include std;
+
+proc non_return_explicit(): void {
+  std::println("welcome xvr");
+}
+
+proc non_return_param_explicit(name: string, age: int): void {
+  std::println("wello {}", name);
+  std::print("i know you are {} years old\n", age)
+}
+
+proc return_non_param(): float {
+  return 3.14;
+}
+
+proc return_param(numbers: float, other_numbers: int): float {
+  return numbers + float(other_numbers);
+}
+
+non_return_explicit();
+non_return_param_explicit("arfy", 25);
+std::println("return non parameter: {}\n", return_non_param());
+std::printl("return param: {}\n", return_param(1.3, 3));
