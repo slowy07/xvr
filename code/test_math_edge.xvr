@@ -1,0 +1,63 @@
+include math;
+include std;
+
+std::println("=== Edge Case Tests ===");
+std::println("");
+
+std::println("--- IEEE 754 Edge Cases ---");
+std::println("sqrt(0.0) = {}", math::sqrt(0.0));
+std::println("sqrt(1.0) = {}", math::sqrt(1.0));
+std::println("sqrt(inf) produces NaN at runtime for negative values");
+std::println("log(inf) produces inf at runtime");
+
+std::println("");
+std::println("--- Integer Abs Edge Cases ---");
+std::println("abs(0) = {}", math::abs(0));
+std::println("abs(1) = {}", math::abs(1));
+std::println("abs(-1) = {}", math::abs(-1));
+std::println("abs(2147483647) = {}", math::abs(2147483647));
+
+std::println("");
+std::println("--- Trigonometric Special Values ---");
+std::println("sin(PI/2) = {}", math::sin(1.5707963267948966));
+std::println("cos(PI) = {}", math::cos(3.141592653589793));
+std::println("tan(PI/4) = {}", math::tan(0.7853981633974483));
+
+std::println("");
+std::println("--- Logarithm Boundaries ---");
+std::println("log(E) = {}", math::log(2.718281828459045));
+std::println("log10(10) = {}", math::log10(10.0));
+std::println("log2(2) = {}", math::log2(2.0));
+
+std::println("");
+std::println("--- Hyperbolic Special Values ---");
+std::println("sinh(1) = {}", math::sinh(1.0));
+std::println("cosh(1) = {}", math::cosh(1.0));
+std::println("tanh(1) = {}", math::tanh(1.0));
+std::println("tanh(inf) approaches 1 at runtime");
+
+std::println("");
+std::println("--- Power Function Tests ---");
+std::println("pow(2.0, 0.0) = {}", math::pow(2.0, 0.0));
+std::println("pow(2.0, -1.0) = {}", math::pow(2.0, -1.0));
+std::println("pow(4.0, 0.5) = {}", math::pow(4.0, 0.5));
+std::println("pow(2.0, 3.0) = {}", math::pow(2.0, 3.0));
+
+std::println("");
+std::println("--- Modulo Edge Cases ---");
+std::println("fmod(5.0, 2.0) = {}", math::fmod(5.0, 2.0));
+std::println("fmod(5.5, 1.5) = {}", math::fmod(5.5, 1.5));
+std::println("fmod(-5.0, 2.0) = {}", math::fmod(-5.0, 2.0));
+std::println("fmod(0.0, 1.0) = {}", math::fmod(0.0, 1.0));
+
+std::println("");
+std::println("--- Rounding Edge Cases ---");
+std::println("round(0.5) = {}", math::round(0.5));
+std::println("round(-0.5) = {}", math::round(-0.5));
+std::println("round(1.5) = {}", math::round(1.5));
+std::println("round(-1.5) = {}", math::round(-1.5));
+std::println("trunc(0.9) = {}", math::trunc(0.9));
+std::println("trunc(-0.9) = {}", math::trunc(-0.9));
+
+std::println("");
+std::println("=== All edge case tests completed ===");

@@ -4,7 +4,7 @@
 # print function - prints string without newline
 # Uses the builtin printf through format string
 # Supports format placeholders: {} for int, float, string
-proc std_print(msg: string) -> int
+proc std_print(msg: string): int
     # This will be replaced by native printf call
     return 0
 end
@@ -15,7 +15,7 @@ end
 # Error handling:
 #   - First argument must be a string
 #   - Format placeholder count must match argument count
-proc std_println(msg: string) -> int
+proc std_println(msg: string): int
     # This will be replaced by native printf call
     return 0
 end

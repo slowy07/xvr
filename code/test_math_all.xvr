@@ -1,0 +1,77 @@
+include math;
+include std;
+
+std::println("=== XVR Math Module Tests ===");
+std::println("");
+
+std::println("--- Basic Functions ---");
+var sqrt_val = math::sqrt(25.0);
+var pow_val = math::pow(2.0, 10.0);
+var abs_int = math::abs(-42);
+var abs_float = math::abs(-3.14);
+
+std::println("sqrt(25.0) = {}", sqrt_val);
+std::println("pow(2.0, 10.0) = {}", pow_val);
+std::println("abs(-42) = {}", abs_int);
+std::println("abs(-3.14) = {}", abs_float);
+
+std::println("");
+std::println("--- Trigonometric Functions ---");
+std::println("sin(0.0) = {}", math::sin(0.0));
+std::println("cos(0.0) = {}", math::cos(0.0));
+std::println("tan(0.0) = {}", math::tan(0.0));
+
+std::println("");
+std::println("--- Inverse Trigonometric Functions ---");
+std::println("asin(0.5) = {}", math::asin(0.5));
+std::println("acos(0.5) = {}", math::acos(0.5));
+std::println("atan(1.0) = {}", math::atan(1.0));
+std::println("atan2(1.0, 1.0) = {}", math::atan2(1.0, 1.0));
+
+std::println("");
+std::println("--- Logarithmic Functions ---");
+std::println("log(1.0) = {}", math::log(1.0));
+std::println("log10(100.0) = {}", math::log10(100.0));
+std::println("log2(8.0) = {}", math::log2(8.0));
+
+std::println("");
+std::println("--- Exponential Functions ---");
+std::println("exp(0.0) = {}", math::exp(0.0));
+std::println("exp(1.0) = {}", math::exp(1.0));
+
+std::println("");
+std::println("--- Rounding Functions ---");
+std::println("floor(3.7) = {}", math::floor(3.7));
+std::println("floor(-3.7) = {}", math::floor(-3.7));
+std::println("ceil(3.2) = {}", math::ceil(3.2));
+std::println("ceil(-3.2) = {}", math::ceil(-3.2));
+std::println("round(3.5) = {}", math::round(3.5));
+std::println("round(3.4) = {}", math::round(3.4));
+std::println("trunc(3.7) = {}", math::trunc(3.7));
+std::println("trunc(-3.7) = {}", math::trunc(-3.7));
+
+std::println("");
+std::println("--- Hyperbolic Functions ---");
+std::println("sinh(0.0) = {}", math::sinh(0.0));
+std::println("sinh(1.0) = {}", math::sinh(1.0));
+std::println("cosh(0.0) = {}", math::cosh(0.0));
+std::println("cosh(1.0) = {}", math::cosh(1.0));
+std::println("tanh(0.0) = {}", math::tanh(0.0));
+std::println("tanh(1.0) = {}", math::tanh(1.0));
+
+std::println("");
+std::println("--- Inverse Hyperbolic Functions ---");
+std::println("asinh(0.0) = {}", math::asinh(0.0));
+std::println("asinh(1.0) = {}", math::asinh(1.0));
+std::println("acosh(1.0) = {}", math::acosh(1.0));
+std::println("acosh(2.0) = {}", math::acosh(2.0));
+std::println("atanh(0.0) = {}", math::atanh(0.0));
+std::println("atanh(0.5) = {}", math::atanh(0.5));
+
+std::println("");
+std::println("--- Modulo Functions ---");
+std::println("fmod(10.0, 3.0) = {}", math::fmod(10.0, 3.0));
+std::println("fmod(6.0, 2.5) = {}", math::fmod(6.0, 2.5));
+
+std::println("");
+std::println("=== All tests completed ===");

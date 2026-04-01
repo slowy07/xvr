@@ -1,0 +1,18 @@
+include math;
+include std;
+
+var a = math::sqrt(0.0);
+var b = math::sqrt(1.0);
+var c = math::sqrt(1000000.0);
+var d = math::pow(5.0, 0.0);
+var e = math::pow(42.0, 1.0);
+var f = math::log(1.0);
+var g = math::exp(0.0);
+
+std::println("sqrt(0) = {}", a);
+std::println("sqrt(1) = {}", b);
+std::println("sqrt(1000000) = {}", c);
+std::println("pow(5, 0) = {}", d);
+std::println("pow(42, 1) = {}", e);
+std::println("log(1) = {}", f);
+std::println("exp(0) = {}", g);

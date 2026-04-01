@@ -513,6 +513,57 @@ static LLVMValueRef lookup_var_with_type(Xvr_LLVMExpressionEmitter* emitter,
                                          const char* name,
                                          Xvr_LiteralType* out_type);
 
+static LLVMValueRef emit_math_sqrt(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args);
+static LLVMValueRef emit_math_pow(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args);
+static LLVMValueRef emit_math_sin(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args);
+static LLVMValueRef emit_math_cos(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args);
+static LLVMValueRef emit_math_abs(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args);
+static LLVMValueRef emit_math_floor(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args);
+static LLVMValueRef emit_math_ceil(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args);
+static LLVMValueRef emit_math_round(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args);
+static LLVMValueRef emit_math_log(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args);
+static LLVMValueRef emit_math_exp(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args);
+static LLVMValueRef emit_math_tan(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args);
+static LLVMValueRef emit_math_atan(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args);
+static LLVMValueRef emit_math_atan2(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args);
+static LLVMValueRef emit_math_asin(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args);
+static LLVMValueRef emit_math_acos(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args);
+static LLVMValueRef emit_math_log10(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args);
+static LLVMValueRef emit_math_log2(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args);
+static LLVMValueRef emit_math_sinh(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args);
+static LLVMValueRef emit_math_cosh(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args);
+static LLVMValueRef emit_math_tanh(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args);
+static LLVMValueRef emit_math_asinh(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args);
+static LLVMValueRef emit_math_acosh(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args);
+static LLVMValueRef emit_math_atanh(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args);
+static LLVMValueRef emit_math_fmod(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args);
+static LLVMValueRef emit_math_trunc(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args);
+
 LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
     Xvr_LLVMExpressionEmitter* emitter, Xvr_NodeBinary* binary) {
     if (!emitter || !binary) {
@@ -866,6 +917,134 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
                         if (fn_name && strcmp(fn_name, "max") == 0) {
                             return emit_max(emitter,
                                             fn_call_node->fnCall.arguments);
+                        }
+                    }
+                }
+            }
+
+            /* Check if it's math:: and the right side is a function call */
+            if (namespace_name && strcmp(namespace_name, "math") == 0) {
+                if (binary->right &&
+                    binary->right->type == XVR_AST_NODE_BINARY &&
+                    (binary->right->binary.opcode == XVR_OP_FN_CALL ||
+                     binary->right->binary.opcode == XVR_OP_DOT)) {
+                    const char* fn_name = NULL;
+                    if (binary->right->binary.left &&
+                        binary->right->binary.left->type ==
+                            XVR_AST_NODE_LITERAL &&
+                        binary->right->binary.left->atomic.literal.type ==
+                            XVR_LITERAL_IDENTIFIER) {
+                        fn_name = (const char*)binary->right->binary.left
+                                      ->atomic.literal.as.string.ptr->data;
+                    }
+
+                    Xvr_ASTNode* fn_call_node = NULL;
+                    if (binary->right->binary.right &&
+                        binary->right->binary.right->type ==
+                            XVR_AST_NODE_FN_CALL) {
+                        fn_call_node = binary->right->binary.right;
+                    }
+
+                    if (fn_call_node && fn_name) {
+                        if (strcmp(fn_name, "sqrt") == 0) {
+                            return emit_math_sqrt(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "pow") == 0) {
+                            return emit_math_pow(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "sin") == 0) {
+                            return emit_math_sin(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "cos") == 0) {
+                            return emit_math_cos(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "abs") == 0) {
+                            return emit_math_abs(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "floor") == 0) {
+                            return emit_math_floor(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "ceil") == 0) {
+                            return emit_math_ceil(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "round") == 0) {
+                            return emit_math_round(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "log") == 0) {
+                            return emit_math_log(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "exp") == 0) {
+                            return emit_math_exp(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "tan") == 0) {
+                            return emit_math_tan(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "atan") == 0) {
+                            return emit_math_atan(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "atan2") == 0) {
+                            return emit_math_atan2(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "asin") == 0) {
+                            return emit_math_asin(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "acos") == 0) {
+                            return emit_math_acos(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "log10") == 0) {
+                            return emit_math_log10(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "log2") == 0) {
+                            return emit_math_log2(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "sinh") == 0) {
+                            return emit_math_sinh(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "cosh") == 0) {
+                            return emit_math_cosh(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "tanh") == 0) {
+                            return emit_math_tanh(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "asinh") == 0) {
+                            return emit_math_asinh(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "acosh") == 0) {
+                            return emit_math_acosh(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "atanh") == 0) {
+                            return emit_math_atanh(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "fmod") == 0) {
+                            return emit_math_fmod(
+                                emitter, fn_call_node->fnCall.arguments);
+                        }
+                        if (strcmp(fn_name, "trunc") == 0) {
+                            return emit_math_trunc(
+                                emitter, fn_call_node->fnCall.arguments);
                         }
                     }
                 }
@@ -1846,6 +2025,1537 @@ static LLVMValueRef emit_max(Xvr_LLVMExpressionEmitter* emitter,
     Xvr_LLVMContextSetError(
         emitter->context,
         "max: unsupported type - only int and float are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_sqrt(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "sqrt: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef sqrt_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.sqrt.f32");
+        if (!sqrt_fn) {
+            sqrt_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.sqrt.f32", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, sqrt_fn, &arg, 1,
+                              "sqrt_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef sqrt_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.sqrt.f64");
+        if (!sqrt_fn) {
+            sqrt_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.sqrt.f64", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, sqrt_fn, &arg, 1,
+                              "sqrt_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "sqrt: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_pow(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef args_list[2] = {NULL, NULL};
+    int arg_count = 0;
+
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 2) {
+        arg_count = 2;
+        for (int i = 0; i < 2; i++) {
+            args_list[i] = Xvr_LLVMExpressionEmitterEmit(
+                emitter, &args->fnCollection.nodes[i]);
+        }
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 2) {
+        arg_count = 2;
+        for (int i = 0; i < 2; i++) {
+            args_list[i] = Xvr_LLVMExpressionEmitterEmit(
+                emitter, &args->compound.nodes[i]);
+        }
+    }
+
+    if (arg_count != 2 || !args_list[0] || !args_list[1]) {
+        Xvr_LLVMContextSetError(emitter->context, "pow: requires 2 arguments");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(args_list[0]);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    LLVMTypeRef param_types[] = {arg_type, arg_type};
+    LLVMValueRef params[] = {args_list[0], args_list[1]};
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type = LLVMFunctionType(LLVMFloatTypeInContext(ctx),
+                                               param_types, 2, false);
+        LLVMValueRef pow_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.pow.f32");
+        if (!pow_fn) {
+            pow_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.pow.f32", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, pow_fn, params, 2,
+                              "pow_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type = LLVMFunctionType(LLVMDoubleTypeInContext(ctx),
+                                               param_types, 2, false);
+        LLVMValueRef pow_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.pow.f64");
+        if (!pow_fn) {
+            pow_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.pow.f64", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, pow_fn, params, 2,
+                              "pow_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "pow: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_sin(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "sin: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef sin_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.sin.f32");
+        if (!sin_fn) {
+            sin_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.sin.f32", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, sin_fn, &arg, 1,
+                              "sin_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef sin_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.sin.f64");
+        if (!sin_fn) {
+            sin_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.sin.f64", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, sin_fn, &arg, 1,
+                              "sin_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "sin: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_cos(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "cos: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef cos_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.cos.f32");
+        if (!cos_fn) {
+            cos_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.cos.f32", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, cos_fn, &arg, 1,
+                              "cos_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef cos_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.cos.f64");
+        if (!cos_fn) {
+            cos_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.cos.f64", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, cos_fn, &arg, 1,
+                              "cos_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "cos: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_abs(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "abs: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMIntegerTypeKind) {
+        unsigned bits = LLVMGetIntTypeWidth(arg_type);
+        if (bits == 32) {
+            LLVMValueRef zero =
+                LLVMConstInt(LLVMInt32TypeInContext(ctx), 0, true);
+            LLVMValueRef neg =
+                LLVMBuildICmp(llvm_builder, LLVMIntSLT, arg, zero, "abs_neg");
+            LLVMValueRef neg_arg =
+                LLVMBuildNeg(llvm_builder, arg, "abs_neg_val");
+            return LLVMBuildSelect(llvm_builder, neg, neg_arg, arg,
+                                   "abs_result");
+        } else if (bits == 64) {
+            LLVMValueRef zero =
+                LLVMConstInt(LLVMInt64TypeInContext(ctx), 0, true);
+            LLVMValueRef neg =
+                LLVMBuildICmp(llvm_builder, LLVMIntSLT, arg, zero, "abs_neg");
+            LLVMValueRef neg_arg =
+                LLVMBuildNeg(llvm_builder, arg, "abs_neg_val");
+            return LLVMBuildSelect(llvm_builder, neg, neg_arg, arg,
+                                   "abs_result");
+        }
+    } else if (kind == LLVMFloatTypeKind) {
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef fabs_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.fabs.f32");
+        if (!fabs_fn) {
+            fabs_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.fabs.f32", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, fabs_fn, &arg, 1,
+                              "abs_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef fabs_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.fabs.f64");
+        if (!fabs_fn) {
+            fabs_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.fabs.f64", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, fabs_fn, &arg, 1,
+                              "abs_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context, "abs: unsupported type");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_floor(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "floor: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef floor_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.floor.f32");
+        if (!floor_fn) {
+            floor_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.floor.f32", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, floor_fn, &arg, 1,
+                              "floor_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef floor_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.floor.f64");
+        if (!floor_fn) {
+            floor_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.floor.f64", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, floor_fn, &arg, 1,
+                              "floor_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "floor: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_ceil(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "ceil: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef ceil_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.ceil.f32");
+        if (!ceil_fn) {
+            ceil_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.ceil.f32", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, ceil_fn, &arg, 1,
+                              "ceil_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef ceil_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.ceil.f64");
+        if (!ceil_fn) {
+            ceil_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.ceil.f64", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, ceil_fn, &arg, 1,
+                              "ceil_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "ceil: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_round(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "round: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef round_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.round.f32");
+        if (!round_fn) {
+            round_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.round.f32", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, round_fn, &arg, 1,
+                              "round_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef round_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.round.f64");
+        if (!round_fn) {
+            round_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.round.f64", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, round_fn, &arg, 1,
+                              "round_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "round: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_log(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "log: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef log_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.log.f32");
+        if (!log_fn) {
+            log_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.log.f32", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, log_fn, &arg, 1,
+                              "log_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef log_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.log.f64");
+        if (!log_fn) {
+            log_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.log.f64", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, log_fn, &arg, 1,
+                              "log_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "log: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_exp(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "exp: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef exp_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.exp.f32");
+        if (!exp_fn) {
+            exp_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.exp.f32", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, exp_fn, &arg, 1,
+                              "exp_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef exp_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.exp.f64");
+        if (!exp_fn) {
+            exp_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.exp.f64", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, exp_fn, &arg, 1,
+                              "exp_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "exp: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_tan(Xvr_LLVMExpressionEmitter* emitter,
+                                  Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "tan: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef tan_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.tan.f32");
+        if (!tan_fn) {
+            tan_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.tan.f32", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, tan_fn, &arg, 1,
+                              "tan_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef tan_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.tan.f64");
+        if (!tan_fn) {
+            tan_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.tan.f64", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, tan_fn, &arg, 1,
+                              "tan_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "tan: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_atan(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "atan: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef atan_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.atan.f32");
+        if (!atan_fn) {
+            atan_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.atan.f32", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, atan_fn, &arg, 1,
+                              "atan_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef atan_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.atan.f64");
+        if (!atan_fn) {
+            atan_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.atan.f64", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, atan_fn, &arg, 1,
+                              "atan_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "atan: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_atan2(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef args_list[2] = {NULL, NULL};
+    int arg_count = 0;
+
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 2) {
+        arg_count = 2;
+        for (int i = 0; i < 2; i++) {
+            args_list[i] = Xvr_LLVMExpressionEmitterEmit(
+                emitter, &args->fnCollection.nodes[i]);
+        }
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 2) {
+        arg_count = 2;
+        for (int i = 0; i < 2; i++) {
+            args_list[i] = Xvr_LLVMExpressionEmitterEmit(
+                emitter, &args->compound.nodes[i]);
+        }
+    }
+
+    if (arg_count != 2 || !args_list[0] || !args_list[1]) {
+        Xvr_LLVMContextSetError(emitter->context,
+                                "atan2: requires 2 arguments");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(args_list[0]);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    LLVMTypeRef param_types[] = {arg_type, arg_type};
+    LLVMValueRef params[] = {args_list[0], args_list[1]};
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type = LLVMFunctionType(LLVMFloatTypeInContext(ctx),
+                                               param_types, 2, false);
+        LLVMValueRef atan2_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.atan2.f32");
+        if (!atan2_fn) {
+            atan2_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.atan2.f32", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, atan2_fn, params, 2,
+                              "atan2_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type = LLVMFunctionType(LLVMDoubleTypeInContext(ctx),
+                                               param_types, 2, false);
+        LLVMValueRef atan2_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.atan2.f64");
+        if (!atan2_fn) {
+            atan2_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.atan2.f64", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, atan2_fn, params, 2,
+                              "atan2_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "atan2: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_asin(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "asin: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef asin_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "asinf");
+        if (!asin_fn) {
+            asin_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "asinf", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, asin_fn, &arg, 1,
+                              "asin_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef asin_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "asin");
+        if (!asin_fn) {
+            asin_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "asin", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, asin_fn, &arg, 1,
+                              "asin_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "asin: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_acos(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "acos: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef acos_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "acosf");
+        if (!acos_fn) {
+            acos_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "acosf", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, acos_fn, &arg, 1,
+                              "acos_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef acos_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "acos");
+        if (!acos_fn) {
+            acos_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "acos", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, acos_fn, &arg, 1,
+                              "acos_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "acos: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_log10(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "log10: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef log10_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "log10f");
+        if (!log10_fn) {
+            log10_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "log10f", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, log10_fn, &arg, 1,
+                              "log10_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef log10_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "log10");
+        if (!log10_fn) {
+            log10_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "log10", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, log10_fn, &arg, 1,
+                              "log10_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "log10: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_log2(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "log2: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef log2_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "log2f");
+        if (!log2_fn) {
+            log2_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "log2f", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, log2_fn, &arg, 1,
+                              "log2_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef log2_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "log2");
+        if (!log2_fn) {
+            log2_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "log2", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, log2_fn, &arg, 1,
+                              "log2_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "log2: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_sinh(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "sinh: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef sinh_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "sinhf");
+        if (!sinh_fn) {
+            sinh_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "sinhf", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, sinh_fn, &arg, 1,
+                              "sinh_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef sinh_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "sinh");
+        if (!sinh_fn) {
+            sinh_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "sinh", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, sinh_fn, &arg, 1,
+                              "sinh_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "sinh: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_cosh(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "cosh: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef cosh_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "coshf");
+        if (!cosh_fn) {
+            cosh_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "coshf", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, cosh_fn, &arg, 1,
+                              "cosh_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef cosh_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "cosh");
+        if (!cosh_fn) {
+            cosh_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "cosh", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, cosh_fn, &arg, 1,
+                              "cosh_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "cosh: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_tanh(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "tanh: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef tanh_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "tanhf");
+        if (!tanh_fn) {
+            tanh_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "tanhf", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, tanh_fn, &arg, 1,
+                              "tanh_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef tanh_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "tanh");
+        if (!tanh_fn) {
+            tanh_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "tanh", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, tanh_fn, &arg, 1,
+                              "tanh_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "tanh: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_asinh(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "asinh: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef asinh_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "asinhf");
+        if (!asinh_fn) {
+            asinh_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "asinhf", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, asinh_fn, &arg, 1,
+                              "asinh_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef asinh_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "asinh");
+        if (!asinh_fn) {
+            asinh_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "asinh", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, asinh_fn, &arg, 1,
+                              "asinh_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "asinh: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_acosh(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "acosh: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef acosh_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "acoshf");
+        if (!acosh_fn) {
+            acosh_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "acoshf", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, acosh_fn, &arg, 1,
+                              "acosh_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef acosh_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "acosh");
+        if (!acosh_fn) {
+            acosh_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "acosh", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, acosh_fn, &arg, 1,
+                              "acosh_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "acosh: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_atanh(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "atanh: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef atanh_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "atanhf");
+        if (!atanh_fn) {
+            atanh_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "atanhf", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, atanh_fn, &arg, 1,
+                              "atanh_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef atanh_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "atanh");
+        if (!atanh_fn) {
+            atanh_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "atanh", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, atanh_fn, &arg, 1,
+                              "atanh_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "atanh: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_fmod(Xvr_LLVMExpressionEmitter* emitter,
+                                   Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef args_list[2] = {NULL, NULL};
+    int arg_count = 0;
+
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 2) {
+        arg_count = 2;
+        for (int i = 0; i < 2; i++) {
+            args_list[i] = Xvr_LLVMExpressionEmitterEmit(
+                emitter, &args->fnCollection.nodes[i]);
+        }
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 2) {
+        arg_count = 2;
+        for (int i = 0; i < 2; i++) {
+            args_list[i] = Xvr_LLVMExpressionEmitterEmit(
+                emitter, &args->compound.nodes[i]);
+        }
+    }
+
+    if (arg_count != 2 || !args_list[0] || !args_list[1]) {
+        Xvr_LLVMContextSetError(emitter->context, "fmod: requires 2 arguments");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(args_list[0]);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    LLVMTypeRef param_types[] = {arg_type, arg_type};
+    LLVMValueRef params[] = {args_list[0], args_list[1]};
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type = LLVMFunctionType(LLVMFloatTypeInContext(ctx),
+                                               param_types, 2, false);
+        LLVMValueRef fmod_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "fmodf");
+        if (!fmod_fn) {
+            fmod_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "fmodf", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, fmod_fn, params, 2,
+                              "fmod_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type = LLVMFunctionType(LLVMDoubleTypeInContext(ctx),
+                                               param_types, 2, false);
+        LLVMValueRef fmod_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "fmod");
+        if (!fmod_fn) {
+            fmod_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "fmod", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, fmod_fn, params, 2,
+                              "fmod_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "fmod: only float32 and float64 are supported");
+    return NULL;
+}
+
+static LLVMValueRef emit_math_trunc(Xvr_LLVMExpressionEmitter* emitter,
+                                    Xvr_ASTNode* args) {
+    if (!emitter || !args) {
+        return NULL;
+    }
+
+    LLVMValueRef arg = NULL;
+    if (args->type == XVR_AST_NODE_FN_COLLECTION &&
+        args->fnCollection.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter,
+                                            &args->fnCollection.nodes[0]);
+    } else if (args->type == XVR_AST_NODE_COMPOUND &&
+               args->compound.count >= 1) {
+        arg = Xvr_LLVMExpressionEmitterEmit(emitter, &args->compound.nodes[0]);
+    }
+
+    if (!arg) {
+        Xvr_LLVMContextSetError(emitter->context, "trunc: invalid argument");
+        return NULL;
+    }
+
+    LLVMBuilderRef llvm_builder =
+        Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+    LLVMTypeRef arg_type = LLVMTypeOf(arg);
+    LLVMTypeKind kind = LLVMGetTypeKind(arg_type);
+
+    if (kind == LLVMFloatTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMFloatTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef trunc_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.trunc.f32");
+        if (!trunc_fn) {
+            trunc_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.trunc.f32", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, trunc_fn, &arg, 1,
+                              "trunc_f32");
+    } else if (kind == LLVMDoubleTypeKind) {
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMTypeRef fn_type =
+            LLVMFunctionType(LLVMDoubleTypeInContext(ctx), &arg_type, 1, false);
+        LLVMValueRef trunc_fn = LLVMGetNamedFunction(
+            Xvr_LLVMModuleManagerGetModule(emitter->module), "llvm.trunc.f64");
+        if (!trunc_fn) {
+            trunc_fn =
+                LLVMAddFunction(Xvr_LLVMModuleManagerGetModule(emitter->module),
+                                "llvm.trunc.f64", fn_type);
+        }
+        return LLVMBuildCall2(llvm_builder, fn_type, trunc_fn, &arg, 1,
+                              "trunc_f64");
+    }
+
+    Xvr_LLVMContextSetError(emitter->context,
+                            "trunc: only float32 and float64 are supported");
     return NULL;
 }
 

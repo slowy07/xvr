@@ -288,7 +288,8 @@ int main(int argc, const char* argv[]) {
         system(cmd);
         free(cmd);
 
-        asprintf(&cmd, "gcc %s /tmp/xvr_runtime.o -o /tmp/xvr_bin 2>/dev/null",
+        asprintf(&cmd,
+                 "gcc %s /tmp/xvr_runtime.o -o /tmp/xvr_bin -lm 2>/dev/null",
                  outFile);
         int rc = system(cmd);
         free(cmd);

@@ -1,0 +1,70 @@
+include math;
+include std;
+
+proc test_sqrt_loop(): void {
+    var i = 0;
+    while (i < 100) {
+        var x = math::sqrt(float64(i));
+        i = i + 1;
+    }
+}
+
+proc test_pow_loop(): void {
+    var i = 0;
+    while (i < 50) {
+        var x = math::pow(2.0, float64(i));
+        i = i + 1;
+    }
+}
+
+proc test_trig_loop(): void {
+    var i = 0;
+    while (i < 100) {
+        var s = math::sin(float64(i) * 0.1);
+        var c = math::cos(float64(i) * 0.1);
+        i = i + 1;
+    }
+}
+
+proc test_abs_loop(): void {
+    var i = -50;
+    while (i < 50) {
+        var x = math::abs(i);
+        i = i + 1;
+    }
+}
+
+proc test_combined(): float {
+    var result = 0.0;
+    var i = 0;
+    while (i < 20) {
+        result = result + math::sqrt(math::pow(float64(i), 2.0));
+        result = result + math::abs(-float64(i));
+        result = result + math::floor(math::abs(float64(i) + 0.5));
+        result = result + math::ceil(math::abs(float64(i) - 0.5));
+        i = i + 1;
+    }
+    return result;
+}
+
+proc test_nested(): void {
+    var i = 0;
+    while (i < 10) {
+        var j = 0;
+        while (j < 10) {
+            var x = math::sqrt(float64(i * i + j * j));
+            var y = math::pow(float64(i), 2.0) + math::pow(float64(j), 2.0);
+            j = j + 1;
+        }
+        i = i + 1;
+    }
+}
+
+test_sqrt_loop();
+test_pow_loop();
+test_trig_loop();
+test_abs_loop();
+var combined = test_combined();
+test_nested();
+
+std::println("All stress tests completed");

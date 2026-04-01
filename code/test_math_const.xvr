@@ -1,0 +1,65 @@
+include math;
+include std;
+
+std::println("=== Constant Folding Tests ===");
+std::println("");
+
+std::println("--- Compile-time constants ---");
+var c1 = math::sqrt(25.0);
+var c2 = math::pow(2.0, 8.0);
+var c3 = math::sin(0.0);
+var c4 = math::cos(0.0);
+var c5 = math::abs(-100);
+var c6 = math::log(1.0);
+var c7 = math::exp(0.0);
+var c8 = math::floor(3.9);
+var c9 = math::ceil(2.1);
+var c10 = math::round(2.5);
+var c11 = math::sinh(0.0);
+var c12 = math::cosh(0.0);
+var c13 = math::tanh(0.0);
+var c14 = math::log10(100.0);
+var c15 = math::log2(1024.0);
+
+std::println("sqrt(25.0) = {} (expected: 5)", c1);
+std::println("pow(2.0, 8.0) = {} (expected: 256)", c2);
+std::println("sin(0.0) = {} (expected: 0)", c3);
+std::println("cos(0.0) = {} (expected: 1)", c4);
+std::println("abs(-100) = {} (expected: 100)", c5);
+std::println("log(1.0) = {} (expected: 0)", c6);
+std::println("exp(0.0) = {} (expected: 1)", c7);
+std::println("floor(3.9) = {} (expected: 3)", c8);
+std::println("ceil(2.1) = {} (expected: 3)", c9);
+std::println("round(2.5) = {} (expected: 3)", c10);
+std::println("sinh(0.0) = {} (expected: 0)", c11);
+std::println("cosh(0.0) = {} (expected: 1)", c12);
+std::println("tanh(0.0) = {} (expected: 0)", c13);
+std::println("log10(100.0) = {} (expected: 2)", c14);
+std::println("log2(1024.0) = {} (expected: 10)", c15);
+
+std::println("");
+std::println("--- Combined expressions ---");
+var e1 = math::sqrt(math::pow(2.0, 4.0));
+var e2 = math::sin(math::asin(0.5));
+var e3 = math::cosh(math::sinh(1.0));
+var e4 = math::log2(math::pow(2.0, 5.0));
+var e5 = math::floor(math::sqrt(10.0));
+var e6 = math::ceil(math::sqrt(10.0));
+var e7 = math::fmod(10.0, 3.0);
+var e8 = math::trunc(7.9);
+var e9 = math::atan2(1.0, 1.0);
+var e10 = math::asin(math::sin(0.5));
+
+std::println("sqrt(pow(2, 4)) = {} (expected: 16)", e1);
+std::println("sin(asin(0.5)) = {} (expected: 0.5)", e2);
+std::println("cosh(sinh(1)) = {} (expected: ~1.543)", e3);
+std::println("log2(pow(2, 5)) = {} (expected: 5)", e4);
+std::println("floor(sqrt(10)) = {} (expected: 3)", e5);
+std::println("ceil(sqrt(10)) = {} (expected: 4)", e6);
+std::println("fmod(10, 3) = {} (expected: 1)", e7);
+std::println("trunc(7.9) = {} (expected: 7)", e8);
+std::println("atan2(1, 1) = {} (expected: ~0.785)", e9);
+std::println("asin(sin(0.5)) = {} (expected: 0.5)", e10);
+
+std::println("");
+std::println("=== All constant folding tests completed ===");
