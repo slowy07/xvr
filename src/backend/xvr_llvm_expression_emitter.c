@@ -689,8 +689,14 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
                         LLVMTypeKind kind = LLVMGetTypeKind(target_type);
 
                         if (kind == LLVMPointerTypeKind) {
-                            LLVMTypeRef elem_type =
-                                LLVMGetElementType(target_type);
+                            LLVMTypeRef elem_type = NULL;
+                            LLVMTypeRef alloc_type =
+                                LLVMGetAllocatedType(target_value);
+                            if (alloc_type) {
+                                elem_type = alloc_type;
+                            } else {
+                                elem_type = LLVMGetElementType(target_type);
+                            }
                             if (elem_type && LLVMGetTypeKind(elem_type) ==
                                                  LLVMArrayTypeKind) {
                                 unsigned elem_count =
@@ -2599,16 +2605,190 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
         }
     }
 
+    /* Postfix increment: x++ */
+    case XVR_AST_NODE_POSTFIX_INCREMENT: {
+        const char* var_name = NULL;
+        if (node->postfixIncrement.identifier.as.string.ptr) {
+            var_name =
+                (const char*)
+                    node->postfixIncrement.identifier.as.string.ptr->data;
+        }
+        if (!var_name) {
+            return NULL;
+        }
+
+        Xvr_LiteralType var_type_xvr = XVR_LITERAL_ANY;
+        LLVMValueRef var_ptr =
+            lookup_var_with_type(emitter, var_name, &var_type_xvr);
+        if (!var_ptr) {
+            return NULL;
+        }
+
+        LLVMBuilderRef llvm_builder =
+            Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+        LLVMTypeRef ptr_type = LLVMTypeOf(var_ptr);
+        LLVMTypeRef elem_type = NULL;
+
+        LLVMTypeRef alloc_type = LLVMGetAllocatedType(var_ptr);
+        if (alloc_type) {
+            elem_type = alloc_type;
+        } else {
+            elem_type = LLVMGetElementType(ptr_type);
+        }
+        if (!elem_type) {
+            return NULL;
+        }
+
+        LLVMValueRef old_value = Xvr_LLVMIRBuilderCreateLoad(
+            emitter->builder, elem_type, var_ptr, "inc_old");
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMValueRef one = LLVMConstInt(LLVMInt32TypeInContext(ctx), 1, false);
+        LLVMValueRef new_value =
+            LLVMBuildAdd(llvm_builder, old_value, one, "inc_new");
+        Xvr_LLVMIRBuilderCreateStore(emitter->builder, new_value, var_ptr);
+
+        return old_value;
+    }
+
+    /* Postfix decrement: x-- */
+    case XVR_AST_NODE_POSTFIX_DECREMENT: {
+        const char* var_name = NULL;
+        if (node->postfixDecrement.identifier.as.string.ptr) {
+            var_name =
+                (const char*)
+                    node->postfixDecrement.identifier.as.string.ptr->data;
+        }
+        if (!var_name) {
+            return NULL;
+        }
+
+        Xvr_LiteralType var_type_xvr = XVR_LITERAL_ANY;
+        LLVMValueRef var_ptr =
+            lookup_var_with_type(emitter, var_name, &var_type_xvr);
+        if (!var_ptr) {
+            return NULL;
+        }
+
+        LLVMBuilderRef llvm_builder =
+            Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+        LLVMTypeRef ptr_type = LLVMTypeOf(var_ptr);
+        LLVMTypeRef elem_type = NULL;
+
+        LLVMTypeRef alloc_type = LLVMGetAllocatedType(var_ptr);
+        if (alloc_type) {
+            elem_type = alloc_type;
+        } else {
+            elem_type = LLVMGetElementType(ptr_type);
+        }
+        if (!elem_type) {
+            return NULL;
+        }
+
+        LLVMValueRef old_value = Xvr_LLVMIRBuilderCreateLoad(
+            emitter->builder, elem_type, var_ptr, "dec_old");
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMValueRef one = LLVMConstInt(LLVMInt32TypeInContext(ctx), 1, false);
+        LLVMValueRef new_value =
+            LLVMBuildSub(llvm_builder, old_value, one, "dec_new");
+        Xvr_LLVMIRBuilderCreateStore(emitter->builder, new_value, var_ptr);
+
+        return old_value;
+    }
+
+    /* Prefix increment: ++x */
+    case XVR_AST_NODE_PREFIX_INCREMENT: {
+        const char* var_name = NULL;
+        if (node->prefixIncrement.identifier.as.string.ptr) {
+            var_name = (const char*)
+                           node->prefixIncrement.identifier.as.string.ptr->data;
+        }
+        if (!var_name) {
+            return NULL;
+        }
+
+        Xvr_LiteralType var_type_xvr = XVR_LITERAL_ANY;
+        LLVMValueRef var_ptr =
+            lookup_var_with_type(emitter, var_name, &var_type_xvr);
+        if (!var_ptr) {
+            return NULL;
+        }
+
+        LLVMBuilderRef llvm_builder =
+            Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+        LLVMTypeRef ptr_type = LLVMTypeOf(var_ptr);
+        LLVMTypeRef elem_type = NULL;
+
+        LLVMTypeRef alloc_type = LLVMGetAllocatedType(var_ptr);
+        if (alloc_type) {
+            elem_type = alloc_type;
+        } else {
+            elem_type = LLVMGetElementType(ptr_type);
+        }
+        if (!elem_type) {
+            return NULL;
+        }
+
+        LLVMValueRef old_value = Xvr_LLVMIRBuilderCreateLoad(
+            emitter->builder, elem_type, var_ptr, "inc_old");
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMValueRef one = LLVMConstInt(LLVMInt32TypeInContext(ctx), 1, false);
+        LLVMValueRef new_value =
+            LLVMBuildAdd(llvm_builder, old_value, one, "inc_new");
+        Xvr_LLVMIRBuilderCreateStore(emitter->builder, new_value, var_ptr);
+
+        return new_value;
+    }
+
+    /* Prefix decrement: --x */
+    case XVR_AST_NODE_PREFIX_DECREMENT: {
+        const char* var_name = NULL;
+        if (node->prefixDecrement.identifier.as.string.ptr) {
+            var_name = (const char*)
+                           node->prefixDecrement.identifier.as.string.ptr->data;
+        }
+        if (!var_name) {
+            return NULL;
+        }
+
+        Xvr_LiteralType var_type_xvr = XVR_LITERAL_ANY;
+        LLVMValueRef var_ptr =
+            lookup_var_with_type(emitter, var_name, &var_type_xvr);
+        if (!var_ptr) {
+            return NULL;
+        }
+
+        LLVMBuilderRef llvm_builder =
+            Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+        LLVMTypeRef ptr_type = LLVMTypeOf(var_ptr);
+        LLVMTypeRef elem_type = NULL;
+
+        LLVMTypeRef alloc_type = LLVMGetAllocatedType(var_ptr);
+        if (alloc_type) {
+            elem_type = alloc_type;
+        } else {
+            elem_type = LLVMGetElementType(ptr_type);
+        }
+        if (!elem_type) {
+            return NULL;
+        }
+
+        LLVMValueRef old_value = Xvr_LLVMIRBuilderCreateLoad(
+            emitter->builder, elem_type, var_ptr, "dec_old");
+        LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
+        LLVMValueRef one = LLVMConstInt(LLVMInt32TypeInContext(ctx), 1, false);
+        LLVMValueRef new_value =
+            LLVMBuildSub(llvm_builder, old_value, one, "dec_new");
+        Xvr_LLVMIRBuilderCreateStore(emitter->builder, new_value, var_ptr);
+
+        return new_value;
+    }
+
     /* Unsupported expression types */
     case XVR_AST_NODE_ERROR:
     case XVR_AST_NODE_PAIR:
     case XVR_AST_NODE_FN_DECL:
     case XVR_AST_NODE_FN_COLLECTION:
     case XVR_AST_NODE_FN_RETURN:
-    case XVR_AST_NODE_PREFIX_INCREMENT:
-    case XVR_AST_NODE_POSTFIX_INCREMENT:
-    case XVR_AST_NODE_PREFIX_DECREMENT:
-    case XVR_AST_NODE_POSTFIX_DECREMENT:
     case XVR_AST_NODE_IMPORT:
     case XVR_AST_NODE_PASS:
     default:

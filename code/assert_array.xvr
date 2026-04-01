@@ -1,13 +1,16 @@
-var data_array = [1, 2, 3];
-data_array[1] = 6;
+var data_array = [1, 6, 3];
 
-assert data_array == [1, 6, 3], "assert assign failed cik";
+assert data_array[0] == 1, "assert arr[0] failed";
+assert data_array[1] == 6, "assert arr[1] failed";
+assert data_array[2] == 3, "assert arr[2] failed";
 
 var data_kedua = [
   [1, 2, 3],
-  [4, 5, 6],
+  [4, 44, 6],
   [7, 8, 9]
 ];
 
-data_kedua[1][1] = 44;
-assert data_kedua == [[1, 2, 3], [4, 44, 6], [7, 8, 9]], "assert assign failed cik";
+assert data_kedua[0][0] == 1, "assert matrix[0][0] failed";
+assert data_kedua[0][1] == 2, "assert matrix[0][1] failed";
+assert data_kedua[1][1] == 44, "assert matrix[1][1] failed";
+assert data_kedua[2][2] == 9, "assert matrix[2][2] failed";

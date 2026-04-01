@@ -1,0 +1,7 @@
+include std;
+
+var data: [int] = [1, 2, 3];
+
+for (var i = 0; i < len(data); i++) {
+  std::print("{}\n", data[i]);
+}
