@@ -1,0 +1,20 @@
+include std;
+
+std::print("=== Array Indexing Test ===\n");
+
+var arr = [1, 2, 3];
+std::print("arr = [1, 2, 3]\n");
+std::print("arr[0] = {}\n", arr[0]);
+std::print("arr[1] = {}\n", arr[1]);
+std::print("arr[2] = {}\n", arr[2]);
+
+std::print("\n=== 2D Array Indexing Test ===\n");
+
+var matrix = [[1, 2], [3, 4]];
+std::print("matrix = [[1, 2], [3, 4]]\n");
+std::print("matrix[0][0] = {}\n", matrix[0][0]);
+std::print("matrix[0][1] = {}\n", matrix[0][1]);
+std::print("matrix[1][0] = {}\n", matrix[1][0]);
+std::print("matrix[1][1] = {}\n", matrix[1][1]);
+
+std::print("\nAll tests passed!\n");

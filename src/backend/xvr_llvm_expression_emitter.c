@@ -2507,7 +2507,14 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
             if (!ptr_type || LLVMGetTypeKind(ptr_type) != LLVMPointerTypeKind) {
                 return NULL;
             }
-            LLVMTypeRef elem_type = LLVMGetElementType(ptr_type);
+
+            /* For alloca, use LLVMGetAllocatedType to get the array type */
+            LLVMTypeRef elem_type = LLVMGetAllocatedType(var_ptr);
+            if (!elem_type) {
+                /* Fallback to LLVMGetElementType */
+                elem_type = LLVMGetElementType(ptr_type);
+            }
+
             if (!elem_type) {
                 return NULL;
             }
@@ -2520,11 +2527,12 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
                 index};
             LLVMValueRef elem_ptr = LLVMBuildInBoundsGEP2(
                 llvm_builder, elem_type, var_ptr, indices, 2, "array_idx");
-            return Xvr_LLVMIRBuilderCreateLoad(emitter->builder, elem_type,
+            LLVMTypeRef elem_elem_type = LLVMGetElementType(elem_type);
+            return Xvr_LLVMIRBuilderCreateLoad(emitter->builder, elem_elem_type,
                                                elem_ptr, "array_elem");
         }
 
-        /* Handle general index expressions */
+        /* Handle general index expressions (e.g., matrix[0][0]) */
         LLVMValueRef base =
             Xvr_LLVMExpressionEmitterEmit(emitter, index_node->first);
         if (!base) {
@@ -2537,24 +2545,58 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
         }
         LLVMBuilderRef llvm_builder =
             Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
-        LLVMTypeRef ptr_type = LLVMTypeOf(base);
-        if (!ptr_type || LLVMGetTypeKind(ptr_type) != LLVMPointerTypeKind) {
-            return NULL;
-        }
-        LLVMTypeRef elem_type = LLVMGetElementType(ptr_type);
-        if (!elem_type) {
-            return NULL;
-        }
+        LLVMTypeRef base_type = LLVMTypeOf(base);
 
-        LLVMValueRef indices[] = {
-            LLVMConstInt(LLVMInt32TypeInContext(
-                             Xvr_LLVMContextGetLLVMContext(emitter->context)),
-                         0, false),
-            index};
-        LLVMValueRef elem_ptr = LLVMBuildInBoundsGEP2(
-            llvm_builder, elem_type, base, indices, 2, "array_idx");
-        return Xvr_LLVMIRBuilderCreateLoad(emitter->builder, elem_type,
-                                           elem_ptr, "array_elem");
+        /* Check if base is a pointer or an array (loaded from first index) */
+        if (LLVMGetTypeKind(base_type) == LLVMPointerTypeKind) {
+            LLVMTypeRef elem_type = LLVMGetElementType(base_type);
+            if (!elem_type) {
+                return NULL;
+            }
+
+            LLVMValueRef indices[] = {
+                LLVMConstInt(
+                    LLVMInt32TypeInContext(
+                        Xvr_LLVMContextGetLLVMContext(emitter->context)),
+                    0, false),
+                index};
+            LLVMValueRef elem_ptr = LLVMBuildInBoundsGEP2(
+                llvm_builder, elem_type, base, indices, 2, "array_idx");
+
+            /* Get element type of the array for loading */
+            LLVMTypeRef elem_elem_type = LLVMGetElementType(elem_type);
+            if (!elem_elem_type) {
+                /* Single element (not an array), load with elem_type */
+                return Xvr_LLVMIRBuilderCreateLoad(emitter->builder, elem_type,
+                                                   elem_ptr, "array_elem");
+            }
+            return Xvr_LLVMIRBuilderCreateLoad(emitter->builder, elem_elem_type,
+                                               elem_ptr, "array_elem");
+        } else {
+            /* Base is an array type (already loaded from first index like
+             * matrix[0]) - need to store to stack to create pointer */
+            LLVMTypeRef elem_type = base_type;
+            LLVMTypeRef elem_elem_type = LLVMGetElementType(elem_type);
+            if (!elem_elem_type) {
+                return NULL;
+            }
+
+            /* Allocate stack space for the array */
+            LLVMValueRef array_alloca =
+                LLVMBuildAlloca(llvm_builder, elem_type, "temp_array");
+            LLVMBuildStore(llvm_builder, base, array_alloca);
+
+            /* Now use GEP to index into the array */
+            LLVMValueRef zero = LLVMConstInt(
+                LLVMInt32TypeInContext(
+                    Xvr_LLVMContextGetLLVMContext(emitter->context)),
+                0, false);
+            LLVMValueRef elem_ptr =
+                LLVMBuildInBoundsGEP2(llvm_builder, elem_elem_type,
+                                      array_alloca, &index, 1, "array_idx");
+            return Xvr_LLVMIRBuilderCreateLoad(emitter->builder, elem_elem_type,
+                                               elem_ptr, "array_elem");
+        }
     }
 
     /* Unsupported expression types */
