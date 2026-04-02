@@ -22,11 +22,11 @@ target_compile_options(xvr PRIVATE
 )
 
 if(XVR_SANITIZER)
-    target_link_libraries(xvr PRIVATE xvr_objects -fsanitize=${XVR_SANITIZER} xvr_llvm_libs)
+    target_link_libraries(xvr PRIVATE xvr_objects -fsanitize=${XVR_SANITIZER} xvr_llvm_libs m)
 elseif(XVR_BUILD_STATIC)
-    target_link_libraries(xvr PRIVATE xvr_static xvr_llvm_libs)
+    target_link_libraries(xvr PRIVATE xvr_static xvr_llvm_libs m)
 else()
-    target_link_libraries(xvr PRIVATE xvr_shared xvr_llvm_libs)
+    target_link_libraries(xvr PRIVATE xvr_shared xvr_llvm_libs m)
 endif()
 
 set_target_properties(xvr PROPERTIES

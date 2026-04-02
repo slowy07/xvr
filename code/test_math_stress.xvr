@@ -1,0 +1,36 @@
+include math;
+include std;
+
+std::println("=== Stress Tests with Loops and Procedures ===");
+std::println("");
+
+proc test_sqrt_loop(n: int): void {
+    var i = 0;
+    while (i < n) {
+        var val = float64(i);
+        var result = math::sqrt(val);
+        std::print("{} ", result);
+        i = i + 1;
+    }
+}
+
+std::println("Running loop stress tests...");
+
+std::println("");
+std::print("sqrt loop: ");
+test_sqrt_loop(10);
+
+std::println("");
+std::println("");
+std::println("--- Nested Function Calls ---");
+var nested = math::floor(math::sqrt(math::pow(2.0, 6.0)));
+std::println("floor(sqrt(pow(2, 6))) = {} (expected: 8)", nested);
+
+var trig_identity = math::asin(math::sin(0.5));
+std::println("asin(sin(0.5)) = {} (expected: 0.5)", trig_identity);
+
+var hyperbolic_identity = math::atanh(math::tanh(0.3));
+std::println("atanh(tanh(0.3)) = {} (expected: 0.3)", hyperbolic_identity);
+
+std::println("");
+std::println("=== All stress tests completed ===");

@@ -29,6 +29,21 @@
   - Ternary expressions
   - Loop edge cases
 
+### 3. Math Module Fuzz Tests (`fuzzer/test_fuzz_math_v2.c`)
+- 60 comprehensive tests covering:
+  - Basic functions: sqrt, pow, abs
+  - Trigonometric: sin, cos, tan, asin, acos, atan, atan2
+  - Logarithmic: log, log10, log2
+  - Exponential: exp
+  - Rounding: floor, ceil, round, trunc
+  - Hyperbolic: sinh, cosh, tanh, asinh, acosh, atanh
+  - Modulo: fmod
+  - IEEE 754 edge cases (NaN, Infinity)
+  - Constant folding (compile-time evaluation)
+  - Combined expressions (nested function calls)
+  - Loop integration
+  - Procedure integration
+
 ### 3. Stress Tests (`fuzzer/stress_test.sh`)
 - 720+ random input tests covering:
   - Nested parentheses
@@ -98,12 +113,25 @@
 - [x] Early returns
 - [x] Missing returns
 
+### Math Module
+- [x] Basic math functions (sqrt, pow, abs)
+- [x] Trigonometric functions (sin, cos, tan, etc.)
+- [x] Logarithmic functions (log, log10, log2)
+- [x] Hyperbolic functions (sinh, cosh, tanh, etc.)
+- [x] Rounding functions (floor, ceil, round, trunc)
+- [x] IEEE 754 compliance (NaN, Infinity)
+- [x] Constant folding for math expressions
+- [x] Type overloading (float32/float64)
+- [x] Math functions in loops
+- [x] Math functions in procedures
+
 ## Test Results
 
 | Test Suite | Passed | Failed | Crashes |
 |------------|--------|--------|---------|
 | Unit Tests | ✓ | 0 | 0 |
 | Fuzzing Tests | 72 | 0 | 0 |
+| Math Module Tests | 60 | 0 | 0 |
 | Stress Tests | 720 | 0 | 0 |
 | Regression Tests | 18 | 0 | 0 |
 | Corpus Tests | ✓ | varies | 0 |

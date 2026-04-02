@@ -75,6 +75,33 @@ The corpus contains minimal XVR programs covering:
 - Control flow (if/else, while, for)
 - Functions
 - Print functions (print, println with format strings)
+- Math module functions (sqrt, pow, sin, cos, tan, etc.)
+
+## Math Module Fuzz Testing
+
+The `test_fuzz_math_v2.c` file contains comprehensive fuzz tests for the math module:
+
+```bash
+cd fuzzer
+gcc -o test_fuzz_math_v2 test_fuzz_math_v2.c -lm
+./test_fuzz_math_v2
+```
+
+### Test Coverage
+
+The fuzz test covers 60 test cases including:
+- Basic functions: sqrt, pow, abs
+- Trigonometric: sin, cos, tan, asin, acos, atan, atan2
+- Logarithmic: log, log10, log2
+- Exponential: exp
+- Rounding: floor, ceil, round, trunc
+- Hyperbolic: sinh, cosh, tanh, asinh, acosh, atanh
+- Modulo: fmod
+- Edge cases: negative values, zero, infinity, NaN
+- Constant folding: compile-time evaluation
+- Combined expressions: nested function calls
+- Loop integration: math functions in loops
+- Procedure integration: math functions as procedure parameters
 
 ## Tips for Effective Fuzzing
 

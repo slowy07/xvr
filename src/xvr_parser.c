@@ -1593,6 +1593,420 @@ static bool calcStaticBinaryArithmetic(Xvr_Parser* parser,
     return true;
 }
 
+static bool is_numeric_literal(Xvr_Literal lit) {
+    return XVR_IS_INTEGER(lit) || XVR_IS_FLOAT(lit) ||
+           lit.type == XVR_LITERAL_INT8 || lit.type == XVR_LITERAL_INT16 ||
+           lit.type == XVR_LITERAL_INT32 || lit.type == XVR_LITERAL_INT64 ||
+           lit.type == XVR_LITERAL_UINT8 || lit.type == XVR_LITERAL_UINT16 ||
+           lit.type == XVR_LITERAL_UINT32 || lit.type == XVR_LITERAL_UINT64 ||
+           lit.type == XVR_LITERAL_FLOAT16 || lit.type == XVR_LITERAL_FLOAT32 ||
+           lit.type == XVR_LITERAL_FLOAT64;
+}
+
+static double get_numeric_value(Xvr_Literal lit) {
+    switch (lit.type) {
+    case XVR_LITERAL_INTEGER:
+        return (double)lit.as.integer;
+    case XVR_LITERAL_FLOAT:
+        return lit.as.number;
+    case XVR_LITERAL_INT8:
+        return (double)lit.as.int8_value;
+    case XVR_LITERAL_INT16:
+        return (double)lit.as.int16_value;
+    case XVR_LITERAL_INT32:
+        return (double)lit.as.int32_value;
+    case XVR_LITERAL_INT64:
+        return (double)lit.as.int64_value;
+    case XVR_LITERAL_UINT8:
+        return (double)lit.as.uint8_value;
+    case XVR_LITERAL_UINT16:
+        return (double)lit.as.uint16_value;
+    case XVR_LITERAL_UINT32:
+        return (double)lit.as.uint32_value;
+    case XVR_LITERAL_UINT64:
+        return (double)lit.as.uint64_value;
+    case XVR_LITERAL_FLOAT16:
+        return (double)lit.as.float16_bits;
+    case XVR_LITERAL_FLOAT32:
+        return (double)lit.as.float32_value;
+    case XVR_LITERAL_FLOAT64:
+        return lit.as.float64_value;
+    default:
+        return 0.0;
+    }
+}
+
+static bool calcStaticMathFn(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+    (void)parser;
+    if (!nodeHandle || !*nodeHandle) {
+        return true;
+    }
+
+    if ((*nodeHandle)->type != XVR_AST_NODE_BINARY ||
+        (*nodeHandle)->binary.opcode != XVR_OP_DOT) {
+        return true;
+    }
+
+    if ((*nodeHandle)->binary.left->type != XVR_AST_NODE_LITERAL ||
+        (*nodeHandle)->binary.left->atomic.literal.type !=
+            XVR_LITERAL_IDENTIFIER) {
+        return true;
+    }
+
+    const char* namespace_name =
+        (const char*)(*nodeHandle)
+            ->binary.left->atomic.literal.as.string.ptr->data;
+    if (!namespace_name || strcmp(namespace_name, "math") != 0) {
+        return true;
+    }
+
+    if ((*nodeHandle)->binary.right->type != XVR_AST_NODE_FN_CALL) {
+        return true;
+    }
+
+    Xvr_ASTNode* fn_call = (*nodeHandle)->binary.right;
+    Xvr_ASTNode* args = fn_call->fnCall.arguments;
+
+    if (!args || args->type != XVR_AST_NODE_FN_COLLECTION) {
+        return true;
+    }
+
+    if (args->fnCollection.count < 1) {
+        return true;
+    }
+
+    if ((*nodeHandle)->binary.right->binary.left->type !=
+            XVR_AST_NODE_LITERAL ||
+        (*nodeHandle)->binary.right->binary.left->atomic.literal.type !=
+            XVR_LITERAL_IDENTIFIER) {
+        return true;
+    }
+
+    const char* fn_name =
+        (const char*)(*nodeHandle)
+            ->binary.right->binary.left->atomic.literal.as.string.ptr->data;
+    if (!fn_name) {
+        return true;
+    }
+
+    if (args->fnCollection.count == 1) {
+        Xvr_ASTNode* arg_node = &args->fnCollection.nodes[0];
+        if (arg_node->type != XVR_AST_NODE_LITERAL ||
+            !is_numeric_literal(arg_node->atomic.literal)) {
+            return true;
+        }
+
+        double val = get_numeric_value(arg_node->atomic.literal);
+
+        if (strcmp(fn_name, "sqrt") == 0) {
+            if (val < 0) {
+                return true;
+            }
+            double result = sqrt(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "sin") == 0) {
+            double result = sin(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "cos") == 0) {
+            double result = cos(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "tan") == 0) {
+            double result = tan(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "asin") == 0) {
+            if (val < -1.0 || val > 1.0) {
+                return true;
+            }
+            double result = asin(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "acos") == 0) {
+            if (val < -1.0 || val > 1.0) {
+                return true;
+            }
+            double result = acos(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "atan") == 0) {
+            double result = atan(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "log") == 0) {
+            if (val <= 0.0) {
+                return true;
+            }
+            double result = log(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "log10") == 0) {
+            if (val <= 0.0) {
+                return true;
+            }
+            double result = log10(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "exp") == 0) {
+            double result = exp(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "floor") == 0) {
+            double result = floor(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "ceil") == 0) {
+            double result = ceil(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "round") == 0) {
+            double result = round(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "abs") == 0) {
+            if (XVR_IS_INTEGER(arg_node->atomic.literal)) {
+                int val_i = (int)XVR_AS_INTEGER(arg_node->atomic.literal);
+                if (val_i < 0) {
+                    val_i = -val_i;
+                }
+                Xvr_Literal lit = XVR_TO_INTEGER_LITERAL(val_i);
+                Xvr_freeASTNode((*nodeHandle)->binary.left);
+                Xvr_freeASTNode((*nodeHandle)->binary.right);
+                (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+                (*nodeHandle)->atomic.literal = lit;
+                return true;
+            } else {
+                double result = fabs(val);
+                Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+                Xvr_freeASTNode((*nodeHandle)->binary.left);
+                Xvr_freeASTNode((*nodeHandle)->binary.right);
+                (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+                (*nodeHandle)->atomic.literal = lit;
+                return true;
+            }
+        }
+
+        if (strcmp(fn_name, "sinh") == 0) {
+            double result = sinh(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "cosh") == 0) {
+            double result = cosh(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "tanh") == 0) {
+            double result = tanh(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "asinh") == 0) {
+            double result = asinh(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "acosh") == 0) {
+            if (val < 1.0) {
+                return true;
+            }
+            double result = acosh(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "atanh") == 0) {
+            if (val <= -1.0 || val >= 1.0) {
+                return true;
+            }
+            double result = atanh(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "trunc") == 0) {
+            double result = trunc(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "log2") == 0) {
+            if (val <= 0.0) {
+                return true;
+            }
+            double result = log2(val);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+    }
+
+    if (args->fnCollection.count == 2) {
+        Xvr_ASTNode* arg1 = &args->fnCollection.nodes[0];
+        Xvr_ASTNode* arg2 = &args->fnCollection.nodes[1];
+
+        if (arg1->type != XVR_AST_NODE_LITERAL ||
+            arg2->type != XVR_AST_NODE_LITERAL ||
+            !is_numeric_literal(arg1->atomic.literal) ||
+            !is_numeric_literal(arg2->atomic.literal)) {
+            return true;
+        }
+
+        double val1 = get_numeric_value(arg1->atomic.literal);
+        double val2 = get_numeric_value(arg2->atomic.literal);
+
+        if (strcmp(fn_name, "pow") == 0) {
+            if (val1 < 0.0 && val2 != floor(val2)) {
+                return true;
+            }
+            double result = pow(val1, val2);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "atan2") == 0) {
+            double result = atan2(val1, val2);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+
+        if (strcmp(fn_name, "fmod") == 0) {
+            double result = fmod(val1, val2);
+            Xvr_Literal lit = XVR_TO_FLOAT_LITERAL(result);
+            Xvr_freeASTNode((*nodeHandle)->binary.left);
+            Xvr_freeASTNode((*nodeHandle)->binary.right);
+            (*nodeHandle)->type = XVR_AST_NODE_LITERAL;
+            (*nodeHandle)->atomic.literal = lit;
+            return true;
+        }
+    }
+
+    return true;
+}
+
 static void dottify(
     Xvr_Parser* parser,
     Xvr_ASTNode** nodeHandle) {  // TODO: remove dot from the compiler entirely
@@ -1673,6 +2087,11 @@ static void parsePrecedence(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle,
         // optimise away the constants
         if (!parser->panic && !calcStaticBinaryArithmetic(parser, nodeHandle)) {
             return;
+        }
+
+        // optimize math function calls with constant arguments
+        if (!parser->panic) {
+            calcStaticMathFn(parser, nodeHandle);
         }
     }
 

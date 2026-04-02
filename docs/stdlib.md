@@ -229,12 +229,140 @@ The standard library is organized into modules:
 - `lib/std/std.mod` - Main std module
 - `lib/std/io.mod` - IO module
 
+## Math Module
+
+The `math` module provides comprehensive mathematical functions using LLVM intrinsics and libm fallback.
+
+> **Note:** For detailed documentation including architecture diagrams, implementation details, and IEEE 754 compliance, see [math_module.md](math_module.md).
+
+### Using the Math Module
+
+```xvr
+include math;
+include std;
+
+var result = math::sqrt(25.0);
+std::println("sqrt(25) = {}", result);  // sqrt(25) = 5.000000
+```
+
+### Basic Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `math::sqrt(x)` | Square root | `math::sqrt(16.0)` → 4.0 |
+| `math::pow(x, y)` | Power (x^y) | `math::pow(2.0, 3.0)` → 8.0 |
+| `math::abs(x)` | Absolute value | `math::abs(-42)` → 42 |
+
+### Trigonometric Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `math::sin(x)` | Sine | `math::sin(0.0)` → 0.0 |
+| `math::cos(x)` | Cosine | `math::cos(0.0)` → 1.0 |
+| `math::tan(x)` | Tangent | `math::tan(0.0)` → 0.0 |
+
+### Inverse Trigonometric Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `math::asin(x)` | Arc sine | `math::asin(0.5)` → 0.523599 |
+| `math::acos(x)` | Arc cosine | `math::acos(0.5)` → 1.047198 |
+| `math::atan(x)` | Arc tangent | `math::atan(1.0)` → 0.785398 |
+| `math::atan2(y, x)` | 2-arg arc tangent | `math::atan2(1.0, 1.0)` → 0.785398 |
+
+### Logarithmic Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `math::log(x)` | Natural log | `math::log(1.0)` → 0.0 |
+| `math::log10(x)` | Base-10 log | `math::log10(100.0)` → 2.0 |
+| `math::log2(x)` | Base-2 log | `math::log2(8.0)` → 3.0 |
+
+### Exponential Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `math::exp(x)` | e^x | `math::exp(1.0)` → 2.718282 |
+
+### Rounding Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `math::floor(x)` | Round down | `math::floor(3.7)` → 3.0 |
+| `math::ceil(x)` | Round up | `math::ceil(3.2)` → 4.0 |
+| `math::round(x)` | Round to nearest | `math::round(3.5)` → 4.0 |
+| `math::trunc(x)` | Truncate | `math::trunc(3.7)` → 3.0 |
+
+### Hyperbolic Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `math::sinh(x)` | Hyperbolic sine | `math::sinh(1.0)` → 1.175201 |
+| `math::cosh(x)` | Hyperbolic cosine | `math::cosh(0.0)` → 1.0 |
+| `math::tanh(x)` | Hyperbolic tangent | `math::tanh(0.0)` → 0.0 |
+
+### Inverse Hyperbolic Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `math::asinh(x)` | Inverse hyperbolic sine | `math::asinh(0.0)` → 0.0 |
+| `math::acosh(x)` | Inverse hyperbolic cosine | `math::acosh(1.0)` → 0.0 |
+| `math::atanh(x)` | Inverse hyperbolic tangent | `math::atanh(0.5)` → 0.549306 |
+
+### Modulo Functions
+
+| Function | Description | Example |
+|----------|-------------|---------|
+| `math::fmod(x, y)` | Floating-point remainder | `math::fmod(10.0, 3.0)` → 1.0 |
+
+### Mathematical Constants
+
+| Constant | Value | Description |
+|----------|-------|-------------|
+| `math::PI` | 3.141592653589793 | Pi (π) |
+| `math::E` | 2.718281828459045 | Euler's number (e) |
+
+### Constant Folding
+
+The math module supports compile-time constant folding for numeric literals:
+
+```xvr
+var x = math::sqrt(25.0);  // Computed at compile time: x = 5.0
+var y = math::sin(0.0);   // Computed at compile time: y = 0.0
+var z = math::log2(1024.0);  // Computed at compile time: z = 10.0
+```
+
+### Type Support
+
+All math functions support `float32` and `float64` types. The `abs` function also supports `int32` and `int64`:
+
+```xvr
+var i = math::abs(-42);      // int32: 42
+var f = math::abs(-3.14);    // float32: 3.14
+```
+
+### IEEE 754 Compliance
+
+Math functions follow IEEE 754 behavior for edge cases:
+
+```xvr
+math::sqrt(-1.0)  // Returns NaN at runtime
+math::log(0.0)     // Returns -Infinity
+math::log(-1.0)    // Returns NaN
+math::pow(0.0, -1.0)  // Returns Infinity
+```
+
+### Implementation Details
+
+- Uses LLVM intrinsics (`llvm.sqrt.*`, `llvm.sin.*`, etc.) for efficient code generation
+- Falls back to libm for functions without LLVM intrinsics (e.g., `sinh`, `cosh`, `tanh`)
+- Linked with `-lm` for mathematical library functions
+
 ## Future Modules
 
 Planned modules:
 - `std/io` - Input/Output operations
 - `std/string` - String manipulation
 - `std/memory` - Memory management
-- `std/math` - Mathematical functions
 - `std/fs` - File system operations
 - `std/collections` - Data structures
