@@ -202,8 +202,8 @@ void Xvr_helpCommandLine(int argc, const char* argv[]);
  * @brief XVR compiler and runtime version metadata
  */
 #define XVR_VERSION_MAJOR 0
-#define XVR_VERSION_MINOR 5
-#define XVR_VERSION_PATCH 13
+#define XVR_VERSION_MINOR 6
+#define XVR_VERSION_PATCH 14
 
 /**
  * @brief Private string duplicate implementation
