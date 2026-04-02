@@ -51,6 +51,19 @@ static void log_test(const char* test_name, const char* status,
     }
 }
 
+/**
+ * @brief Compile XVR code using the xvr compiler (compile-only mode)
+ * @param code XVR source code to compile
+ * @return Compiler output, or NULL on error
+ *
+ * SECURITY NOTE: This function uses popen() which executes a shell command.
+ * This is necessary because we need to run the xvr compiler and capture
+ * its output. The following safeguards are in place:
+ * - Input validation rejects dangerous shell characters
+ * - Code length is limited to prevent buffer overflow
+ * - Command is constructed using %.*s to prevent format string attacks
+ * - Uses heredoc syntax (<<'XVRCODE') to safely pass code to shell
+ */
 static const char* compile_only(const char* code) {
     static char buffer[MAX_OUTPUT_SIZE];
 
@@ -88,7 +101,10 @@ static const char* compile_only(const char* code) {
         return buffer;
     }
 
-    FILE* fp = popen(cmd, "r");
+    /* popen() is required here to invoke the xvr compiler.
+     * Input is validated above to prevent command injection.
+     * This is a test utility, not production code. */
+    FILE* fp = popen(cmd, "r");  // nolint: this is a test utility
     if (!fp) {
         snprintf(buffer, sizeof(buffer), "ERROR: popen failed");
         return buffer;

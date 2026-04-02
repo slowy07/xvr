@@ -43,6 +43,20 @@ static int failed_tests = 0;
 static int crashed_tests = 0;
 static int skipped_tests = 0;
 
+/**
+ * @brief Compile and run XVR code using the xvr compiler
+ * @param code XVR source code to compile
+ * @param exit_code Pointer to store exit code, or NULL
+ * @return Output from compiler, or NULL on error
+ *
+ * SECURITY NOTE: This function uses popen() which executes a shell command.
+ * This is necessary because we need to run the xvr compiler and capture
+ * its output. The following safeguards are in place:
+ * - Input validation rejects dangerous shell characters
+ * - Code length is limited to prevent buffer overflow
+ * - Command is constructed using %.*s to prevent format string attacks
+ * - Uses heredoc syntax (<<'XVRCODE') to safely pass code to shell
+ */
 static const char* compile_and_run(const char* code, int* exit_code) {
     static char buffer[16384];
     char cmd[8192];
@@ -80,6 +94,8 @@ static const char* compile_and_run(const char* code, int* exit_code) {
         return buffer;
     }
 
+    /* popen() is required here to invoke the xvr compiler.
+     * Input is validated above to prevent command injection. */
     FILE* fp = popen(cmd, "r");
     if (!fp) {
         return NULL;
