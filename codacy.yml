@@ -1,0 +1,15 @@
+# Codacy Configuration
+# https://docs.codacy.com/
+#
+# This file excludes fuzzer test files from Codacy analysis.
+# These files use popen() to invoke the xvr compiler for testing purposes.
+# 
+# IMPORTANT: Codacy does not support per-issue suppression in YAML.
+# The test files contain inline suppression comments:
+#   // codacy:excludeLine:CWE-78
+# to suppress the CWE-78 (Command Injection) warning.
+
+---
+exclude_paths:
+  # Exclude all fuzzer test files
+  - "fuzzer/**"

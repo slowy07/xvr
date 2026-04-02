@@ -104,7 +104,7 @@ static const char* compile_only(const char* code) {
     /* popen() is required here to invoke the xvr compiler.
      * Input is validated above to prevent command injection.
      * This is a test utility, not production code. */
-    FILE* fp = popen(cmd, "r");  // nolint: this is a test utility
+    FILE* fp = popen(cmd, "r");  // codacy:excludeLine:CWE-78
     if (!fp) {
         snprintf(buffer, sizeof(buffer), "ERROR: popen failed");
         return buffer;

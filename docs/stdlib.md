@@ -233,6 +233,8 @@ The standard library is organized into modules:
 
 The `math` module provides comprehensive mathematical functions using LLVM intrinsics and libm fallback.
 
+> **Note:** For detailed documentation including architecture diagrams, implementation details, and IEEE 754 compliance, see [math_module.md](math_module.md).
+
 ### Using the Math Module
 
 ```xvr
