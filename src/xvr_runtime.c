@@ -4,10 +4,12 @@
  * Provides runtime support functions for the XVR compiler.
  */
 
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h>
 
 #ifndef XVR_CC_ERROR
 #    define XVR_CC_ERROR "\x1b[31m"
@@ -91,18 +93,23 @@ static void xvr_array_help(const char* msg) {
     fprintf(stderr, XVR_CC_NOTICE "help: " XVR_CC_RESET "%s\n", msg);
 }
 
+static void xvr_array_error_and_raise(const char* msg) {
+    xvr_array_error(msg, 0);
+    raise(SIGABRT);
+}
+
 int xvr_array_get_int(void* arr_ptr, int index) {
     XvrArrayInt* arr = (XvrArrayInt*)arr_ptr;
     if (!arr) return 0;
     if (arr->size == 0) {
         xvr_array_error("cannot get from empty array", 0);
         xvr_array_help("array is empty, use insert() to add elements first");
-        exit(1);
+        raise(SIGABRT);
     }
     if (index < 0) {
         xvr_array_error("array index is negative", 0);
         xvr_array_help("use a non-negative index (0 or greater)");
-        exit(1);
+        raise(SIGABRT);
     }
     if (index >= arr->size) {
         xvr_array_error_idx(index, arr->size);
@@ -110,7 +117,7 @@ int xvr_array_get_int(void* arr_ptr, int index) {
                 XVR_CC_NOTICE "help: " XVR_CC_RESET
                               "valid index range is 0 to %d\n",
                 arr->size - 1);
-        exit(1);
+        raise(SIGABRT);
     }
     return arr->data[index];
 }
@@ -121,12 +128,12 @@ void xvr_array_set_int(void* arr_ptr, int index, int value) {
     if (arr->size == 0) {
         xvr_array_error("cannot set in empty array", 0);
         xvr_array_help("array is empty, use insert() to add elements first");
-        exit(1);
+        raise(SIGABRT);
     }
     if (index < 0) {
         xvr_array_error("array index is negative", 0);
         xvr_array_help("use a non-negative index (0 or greater)");
-        exit(1);
+        raise(SIGABRT);
     }
     if (index >= arr->size) {
         xvr_array_error_idx(index, arr->size);
@@ -134,7 +141,7 @@ void xvr_array_set_int(void* arr_ptr, int index, int value) {
                 XVR_CC_NOTICE "help: " XVR_CC_RESET
                               "valid index range is 0 to %d\n",
                 arr->size - 1);
-        exit(1);
+        raise(SIGABRT);
     }
     arr->data[index] = value;
 }
