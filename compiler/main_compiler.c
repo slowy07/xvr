@@ -1,4 +1,5 @@
 #include <llvm-c/Core.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -243,81 +244,78 @@ int main(int argc, const char* argv[]) {
 
     if (shouldRun) {
         const char* runtime_src = "/tmp/xvr_runtime.c";
-        const char* runtime_code =
-            "#include <stdio.h>\n"
-            "#include <stdarg.h>\n"
-            "#include <stdlib.h>\n"
-            "#include <string.h>\n"
-            "int printf(const char *fmt, ...) {\n"
-            "    va_list args;\n"
-            "    va_start(args, fmt);\n"
-            "    int result = vprintf(fmt, args);\n"
-            "    va_end(args);\n"
-            "    return result;\n"
-            "}\n"
-            "char* xvr_string_concat(const char* lhs, const char* rhs) {\n"
-            "    if (!lhs) lhs = \"\";\n"
-            "    if (!rhs) rhs = \"\";\n"
-            "    size_t lhs_len = strlen(lhs);\n"
-            "    size_t rhs_len = strlen(rhs);\n"
-            "    size_t total_len = lhs_len + rhs_len;\n"
-            "    char* result = (char*)malloc(total_len + 1);\n"
-            "    if (!result) return NULL;\n"
-            "    memcpy(result, lhs, lhs_len);\n"
-            "    memcpy(result + lhs_len, rhs, rhs_len);\n"
-            "    result[total_len] = '\\0';\n"
-            "    return result;\n"
-            "}\n"
-            "int xvr_str_len(const char* str) {\n"
-            "    if (!str) return 0;\n"
-            "    return (int)strlen(str);\n"
-            "}\n"
-            "int xvr_array_len(void* arr, int size) {\n"
-            "    return size;\n"
-            "}\n"
-            "typedef struct {\n"
-            "    void* buffer;\n"
-            "    int size;\n"
-            "    int capacity;\n"
-            "} XvrArray;\n"
-            "XvrArray* xvr_array_create_int(int initial_capacity) {\n"
-            "    XvrArray* arr = (XvrArray*)malloc(sizeof(XvrArray));\n"
-            "    if (!arr) return NULL;\n"
-            "    arr->size = 0;\n"
-            "    arr->capacity = initial_capacity > 0 ? initial_capacity : 1;\n"
-            "    arr->buffer = malloc(sizeof(int) * arr->capacity);\n"
-            "    if (!arr->buffer) { free(arr); return NULL; }\n"
-            "    return arr;\n"
-            "}\n"
-            "void xvr_array_insert_int(int** arr_ptr, int value) {\n"
-            "    if (!arr_ptr || !*arr_ptr) return;\n"
-            "    XvrArray* arr = (XvrArray*)*arr_ptr;\n"
-            "    if (arr->size >= arr->capacity) {\n"
-            "        int new_cap = arr->capacity * 2;\n"
-            "        arr->buffer = realloc(arr->buffer, sizeof(int) * "
-            "new_cap);\n"
-            "        arr->capacity = new_cap;\n"
-            "    }\n"
-            "    ((int*)arr->buffer)[arr->size++] = value;\n"
-            "}\n";
+        const char* build_dir = getenv("XVR_BUILD_DIR");
+        if (!build_dir) build_dir = "build";
+        char* libxvr_path;
+        asprintf(&libxvr_path, "%s/src/libxvr.a", build_dir);
 
-        FILE* rf = fopen(runtime_src, "w");
-        if (rf) {
-            fputs(runtime_code, rf);
-            fclose(rf);
+        FILE* rf = fopen(libxvr_path, "r");
+        int has_libxvr = (rf != NULL);
+        if (rf) fclose(rf);
+
+        const char* runtime_code;
+        if (has_libxvr) {
+            runtime_code = "";
+        } else {
+            runtime_code =
+                "#include <stdio.h>\n"
+                "#include <stdarg.h>\n"
+                "#include <stdlib.h>\n"
+                "#include <string.h>\n"
+                "int printf(const char *fmt, ...) {\n"
+                "    va_list args;\n"
+                "    va_start(args, fmt);\n"
+                "    int result = vprintf(fmt, args);\n"
+                "    va_end(args);\n"
+                "    return result;\n"
+                "}\n"
+                "char* xvr_string_concat(const char* lhs, const char* rhs) {\n"
+                "    if (!lhs) lhs = \"\";\n"
+                "    if (!rhs) rhs = \"\";\n"
+                "    size_t lhs_len = strlen(lhs);\n"
+                "    size_t rhs_len = strlen(rhs);\n"
+                "    size_t total_len = lhs_len + rhs_len;\n"
+                "    char* result = (char*)malloc(total_len + 1);\n"
+                "    if (!result) return NULL;\n"
+                "    memcpy(result, lhs, lhs_len);\n"
+                "    memcpy(result + lhs_len, rhs, rhs_len);\n"
+                "    result[total_len] = '\\0';\n"
+                "    return result;\n"
+                "}\n"
+                "int xvr_str_len(const char* str) {\n"
+                "    if (!str) return 0;\n"
+                "    return (int)strlen(str);\n"
+                "}\n";
+        }
+
+        if (strlen(runtime_code) > 0) {
+            FILE* rf2 = fopen(runtime_src, "w");
+            if (rf2) {
+                fputs(runtime_code, rf2);
+                fclose(rf2);
+            }
+
+            char* cmd2;
+            asprintf(&cmd2, "gcc -c %s -o /tmp/xvr_runtime.o 2>/dev/null",
+                     runtime_src);
+            system(cmd2);
+            free(cmd2);
         }
 
         char* cmd;
-        asprintf(&cmd, "gcc -c %s -o /tmp/xvr_runtime.o 2>/dev/null",
-                 runtime_src);
-        system(cmd);
-        free(cmd);
-
-        asprintf(&cmd,
-                 "gcc %s /tmp/xvr_runtime.o -o /tmp/xvr_bin -lm 2>/dev/null",
-                 outFile);
+        if (has_libxvr) {
+            asprintf(&cmd,
+                     "gcc %s -o /tmp/xvr_bin -lm -lpthread "
+                     "-lxml2 -lcurl %s 2>&1",
+                     outFile, libxvr_path);
+        } else {
+            asprintf(&cmd,
+                     "gcc %s -o /tmp/xvr_bin -lm -lpthread "
+                     "-lxml2 -lcurl 2>&1",
+                     outFile);
+        }
         int rc = system(cmd);
-        free(cmd);
+        free(libxvr_path);
 
         long bin_size = get_file_size("/tmp/xvr_bin");
 

@@ -31,50 +31,48 @@ int xvr_str_len(const char* str) {
     return (int)strlen(str);
 }
 
-int xvr_array_len(void* arr) { return 0; }
-
 typedef struct {
-    void* buffer;
+    int* data;
     int size;
     int capacity;
-} XvrArray;
+} XvrArrayInt;
 
-XvrArray* xvr_array_create_int(int initial_capacity) {
-    XvrArray* arr = (XvrArray*)malloc(sizeof(XvrArray));
+int xvr_array_len(void* arr_ptr) {
+    if (!arr_ptr) return 0;
+    XvrArrayInt* arr = (XvrArrayInt*)arr_ptr;
+    return arr->size;
+}
+
+XvrArrayInt* xvr_array_create_int() {
+    XvrArrayInt* arr = (XvrArrayInt*)malloc(sizeof(XvrArrayInt));
     if (!arr) return NULL;
-
+    arr->data = NULL;
     arr->size = 0;
-    arr->capacity = initial_capacity > 0 ? initial_capacity : 1;
-    arr->buffer = malloc(sizeof(int) * arr->capacity);
-    if (!arr->buffer) {
-        free(arr);
-        return NULL;
-    }
+    arr->capacity = 0;
     return arr;
 }
 
-void xvr_array_insert_int(XvrArray* arr, int value) {
-    if (!arr || !arr->buffer) return;
-
+void xvr_array_insert_int(void* arr_ptr, int value) {
+    XvrArrayInt* arr = (XvrArrayInt*)arr_ptr;
+    if (!arr) return;
     if (arr->size >= arr->capacity) {
-        int new_capacity = arr->capacity * 2;
-        void* new_buffer = realloc(arr->buffer, sizeof(int) * new_capacity);
-        if (!new_buffer) return;
-        arr->buffer = new_buffer;
+        int new_capacity = arr->capacity == 0 ? 4 : arr->capacity * 2;
+        int* new_data = (int*)realloc(arr->data, sizeof(int) * new_capacity);
+        if (!new_data) return;
+        arr->data = new_data;
         arr->capacity = new_capacity;
     }
-
-    ((int*)arr->buffer)[arr->size++] = value;
+    arr->data[arr->size++] = value;
 }
 
-int xvr_array_get_int(XvrArray* arr, int index) {
-    if (!arr || !arr->buffer) return 0;
-    if (index < 0 || index >= arr->size) return 0;
-    return ((int*)arr->buffer)[index];
+int xvr_array_get_int(void* arr_ptr, int index) {
+    XvrArrayInt* arr = (XvrArrayInt*)arr_ptr;
+    if (!arr || index < 0 || index >= arr->size) return 0;
+    return arr->data[index];
 }
 
-void xvr_array_destroy(XvrArray* arr) {
-    if (!arr) return;
-    if (arr->buffer) free(arr->buffer);
-    free(arr);
+void xvr_array_set_int(void* arr_ptr, int index, int value) {
+    XvrArrayInt* arr = (XvrArrayInt*)arr_ptr;
+    if (!arr || index < 0 || index >= arr->size) return;
+    arr->data[index] = value;
 }

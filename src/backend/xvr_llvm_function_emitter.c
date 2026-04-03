@@ -180,20 +180,6 @@ void Xvr_LLVMFunctionEmitterAddLocalVar(Xvr_LLVMFunctionEmitter* emitter,
     add_local_var(emitter, name, alloca, type, array_count);
 }
 
-Xvr_LiteralType Xvr_LLVMFunctionEmitterGetLocalVarType(
-    Xvr_LLVMFunctionEmitter* emitter, const char* name) {
-    if (!emitter || !name) {
-        return XVR_LITERAL_ANY;
-    }
-    for (int i = 0; i < emitter->local_var_count; i++) {
-        if (emitter->local_vars[i].name &&
-            strcmp(emitter->local_vars[i].name, name) == 0) {
-            return emitter->local_vars[i].type;
-        }
-    }
-    return XVR_LITERAL_ANY;
-}
-
 void Xvr_LLVMFunctionEmitterEnterScope(Xvr_LLVMFunctionEmitter* emitter) {
     if (!emitter) return;
     if (emitter->scope_depth < 32) {
