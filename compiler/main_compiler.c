@@ -246,11 +246,16 @@ int main(int argc, const char* argv[]) {
         char* libxvr_path = NULL;
         int has_libxvr = 0;
 
-        const char* build_dir = getenv("XVR_BUILD_DIR");
-        if (!build_dir) build_dir = "build";
+        static const char* build_dir =
+            "/home/arfyslowy/Documents/project/xvrlang/xvr/build";
 
-        const char* search_paths[] = {build_dir, "build",    ".",
-                                      "..",      "../build", NULL};
+        const char* search_paths[] = {
+            build_dir,
+            "/home/arfyslowy/Documents/project/xvrlang/xvr/build",
+            ".",
+            "..",
+            "/home/arfyslowy/Documents/project/xvrlang/../build",
+            NULL};
 
         for (int i = 0; search_paths[i] != NULL; i++) {
             char* test_path;
@@ -282,17 +287,11 @@ int main(int argc, const char* argv[]) {
         if (libxvr_path) free(libxvr_path);
 
         long bin_size = get_file_size("/tmp/xvr_bin");
-
-        if (Xvr_commandLine.showTiming) {
-            const char* target = LLVMGetDefaultTargetTriple();
-            printf("\n");
-            printf("  " XVR_CC_NOTICE "Target:" XVR_CC_RESET " %s\n", target);
-            printf("  " XVR_CC_NOTICE "Size:" XVR_CC_RESET " %.1f KB\n",
-                   bin_size / 1024.0);
-            printf("  " XVR_CC_NOTICE "Time:" XVR_CC_RESET " %.2f ms\n",
-                   total_time);
-            printf("\n");
-            LLVMDisposeMessage((char*)target);
+        if (rc != 0) {
+            fprintf(stderr, "gcc failed: rc=%d\n", rc);
+        } else if (bin_size <= 0) {
+            fprintf(stderr, "binary not created\n");
+            rc = 1;
         }
 
         if (rc == 0) {

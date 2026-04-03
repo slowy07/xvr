@@ -4216,7 +4216,13 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
 
             /* Check type literal annotation for array type */
             if (varDecl->typeLiteral.type == XVR_LITERAL_TYPE) {
-                varType = XVR_AS_TYPE(varDecl->typeLiteral).typeOf;
+                Xvr_LiteralType typeOf =
+                    XVR_AS_TYPE(varDecl->typeLiteral).typeOf;
+                if (typeOf == XVR_LITERAL_ARRAY) {
+                    varType = XVR_LITERAL_ARRAY;
+                } else {
+                    varType = typeOf;
+                }
             }
 
             /* Handle initialization expression if present */
@@ -4303,11 +4309,11 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
             }
 
             LLVMTypeRef alloc_type;
-            if (init_value && varType != XVR_LITERAL_ARRAY) {
-                alloc_type = LLVMTypeOf(init_value);
-            } else if (varType == XVR_LITERAL_ARRAY) {
+            if (varType == XVR_LITERAL_ARRAY) {
                 alloc_type =
                     LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx), 0);
+            } else if (init_value) {
+                alloc_type = LLVMTypeOf(init_value);
             } else {
                 alloc_type = LLVMInt32TypeInContext(llvm_ctx);
             }
