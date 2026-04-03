@@ -5,6 +5,7 @@
  */
 
 #include <stdint.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
@@ -65,14 +66,35 @@ void xvr_array_insert_int(void* arr_ptr, int value) {
     arr->data[arr->size++] = value;
 }
 
+static void xvr_array_error(const char* func, int index, int size) {
+    if (size == 0) {
+        fprintf(stderr, "error: cannot %s from empty array\n", func);
+    } else if (index < 0) {
+        fprintf(stderr, "error: array index %d is negative\n", index);
+        fprintf(stderr, "help: use a non-negative index (0 or greater)\n");
+    } else {
+        fprintf(stderr, "error: array index %d out of bounds (size: %d)\n",
+                index, size);
+        fprintf(stderr, "help: valid index range is 0 to %d\n", size - 1);
+    }
+}
+
 int xvr_array_get_int(void* arr_ptr, int index) {
     XvrArrayInt* arr = (XvrArrayInt*)arr_ptr;
-    if (!arr || index < 0 || index >= arr->size) return 0;
+    if (!arr) return 0;
+    if (index < 0 || index >= arr->size) {
+        xvr_array_error("get", index, arr ? arr->size : 0);
+        return 0;
+    }
     return arr->data[index];
 }
 
 void xvr_array_set_int(void* arr_ptr, int index, int value) {
     XvrArrayInt* arr = (XvrArrayInt*)arr_ptr;
-    if (!arr || index < 0 || index >= arr->size) return;
+    if (!arr) return;
+    if (index < 0 || index >= arr->size) {
+        xvr_array_error("set", index, arr->size);
+        return;
+    }
     arr->data[index] = value;
 }

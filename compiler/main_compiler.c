@@ -243,67 +243,30 @@ int main(int argc, const char* argv[]) {
     double total_time = get_time_ms() - start_time;
 
     if (shouldRun) {
-        const char* runtime_src = "/tmp/xvr_runtime.c";
+        char* libxvr_path = NULL;
+        int has_libxvr = 0;
+
         const char* build_dir = getenv("XVR_BUILD_DIR");
         if (!build_dir) build_dir = "build";
-        char* libxvr_path;
-        asprintf(&libxvr_path, "%s/src/libxvr.a", build_dir);
 
-        FILE* rf = fopen(libxvr_path, "r");
-        int has_libxvr = (rf != NULL);
-        if (rf) fclose(rf);
+        const char* search_paths[] = {build_dir, "build",    ".",
+                                      "..",      "../build", NULL};
 
-        const char* runtime_code;
-        if (has_libxvr) {
-            runtime_code = "";
-        } else {
-            runtime_code =
-                "#include <stdio.h>\n"
-                "#include <stdarg.h>\n"
-                "#include <stdlib.h>\n"
-                "#include <string.h>\n"
-                "int printf(const char *fmt, ...) {\n"
-                "    va_list args;\n"
-                "    va_start(args, fmt);\n"
-                "    int result = vprintf(fmt, args);\n"
-                "    va_end(args);\n"
-                "    return result;\n"
-                "}\n"
-                "char* xvr_string_concat(const char* lhs, const char* rhs) {\n"
-                "    if (!lhs) lhs = \"\";\n"
-                "    if (!rhs) rhs = \"\";\n"
-                "    size_t lhs_len = strlen(lhs);\n"
-                "    size_t rhs_len = strlen(rhs);\n"
-                "    size_t total_len = lhs_len + rhs_len;\n"
-                "    char* result = (char*)malloc(total_len + 1);\n"
-                "    if (!result) return NULL;\n"
-                "    memcpy(result, lhs, lhs_len);\n"
-                "    memcpy(result + lhs_len, rhs, rhs_len);\n"
-                "    result[total_len] = '\\0';\n"
-                "    return result;\n"
-                "}\n"
-                "int xvr_str_len(const char* str) {\n"
-                "    if (!str) return 0;\n"
-                "    return (int)strlen(str);\n"
-                "}\n";
-        }
-
-        if (runtime_code && *runtime_code != '\0') {
-            FILE* rf2 = fopen(runtime_src, "w");
-            if (rf2) {
-                fputs(runtime_code, rf2);
-                fclose(rf2);
+        for (int i = 0; search_paths[i] != NULL; i++) {
+            char* test_path;
+            asprintf(&test_path, "%s/src/libxvr.a", search_paths[i]);
+            FILE* rf = fopen(test_path, "r");
+            if (rf) {
+                fclose(rf);
+                libxvr_path = test_path;
+                has_libxvr = 1;
+                break;
             }
-
-            char* cmd2;
-            asprintf(&cmd2, "gcc -c %s -o /tmp/xvr_runtime.o 2>/dev/null",
-                     runtime_src);
-            system(cmd2);
-            free(cmd2);
+            free(test_path);
         }
 
         char* cmd;
-        if (has_libxvr) {
+        if (has_libxvr && libxvr_path) {
             asprintf(&cmd,
                      "gcc %s -o /tmp/xvr_bin -lm -lpthread "
                      "-lxml2 -lcurl %s 2>&1",
@@ -314,8 +277,9 @@ int main(int argc, const char* argv[]) {
                      "-lxml2 -lcurl 2>&1",
                      outFile);
         }
+
         int rc = system(cmd);
-        free(libxvr_path);
+        if (libxvr_path) free(libxvr_path);
 
         long bin_size = get_file_size("/tmp/xvr_bin");
 
@@ -335,8 +299,6 @@ int main(int argc, const char* argv[]) {
             system("/tmp/xvr_bin");
         }
 
-        unlink(runtime_src);
-        unlink("/tmp/xvr_runtime.o");
         unlink(outFile);
         unlink("/tmp/xvr_bin");
     } else {

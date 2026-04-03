@@ -4269,6 +4269,37 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
                 LLVMValueRef array_ptr = LLVMBuildCall2(
                     llvm_builder, fn_type, callee, NULL, 0, "array_create");
                 init_value = array_ptr;
+
+                if (array_count > 0 && varDecl->expression &&
+                    varDecl->expression->type == XVR_AST_NODE_COMPOUND) {
+                    Xvr_NodeCompound* comp = &varDecl->expression->compound;
+                    LLVMValueRef insert_callee =
+                        LLVMGetNamedFunction(module, "xvr_array_insert_int");
+                    LLVMTypeRef insert_fn_type = NULL;
+                    if (!insert_callee) {
+                        LLVMTypeRef param_types[2] = {
+                            LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx),
+                                            0),
+                            LLVMInt32TypeInContext(llvm_ctx)};
+                        insert_fn_type = LLVMFunctionType(
+                            LLVMVoidTypeInContext(llvm_ctx), param_types, 2, 0);
+                        insert_callee = LLVMAddFunction(
+                            module, "xvr_array_insert_int", insert_fn_type);
+                    } else {
+                        insert_fn_type =
+                            LLVMGetElementType(LLVMTypeOf(insert_callee));
+                    }
+
+                    for (int i = 0; i < comp->count && i < array_count; i++) {
+                        LLVMValueRef elem_val = Xvr_LLVMExpressionEmitterEmit(
+                            emitter, &comp->nodes[i]);
+                        if (elem_val) {
+                            LLVMValueRef args[2] = {array_ptr, elem_val};
+                            LLVMBuildCall2(llvm_builder, insert_fn_type,
+                                           insert_callee, args, 2, "");
+                        }
+                    }
+                }
             }
 
             LLVMTypeRef alloc_type;
