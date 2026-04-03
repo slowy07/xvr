@@ -32,6 +32,10 @@ while (k < len(names)) {
 }
 std::print("\n");
 
+std::print("=== Test direct access ===\n");
+std::print("names[0] = {}\n", names[0]);
+std::print("names[1] = {}\n", names[1]);
+
 std::print("=== Test nested loops ===\n");
 
 var matrix: [int] = [];
