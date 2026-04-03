@@ -105,6 +105,9 @@ void Xvr_LLVMFunctionEmitterAddLocalVar(Xvr_LLVMFunctionEmitter* emitter,
                                         const char* name, LLVMValueRef alloca,
                                         Xvr_LiteralType type, int array_count);
 
+Xvr_LiteralType Xvr_LLVMFunctionEmitterGetLocalVarType(
+    Xvr_LLVMFunctionEmitter* emitter, const char* name);
+
 /**
  * @brief Enter a new scope (saves current variable count)
  * @param emitter Function emitter
