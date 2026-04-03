@@ -97,12 +97,12 @@ int xvr_array_get_int(void* arr_ptr, int index) {
     if (arr->size == 0) {
         xvr_array_error("cannot get from empty array", 0);
         xvr_array_help("array is empty, use insert() to add elements first");
-        return 0;
+        exit(1);
     }
     if (index < 0) {
         xvr_array_error("array index is negative", 0);
         xvr_array_help("use a non-negative index (0 or greater)");
-        return 0;
+        exit(1);
     }
     if (index >= arr->size) {
         xvr_array_error_idx(index, arr->size);
@@ -110,7 +110,7 @@ int xvr_array_get_int(void* arr_ptr, int index) {
                 XVR_CC_NOTICE "help: " XVR_CC_RESET
                               "valid index range is 0 to %d\n",
                 arr->size - 1);
-        return 0;
+        exit(1);
     }
     return arr->data[index];
 }
@@ -121,12 +121,12 @@ void xvr_array_set_int(void* arr_ptr, int index, int value) {
     if (arr->size == 0) {
         xvr_array_error("cannot set in empty array", 0);
         xvr_array_help("array is empty, use insert() to add elements first");
-        return;
+        exit(1);
     }
     if (index < 0) {
         xvr_array_error("array index is negative", 0);
         xvr_array_help("use a non-negative index (0 or greater)");
-        return;
+        exit(1);
     }
     if (index >= arr->size) {
         xvr_array_error_idx(index, arr->size);
@@ -134,7 +134,7 @@ void xvr_array_set_int(void* arr_ptr, int index, int value) {
                 XVR_CC_NOTICE "help: " XVR_CC_RESET
                               "valid index range is 0 to %d\n",
                 arr->size - 1);
-        return;
+        exit(1);
     }
     arr->data[index] = value;
 }
