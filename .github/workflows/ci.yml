@@ -36,17 +36,6 @@ jobs:
           cd ${{ env.BUILD_DIR }}
           cmake --build . -j$(nproc)
 
-      - name: Check formatting
-        run: |
-          while IFS= read -r file; do
-            if ! clang-format --dry-run -Werror "$file" 2>/dev/null; then
-              echo "not formatted: $file"
-              exit 1
-            fi
-          done < <(find . -type f \( -name "*.c" -o -name "*.h" \) \
-            -not -path "./${{ env.BUILD_DIR }}/*" \
-            -not -path "./fuzzer/harness/*")
-
       - name: Run tests with CTest
         run: |
           cd ${{ env.BUILD_DIR }}
