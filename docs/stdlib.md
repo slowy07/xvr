@@ -23,25 +23,15 @@ XVR has a module system that allows you to include external code:
 When you use `include std;`, the compiler resolves the module path:
 
 ```
-┌──────────────────────────────────────────────────────────────────────┐
-│                      Module Resolution Flow                           │
-└──────────────────────────────────────────────────────────────────────┘
-
-  1. Parser encounters:  include std;
-                         │
-                         ▼
-  2. ModuleResolver.resolve("std")
-                         │
-                         ▼
-  3. Construct path:  {stdlib_path}/std.xvr
-                     Default: ./lib/std/std.xvr
-                         │
-                         ▼
-  4. LoadModule() reads and parses the .xvr file
-                         │
-                         ▼
-  5. AST nodes merged into main compilation
+  include std; --> Parser --> ModuleResolver --> LoadModule --> Merge
 ```
+
+Steps:
+1. Parser encounters: include std;
+2. ModuleResolver.resolve("std")
+3. Construct path: {stdlib_path}/std.xvr
+4. LoadModule() reads and parses the .xvr file
+5. AST nodes merged into main compilation
 
 ### Module Loading
 
@@ -181,6 +171,112 @@ Example error:
 std::println(42);              // error: println: first argument must be a string
 std::println("{} {}", 42);      // error: println: format placeholder count (2) does not match argument count (1)
 ```
+
+## Arrays
+
+XVR supports dynamic arrays with `insert()` method and indexing.
+
+### Type Support
+
+| Type Annotation | Element Type | insert() | Access | Status |
+|-----------------|-------------|---------|--------|--------|
+| `[int]` | int32 | Works | Works | Supported |
+| `[float]` | float32 | Coerces to int | Returns int | Not implemented |
+| `[string]` | string | Pointer garbage | Pointer garbage | Not implemented |
+| `[float64]` | float64 | Planned | Planned | Future |
+
+> **Warning**: Only use `[int]` arrays. Other types have undefined behavior.
+
+### Declaring Arrays
+
+Use `: [int]` type annotation for dynamic integer arrays:
+
+```xvr
+var numbers: [int] = [];        // Empty dynamic int array
+var data: [int] = [1, 2, 3];    // Array with initial elements
+```
+
+### insert(value)
+
+Add integer elements to an array:
+
+```xvr
+var data: [int] = [];
+
+data.insert(1);    // Add 1 to array
+data.insert(2);    // Add 2 to array
+data.insert(3);    // Add 3 to array
+```
+
+### Accessing Elements
+
+Access elements by index (0-based):
+
+```xvr
+var data: [int] = [10, 20, 30];
+
+std::println("{}", data[0]);  // 10
+std::println("{}", data[1]);  // 20
+std::println("{}", data[2]);  // 30
+```
+
+### len(array)
+
+Get array length:
+
+```xvr
+var data: [int] = [1, 2, 3];
+var length = len(data);  // 3
+```
+
+### Array with Loops
+
+Arrays work with for and while loops:
+
+```xvr
+// Using for loop
+var data: [int] = [];
+for (var i = 1; i <= 5; i++) {
+    data.insert(i);
+}
+
+for (var j = 0; j < len(data); j++) {
+    std::print("{} ", data[j]);  // 1 2 3 4 5
+}
+
+// Using while loop
+var data: [int] = [];
+var count = 0;
+while (count < 3) {
+    data.insert(count * 10);
+    count += 1;
+}
+
+std::println("{}", data[0]);  // 0
+std::println("{}", data[1]);  // 10
+std::println("{}", data[2]);  // 20
+```
+
+### Out of Bounds Error
+
+Accessing invalid indices produces a runtime error:
+
+```xvr
+var data: [int] = [1, 2, 3];
+
+data[10];  // error: array index 10 out of bounds (size: 3)
+           // help: valid index range is 0 to 2
+```
+
+### Supported Operations (int arrays)
+
+| Operation | Description | Example |
+|----------|-------------|---------|
+| `var arr: [int] = []` | Declare empty int array | Creates empty dynamic array |
+| `arr.insert(x)` | Add int element | `data.insert(5)` adds 5 |
+| `arr[i]` | Access element | `data[0]` gets first element |
+| `arr[i] = x` | Set element | `data[0] = 5` sets first element |
+| `len(arr)` | Get length | Returns element count |
 
 ### std::max
 

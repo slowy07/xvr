@@ -10,16 +10,13 @@ The XVR language uses an AOT (Ahead-of-Time) compiler that generates native exec
 │  (Source)   │    │  (Tokens)   │    │  (Errors)   │    │   (Tree)    │    │     IR      │
 └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘    └─────────────┘
                                                                                      │
-                                                                                     ▼
                                                                         ┌─────────────────┐
                                                                         │  LLVM Optimizer │
                                                                         │   (Optional)    │
                                                                         └─────────────────┘
                                                                                      │
-                                                                                     ▼
        ┌──────────────────────────────────────────────────────────────────────────────────┐
        │                                                                                  │
-       ▼                                                                                  ▼
 ┌─────────────┐                                                          ┌─────────────────┐
 │  Executable │◀─── Link ───┐                                   ┌───────▶│    Object File  │
 │   (a.out)   │             │                                   │        │    (.o/.obj)    │
@@ -64,17 +61,15 @@ The XVR compiler translates `.xvr` source files into:
 │  │                                        └─────────────────────────────────────┘ │     │
 │  └─────────────────────────────────────────────────────────────────────────────────┘    │
 │                                         │                                               │
-│                                         ▼                                               │
 │  ┌─────────────────────────────────────────────────────────────────────────────────────────┐
 │  │                                    LLVM Backend                                      │
-│  │                                                                                         │
-│  │  ┌─────────────────────────────────────────┐                                          │
+│  │                                                                                        │
+│  │  ┌─────────────────────────────────────────┐                                           │
 │  │  │         xvr_llvm_codegen.c               │                                          │
 │  │  │              (Coordinator)               │                                          │
-│  │  └──────────────────┬──────────────────────┘                                          │
-│  │                     │                                                                │
-│  │    ┌────────────────┼────────────────┐                                                │
-│  │    ▼                ▼                ▼                                                │
+│  │  └──────────────────┬──────────────────────┘                                           │
+│  │                     │                                                                  │
+│  │    ┌────────────────┼────────────────┐                                                 │
 │  │ ┌──────────┐ ┌──────────┐ ┌──────────────┐                                             │
 │  │ │Context   │ │Type      │ │Module        │                                             │
 │  │ │Manager   │ │Mapper    │ │Manager       │                                             │
@@ -109,13 +104,11 @@ The XVR compiler translates `.xvr` source files into:
   │ var x=42 │         │ codegen.c    │       │ alloca i32│
   └──────────┘         └──────────────┘       └───────────┘
                                   │
-                                  ▼
                          ┌──────────────────┐
                          │ xvr_llvm_type_   │
                          │ mapper.c         │────────▶ i32, i8*, float, etc.
                          └──────────────────┘
                                   │
-                                  ▼
                          ┌──────────────────┐
                          │ xvr_llvm_ir_     │
                          │ builder.c        │────────▶ LLVMBuildAlloca, LLVMBuildStore
@@ -140,7 +133,6 @@ Module Loading Flow:
   │ NODE_IMPORT│         │ Resolve(module)  │       │ file       │
   └────────────┘         └──────────────────┘       └─────┬──────┘
                                                           │
-                                                          ▼
                                                ┌──────────────────┐
                                                │ Merge AST into   │
                                                │ main program     │
@@ -400,7 +392,7 @@ XVR implements a builtin function registry for compiler-level functions:
 
 ```
 ┌────────────────────────────────────────────────────────────────────────────────────────┐
-│                          BuiltinRegistry & ModuleResolver                               │
+│                          BuiltinRegistry & ModuleResolver                              │
 └────────────────────────────────────────────────────────────────────────────────────────┘
 
                          ┌─────────────────────┐
@@ -410,7 +402,6 @@ XVR implements a builtin function registry for compiler-level functions:
                          │ len(x)              │    │
                          │ panic(msg)          │    │
                          └─────────────────────┘    │
-                                                   ▼
                                       ┌─────────────────────┐
                                       │  Codegen Handler    │
                                       │  (callback for each)│
@@ -424,13 +415,11 @@ XVR implements a builtin function registry for compiler-level functions:
                                 │
            ┌────────────────────┼────────────────────┐
            │                    │                    │
-           ▼                    ▼                    ▼
     ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
     │ include std; │    │ include io;  │    │include math; │
     │   (import)   │    │   (import)   │    │   (import)   │
     └──────┬───────┘    └──────┬───────┘    └──────┬───────┘
            │                   │                   │
-           ▼                   ▼                   ▼
     ┌──────────────┐    ┌──────────────┐    ┌──────────────┐
     │ lib/std/io   │    │ lib/std/io   │    │ lib/std/math │
     │   .xvr      │    │   .xvr       │    │   .xvr       │
@@ -447,17 +436,13 @@ include std;            ─────▶  ModuleResolver
    │                          Resolve("std")
    │                          └─ path: ./lib/std/std.xvr
    │                                │
-   │                                ▼
    │                          read_file()  ─────────────────────▶ ./lib/std/std.xvr
    │                                │
-   │                                ▼ 
    │                          parse_to_ast()
    │                                │
-   │                                ▼ 
    │                          merge AST nodes into 
    │                          main compilation
    │                                │
-   ▼                                ▼
 ┌──────────────┐              ┌──────────────┐
 │ std::println │    ─────▶    │ Compiled     │
 │   "Hello"    │              │   Output     │
@@ -508,13 +493,11 @@ Format String Parsing Flow:
 │  "Hello {}!"    │  (input)
 └────────┬────────┘
          │
-         ▼
 ┌─────────────────────────────────────┐
 │  Parse for {} placeholders          │
 │  Count arguments                    │
 └────────┬────────────────────────────┘
          │
-         ▼
 ┌─────────────────────────────────────┐
 │  Infer types from LLVM values       │
 │  integer → %d                       │
@@ -522,7 +505,6 @@ Format String Parsing Flow:
 │  string  → %s                       │
 └────────┬────────────────────────────┘
          │
-         ▼
 ┌─────────────────┐
 │  "Hello %s!"    │  (printf format)
 └─────────────────┘
