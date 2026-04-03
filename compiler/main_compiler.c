@@ -288,7 +288,7 @@ int main(int argc, const char* argv[]) {
                 "}\n";
         }
 
-        if (strlen(runtime_code) > 0) {
+        if (runtime_code && strlen(runtime_code) > 0) {
             FILE* rf2 = fopen(runtime_src, "w");
             if (rf2) {
                 fputs(runtime_code, rf2);

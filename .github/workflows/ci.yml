@@ -20,10 +20,10 @@ jobs:
 
       - name: Install LLVM ${{ env.LLVM_VERSION }}
         run: |
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null > /dev/null
           echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt-get update
-          sudo apt-get install -y llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev clang-format
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev clang-format
 
       - name: Configure CMake
         run: |
@@ -68,10 +68,10 @@ jobs:
 
       - name: Install LLVM ${{ env.LLVM_VERSION }}
         run: |
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
           echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt-get update
-          sudo apt-get install -y llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
 
       - name: Configure and build Release
         run: |
@@ -93,10 +93,10 @@ jobs:
 
       - name: Install LLVM ${{ env.LLVM_VERSION }}
         run: |
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
           echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt-get update
-          sudo apt-get install -y llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
 
       - name: Build with AddressSanitizer
         run: |
@@ -119,10 +119,10 @@ jobs:
 
       - name: Install LLVM ${{ env.LLVM_VERSION }}
         run: |
-          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
           echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
-          sudo apt-get update
-          sudo apt-get install -y llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
 
       - name: Build static only
         run: |
