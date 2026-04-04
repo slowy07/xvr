@@ -45,20 +45,16 @@ void xvr_array_insert_int(void* arr_ptr, int value) {
 }
 
 static void xvr_array_error(const char* msg) {
-    fprintf(stderr, XVR_CC_ERROR "error: " XVR_CC_RESET);
-    fprintf(stderr, "%s\n", msg);
+    fprintf(stderr, "%s%s%s%s\n", XVR_CC_ERROR, "error: ", XVR_CC_RESET, msg);
 }
 
 static void xvr_array_error_idx(int idx, int size) {
-    fprintf(stderr, XVR_CC_ERROR "error: " XVR_CC_RESET "array index ");
-    fprintf(stderr, "%d", idx);
-    fprintf(stderr, " out of bounds (size: ");
-    fprintf(stderr, "%d", size);
-    fprintf(stderr, ")\n");
+    fprintf(stderr, "%s%s%sarray index %d out of bounds (size: %d)\n",
+            XVR_CC_ERROR, "error: ", XVR_CC_RESET, idx, size);
 }
 
 static void xvr_array_help(const char* msg) {
-    fprintf(stderr, XVR_CC_NOTICE "help: " XVR_CC_RESET "%s\n", msg);
+    fprintf(stderr, "%s%s%s%s\n", XVR_CC_NOTICE, "help: ", XVR_CC_RESET, msg);
 }
 
 int xvr_array_len(void* arr_ptr) {
@@ -82,11 +78,9 @@ int xvr_array_get_int(void* arr_ptr, int index) {
     }
     if (index >= arr->size) {
         xvr_array_error_idx(index, arr->size);
-        fprintf(stderr, XVR_CC_NOTICE "help: " XVR_CC_RESET
-                                      "valid index range is 0 to ");
         int upper = arr->size - 1;
-        fprintf(stderr, "%d", upper);
-        fprintf(stderr, "\n");
+        fprintf(stderr, "%s%s%svalid index range is 0 to %d\n", XVR_CC_NOTICE,
+                "help: ", XVR_CC_RESET, upper);
         raise(SIGABRT);
     }
     return arr->data[index];
@@ -107,11 +101,9 @@ void xvr_array_set_int(void* arr_ptr, int index, int value) {
     }
     if (index >= arr->size) {
         xvr_array_error_idx(index, arr->size);
-        fprintf(stderr, XVR_CC_NOTICE "help: " XVR_CC_RESET
-                                      "valid index range is 0 to ");
         int upper = arr->size - 1;
-        fprintf(stderr, "%d", upper);
-        fprintf(stderr, "\n");
+        fprintf(stderr, "%s%s%svalid index range is 0 to %d\n", XVR_CC_NOTICE,
+                "help: ", XVR_CC_RESET, upper);
         raise(SIGABRT);
     }
     arr->data[index] = value;
