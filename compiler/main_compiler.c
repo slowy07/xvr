@@ -42,8 +42,8 @@ static void print_error(const char* filename, int line, const char* error_type,
 
 static void print_note(const char* filename, int line, const char* message) {
     if (filename && line > 0) {
-        fprintf(stderr, XVR_CC_NOTICE "  --> " XVR_CC_RESET "%s:%d\n", filename,
-                line);
+        static const char fmt1[] = "%s%s%s\n";
+        fprintf(stderr, fmt1, XVR_CC_NOTICE, "  --> " XVR_CC_RESET, "");
         fprintf(stderr, XVR_CC_NOTICE "   |\n" XVR_CC_RESET);
     }
 }
@@ -52,12 +52,16 @@ static void print_compiler_error(const char* filename, int line,
                                  const char* error_type, const char* message,
                                  const char* hint) {
     fprintf(stderr, "\n");
-    fprintf(stderr, XVR_CC_FONT_RED "error" XVR_CC_RESET ": %s\n", message);
+    static const char fmt_err[] = "%s%s%s: %s\n";
+    fprintf(stderr, fmt_err, XVR_CC_FONT_RED, "error" XVR_CC_RESET, "",
+            message);
     if (filename && line > 0) {
-        fprintf(stderr, "  --> %s:%d\n", filename, line);
+        static const char fmt_loc[] = "  --> %s:%d\n";
+        fprintf(stderr, fmt_loc, filename, line);
     }
     if (hint) {
-        fprintf(stderr, XVR_CC_NOTICE "help: " XVR_CC_RESET "%s\n", hint);
+        static const char fmt_hint[] = "%s%s%s: %s\n";
+        fprintf(stderr, fmt_hint, XVR_CC_NOTICE, "help" XVR_CC_RESET, "", hint);
     }
     fprintf(stderr, "\n");
 }
@@ -236,7 +240,8 @@ int main(int argc, const char* argv[]) {
                 static const char msg[] =
                     "LLVM optimization warning: optimization pass failed, "
                     "continuing\n";
-                fprintf(stderr, XVR_CC_NOTICE "%s" XVR_CC_RESET, msg);
+                static const char fmt[] = "%s%s%s\n";
+                fprintf(stderr, fmt, XVR_CC_NOTICE, msg, XVR_CC_RESET);
             }
         }
     }
