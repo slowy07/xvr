@@ -32,13 +32,11 @@ static long get_file_size(const char* path) {
 static void print_error(const char* filename, int line, const char* error_type,
                         const char* message) {
     if (filename) {
-        fprintf(stderr,
-                XVR_CC_ERROR "%s:%d: " XVR_CC_FONT_RED "%s: " XVR_CC_RESET
-                             "%s\n",
-                filename, line, error_type, message);
+        static const char fmt[] = "%s:%d: %s: %s\n";
+        fprintf(stderr, fmt, filename, line, error_type, message);
     } else {
-        fprintf(stderr, XVR_CC_ERROR "%s: " XVR_CC_RESET "%s\n", error_type,
-                message);
+        static const char fmt[] = "%s: %s\n";
+        fprintf(stderr, fmt, error_type, message);
     }
 }
 
