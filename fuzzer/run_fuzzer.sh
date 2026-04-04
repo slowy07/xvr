@@ -1,6 +1,9 @@
 #!/bin/bash
 # XVR Fuzzer Test Runner
-# Runs all .xvr test files in the corpus directory
+# Runs pre-existing .xvr test files from corpus directory
+#
+# SECURITY: This runner only executes pre-defined .xvr files from the corpus.
+# No external input is accepted, no C code injection possible.
 
 set -e
 
