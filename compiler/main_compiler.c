@@ -246,24 +246,7 @@ int main(int argc, const char* argv[]) {
         char* libxvr_path = NULL;
         int has_libxvr = 0;
 
-        char exe_path[4096] = {0};
-        ssize_t len =
-            readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
-        /*
-         * Note: TOCTOU concern is mitigated because:
-         * 1. /proc/self/exe is a stable kernel symlink
-         * 2. We only read the path, not use it for security decisions
-         * 3. The search fallback includes relative paths as backup
-         */
-        if (len > 0) {
-            exe_path[len] = '\0';
-            char* lastSlash = strrchr(exe_path, '/');
-            if (lastSlash) {
-                *lastSlash = '\0';
-            }
-        }
-
-        char search_paths[16][4096];
+        char search_paths[24][4096];
         int path_count = 0;
 
         const char* env_build = getenv("XVR_BUILD_DIR");
@@ -272,25 +255,36 @@ int main(int argc, const char* argv[]) {
                      env_build);
         }
 
-        if (exe_path[0]) {
-            snprintf(search_paths[path_count++], sizeof(search_paths[0]),
-                     "%s/build", exe_path);
-            char* p = strrchr(exe_path, '/');
-            if (p) {
-                *p = '\0';
-                snprintf(search_paths[path_count++], sizeof(search_paths[0]),
-                         "%s/build", exe_path);
-            }
+        const char* home = getenv("HOME");
+        if (home) {
+            char path[4096];
+            snprintf(path, sizeof(path),
+                     "%s/Documents/project/xvrlang/xvr/build", home);
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]), "%s",
+                     path);
+            snprintf(path, sizeof(path), "%s/project/xvrlang/xvr/build", home);
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]), "%s",
+                     path);
         }
 
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                 "/home/arfyslowy/Documents/project/xvrlang/xvr/build");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                 "/home/arfyslowy/project/xvrlang/xvr/build");
         snprintf(search_paths[path_count++], sizeof(search_paths[0]), "build");
         snprintf(search_paths[path_count++], sizeof(search_paths[0]),
                  "../build");
         snprintf(search_paths[path_count++], sizeof(search_paths[0]),
                  "./build");
-        if (exe_path[0]) {
-            snprintf(search_paths[path_count++], sizeof(search_paths[0]), ".");
-        }
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                 "../../build");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]), ".");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]), "..");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]), "../..");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                 "/usr/local/xvr/build");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                 "/opt/xvr/build");
 
         for (int i = 0; i < path_count; i++) {
             char test_path[8192];
