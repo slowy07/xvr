@@ -235,9 +235,10 @@ int main(int argc, const char* argv[]) {
         Xvr_LLVMCodegenSetOptimizationLevel(codegen, llvm_level);
         if (!Xvr_LLVMCodegenRunOptimizer(codegen)) {
             if (Xvr_commandLine.verbose) {
-                fprintf(stderr, XVR_CC_NOTICE
-                        "LLVM optimization warning: optimization pass failed, "
-                        "continuing\n" XVR_CC_RESET);
+                static const char msg[] =
+                    "LLVM optimization warning: optimization pass failed, "
+                    "continuing\n";
+                fprintf(stderr, XVR_CC_NOTICE "%s" XVR_CC_RESET, msg);
             }
         }
     }
