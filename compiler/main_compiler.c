@@ -246,9 +246,15 @@ int main(int argc, const char* argv[]) {
         char* libxvr_path = NULL;
         int has_libxvr = 0;
 
-        char exe_path[1024] = {0};
+        char exe_path[4096] = {0};
         ssize_t len =
             readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+        /*
+         * Note: TOCTOU concern is mitigated because:
+         * 1. /proc/self/exe is a stable kernel symlink
+         * 2. We only read the path, not use it for security decisions
+         * 3. The search fallback includes relative paths as backup
+         */
         if (len > 0) {
             exe_path[len] = '\0';
             char* lastSlash = strrchr(exe_path, '/');

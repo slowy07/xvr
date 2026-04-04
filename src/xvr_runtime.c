@@ -75,11 +75,10 @@ void xvr_array_insert_int(void* arr_ptr, int value) {
 }
 
 static void xvr_array_error(const char* msg, int line) {
-    fprintf(stderr, XVR_CC_ERROR "error: " XVR_CC_RESET "%s", msg);
+    fprintf(stderr, XVR_CC_ERROR "error: " XVR_CC_RESET "%s\n", msg);
     if (line > 0) {
-        fprintf(stderr, "  --> line %d", line);
+        fprintf(stderr, "  --> line %d\n", line);
     }
-    fprintf(stderr, "\n");
 }
 
 static void xvr_array_error_idx(int idx, int size) {
