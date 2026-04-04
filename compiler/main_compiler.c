@@ -8,6 +8,7 @@
 
 #include "backend/xvr_llvm_codegen.h"
 #include "compiler_tools.h"
+#include "optimizer/xvr_ast_optimizer.h"
 #include "xvr_ast_node.h"
 #include "xvr_common.h"
 #include "xvr_console_colors.h"
@@ -166,6 +167,27 @@ int main(int argc, const char* argv[]) {
     }
     Xvr_freeUnusedChecker(&checker);
 
+    Xvr_ASTOptimizer* ast_opt = Xvr_ASTOptimizerCreate();
+    if (ast_opt) {
+        int opt_level = Xvr_commandLine.optimizationLevel;
+        Xvr_OptimizationLevel xvr_opt_level =
+            Xvr_OptimizationLevelFromInt(opt_level);
+        Xvr_ASTOptimizerSetLevel(ast_opt, xvr_opt_level);
+
+        if (opt_level > 0) {
+            Xvr_ASTOptimizerAddStandardPasses(ast_opt);
+            Xvr_ASTOptimizerResult result =
+                Xvr_ASTOptimizerRun(ast_opt, nodes, nodeCount);
+            if (Xvr_commandLine.verbose && result.changes_made > 0) {
+                fprintf(stderr,
+                        XVR_CC_NOTICE
+                        "AST optimization: %d changes\n" XVR_CC_RESET,
+                        result.changes_made);
+            }
+        }
+        Xvr_ASTOptimizerDestroy(ast_opt);
+    }
+
     Xvr_LLVMCodegen* codegen = Xvr_LLVMCodegenCreate(module_name);
     if (!codegen) {
         print_compiler_error(srcForError, 0, "error",
@@ -193,15 +215,32 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
-    /* FIXME: Optimizer causes SIGSEGV - re-enable once target machine
-     * configuration is fixed in xvr_llvm_optimizer.c
-     *
-     * TODO: Add command-line flag for optimization level (-O0, -O1, -O2, -O3)
-     *
-    if (!Xvr_commandLine.dumpLLVM) {
-        Xvr_LLVMCodegenRunOptimizer(codegen);
+    int opt_level = Xvr_commandLine.optimizationLevel;
+    if (opt_level > 0 && !Xvr_commandLine.dumpLLVM) {
+        Xvr_LLVMOptimizationLevel llvm_level = XVR_LLVM_OPT_O2;
+        switch (opt_level) {
+        case 1:
+            llvm_level = XVR_LLVM_OPT_O1;
+            break;
+        case 2:
+            llvm_level = XVR_LLVM_OPT_O2;
+            break;
+        case 3:
+            llvm_level = XVR_LLVM_OPT_O3;
+            break;
+        default:
+            llvm_level = XVR_LLVM_OPT_O2;
+            break;
+        }
+        Xvr_LLVMCodegenSetOptimizationLevel(codegen, llvm_level);
+        if (!Xvr_LLVMCodegenRunOptimizer(codegen)) {
+            if (Xvr_commandLine.verbose) {
+                fprintf(stderr, XVR_CC_NOTICE
+                        "LLVM optimization warning: optimization pass failed, "
+                        "continuing\n" XVR_CC_RESET);
+            }
+        }
     }
-    */
 
     bool shouldRun = !Xvr_commandLine.compileOnly &&
                      !Xvr_commandLine.dumpLLVM &&

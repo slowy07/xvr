@@ -13,6 +13,7 @@ target_include_directories(xvr PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/backend
+    ${CMAKE_SOURCE_DIR}/src/optimizer
 )
 
 target_compile_options(xvr PRIVATE

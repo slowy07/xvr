@@ -81,6 +81,52 @@ cmake -DXVR_BUILD_SHARED=OFF ..
 ./build/xvr -d source.xvr
 ```
 
+### Optimization Levels
+
+XVR supports multiple optimization levels via the `-O` flag:
+
+| Level | Description |
+|-------|-------------|
+| `-O0` | No optimization (fastest compile time) |
+| `-O1` | Basic optimizations |
+| `-O2` | Balanced optimizations (default for Release) |
+| `-O3` | Aggressive optimizations (maximum performance) |
+
+```sh
+# Compile with optimizations
+./build/xvr source.xvr -O2
+
+# Compile with aggressive optimization
+./build/xvr source.xvr -O3 -o output
+```
+
+### Optimization Pipeline
+
+The compiler applies optimizations in two stages:
+
+1. **AST Optimizations** (frontend):
+   - Constant Folding: Evaluates constant expressions at compile time
+   - Dead Code Elimination: Removes unreachable code branches
+
+2. **LLVM Optimizations** (backend):
+   - Advanced interprocedural optimizations
+   - Loop optimizations
+   - Vectorization
+   - Register allocation
+
+Example transformations:
+```xvr
+# Before optimization (source)
+var x = 2 + 3 * 4;    # becomes 14
+if (false) {
+    println("unreachable");
+}
+
+# After optimization (LLVM IR)
+%1 = add i32 14
+br label %exit
+```
+
 ### Verbose Output
 
 Use `-d` or `--debug` flag to see compilation information:
@@ -153,6 +199,40 @@ std::println("Hello!");
 ## Need Tutorial?
 
 You can check on [tutorial](docs/tutorial) for explore some tutorials.
+
+## Optimization Architecture
+
+XVR implements a modular, extensible optimization pipeline following modern compiler design principles (Rust, Clang, Swift).
+
+### Design Principles
+
+1. **Correctness First**: Optimizations never change program semantics
+2. **Pass-Based Architecture**: Each optimization is an isolated, composable pass
+3. **Deterministic Behavior**: Same input always produces same optimized output
+4. **Safety**: No undefined behavior introduced by optimizations
+
+### AST Optimization Passes
+
+| Pass | Description | Example |
+|------|-------------|---------|
+| Constant Folding | Evaluates constant expressions | `2 + 3 * 4` → `14` |
+| Dead Code Elimination | Removes unreachable branches | `if (false)` → removed |
+
+### Compilation Pipeline
+
+```
+Source Code
+    ↓
+Lexer → Parser → AST
+    ↓
+[AST Optimization Passes]
+    ↓
+Lowering → LLVM IR
+    ↓
+[LLVM Optimization Pipeline]
+    ↓
+Machine Code
+```
 
 ## Side project XvrLang
 
