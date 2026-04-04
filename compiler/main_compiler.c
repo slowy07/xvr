@@ -257,7 +257,7 @@ int main(int argc, const char* argv[]) {
             }
         }
 
-        char search_paths[16][1024];
+        char search_paths[16][4096];
         int path_count = 0;
 
         const char* env_build = getenv("XVR_BUILD_DIR");
@@ -269,7 +269,6 @@ int main(int argc, const char* argv[]) {
         if (exe_path[0]) {
             snprintf(search_paths[path_count++], sizeof(search_paths[0]),
                      "%s/build", exe_path);
-            char parent[1024];
             char* p = strrchr(exe_path, '/');
             if (p) {
                 *p = '\0';
@@ -288,7 +287,7 @@ int main(int argc, const char* argv[]) {
         }
 
         for (int i = 0; i < path_count; i++) {
-            char test_path[1024];
+            char test_path[8192];
             snprintf(test_path, sizeof(test_path), "%s/src/libxvr.a",
                      search_paths[i]);
             FILE* rf = fopen(test_path, "r");
