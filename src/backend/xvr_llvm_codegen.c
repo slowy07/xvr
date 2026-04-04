@@ -505,7 +505,7 @@ bool Xvr_LLVMCodegenWriteBitcode(Xvr_LLVMCodegen* codegen,
 }
 
 bool Xvr_LLVMCodegenWriteObjectFile(Xvr_LLVMCodegen* codegen,
-                                    const char* filepath) {
+                                    const char* filepath, int filetype) {
     if (!codegen || !filepath) {
         return false;
     }
@@ -514,7 +514,7 @@ bool Xvr_LLVMCodegenWriteObjectFile(Xvr_LLVMCodegen* codegen,
     }
     finalize_main_function(codegen);
     return Xvr_LLVMTargetMachineEmitToFile(codegen->target_machine,
-                                           codegen->module, filepath, 0);
+                                           codegen->module, filepath, filetype);
 }
 
 bool Xvr_LLVMCodegenExecuteJIT(Xvr_LLVMCodegen* codegen) {

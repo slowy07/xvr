@@ -63,7 +63,7 @@ bool Xvr_LLVMCodegenWriteBitcode(Xvr_LLVMCodegen* codegen,
                                  const char* filepath);
 
 bool Xvr_LLVMCodegenWriteObjectFile(Xvr_LLVMCodegen* codegen,
-                                    const char* filepath);
+                                    const char* filepath, int filetype);
 
 bool Xvr_LLVMCodegenExecuteJIT(Xvr_LLVMCodegen* codegen);
 

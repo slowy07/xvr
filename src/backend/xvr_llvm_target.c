@@ -33,6 +33,20 @@ SOFTWARE.
 
 #include "xvr_common.h"
 
+typedef enum {
+    XVR_EMIT_OBJECT = 0,
+    XVR_EMIT_ASM = 1,
+    XVR_EMIT_LLVM_IR = 2
+} Xvr_EmitType;
+
+Xvr_EmitType Xvr_EmitTypeFromString(const char* type_str) {
+    if (!type_str) return XVR_EMIT_OBJECT;
+    if (strcmp(type_str, "obj") == 0) return XVR_EMIT_OBJECT;
+    if (strcmp(type_str, "asm") == 0) return XVR_EMIT_ASM;
+    if (strcmp(type_str, "llvm-ir") == 0) return XVR_EMIT_LLVM_IR;
+    return XVR_EMIT_OBJECT;
+}
+
 struct Xvr_LLVMTargetConfig {
     char* triple;
     char* cpu;
@@ -204,9 +218,7 @@ void Xvr_LLVMTargetMachineDestroy(Xvr_LLVMTargetMachine* tm) {
 bool Xvr_LLVMTargetMachineEmitToFile(Xvr_LLVMTargetMachine* tm,
                                      Xvr_LLVMModuleManager* mod_manager,
                                      const char* filename, int filetype) {
-    (void)tm;
-    (void)filetype;
-    if (!mod_manager || !filename) {
+    if (!tm || !mod_manager || !filename) {
         return false;
     }
 
@@ -215,33 +227,50 @@ bool Xvr_LLVMTargetMachineEmitToFile(Xvr_LLVMTargetMachine* tm,
         return false;
     }
 
-    LLVMSetTarget(mod, "x86_64-pc-linux-gnu");
+    Xvr_EmitType emit_type = (Xvr_EmitType)filetype;
+    LLVMTargetMachineRef machine = tm->target_machine;
 
-    size_t ir_len = 0;
-    char* ir = LLVMPrintModuleToString(mod);
-    if (!ir) {
-        return false;
+    char* err_msg = NULL;
+    LLVMBool result;
+
+    switch (emit_type) {
+    case XVR_EMIT_ASM: {
+        result = LLVMTargetMachineEmitToFile(machine, mod, filename,
+                                             LLVMAssemblyFile, &err_msg);
+        break;
     }
-
-    FILE* f = fopen("/tmp/xvr_ir.ll", "w");
-    if (!f) {
+    case XVR_EMIT_LLVM_IR: {
+        char* ir = LLVMPrintModuleToString(mod);
+        if (!ir) {
+            return false;
+        }
+        FILE* f = fopen(filename, "w");
+        if (!f) {
+            LLVMDisposeMessage(ir);
+            return false;
+        }
+        fputs(ir, f);
+        fclose(f);
         LLVMDisposeMessage(ir);
+        return true;
+    }
+    case XVR_EMIT_OBJECT:
+    default: {
+        result = LLVMTargetMachineEmitToFile(machine, mod, filename,
+                                             LLVMObjectFile, &err_msg);
+        break;
+    }
+    }
+
+    if (result) {
+        if (err_msg) {
+            fprintf(stderr, "error: failed to emit file: %s\n", err_msg);
+            LLVMDisposeMessage(err_msg);
+        }
         return false;
     }
-    fputs(ir, f);
-    fclose(f);
-    LLVMDisposeMessage(ir);
 
-    char* cmd;
-    if (asprintf(&cmd,
-                 "clang -target x86_64-pc-linux-gnu -c /tmp/xvr_ir.ll -o %s",
-                 filename) == -1) {
-        return false;
-    }
-    int rc = system(cmd);
-    free(cmd);
-
-    return rc == 0;
+    return true;
 }
 
 void* Xvr_LLVMTargetMachineEmitToMemory(Xvr_LLVMTargetMachine* tm,

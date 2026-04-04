@@ -203,32 +203,67 @@ int main(int argc, const char* argv[]) {
     }
     */
 
-    bool shouldRun = !Xvr_commandLine.compileOnly && !Xvr_commandLine.dumpLLVM;
+    bool shouldRun = !Xvr_commandLine.compileOnly &&
+                     !Xvr_commandLine.dumpLLVM &&
+                     (Xvr_commandLine.emitType == NULL);
     char* outFile = NULL;
+    char* objFile = NULL;
+
+    bool useEmitType = Xvr_commandLine.emitType != NULL;
+    int emitFileType = 0;
+    if (useEmitType) {
+        if (strcmp(Xvr_commandLine.emitType, "asm") == 0) {
+            emitFileType = 1;
+        } else if (strcmp(Xvr_commandLine.emitType, "llvm-ir") == 0) {
+            emitFileType = 2;
+        } else {
+            emitFileType = 0;
+        }
+    }
 
     if (shouldRun) {
-        outFile = strdup("/tmp/xvr_compile.o");
+        objFile = strdup("/tmp/xvr_compile.o");
+        if (Xvr_commandLine.outFile) {
+            outFile = strdup(Xvr_commandLine.outFile);
+        }
     } else {
         outFile = Xvr_commandLine.outFile ? strdup(Xvr_commandLine.outFile)
                                           : strdup("a.out");
+        objFile = strdup(outFile);
     }
 
-    if (Xvr_commandLine.dumpLLVM) {
+    if (Xvr_commandLine.dumpLLVM || (useEmitType && emitFileType == 2)) {
         size_t ir_len = 0;
         char* ir = Xvr_LLVMCodegenPrintIR(codegen, &ir_len);
         if (ir) {
-            printf("%s\n", ir);
+            if (useEmitType && emitFileType == 2 && Xvr_commandLine.outFile) {
+                FILE* f = fopen(Xvr_commandLine.outFile, "w");
+                if (f) {
+                    fputs(ir, f);
+                    fclose(f);
+                } else {
+                    free(ir);
+                    print_compiler_error(srcForError, 0, "error",
+                                         "failed to write LLVM IR file", NULL);
+                    free(outFile);
+                    free(objFile);
+                    return 1;
+                }
+            } else {
+                printf("%s\n", ir);
+            }
             free(ir);
         }
     } else {
-        if (!Xvr_LLVMCodegenWriteObjectFile(codegen, outFile)) {
+        if (!Xvr_LLVMCodegenWriteObjectFile(codegen, objFile, emitFileType)) {
             print_compiler_error(
-                srcForError, 0, "error", "failed to write object file",
+                srcForError, 0, "error", "failed to write output file",
                 "Check write permissions in the output directory");
             Xvr_LLVMCodegenDestroy(codegen);
             for (int i = 0; i < nodeCount; i++) Xvr_freeASTNode(nodes[i]);
             free(nodes);
             free(outFile);
+            free(objFile);
             if (Xvr_commandLine.sourceFile) free((void*)source);
             return 1;
         }
@@ -283,18 +318,27 @@ int main(int argc, const char* argv[]) {
         }
 
         char* cmd;
-        asprintf(&cmd, "gcc -c %s -o /tmp/xvr_runtime.o 2>/dev/null",
-                 runtime_src);
-        system(cmd);
+        asprintf(&cmd, "gcc -c %s -o /tmp/xvr_runtime.o", runtime_src);
+        int rc_compile = system(cmd);
+        if (rc_compile != 0) {
+            fprintf(stderr, "error: failed to compile runtime\n");
+            unlink(runtime_src);
+            free(outFile);
+            return 1;
+        }
         free(cmd);
 
-        asprintf(&cmd,
-                 "gcc %s /tmp/xvr_runtime.o -o /tmp/xvr_bin -lm 2>/dev/null",
-                 outFile);
+        char* final_exe =
+            Xvr_commandLine.outFile ? Xvr_commandLine.outFile : "/tmp/xvr_bin";
+        asprintf(&cmd, "gcc %s /tmp/xvr_runtime.o -o %s -lm", objFile,
+                 final_exe);
         int rc = system(cmd);
+        if (rc != 0) {
+            fprintf(stderr, "error: failed to link executable\n");
+        }
         free(cmd);
 
-        long bin_size = get_file_size("/tmp/xvr_bin");
+        long bin_size = get_file_size(final_exe);
 
         if (Xvr_commandLine.showTiming) {
             const char* target = LLVMGetDefaultTargetTriple();
@@ -309,13 +353,15 @@ int main(int argc, const char* argv[]) {
         }
 
         if (rc == 0) {
-            system("/tmp/xvr_bin");
+            system(final_exe);
         }
 
         unlink(runtime_src);
         unlink("/tmp/xvr_runtime.o");
-        unlink(outFile);
-        unlink("/tmp/xvr_bin");
+        unlink(objFile);
+        if (!Xvr_commandLine.outFile) {
+            unlink("/tmp/xvr_bin");
+        }
     } else {
         long obj_size = get_file_size(outFile);
         if (Xvr_commandLine.showTiming) {
@@ -332,5 +378,6 @@ int main(int argc, const char* argv[]) {
     }
 
     free(outFile);
+    free(objFile);
     return 0;
 }
