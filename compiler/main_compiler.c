@@ -246,28 +246,58 @@ int main(int argc, const char* argv[]) {
         char* libxvr_path = NULL;
         int has_libxvr = 0;
 
-        static const char* build_dir =
-            "/home/arfyslowy/Documents/project/xvrlang/xvr/build";
+        char exe_path[1024] = {0};
+        ssize_t len =
+            readlink("/proc/self/exe", exe_path, sizeof(exe_path) - 1);
+        if (len > 0) {
+            exe_path[len] = '\0';
+            char* lastSlash = strrchr(exe_path, '/');
+            if (lastSlash) {
+                *lastSlash = '\0';
+            }
+        }
 
-        const char* search_paths[] = {
-            build_dir,
-            "/home/arfyslowy/Documents/project/xvrlang/xvr/build",
-            ".",
-            "..",
-            "/home/arfyslowy/Documents/project/xvrlang/../build",
-            NULL};
+        char search_paths[16][1024];
+        int path_count = 0;
 
-        for (int i = 0; search_paths[i] != NULL; i++) {
-            char* test_path;
-            asprintf(&test_path, "%s/src/libxvr.a", search_paths[i]);
+        const char* env_build = getenv("XVR_BUILD_DIR");
+        if (env_build) {
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]), "%s",
+                     env_build);
+        }
+
+        if (exe_path[0]) {
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                     "%s/build", exe_path);
+            char parent[1024];
+            char* p = strrchr(exe_path, '/');
+            if (p) {
+                *p = '\0';
+                snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                         "%s/build", exe_path);
+            }
+        }
+
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]), "build");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                 "../build");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                 "./build");
+        if (exe_path[0]) {
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]), ".");
+        }
+
+        for (int i = 0; i < path_count; i++) {
+            char test_path[1024];
+            snprintf(test_path, sizeof(test_path), "%s/src/libxvr.a",
+                     search_paths[i]);
             FILE* rf = fopen(test_path, "r");
             if (rf) {
                 fclose(rf);
-                libxvr_path = test_path;
+                libxvr_path = strdup(test_path);
                 has_libxvr = 1;
                 break;
             }
-            free(test_path);
         }
 
         char* cmd;
