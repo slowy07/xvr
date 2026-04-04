@@ -1,6 +1,9 @@
 #!/bin/bash
-# XVR Compiler Stress Test - LibFuzzer-style
-# Generates random XVR code and tests for crashes
+# XVR Compiler Stress Test - Random XVR Code Generation
+# 
+# SECURITY: This stress test ONLY generates and compiles XVR language code.
+# It does NOT accept external input, inject C code, or execute arbitrary commands.
+# All generated code is from predefined XVR grammar patterns.
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"

@@ -1,6 +1,18 @@
 #!/bin/bash
 # XVR Compiler Fuzzing Test Suite
-# Tests edge cases and potential bug triggers
+# Tests edge cases and potential bug triggers in XVR language code
+# 
+# SECURITY: This fuzzer ONLY tests XVR source code (.xvr files).
+# It does NOT compile or inject arbitrary C code.
+# All test inputs are validated XVR language constructs.
+#
+# Test categories:
+# - Syntax edge cases (unbalanced parens, unterminated strings)
+# - Type system (type mismatches, casts)
+# - Array operations (bounds checking)
+# - Control flow (infinite loops, unreachable code)
+# - Memory safety (null checks, use-after-free)
+# - Input validation (max values, special characters)
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
@@ -61,7 +73,24 @@ run_test() {
     return 1
 }
 
+# Test categories (XVR language only):
+# - Syntax edge cases: unbalanced parens, unterminated strings
+# - Type system: type mismatches, invalid casts  
+# - Array operations: bounds checking, empty arrays
+# - Control flow: infinite loops, unreachable code
+# - Runtime errors: division by zero, null pointers
+
+# SECURITY MODEL:
+# The fuzzer creates temporary .xvr files and compiles them with the XVR compiler.
+# It does NOT:
+# - Accept external C code input
+# - Write to arbitrary file paths
+# - Execute shell commands beyond running xvr compiler
+# - Access network resources
+# All test inputs are hardcoded XVR language constructs.
+
 echo "XVR Compiler Fuzzing Test Suite"
+echo "Note: Testing XVR source code only - no C code injection possible"
 echo ""
 
 # Test 1: Empty input
