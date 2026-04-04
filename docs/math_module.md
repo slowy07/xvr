@@ -22,7 +22,6 @@ The XVR math module provides comprehensive mathematical functions for the XVR pr
 │                 │      │                 │       │                         │
 └─────────────────┘      └─────────────────┘       └─────────────────────────┘
                                                            │
-                                                           ▼
                                                  ┌─────────────────────────┐
                                                  │   Function Dispatch     │
                                                  │                         │
@@ -37,7 +36,6 @@ The XVR math module provides comprehensive mathematical functions for the XVR pr
                                                  │  └─────────────────┘    │
                                                  └─────────────────────────┘
                                                            │
-                                                           ▼
                                                  ┌─────────────────────────┐
                                                  │   Constant Folding      │
                                                  │   (Parser)              │
@@ -128,7 +126,7 @@ The math module supports compile-time constant folding for numeric literals.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                    Constant Folding Flow                          │
+│                    Constant Folding Flow                        │
 └─────────────────────────────────────────────────────────────────┘
 
   Source Code                    Parser                      Output
@@ -286,12 +284,12 @@ Math functions follow IEEE 754 behavior for edge cases:
   │                                                                           │
   │  Source: "include math; var x = math::sqrt(25.0);"                        │
   │          │                                                                │
-  │          ▼                                                                │
+  │                                                                           │
   │  Tokens: [INCLUDE, IDENT(math), SEMICOLON, VAR, IDENT(x), ASSIGN,         │
   │            IDENT(math), SCOPE_RESOLVE, IDENT(sqrt), LPAREN,               │
   │            FLOAT(25.0), RPAREN, SEMICOLON]                                │
   │          │                                                                │
-  │          ▼                                                                │
+  │                                                                           │
   │  AST: ProgramNode                                                         │
   │        ├── IncludeNode("math")                                            │
   │        └── VarDeclNode("x")                                               │
@@ -300,18 +298,16 @@ Math functions follow IEEE 754 behavior for edge cases:
   │                                                                           │
   └───────────────────────────────────────────────────────────────────────────┘
                                     │
-                                    ▼
   2. Constant Folding (Parser)
   ┌───────────────────────────────────────────────────────────────────────────┐
   │                                                                           │
   │  Before: FnCallNode("math::sqrt", [LiteralNode(25.0)])                    │
   │          │                                                                │
-  │          ▼ (calcStaticMathFn)                                             │
+  │          (calcStaticMathFn)                                               │
   │  After:  LiteralNode(5.0)  // sqrt(25) = 5 at compile-time                │
   │                                                                           │
   └───────────────────────────────────────────────────────────────────────────┘
                                     │
-                                    ▼
   3. LLVM IR Generation
   ┌───────────────────────────────────────────────────────────────────────────┐
   │                                                                           │
@@ -329,22 +325,21 @@ Math functions follow IEEE 754 behavior for edge cases:
   │                                                                           │
   └───────────────────────────────────────────────────────────────────────────┘
                                     │
-                                    ▼
   4. Linking & Execution
   ┌───────────────────────────────────────────────────────────────────────────┐
   │                                                                           │
   │  Compilation: xvr source.xvr                                              │
   │          │                                                                │
-  │          ▼                                                                │
+  │                                                                           │
   │  gcc -c source.o -o /tmp/xvr_runtime.o                                    │
   │          │                                                                │
-  │          ▼                                                                │
+  │                                                                           │
   │  gcc source.o /tmp/xvr_runtime.o -lm -o executable                        │
   │          │                                                                │
-  │          ▼                                                                │
+  │                                                                           │
   │  Execution: ./executable                                                  │
   │          │                                                                │
-  │          ▼                                                                │
+  │                                                                           │
   │  Output: x = 5.000000                                                     │
   │                                                                           │
   └───────────────────────────────────────────────────────────────────────────┘
@@ -415,7 +410,6 @@ Per IEEE 754, functions do not throw exceptions but return special values:
            │                         │                         │
            └─────────────────────────┴─────────────────────────┘
                                    │
-                                   ▼
                      ┌───────────────────────────┐
                      │     60+ Test Cases        │
                      │     ALL PASSING           │

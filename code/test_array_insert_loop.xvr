@@ -1,0 +1,55 @@
+include std;
+
+std::print("=== Test insert() with for loop ===\n");
+
+var nums: [int] = [];
+
+for (var i = 1; i <= 5; i++) {
+    nums.insert(i);
+}
+
+std::print("nums after for loop insert: ");
+for (var j = 0; j < len(nums); j++) {
+    std::print("{} ", nums[j]);
+}
+std::print("\n");
+
+std::print("=== Test insert() with while loop ===\n");
+
+var names: [int] = [];
+var count = 0;
+
+while (count < 3) {
+    names.insert(count * 10);
+    count += 1;
+}
+
+std::print("names after while loop insert: ");
+var k = 0;
+while (k < len(names)) {
+    std::print("{} ", names[k]);
+    k += 1;
+}
+std::print("\n");
+
+std::print("=== Test direct access ===\n");
+std::print("names[0] = {}\n", names[0]);
+std::print("names[1] = {}\n", names[1]);
+
+std::print("=== Test nested loops ===\n");
+
+var matrix: [int] = [];
+
+for (var row = 0; row < 2; row++) {
+    for (var col = 0; col < 2; col++) {
+        matrix.insert(row * 10 + col);
+    }
+}
+
+std::print("matrix elements: ");
+for (var m = 0; m < len(matrix); m++) {
+    std::print("{} ", matrix[m]);
+}
+std::print("\n");
+
+std::print("All tests passed!\n");

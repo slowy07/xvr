@@ -1,0 +1,11 @@
+include std;
+
+std::print("=== Test out-of-bounds in loop ===\n");
+
+var arr = [1, 2, 3];
+
+for (var i = 0; i < 5; i++) {
+    std::print("arr[{}] = {}\n", i, arr[i]);
+}
+
+std::print("Should not reach here\n");

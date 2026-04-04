@@ -76,10 +76,8 @@ static LLVMValueRef handle_sizeof(void* context, LLVMBuilderRef builder,
                 size_bits = 0;
                 break;
             }
-            LLVMContextRef ctx = LLVMGetGlobalContext();
-            LLVMValueRef result =
-                LLVMConstInt(LLVMInt32TypeInContext(ctx), size_bits, false);
-            return result;
+            (void)size_bits;
+            (void)context;
         }
     }
 

@@ -725,6 +725,41 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
                                     }
                                 }
                             }
+
+                            /* Handle dynamic arrays (XVR_LITERAL_ARRAY type) */
+                            if (var_type_xvr == XVR_LITERAL_ARRAY) {
+                                LLVMContextRef ctx =
+                                    Xvr_LLVMContextGetLLVMContext(
+                                        emitter->context);
+                                LLVMModuleRef m =
+                                    Xvr_LLVMModuleManagerGetModule(
+                                        emitter->module);
+                                LLVMBuilderRef b =
+                                    Xvr_LLVMIRBuilderGetLLVMBuilder(
+                                        emitter->builder);
+
+                                LLVMValueRef array_ptr = LLVMBuildLoad2(
+                                    b,
+                                    LLVMPointerType(LLVMInt32TypeInContext(ctx),
+                                                    0),
+                                    var_ptr, "array_ptr");
+
+                                const char* len_fn_name = "xvr_array_len";
+                                LLVMTypeRef len_fn_type = LLVMFunctionType(
+                                    LLVMInt32TypeInContext(ctx),
+                                    (LLVMTypeRef[]){LLVMPointerType(
+                                        LLVMInt32TypeInContext(ctx), 0)},
+                                    1, false);
+                                LLVMValueRef len_fn =
+                                    LLVMGetNamedFunction(m, len_fn_name);
+                                if (!len_fn) {
+                                    len_fn = LLVMAddFunction(m, len_fn_name,
+                                                             len_fn_type);
+                                }
+                                return LLVMBuildCall2(b, len_fn_type, len_fn,
+                                                      &array_ptr, 1,
+                                                      "array_len");
+                            }
                         }
 
                         /* For non-identifiers or other types, emit normally */
@@ -1050,7 +1085,168 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
                 }
             }
         }
-        return NULL;
+    }
+
+    /* Handle method calls: identifier.method(args) */
+    if (binary->opcode == XVR_OP_DOT && binary->left &&
+        binary->left->type == XVR_AST_NODE_LITERAL &&
+        binary->left->atomic.literal.type == XVR_LITERAL_IDENTIFIER) {
+        const char* var_name =
+            (const char*)binary->left->atomic.literal.as.string.ptr->data;
+
+        /* Look up the variable */
+        LLVMValueRef var_ptr = lookup_var(emitter, var_name);
+        if (!var_ptr) {
+            return NULL;
+        }
+
+        /* Check if right side is a method call pattern: .method(args) */
+        if (binary->right && binary->right->type == XVR_AST_NODE_BINARY &&
+            binary->right->binary.opcode == XVR_OP_DOT) {
+            /* Get method name from right->left */
+            const char* method_name = NULL;
+            if (binary->right->binary.left &&
+                binary->right->binary.left->type == XVR_AST_NODE_LITERAL &&
+                binary->right->binary.left->atomic.literal.type ==
+                    XVR_LITERAL_IDENTIFIER) {
+                method_name = (const char*)binary->right->binary.left->atomic
+                                  .literal.as.string.ptr->data;
+            }
+
+            /* Get arguments from right->right (FN_CALL node) */
+            Xvr_ASTNode* fn_call_node = NULL;
+            if (binary->right->binary.right &&
+                binary->right->binary.right->type == XVR_AST_NODE_FN_CALL) {
+                fn_call_node = binary->right->binary.right;
+            }
+
+            /* Handle insert method for arrays */
+            if (fn_call_node && method_name &&
+                strcmp(method_name, "insert") == 0) {
+                LLVMContextRef llvm_ctx =
+                    Xvr_LLVMContextGetLLVMContext(emitter->context);
+                LLVMModuleRef module =
+                    Xvr_LLVMModuleManagerGetModule(emitter->module);
+                LLVMBuilderRef llvm_builder =
+                    Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+
+                /* Get or declare xvr_array_insert_int */
+                LLVMValueRef callee =
+                    LLVMGetNamedFunction(module, "xvr_array_insert_int");
+
+                /* Always create the function type */
+                LLVMTypeRef param_types[2] = {
+                    LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx), 0),
+                    LLVMInt32TypeInContext(llvm_ctx)};
+                LLVMTypeRef fn_type = LLVMFunctionType(
+                    LLVMVoidTypeInContext(llvm_ctx), param_types, 2, 0);
+
+                if (!callee) {
+                    callee = LLVMAddFunction(module, "xvr_array_insert_int",
+                                             fn_type);
+                }
+
+                /* Get argument value */
+                LLVMValueRef arg_value = NULL;
+                Xvr_ASTNode* args = fn_call_node->fnCall.arguments;
+                if (args && args->type == XVR_AST_NODE_FN_COLLECTION &&
+                    args->fnCollection.count > 0) {
+                    arg_value = Xvr_LLVMExpressionEmitterEmit(
+                        emitter, &args->fnCollection.nodes[0]);
+                }
+
+                if (arg_value) {
+                    /* Load the array pointer from the alloca */
+                    LLVMValueRef array_ptr = LLVMBuildLoad2(
+                        llvm_builder,
+                        LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx), 0),
+                        var_ptr, "array_ptr");
+                    LLVMValueRef call_args[2] = {array_ptr, arg_value};
+                    LLVMBuildCall2(llvm_builder, fn_type, callee, call_args, 2,
+                                   "");
+                    return arg_value;
+                }
+            }
+        }
+    }
+
+    /* Handle array index assignment: arr[index] = value */
+    if (binary->opcode == XVR_OP_VAR_ASSIGN && binary->left &&
+        binary->left->type == XVR_AST_NODE_INDEX) {
+        Xvr_NodeIndex* index_node = &binary->left->index;
+
+        /* Check if this is an array index assignment */
+        if (index_node->first &&
+            index_node->first->type == XVR_AST_NODE_LITERAL &&
+            index_node->first->atomic.literal.type == XVR_LITERAL_IDENTIFIER) {
+            const char* var_name =
+                (const char*)
+                    index_node->first->atomic.literal.as.string.ptr->data;
+
+            Xvr_LiteralType var_type_xvr = XVR_LITERAL_ANY;
+            LLVMValueRef var_ptr =
+                lookup_var_with_type(emitter, var_name, &var_type_xvr);
+            if (!var_ptr || var_type_xvr != XVR_LITERAL_ARRAY) {
+                return NULL;
+            }
+
+            /* Evaluate the index expression */
+            LLVMValueRef index =
+                Xvr_LLVMExpressionEmitterEmit(emitter, index_node->second);
+            if (!index) {
+                return NULL;
+            }
+
+            /* Evaluate the value to assign */
+            LLVMValueRef value =
+                Xvr_LLVMExpressionEmitterEmit(emitter, binary->right);
+            if (!value) {
+                return NULL;
+            }
+
+            LLVMContextRef llvm_ctx =
+                Xvr_LLVMContextGetLLVMContext(emitter->context);
+            LLVMModuleRef module =
+                Xvr_LLVMModuleManagerGetModule(emitter->module);
+            LLVMBuilderRef llvm_builder =
+                Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+
+            /* Load the array pointer */
+            LLVMValueRef array_ptr = LLVMBuildLoad2(
+                llvm_builder,
+                LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx), 0), var_ptr,
+                "array_ptr");
+
+            /* Get or declare xvr_array_set_int */
+            LLVMValueRef callee =
+                LLVMGetNamedFunction(module, "xvr_array_set_int");
+
+            LLVMTypeRef fn_type = NULL;
+            if (!callee) {
+                LLVMTypeRef param_types[3] = {
+                    LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx), 0),
+                    LLVMInt32TypeInContext(llvm_ctx),
+                    LLVMInt32TypeInContext(llvm_ctx)};
+                fn_type = LLVMFunctionType(LLVMVoidTypeInContext(llvm_ctx),
+                                           param_types, 3, 0);
+                callee = LLVMAddFunction(module, "xvr_array_set_int", fn_type);
+            } else {
+                fn_type = LLVMGetElementType(LLVMTypeOf(callee));
+            }
+            if (!fn_type) {
+                LLVMTypeRef param_types[3] = {
+                    LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx), 0),
+                    LLVMInt32TypeInContext(llvm_ctx),
+                    LLVMInt32TypeInContext(llvm_ctx)};
+                fn_type = LLVMFunctionType(LLVMVoidTypeInContext(llvm_ctx),
+                                           param_types, 3, 0);
+            }
+
+            LLVMValueRef args[3] = {array_ptr, index, value};
+            LLVMBuildCall2(llvm_builder, fn_type, callee, args, 3, "");
+
+            return value;
+        }
     }
 
     /* Handle variable assignment: x = expr, x += expr, etc. */
@@ -4013,22 +4209,31 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
             var_name = (const char*)varDecl->identifier.as.string.ptr->data;
         }
 
-        if (var_name && varDecl->expression) {
-            LLVMValueRef init_value =
-                Xvr_LLVMExpressionEmitterEmit(emitter, varDecl->expression);
-            if (init_value) {
-                LLVMTypeRef var_type = LLVMTypeOf(init_value);
-                LLVMValueRef alloca = Xvr_LLVMIRBuilderCreateAlloca(
-                    emitter->builder, var_type, var_name);
-                Xvr_LLVMIRBuilderCreateStore(emitter->builder, init_value,
-                                             alloca);
-                Xvr_LiteralType varType = XVR_LITERAL_INTEGER;
-                int array_count = 0;
-                if (varDecl->typeLiteral.type == XVR_LITERAL_TYPE) {
-                    varType = XVR_AS_TYPE(varDecl->typeLiteral).typeOf;
+        if (var_name) {
+            LLVMValueRef alloca = NULL;
+            Xvr_LiteralType varType = XVR_LITERAL_INTEGER;
+            int array_count = 0;
+
+            /* Check type literal annotation for array type */
+            if (varDecl->typeLiteral.type == XVR_LITERAL_TYPE) {
+                Xvr_LiteralType typeOf =
+                    XVR_AS_TYPE(varDecl->typeLiteral).typeOf;
+                if (typeOf == XVR_LITERAL_ARRAY) {
+                    varType = XVR_LITERAL_ARRAY;
+                } else {
+                    varType = typeOf;
                 }
+            }
+
+            /* Handle initialization expression if present */
+            LLVMValueRef init_value = NULL;
+            if (varDecl->expression) {
+                init_value =
+                    Xvr_LLVMExpressionEmitterEmit(emitter, varDecl->expression);
+
                 /* Detect array type from expression */
-                if (varDecl->expression->type == XVR_AST_NODE_COMPOUND) {
+                if (init_value &&
+                    varDecl->expression->type == XVR_AST_NODE_COMPOUND) {
                     Xvr_NodeCompound* comp = &varDecl->expression->compound;
                     if (comp->literalType == XVR_LITERAL_ARRAY ||
                         comp->literalType == XVR_LITERAL_ANY) {
@@ -4036,13 +4241,97 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
                         array_count = comp->count;
                     }
                 }
-                /* Add to function emitter's variable table */
-                Xvr_LLVMFunctionEmitter* fn_emitter =
-                    (Xvr_LLVMFunctionEmitter*)emitter->fn_emitter;
-                if (fn_emitter) {
-                    Xvr_LLVMFunctionEmitterAddLocalVar(
-                        fn_emitter, var_name, alloca, varType, array_count);
+            }
+
+            /* Create allocation based on type */
+            LLVMContextRef llvm_ctx =
+                Xvr_LLVMContextGetLLVMContext(emitter->context);
+
+            if (varType == XVR_LITERAL_ARRAY) {
+                /* Call xvr_array_create_int to initialize the array */
+                LLVMModuleRef module =
+                    Xvr_LLVMModuleManagerGetModule(emitter->module);
+                LLVMBuilderRef llvm_builder =
+                    Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+
+                LLVMValueRef callee =
+                    LLVMGetNamedFunction(module, "xvr_array_create_int");
+                LLVMTypeRef fn_type = NULL;
+                if (!callee) {
+                    fn_type = LLVMFunctionType(
+                        LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx), 0),
+                        NULL, 0, 0);
+                    callee = LLVMAddFunction(module, "xvr_array_create_int",
+                                             fn_type);
+                } else {
+                    fn_type = LLVMGetElementType(LLVMTypeOf(callee));
                 }
+                if (!fn_type) {
+                    fn_type = LLVMFunctionType(
+                        LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx), 0),
+                        NULL, 0, 0);
+                }
+
+                LLVMValueRef array_ptr = LLVMBuildCall2(
+                    llvm_builder, fn_type, callee, NULL, 0, "array_create");
+                init_value = array_ptr;
+
+                if (array_count > 0 && varDecl->expression &&
+                    varDecl->expression->type == XVR_AST_NODE_COMPOUND) {
+                    Xvr_NodeCompound* comp = &varDecl->expression->compound;
+                    LLVMValueRef insert_callee =
+                        LLVMGetNamedFunction(module, "xvr_array_insert_int");
+                    LLVMTypeRef insert_fn_type = NULL;
+                    if (!insert_callee) {
+                        LLVMTypeRef param_types[2] = {
+                            LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx),
+                                            0),
+                            LLVMInt32TypeInContext(llvm_ctx)};
+                        insert_fn_type = LLVMFunctionType(
+                            LLVMVoidTypeInContext(llvm_ctx), param_types, 2, 0);
+                        insert_callee = LLVMAddFunction(
+                            module, "xvr_array_insert_int", insert_fn_type);
+                    } else {
+                        insert_fn_type =
+                            LLVMGetElementType(LLVMTypeOf(insert_callee));
+                    }
+
+                    for (int i = 0; i < comp->count && i < array_count; i++) {
+                        LLVMValueRef elem_val = Xvr_LLVMExpressionEmitterEmit(
+                            emitter, &comp->nodes[i]);
+                        if (elem_val) {
+                            LLVMValueRef args[2] = {array_ptr, elem_val};
+                            LLVMBuildCall2(llvm_builder, insert_fn_type,
+                                           insert_callee, args, 2, "");
+                        }
+                    }
+                }
+            }
+
+            LLVMTypeRef alloc_type;
+            if (varType == XVR_LITERAL_ARRAY) {
+                alloc_type =
+                    LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx), 0);
+            } else if (init_value) {
+                alloc_type = LLVMTypeOf(init_value);
+            } else {
+                alloc_type = LLVMInt32TypeInContext(llvm_ctx);
+            }
+
+            alloca = Xvr_LLVMIRBuilderCreateAlloca(emitter->builder, alloc_type,
+                                                   var_name);
+
+            if (init_value) {
+                Xvr_LLVMIRBuilderCreateStore(emitter->builder, init_value,
+                                             alloca);
+            }
+
+            /* Register the variable */
+            Xvr_LLVMFunctionEmitter* fn_emitter =
+                (Xvr_LLVMFunctionEmitter*)emitter->fn_emitter;
+            if (fn_emitter) {
+                Xvr_LLVMFunctionEmitterAddLocalVar(fn_emitter, var_name, alloca,
+                                                   varType, array_count);
             }
         }
         return NULL;
@@ -4219,33 +4508,48 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
 
             LLVMBuilderRef llvm_builder =
                 Xvr_LLVMIRBuilderGetLLVMBuilder(emitter->builder);
+            LLVMContextRef llvm_ctx =
+                Xvr_LLVMContextGetLLVMContext(emitter->context);
+            LLVMModuleRef module =
+                Xvr_LLVMModuleManagerGetModule(emitter->module);
+
+            /* Load the array pointer for dynamic arrays */
             LLVMTypeRef ptr_type = LLVMTypeOf(var_ptr);
-            if (!ptr_type || LLVMGetTypeKind(ptr_type) != LLVMPointerTypeKind) {
-                return NULL;
+            LLVMValueRef array_ptr;
+            if (ptr_type && LLVMGetTypeKind(ptr_type) == LLVMPointerTypeKind) {
+                array_ptr = LLVMBuildLoad2(
+                    llvm_builder,
+                    LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx), 0),
+                    var_ptr, "array_ptr");
+            } else {
+                array_ptr = var_ptr;
             }
 
-            /* For alloca, use LLVMGetAllocatedType to get the array type */
-            LLVMTypeRef elem_type = LLVMGetAllocatedType(var_ptr);
-            if (!elem_type) {
-                /* Fallback to LLVMGetElementType */
-                elem_type = LLVMGetElementType(ptr_type);
+            /* Call runtime function to get element */
+            LLVMValueRef callee =
+                LLVMGetNamedFunction(module, "xvr_array_get_int");
+            LLVMTypeRef fn_type = NULL;
+            if (!callee) {
+                LLVMTypeRef param_types[2] = {
+                    LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx), 0),
+                    LLVMInt32TypeInContext(llvm_ctx)};
+                fn_type = LLVMFunctionType(LLVMInt32TypeInContext(llvm_ctx),
+                                           param_types, 2, 0);
+                callee = LLVMAddFunction(module, "xvr_array_get_int", fn_type);
+            } else {
+                fn_type = LLVMGetElementType(LLVMTypeOf(callee));
+            }
+            if (!fn_type) {
+                LLVMTypeRef param_types[2] = {
+                    LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx), 0),
+                    LLVMInt32TypeInContext(llvm_ctx)};
+                fn_type = LLVMFunctionType(LLVMInt32TypeInContext(llvm_ctx),
+                                           param_types, 2, 0);
             }
 
-            if (!elem_type) {
-                return NULL;
-            }
-
-            LLVMValueRef indices[] = {
-                LLVMConstInt(
-                    LLVMInt32TypeInContext(
-                        Xvr_LLVMContextGetLLVMContext(emitter->context)),
-                    0, false),
-                index};
-            LLVMValueRef elem_ptr = LLVMBuildInBoundsGEP2(
-                llvm_builder, elem_type, var_ptr, indices, 2, "array_idx");
-            LLVMTypeRef elem_elem_type = LLVMGetElementType(elem_type);
-            return Xvr_LLVMIRBuilderCreateLoad(emitter->builder, elem_elem_type,
-                                               elem_ptr, "array_elem");
+            LLVMValueRef args[2] = {array_ptr, index};
+            return LLVMBuildCall2(llvm_builder, fn_type, callee, args, 2,
+                                  "array_elem");
         }
 
         /* Handle general index expressions (e.g., matrix[0][0]) */
