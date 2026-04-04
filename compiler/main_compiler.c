@@ -277,66 +277,81 @@ int main(int argc, const char* argv[]) {
     double total_time = get_time_ms() - start_time;
 
     if (shouldRun) {
-        const char* runtime_src = "/tmp/xvr_runtime.c";
-        const char* runtime_code =
-            "#include <stdio.h>\n"
-            "#include <stdarg.h>\n"
-            "#include <stdlib.h>\n"
-            "#include <string.h>\n"
-            "int printf(const char *fmt, ...) {\n"
-            "    va_list args;\n"
-            "    va_start(args, fmt);\n"
-            "    int result = vprintf(fmt, args);\n"
-            "    va_end(args);\n"
-            "    return result;\n"
-            "}\n"
-            "char* xvr_string_concat(const char* lhs, const char* rhs) {\n"
-            "    if (!lhs) lhs = \"\";\n"
-            "    if (!rhs) rhs = \"\";\n"
-            "    size_t lhs_len = strlen(lhs);\n"
-            "    size_t rhs_len = strlen(rhs);\n"
-            "    size_t total_len = lhs_len + rhs_len;\n"
-            "    char* result = (char*)malloc(total_len + 1);\n"
-            "    if (!result) return NULL;\n"
-            "    memcpy(result, lhs, lhs_len);\n"
-            "    memcpy(result + lhs_len, rhs, rhs_len);\n"
-            "    result[total_len] = '\\0';\n"
-            "    return result;\n"
-            "}\n"
-            "int xvr_str_len(const char* str) {\n"
-            "    if (!str) return 0;\n"
-            "    return (int)strlen(str);\n"
-            "}\n"
-            "int xvr_array_len(void* arr, int size) {\n"
-            "    return size;\n"
-            "}\n";
+        char* libxvr_path = NULL;
+        int has_libxvr = 0;
 
-        FILE* rf = fopen(runtime_src, "w");
-        if (rf) {
-            fputs(runtime_code, rf);
-            fclose(rf);
+        char search_paths[24][4096];
+        int path_count = 0;
+
+        const char* env_build = getenv("XVR_BUILD_DIR");
+        if (env_build) {
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]), "%s",
+                     env_build);
+        }
+
+        const char* home = getenv("HOME");
+        if (home) {
+            char path[4096];
+            snprintf(path, sizeof(path),
+                     "%s/Documents/project/xvrlang/xvr/build", home);
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]), "%s",
+                     path);
+            snprintf(path, sizeof(path), "%s/project/xvrlang/xvr/build", home);
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]), "%s",
+                     path);
+        }
+
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                 "/home/arfyslowy/Documents/project/xvrlang/xvr/build");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                 "/home/arfyslowy/project/xvrlang/xvr/build");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]), "build");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                 "../build");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                 "./build");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                 "../../build");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]), ".");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]), "..");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]), "../..");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                 "/usr/local/xvr/build");
+        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                 "/opt/xvr/build");
+
+        for (int i = 0; i < path_count; i++) {
+            char test_path[8192];
+            snprintf(test_path, sizeof(test_path), "%s/src/libxvr.a",
+                     search_paths[i]);
+            FILE* rf = fopen(test_path, "r");
+            if (rf) {
+                fclose(rf);
+                libxvr_path = strdup(test_path);
+                has_libxvr = 1;
+                break;
+            }
         }
 
         char* cmd;
-        asprintf(&cmd, "gcc -c %s -o /tmp/xvr_runtime.o", runtime_src);
-        int rc_compile = system(cmd);
-        if (rc_compile != 0) {
-            fprintf(stderr, "error: failed to compile runtime\n");
-            unlink(runtime_src);
-            free(outFile);
-            return 1;
-        }
-        free(cmd);
-
         char* final_exe =
             Xvr_commandLine.outFile ? Xvr_commandLine.outFile : "/tmp/xvr_bin";
-        asprintf(&cmd, "gcc %s /tmp/xvr_runtime.o -o %s -lm", objFile,
-                 final_exe);
+
+        if (has_libxvr && libxvr_path) {
+            asprintf(&cmd, "gcc %s -o %s -lm -lpthread -lxml2 -lcurl %s",
+                     objFile, final_exe, libxvr_path);
+        } else {
+            asprintf(&cmd, "gcc %s -o %s -lm -lpthread -lxml2 -lcurl", objFile,
+                     final_exe);
+        }
+
         int rc = system(cmd);
+        if (libxvr_path) free(libxvr_path);
+        free(cmd);
+
         if (rc != 0) {
             fprintf(stderr, "error: failed to link executable\n");
         }
-        free(cmd);
 
         long bin_size = get_file_size(final_exe);
 
@@ -356,8 +371,6 @@ int main(int argc, const char* argv[]) {
             system(final_exe);
         }
 
-        unlink(runtime_src);
-        unlink("/tmp/xvr_runtime.o");
         unlink(objFile);
         if (!Xvr_commandLine.outFile) {
             unlink("/tmp/xvr_bin");
