@@ -66,20 +66,43 @@ cmake -DXVR_BUILD_SHARED=OFF ..
 
 ```sh
 # Compile and run a .xvr file (default)
-./build/xvr source.xvr
+xvr source.xvr
+
+# Flags can be placed before or after the source file
+xvr -O2 source.xvr
+xvr source.xvr -O2
+xvr -d -O2 source.xvr
+xvr -v --timing -O3 source.xvr
 
 # Compile to executable
-./build/xvr source.xvr -o output
+xvr source.xvr -o output
 
 # Compile to object file only
-./build/xvr source.xvr -c output.o
+xvr source.xvr -c output.o
 
 # Dump LLVM IR to stdout
-./build/xvr source.xvr -l
-
-# Verbose compilation (show build stages)
-./build/xvr -d source.xvr
+xvr source.xvr -l
+xvr -S source.xvr
 ```
+
+### Command-Line Flags
+
+| Flag | Description |
+|------|-------------|
+| `-h, --help` | Display help message |
+| `-v, --version` | Display version info |
+| `-v, --verbose` | Show detailed compilation info |
+| `-d, --debug` | Enable verbose debug output |
+| `-o, --output <file>` | Output file name |
+| `-c, --compile <file>` | Compile to object file |
+| `-S, -l, --llvm` | Output LLVM IR to stdout |
+| `-e, --emit <type>` | Emit specific output (llvm-ir, asm, obj) |
+| `-i, --input <code>` | Compile and run inline code |
+| `-n` | Disable trailing newline in print |
+| `-O<0|1|2|3>` | Optimization level |
+| `-Z, --dump-tokens` | Dump lexer tokens |
+| `--dump-ast` | Dump parsed AST |
+| `--timing` | Show compilation timing |
 
 ### Optimization Levels
 
@@ -89,55 +112,31 @@ XVR supports multiple optimization levels via the `-O` flag:
 |-------|-------------|
 | `-O0` | No optimization (fastest compile time) |
 | `-O1` | Basic optimizations |
-| `-O2` | Balanced optimizations (default for Release) |
+| `-O2` | Balanced optimizations (default) |
 | `-O3` | Aggressive optimizations (maximum performance) |
 
 ```sh
 # Compile with optimizations
-./build/xvr source.xvr -O2
+xvr -O2 source.xvr
 
-# Compile with aggressive optimization
-./build/xvr source.xvr -O3 -o output
-```
-
-### Optimization Pipeline
-
-The compiler applies optimizations in two stages:
-
-1. **AST Optimizations** (frontend):
-   - Constant Folding: Evaluates constant expressions at compile time
-   - Dead Code Elimination: Removes unreachable code branches
-
-2. **LLVM Optimizations** (backend):
-   - Advanced interprocedural optimizations
-   - Loop optimizations
-   - Vectorization
-   - Register allocation
-
-Example transformations:
-```xvr
-# Before optimization (source)
-var x = 2 + 3 * 4;    # becomes 14
-if (false) {
-    println("unreachable");
-}
-
-# After optimization (LLVM IR)
-%1 = add i32 14
-br label %exit
+# Multiple flags
+xvr -O3 -v source.xvr -o output
+xvr -d --timing -O2 source.xvr
 ```
 
 ### Verbose Output
 
-Use `-d` or `--debug` flag to see compilation information:
+Use `-d` or `--debug` or `--verbose` flag to see compilation information:
 
 ```sh
-./build/xvr -d source.xvr
+xvr -v source.xvr
+xvr --timing -O2 source.xvr
 ```
 
 Output shows:
 - Target architecture
 - Output file size
+- Compilation timing breakdown
 - Total compilation time
 
 Example:

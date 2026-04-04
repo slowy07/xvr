@@ -77,8 +77,8 @@ bool Xvr_ASTOptimizerAddPass(Xvr_ASTOptimizer* opt,
     if (!opt || !pass) {
         return false;
     }
-    if (opt->pass_count >= opt->pass_capacity) {
-        int new_cap = opt->pass_capacity * 2;
+    if (!opt->passes || opt->pass_count >= opt->pass_capacity) {
+        int new_cap = opt->pass_capacity > 0 ? opt->pass_capacity * 2 : 4;
         Xvr_ASTOptimizerPass* new_passes =
             realloc(opt->passes, new_cap * sizeof(Xvr_ASTOptimizerPass));
         if (!new_passes) {

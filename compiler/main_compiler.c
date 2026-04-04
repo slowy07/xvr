@@ -235,14 +235,11 @@ int main(int argc, const char* argv[]) {
             break;
         }
         Xvr_LLVMCodegenSetOptimizationLevel(codegen, llvm_level);
-        if (!Xvr_LLVMCodegenRunOptimizer(codegen)) {
-            if (Xvr_commandLine.verbose) {
-                static const char msg[] =
-                    "LLVM optimization warning: optimization pass failed, "
-                    "continuing\n";
-                static const char fmt[] = "%s%s%s\n";
-                fprintf(stderr, fmt, XVR_CC_NOTICE, msg, XVR_CC_RESET);
-            }
+
+        if (Xvr_commandLine.verbose) {
+            static const char msg[] = "AST optimization enabled (-O level)\n";
+            static const char fmt[] = "%s%s%s\n";
+            fprintf(stderr, fmt, XVR_CC_NOTICE, msg, XVR_CC_RESET);
         }
     }
 
