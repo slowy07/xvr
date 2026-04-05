@@ -32,38 +32,47 @@ static long get_file_size(const char* path) {
 static void print_error(const char* filename, int line, const char* error_type,
                         const char* message) {
     if (filename) {
-        static const char fmt[] = "%s:%d: %s: %s\n";
-        fprintf(stderr, fmt, filename, line, error_type, message);
+        fputs(filename, stderr);
+        fprintf(stderr, ":%d: ", line);
+        fputs(error_type, stderr);
+        fputs(": ", stderr);
+        fputs(message, stderr);
+        fputc('\n', stderr);
     } else {
-        static const char fmt[] = "%s: %s\n";
-        fprintf(stderr, fmt, error_type, message);
+        fputs(error_type, stderr);
+        fputs(": ", stderr);
+        fputs(message, stderr);
+        fputc('\n', stderr);
     }
 }
 
 static void print_note(const char* filename, int line, const char* message) {
     if (filename && line > 0) {
-        static const char fmt1[] = "%s%s%s\n";
-        fprintf(stderr, fmt1, XVR_CC_NOTICE, "  --> " XVR_CC_RESET, "");
-        fprintf(stderr, XVR_CC_NOTICE "   |\n" XVR_CC_RESET);
+        fputs("  --> ", stderr);
+        fputs(filename, stderr);
+        fprintf(stderr, ":%d\n", line);
+        fputs("   |\n", stderr);
     }
 }
 
 static void print_compiler_error(const char* filename, int line,
                                  const char* error_type, const char* message,
                                  const char* hint) {
-    fprintf(stderr, "\n");
-    static const char fmt_err[] = "%s%s%s: %s\n";
-    fprintf(stderr, fmt_err, XVR_CC_FONT_RED, "error" XVR_CC_RESET, "",
-            message);
+    fputc('\n', stderr);
+    fputs("error: ", stderr);
+    fputs(message, stderr);
+    fputc('\n', stderr);
     if (filename && line > 0) {
-        static const char fmt_loc[] = "  --> %s:%d\n";
-        fprintf(stderr, fmt_loc, filename, line);
+        fputs("  --> ", stderr);
+        fputs(filename, stderr);
+        fprintf(stderr, ":%d\n", line);
     }
     if (hint) {
-        static const char fmt_hint[] = "%s%s%s: %s\n";
-        fprintf(stderr, fmt_hint, XVR_CC_NOTICE, "help" XVR_CC_RESET, "", hint);
+        fputs("help: ", stderr);
+        fputs(hint, stderr);
+        fputc('\n', stderr);
     }
-    fprintf(stderr, "\n");
+    fputc('\n', stderr);
 }
 
 int main(int argc, const char* argv[]) {
@@ -141,15 +150,14 @@ int main(int argc, const char* argv[]) {
     }
 
     if (Xvr_commandLine.dumpAST) {
-        static const char fmt[] =
-            "\n"
-            "AST: %d top-level nodes\n";
-        fprintf(stderr, fmt, nodeCount);
+        fputc('\n', stderr);
+        fputs("AST: ", stderr);
+        fprintf(stderr, "%d", nodeCount);
+        fputs(" top-level nodes\n", stderr);
         for (int i = 0; i < nodeCount; i++) {
-            static const char node_fmt[] = "  [%d] node type %d\n";
-            fprintf(stderr, node_fmt, i, nodes[i]->type);
+            fprintf(stderr, "  [%d] node type %d\n", i, nodes[i]->type);
         }
-        fprintf(stderr, "\n");
+        fputc('\n', stderr);
     }
 
     Xvr_UnusedChecker checker;
@@ -183,8 +191,9 @@ int main(int argc, const char* argv[]) {
             Xvr_ASTOptimizerResult result =
                 Xvr_ASTOptimizerRun(ast_opt, nodes, nodeCount);
             if (Xvr_commandLine.verbose && result.changes_made > 0) {
-                static const char msg[] = "AST optimization: %d changes\n";
-                fprintf(stderr, msg, result.changes_made);
+                fputs("AST optimization: ", stderr);
+                fprintf(stderr, "%d", result.changes_made);
+                fputs(" changes\n", stderr);
             }
         }
         Xvr_ASTOptimizerDestroy(ast_opt);
@@ -237,9 +246,7 @@ int main(int argc, const char* argv[]) {
         Xvr_LLVMCodegenSetOptimizationLevel(codegen, llvm_level);
 
         if (Xvr_commandLine.verbose) {
-            static const char msg[] = "AST optimization enabled (-O level)\n";
-            static const char fmt[] = "%s%s%s\n";
-            fprintf(stderr, fmt, XVR_CC_NOTICE, msg, XVR_CC_RESET);
+            fputs("AST optimization enabled (-O level)\n", stderr);
         }
     }
 
