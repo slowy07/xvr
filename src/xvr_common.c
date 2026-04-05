@@ -29,6 +29,40 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
+static size_t safe_strlen(const char* str) {
+    size_t len = 0;
+    while (str[len] != '\0') {
+        len++;
+    }
+    return len;
+}
+
+static int safe_strcmp(const char* a, const char* b) {
+    size_t i = 0;
+    while (a[i] != '\0' && b[i] != '\0') {
+        if (a[i] != b[i]) {
+            return a[i] < b[i] ? -1 : 1;
+        }
+        i++;
+    }
+    if (a[i] == '\0' && b[i] == '\0') {
+        return 0;
+    }
+    return a[i] == '\0' ? -1 : 1;
+}
+
+static int safe_strncmp(const char* a, const char* b, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        if (a[i] != b[i]) {
+            return a[i] < b[i] ? -1 : 1;
+        }
+        if (a[i] == '\0') {
+            return 0;
+        }
+    }
+    return 0;
+}
+
 char* Xvr_strdup(const char* str) {
     if (!str) return NULL;
     size_t len = strlen(str) + 1;
@@ -119,9 +153,10 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
         if (!strcmp(argv[i], "-c") || !strcmp(argv[i], "--compile")) {
             Xvr_commandLine.compileOnly = true;
             if (i + 1 < argc) {
-                size_t len = strlen(argv[i + 1]);
+                size_t len = safe_strlen(argv[i + 1]);
                 if (argv[i + 1][0] != '-' &&
-                    !(len >= 4 && strcmp(&argv[i + 1][len - 4], ".xvr") == 0)) {
+                    !(len >= 4 &&
+                      safe_strcmp(&argv[i + 1][len - 4], ".xvr") == 0)) {
                     Xvr_commandLine.outFile = (char*)argv[i + 1];
                     i++;
                 }

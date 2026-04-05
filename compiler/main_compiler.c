@@ -33,25 +33,54 @@ static char* get_filename_without_ext(const char* path) {
     if (!path) {
         return NULL;
     }
-    const char* base = strrchr(path, '/');
-    base = base ? base + 1 : path;
 
-    size_t len = strlen(base);
-    if (len < 4) {
+    size_t path_len = 0;
+    while (path[path_len] != '\0') {
+        path_len++;
+    }
+
+    const char* base = NULL;
+    for (size_t i = path_len; i > 0; i--) {
+        if (path[i - 1] == '/') {
+            base = path + i;
+            break;
+        }
+    }
+    if (!base) {
+        base = path;
+        path_len = 0;
+        while (base[path_len] != '\0') {
+            path_len++;
+        }
+    }
+
+    if (path_len < 4) {
         return NULL;
     }
 
-    const char* ext = ".xvr";
-    if (len > 4 && strcmp(base + len - 4, ext) == 0) {
-        len -= 4;
+    if (path_len >= 4) {
+        const char* ext = ".xvr";
+        size_t ext_pos = path_len - 4;
+        int matches = 1;
+        for (size_t j = 0; j < 4; j++) {
+            if (base[ext_pos + j] != ext[j]) {
+                matches = 0;
+                break;
+            }
+        }
+        if (matches) {
+            path_len -= 4;
+        }
     }
 
-    char* result = malloc(len + 1);
+    char* result = (char*)malloc(path_len + 1);
     if (!result) {
         return NULL;
     }
-    memcpy(result, base, len);
-    result[len] = '\0';
+    for (size_t i = 0; i < path_len; i++) {
+        result[i] = base[i];
+    }
+    result[path_len] = '\0';
     return result;
 }
 
@@ -66,16 +95,29 @@ static char* build_output_filename(const char* sourceFile,
         return base;
     }
 
-    size_t extLen = strlen(extension);
-    size_t baseLen = strlen(base);
-    char* result = malloc(baseLen + extLen + 1);
+    size_t base_len = 0;
+    while (base[base_len] != '\0') {
+        base_len++;
+    }
+
+    size_t ext_len = 0;
+    while (extension[ext_len] != '\0') {
+        ext_len++;
+    }
+
+    char* result = (char*)malloc(base_len + ext_len + 1);
     if (!result) {
         free(base);
         return NULL;
     }
 
-    memcpy(result, base, baseLen);
-    memcpy(result + baseLen, extension, extLen + 1);
+    for (size_t i = 0; i < base_len; i++) {
+        result[i] = base[i];
+    }
+    for (size_t i = 0; i < ext_len; i++) {
+        result[base_len + i] = extension[i];
+    }
+    result[base_len + ext_len] = '\0';
     free(base);
     return result;
 }
