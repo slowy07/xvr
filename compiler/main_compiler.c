@@ -33,7 +33,8 @@ static void print_error(const char* filename, int line, const char* error_type,
                         const char* message) {
     if (filename) {
         fputs(filename, stderr);
-        fprintf(stderr, ":%d: ", line);
+        fprintf(stderr, "%d", line);
+        fputs(": ", stderr);
         fputs(error_type, stderr);
         fputs(": ", stderr);
         fputs(message, stderr);
