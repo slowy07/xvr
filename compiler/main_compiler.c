@@ -8,6 +8,7 @@
 
 #include "backend/xvr_llvm_codegen.h"
 #include "compiler_tools.h"
+#include "optimizer/xvr_ast_optimizer.h"
 #include "xvr_ast_node.h"
 #include "xvr_common.h"
 #include "xvr_console_colors.h"
@@ -28,39 +29,144 @@ static long get_file_size(const char* path) {
     return 0;
 }
 
+static char* get_filename_without_ext(const char* path) {
+    if (!path) {
+        return NULL;
+    }
+
+    size_t path_len = 0;
+    while (path[path_len] != '\0') {
+        path_len++;
+    }
+
+    const char* base = NULL;
+    for (size_t i = path_len; i > 0; i--) {
+        if (path[i - 1] == '/') {
+            base = path + i;
+            break;
+        }
+    }
+    if (!base) {
+        base = path;
+        path_len = 0;
+        while (base[path_len] != '\0') {
+            path_len++;
+        }
+    }
+
+    if (path_len < 4) {
+        return NULL;
+    }
+
+    if (path_len >= 4) {
+        const char* ext = ".xvr";
+        size_t ext_pos = path_len - 4;
+        int matches = 1;
+        for (size_t j = 0; j < 4; j++) {
+            if (base[ext_pos + j] != ext[j]) {
+                matches = 0;
+                break;
+            }
+        }
+        if (matches) {
+            path_len -= 4;
+        }
+    }
+
+    char* result = (char*)malloc(path_len + 1);
+    if (!result) {
+        return NULL;
+    }
+    for (size_t i = 0; i < path_len; i++) {
+        result[i] = base[i];
+    }
+    result[path_len] = '\0';
+    return result;
+}
+
+static char* build_output_filename(const char* sourceFile,
+                                   const char* extension) {
+    char* base = get_filename_without_ext(sourceFile);
+    if (!base) {
+        return NULL;
+    }
+
+    if (!extension) {
+        return base;
+    }
+
+    size_t base_len = 0;
+    while (base[base_len] != '\0') {
+        base_len++;
+    }
+
+    size_t ext_len = 0;
+    while (extension[ext_len] != '\0') {
+        ext_len++;
+    }
+
+    char* result = (char*)malloc(base_len + ext_len + 1);
+    if (!result) {
+        free(base);
+        return NULL;
+    }
+
+    for (size_t i = 0; i < base_len; i++) {
+        result[i] = base[i];
+    }
+    for (size_t i = 0; i < ext_len; i++) {
+        result[base_len + i] = extension[i];
+    }
+    result[base_len + ext_len] = '\0';
+    free(base);
+    return result;
+}
+
 static void print_error(const char* filename, int line, const char* error_type,
                         const char* message) {
     if (filename) {
-        fprintf(stderr,
-                XVR_CC_ERROR "%s:%d: " XVR_CC_FONT_RED "%s: " XVR_CC_RESET
-                             "%s\n",
-                filename, line, error_type, message);
+        fputs(filename, stderr);
+        fprintf(stderr, "%d", line);
+        fputs(": ", stderr);
+        fputs(error_type, stderr);
+        fputs(": ", stderr);
+        fputs(message, stderr);
+        fputc('\n', stderr);
     } else {
-        fprintf(stderr, XVR_CC_ERROR "%s: " XVR_CC_RESET "%s\n", error_type,
-                message);
+        fputs(error_type, stderr);
+        fputs(": ", stderr);
+        fputs(message, stderr);
+        fputc('\n', stderr);
     }
 }
 
 static void print_note(const char* filename, int line, const char* message) {
     if (filename && line > 0) {
-        fprintf(stderr, XVR_CC_NOTICE "  --> " XVR_CC_RESET "%s:%d\n", filename,
-                line);
-        fprintf(stderr, XVR_CC_NOTICE "   |\n" XVR_CC_RESET);
+        fputs("  --> ", stderr);
+        fputs(filename, stderr);
+        fprintf(stderr, ":%d\n", line);
+        fputs("   |\n", stderr);
     }
 }
 
 static void print_compiler_error(const char* filename, int line,
                                  const char* error_type, const char* message,
                                  const char* hint) {
-    fprintf(stderr, "\n");
-    fprintf(stderr, XVR_CC_FONT_RED "error" XVR_CC_RESET ": %s\n", message);
+    fputc('\n', stderr);
+    fputs("error: ", stderr);
+    fputs(message, stderr);
+    fputc('\n', stderr);
     if (filename && line > 0) {
-        fprintf(stderr, "  --> %s:%d\n", filename, line);
+        fputs("  --> ", stderr);
+        fputs(filename, stderr);
+        fprintf(stderr, ":%d\n", line);
     }
     if (hint) {
-        fprintf(stderr, XVR_CC_NOTICE "help: " XVR_CC_RESET "%s\n", hint);
+        fputs("help: ", stderr);
+        fputs(hint, stderr);
+        fputc('\n', stderr);
     }
-    fprintf(stderr, "\n");
+    fputc('\n', stderr);
 }
 
 int main(int argc, const char* argv[]) {
@@ -138,13 +244,14 @@ int main(int argc, const char* argv[]) {
     }
 
     if (Xvr_commandLine.dumpAST) {
-        fprintf(stderr,
-                "\n" XVR_CC_NOTICE "AST:" XVR_CC_RESET " %d top-level nodes\n",
-                nodeCount);
+        fputc('\n', stderr);
+        fputs("AST: ", stderr);
+        fprintf(stderr, "%d", nodeCount);
+        fputs(" top-level nodes\n", stderr);
         for (int i = 0; i < nodeCount; i++) {
             fprintf(stderr, "  [%d] node type %d\n", i, nodes[i]->type);
         }
-        fprintf(stderr, "\n");
+        fputc('\n', stderr);
     }
 
     Xvr_UnusedChecker checker;
@@ -165,6 +272,26 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
     Xvr_freeUnusedChecker(&checker);
+
+    Xvr_ASTOptimizer* ast_opt = Xvr_ASTOptimizerCreate();
+    if (ast_opt) {
+        int opt_level = Xvr_commandLine.optimizationLevel;
+        Xvr_OptimizationLevel xvr_opt_level =
+            Xvr_OptimizationLevelFromInt(opt_level);
+        Xvr_ASTOptimizerSetLevel(ast_opt, xvr_opt_level);
+
+        if (opt_level > 0) {
+            Xvr_ASTOptimizerAddStandardPasses(ast_opt);
+            Xvr_ASTOptimizerResult result =
+                Xvr_ASTOptimizerRun(ast_opt, nodes, nodeCount);
+            if (Xvr_commandLine.verbose && result.changes_made > 0) {
+                fputs("AST optimization: ", stderr);
+                fprintf(stderr, "%d", result.changes_made);
+                fputs(" changes\n", stderr);
+            }
+        }
+        Xvr_ASTOptimizerDestroy(ast_opt);
+    }
 
     Xvr_LLVMCodegen* codegen = Xvr_LLVMCodegenCreate(module_name);
     if (!codegen) {
@@ -193,15 +320,29 @@ int main(int argc, const char* argv[]) {
         return 1;
     }
 
-    /* FIXME: Optimizer causes SIGSEGV - re-enable once target machine
-     * configuration is fixed in xvr_llvm_optimizer.c
-     *
-     * TODO: Add command-line flag for optimization level (-O0, -O1, -O2, -O3)
-     *
-    if (!Xvr_commandLine.dumpLLVM) {
-        Xvr_LLVMCodegenRunOptimizer(codegen);
+    int opt_level = Xvr_commandLine.optimizationLevel;
+    if (opt_level > 0 && !Xvr_commandLine.dumpLLVM) {
+        Xvr_LLVMOptimizationLevel llvm_level = XVR_LLVM_OPT_O2;
+        switch (opt_level) {
+        case 1:
+            llvm_level = XVR_LLVM_OPT_O1;
+            break;
+        case 2:
+            llvm_level = XVR_LLVM_OPT_O2;
+            break;
+        case 3:
+            llvm_level = XVR_LLVM_OPT_O3;
+            break;
+        default:
+            llvm_level = XVR_LLVM_OPT_O2;
+            break;
+        }
+        Xvr_LLVMCodegenSetOptimizationLevel(codegen, llvm_level);
+
+        if (Xvr_commandLine.verbose) {
+            fputs("AST optimization enabled (-O level)\n", stderr);
+        }
     }
-    */
 
     bool shouldRun = !Xvr_commandLine.compileOnly &&
                      !Xvr_commandLine.dumpLLVM &&
@@ -221,14 +362,43 @@ int main(int argc, const char* argv[]) {
         }
     }
 
+    /* TODO: Consolidate output filename generation into a separate helper
+       function to avoid code duplication between shouldRun and else branches */
     if (shouldRun) {
         objFile = strdup("/tmp/xvr_compile.o");
+        /* NOTE: Use safe helper function to extract filename without extension
+         */
         if (Xvr_commandLine.outFile) {
             outFile = strdup(Xvr_commandLine.outFile);
+        } else if (Xvr_commandLine.sourceFile) {
+            outFile = get_filename_without_ext(Xvr_commandLine.sourceFile);
+            if (!outFile) {
+                outFile = strdup("a.out");
+            }
+        } else {
+            outFile = strdup("a.out");
         }
     } else {
-        outFile = Xvr_commandLine.outFile ? strdup(Xvr_commandLine.outFile)
-                                          : strdup("a.out");
+        if (Xvr_commandLine.outFile) {
+            outFile = strdup(Xvr_commandLine.outFile);
+        } else if (Xvr_commandLine.sourceFile) {
+            const char* ext = NULL;
+            if (useEmitType) {
+                if (emitFileType == 1) {
+                    ext = ".s";
+                } else if (emitFileType == 2) {
+                    ext = ".ll";
+                }
+            } else if (Xvr_commandLine.compileOnly) {
+                ext = ".o";
+            }
+            outFile = build_output_filename(Xvr_commandLine.sourceFile, ext);
+            if (!outFile) {
+                outFile = strdup("a.out");
+            }
+        } else {
+            outFile = strdup("a.out");
+        }
         objFile = strdup(outFile);
     }
 
@@ -236,8 +406,8 @@ int main(int argc, const char* argv[]) {
         size_t ir_len = 0;
         char* ir = Xvr_LLVMCodegenPrintIR(codegen, &ir_len);
         if (ir) {
-            if (useEmitType && emitFileType == 2 && Xvr_commandLine.outFile) {
-                FILE* f = fopen(Xvr_commandLine.outFile, "w");
+            if (useEmitType && emitFileType == 2) {
+                FILE* f = fopen(outFile, "w");
                 if (f) {
                     fputs(ir, f);
                     fclose(f);
@@ -334,8 +504,7 @@ int main(int argc, const char* argv[]) {
         }
 
         char* cmd;
-        char* final_exe =
-            Xvr_commandLine.outFile ? Xvr_commandLine.outFile : "/tmp/xvr_bin";
+        char* final_exe = outFile ? outFile : "/tmp/xvr_bin";
 
         if (has_libxvr && libxvr_path) {
             asprintf(&cmd, "gcc %s -o %s -lm -lpthread -lxml2 -lcurl %s",
@@ -368,12 +537,13 @@ int main(int argc, const char* argv[]) {
         }
 
         if (rc == 0) {
-            system(final_exe);
+            char run_cmd[8192];
+            snprintf(run_cmd, sizeof(run_cmd), "./%s", outFile);
+            system(run_cmd);
         }
 
         unlink(objFile);
-        if (!Xvr_commandLine.outFile) {
-            unlink("/tmp/xvr_bin");
+        if (!Xvr_commandLine.outFile && !shouldRun) {
         }
     } else {
         long obj_size = get_file_size(outFile);

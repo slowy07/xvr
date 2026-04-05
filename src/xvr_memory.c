@@ -38,6 +38,9 @@ void Xvr_debugResetMemoryStats(void) {
 
 void* Xvr_private_defaultMemoryAllocator(void* pointer, size_t oldSize,
                                          size_t newSize) {
+    /* NOTE: This allocator uses standard malloc/free - consider arena
+       allocation for performance-critical code paths to reduce allocation
+       overhead */
 #if XVR_DEBUG_ALLOCATIONS
     if (!g_initialized) {
         g_initialized = 1;

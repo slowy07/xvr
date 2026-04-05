@@ -29,6 +29,40 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
+static size_t safe_strlen(const char* str) {
+    size_t len = 0;
+    while (str[len] != '\0') {
+        len++;
+    }
+    return len;
+}
+
+static int safe_strcmp(const char* a, const char* b) {
+    size_t i = 0;
+    while (a[i] != '\0' && b[i] != '\0') {
+        if (a[i] != b[i]) {
+            return a[i] < b[i] ? -1 : 1;
+        }
+        i++;
+    }
+    if (a[i] == '\0' && b[i] == '\0') {
+        return 0;
+    }
+    return a[i] == '\0' ? -1 : 1;
+}
+
+static int safe_strncmp(const char* a, const char* b, size_t n) {
+    for (size_t i = 0; i < n; i++) {
+        if (a[i] != b[i]) {
+            return a[i] < b[i] ? -1 : 1;
+        }
+        if (a[i] == '\0') {
+            return 0;
+        }
+    }
+    return 0;
+}
+
 char* Xvr_strdup(const char* str) {
     if (!str) return NULL;
     size_t len = strlen(str) + 1;
@@ -84,8 +118,14 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
             continue;
         }
 
-        if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--version")) {
+        if (!strcmp(argv[i], "--version")) {
             Xvr_commandLine.version = true;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
+        if (!strcmp(argv[i], "-v") || !strcmp(argv[i], "--verbose")) {
+            Xvr_commandLine.verbose = true;
             Xvr_commandLine.error = false;
             continue;
         }
@@ -112,9 +152,14 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
 
         if (!strcmp(argv[i], "-c") || !strcmp(argv[i], "--compile")) {
             Xvr_commandLine.compileOnly = true;
-            if (i + 1 < argc && argv[i + 1][0] != '-') {
-                Xvr_commandLine.outFile = (char*)argv[i + 1];
-                i++;
+            if (i + 1 < argc) {
+                size_t len = safe_strlen(argv[i + 1]);
+                if (argv[i + 1][0] != '-' &&
+                    !(len >= 4 &&
+                      safe_strcmp(&argv[i + 1][len - 4], ".xvr") == 0)) {
+                    Xvr_commandLine.outFile = (char*)argv[i + 1];
+                    i++;
+                }
             }
             Xvr_commandLine.error = false;
             continue;
@@ -176,21 +221,18 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
 
         if (!strcmp(argv[i], "--dump-tokens") || !strcmp(argv[i], "-Z")) {
             Xvr_commandLine.dumpTokens = true;
-            Xvr_commandLine.verbose = true;
             Xvr_commandLine.error = false;
             continue;
         }
 
         if (!strcmp(argv[i], "--dump-ast")) {
             Xvr_commandLine.dumpAST = true;
-            Xvr_commandLine.verbose = true;
             Xvr_commandLine.error = false;
             continue;
         }
 
         if (!strcmp(argv[i], "--timing")) {
             Xvr_commandLine.showTiming = true;
-            Xvr_commandLine.verbose = true;
             Xvr_commandLine.error = false;
             continue;
         }
@@ -227,23 +269,32 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
 
     printf("USAGE:\n");
     printf(
-        "  xvr <source.xvr>              Compile and run (produces temp "
-        "binary)\n");
-    printf("  xvr <source.xvr> -o <output>   Compile to executable\n");
-    printf("  xvr <source.xvr> -c <output.o> Compile to object file only\n");
-    printf("  xvr <source.xvr> -S             Output LLVM IR to stdout\n");
-    printf("  xvr <source.xvr> -l             Output LLVM IR to stdout\n");
+        "  xvr [flags] <source.xvr>      Compile and run (default: creates "
+        "'source' executable)\n");
+    printf("  xvr [flags] <source.xvr> -o <output>   Compile to executable\n");
+    printf(
+        "  xvr [flags] <source.xvr> -c [output]  Compile to object file "
+        "(default: source.o)\n");
+    printf(
+        "  xvr [flags] <source.xvr> --emit asm       Output assembly (default: "
+        "source.s)\n");
+    printf(
+        "  xvr [flags] <source.xvr> --emit llvm-ir  Output LLVM IR (default: "
+        "source.ll)\n");
+    printf(
+        "  xvr [flags] <source.xvr> -l             Output LLVM IR to stdout\n");
     printf("  xvr -i '<code>'                Compile and run inline code\n\n");
 
     printf("OPTIONS:\n");
     printf("  -h, --help               Display this help message and exit\n");
     printf("  -v, --version            Display version information and exit\n");
-    printf("  -o, --output <file>      Output file name (default: a.out)\n");
-    printf("  -c, --compile <file>     Compile to object file (don't link)\n");
+    printf("  -o, --output <file>      Output file name\n");
+    printf("  -c, --compile [file]     Compile to object file (.o)\n");
     printf("  -S, -l, --llvm           Output LLVM IR to stdout\n");
     printf(
         "  -r                        Compile and immediately run (default)\n");
     printf("  -d, --debug               Enable verbose debug output\n");
+    printf("  -v, --verbose             Show detailed compilation info\n");
     printf(
         "  -i, --input <code>       Compile and run inline XVR code string\n");
     printf(
@@ -253,12 +304,32 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
     printf(
         "  -n                        Disable trailing newline in print "
         "statements\n");
-    printf("  -O<0|1|2|3>               Optimization level (default: -O0)\n");
+    printf("  -O<0|1|2|3>              Optimization level (default: -O0)\n");
     printf("  -Z, --dump-tokens        Dump all lexer tokens to stderr\n");
     printf("  --dump-ast               Dump parsed AST to stderr\n");
     printf("  --timing                 Show compilation timing breakdown\n\n");
 
+    printf("OUTPUT TYPES:\n");
+    printf("  -e asm                   Emit assembly (.s file)\n");
+    printf("  -e llvm-ir              Emit LLVM IR (.ll file)\n");
+    printf("  -e obj                  Emit object file (.o file)\n\n");
+
+    printf("DEFAULT OUTPUT FILES:\n");
+    printf("  (no flag)               Executable (source name without .xvr)\n");
+    printf("  -c                       Object file (.o)\n");
+    printf("  --emit asm               Assembly (.s)\n");
+    printf("  --emit llvm-ir           LLVM IR (.ll)\n\n");
+
+    printf("OPTIMIZATION LEVELS:\n");
+    printf("  -O0                      No optimization (fastest compile)\n");
+    printf("  -O1                      Basic optimizations\n");
+    printf("  -O2                      Balanced optimizations (default)\n");
+    printf("  -O3                      Aggressive optimizations\n\n");
+
     printf("ARGUMENTS:\n");
+    printf(
+        "  [flags]                   Optional flags (can be placed before or "
+        "after file)\n");
     printf("  <source.xvr>              XVR source file to compile\n");
     printf(
         "  <output>                  Output executable or object file name\n");
@@ -267,6 +338,9 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
     printf("EXAMPLES:\n");
     printf("  Compile and run a source file:\n");
     printf("    $ xvr hello.xvr\n\n");
+    printf("  Compile with optimization (flag before file):\n");
+    printf("    $ xvr -O2 hello.xvr\n");
+    printf("    $ xvr -O3 -d hello.xvr\n\n");
     printf("  Compile to executable with custom name:\n");
     printf("    $ xvr hello.xvr -o myprogram\n");
     printf("    $ ./myprogram\n\n");
@@ -274,9 +348,12 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
     printf("    $ xvr hello.xvr -c hello.o\n\n");
     printf("  Output LLVM IR for inspection:\n");
     printf("    $ xvr hello.xvr -l\n");
-    printf("    $ xvr hello.xvr -S\n\n");
-    printf("  Compile with optimization:\n");
-    printf("    $ xvr -O2 hello.xvr -o hello\n\n");
+    printf("    $ xvr -S hello.xvr\n\n");
+    printf("  Verbose compilation with timing:\n");
+    printf("    $ xvr -v --timing hello.xvr\n");
+    printf("    $ xvr --timing -O2 hello.xvr\n\n");
+    printf("  Compile with optimization and verbose:\n");
+    printf("    $ xvr -O2 -v hello.xvr -o hello\n\n");
     printf("  Compile inline code and run:\n");
     printf("    $ xvr -i 'print(\"Hello World\")'\n\n");
     printf("  Show compiler version:\n");

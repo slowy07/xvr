@@ -68,7 +68,11 @@ xvr/
 │   │   ├── xvr_llvm_codegen.c       # Main code generator
 │   │   ├── xvr_llvm_control_flow.c # If/while/for handling
 │   │   ├── xvr_llvm_expression_emitter.c # Expression codegen
+│   │   ├── xvr_llvm_optimizer.c     # LLVM optimization pipeline
 │   │   └── *.c/*.h                  # LLVM infrastructure
+│   ├── optimizer/           # AST optimization passes
+│   │   ├── xvr_ast_optimizer.h     # PassManager interface
+│   │   └── xvr_ast_optimizer.c     # Pass implementations
 │   ├── xvr_*.c              # Parser, lexer, AST, etc.
 │   └── xvr_common.h        # Version info, common definitions
 ├── compiler/               # Compiler executable source
@@ -250,6 +254,40 @@ Use clear, descriptive commit messages:
 1. Add opcode to `xvr_opcodes.h`
 2. Add parser handling
 3. Add LLVM codegen in `src/backend/`
+
+### New Optimization Passes
+
+To add a new AST optimization pass:
+
+1. Add pass type to `xvr_ast_optimizer.h`:
+```c
+typedef enum {
+    // ... existing passes ...
+    XVR_PASS_YOUR_NEW_PASS
+} Xvr_ASTPassType;
+```
+
+2. Implement the pass function:
+```c
+static Xvr_ASTOptimizerResult run_your_pass(Xvr_ASTNode** node, void* context) {
+    Xvr_ASTOptimizerResult result = {XVR_OPT_RESULT_SUCCESS, 0, NULL};
+    // Implement your optimization logic
+    return result;
+}
+```
+
+3. Register the pass in `Xvr_ASTOptimizerAddStandardPasses()`:
+```c
+Xvr_ASTOptimizerPass new_pass = {
+    .type = XVR_PASS_YOUR_NEW_PASS,
+    .name = "your_pass_name",
+    .run = run_your_pass,
+    .context = your_context,
+    .priority = 5,  // Higher = runs later
+    .enabled = true
+};
+Xvr_ASTOptimizerAddPass(opt, &new_pass);
+```
 
 ### Print/Println Behavior
 
