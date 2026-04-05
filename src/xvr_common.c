@@ -118,9 +118,13 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
 
         if (!strcmp(argv[i], "-c") || !strcmp(argv[i], "--compile")) {
             Xvr_commandLine.compileOnly = true;
-            if (i + 1 < argc && argv[i + 1][0] != '-') {
-                Xvr_commandLine.outFile = (char*)argv[i + 1];
-                i++;
+            if (i + 1 < argc) {
+                size_t len = strlen(argv[i + 1]);
+                if (argv[i + 1][0] != '-' &&
+                    !(len >= 4 && strcmp(&argv[i + 1][len - 4], ".xvr") == 0)) {
+                    Xvr_commandLine.outFile = (char*)argv[i + 1];
+                    i++;
+                }
             }
             Xvr_commandLine.error = false;
             continue;
@@ -230,14 +234,18 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
 
     printf("USAGE:\n");
     printf(
-        "  xvr [flags] <source.xvr>    Compile and run (produces temp "
-        "binary)\n");
+        "  xvr [flags] <source.xvr>      Compile and run (default: creates "
+        "'source' executable)\n");
     printf("  xvr [flags] <source.xvr> -o <output>   Compile to executable\n");
     printf(
-        "  xvr [flags] <source.xvr> -c <output.o> Compile to object file "
-        "only\n");
+        "  xvr [flags] <source.xvr> -c [output]  Compile to object file "
+        "(default: source.o)\n");
     printf(
-        "  xvr [flags] <source.xvr> -S             Output LLVM IR to stdout\n");
+        "  xvr [flags] <source.xvr> --emit asm       Output assembly (default: "
+        "source.s)\n");
+    printf(
+        "  xvr [flags] <source.xvr> --emit llvm-ir  Output LLVM IR (default: "
+        "source.ll)\n");
     printf(
         "  xvr [flags] <source.xvr> -l             Output LLVM IR to stdout\n");
     printf("  xvr -i '<code>'                Compile and run inline code\n\n");
@@ -245,8 +253,8 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
     printf("OPTIONS:\n");
     printf("  -h, --help               Display this help message and exit\n");
     printf("  -v, --version            Display version information and exit\n");
-    printf("  -o, --output <file>      Output file name (default: a.out)\n");
-    printf("  -c, --compile <file>     Compile to object file (don't link)\n");
+    printf("  -o, --output <file>      Output file name\n");
+    printf("  -c, --compile [file]     Compile to object file (.o)\n");
     printf("  -S, -l, --llvm           Output LLVM IR to stdout\n");
     printf(
         "  -r                        Compile and immediately run (default)\n");
@@ -265,6 +273,17 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
     printf("  -Z, --dump-tokens        Dump all lexer tokens to stderr\n");
     printf("  --dump-ast               Dump parsed AST to stderr\n");
     printf("  --timing                 Show compilation timing breakdown\n\n");
+
+    printf("OUTPUT TYPES:\n");
+    printf("  -e asm                   Emit assembly (.s file)\n");
+    printf("  -e llvm-ir              Emit LLVM IR (.ll file)\n");
+    printf("  -e obj                  Emit object file (.o file)\n\n");
+
+    printf("DEFAULT OUTPUT FILES:\n");
+    printf("  (no flag)               Executable (source name without .xvr)\n");
+    printf("  -c                       Object file (.o)\n");
+    printf("  --emit asm               Assembly (.s)\n");
+    printf("  --emit llvm-ir           LLVM IR (.ll)\n\n");
 
     printf("OPTIMIZATION LEVELS:\n");
     printf("  -O0                      No optimization (fastest compile)\n");

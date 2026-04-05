@@ -74,15 +74,21 @@ xvr source.xvr -O2
 xvr -d -O2 source.xvr
 xvr -v --timing -O3 source.xvr
 
-# Compile to executable
-xvr source.xvr -o output
+# Compile to executable (default output: source name without extension)
+xvr source.xvr              # → creates 'source' executable
 
-# Compile to object file only
-xvr source.xvr -c output.o
+# Compile to object file
+xvr -c source.xvr          # → creates 'source.o'
 
-# Dump LLVM IR to stdout
-xvr source.xvr -l
-xvr -S source.xvr
+# Output assembly (.s)
+xvr --emit asm source.xvr  # → creates 'source.s'
+
+# Output LLVM IR (.ll)
+xvr --emit llvm-ir source.xvr # → creates 'source.ll'
+
+# Custom output name
+xvr source.xvr -o myprogram
+xvr -c source.xvr -o myobject.o
 ```
 
 ### Command-Line Flags
@@ -94,7 +100,7 @@ xvr -S source.xvr
 | `-v, --verbose` | Show detailed compilation info |
 | `-d, --debug` | Enable verbose debug output |
 | `-o, --output <file>` | Output file name |
-| `-c, --compile <file>` | Compile to object file |
+| `-c, --compile [file]` | Compile to object file (.o) |
 | `-S, -l, --llvm` | Output LLVM IR to stdout |
 | `-e, --emit <type>` | Emit specific output (llvm-ir, asm, obj) |
 | `-i, --input <code>` | Compile and run inline code |
@@ -103,6 +109,21 @@ xvr -S source.xvr
 | `-Z, --dump-tokens` | Dump lexer tokens |
 | `--dump-ast` | Dump parsed AST |
 | `--timing` | Show compilation timing |
+
+### Output Types
+
+The `-e, --emit` flag specifies the output format:
+
+| Type | Extension | Description |
+|------|-----------|-------------|
+| `asm` | `.s` | Assembly language (native x86-64) |
+| `llvm-ir` | `.ll` | LLVM IR (human-readable) |
+| `obj` | `.o` | Object file (binary) |
+
+Without `-e`, default behavior:
+- No flag → executable (compiled binary)
+- `-c` → object file (`.o`)
+- Default filename = source name without `.xvr` extension
 
 ### Optimization Levels
 

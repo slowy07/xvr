@@ -38,11 +38,14 @@ struct Xvr_ASTOptimizer {
 };
 
 Xvr_ASTOptimizer* Xvr_ASTOptimizerCreate(void) {
+    /* NOTE: Default optimization level is O2 for balanced compile
+     * time/performance */
     Xvr_ASTOptimizer* opt = calloc(1, sizeof(Xvr_ASTOptimizer));
     if (!opt) {
         return NULL;
     }
     opt->level = XVR_OPT_LEVEL_O2;
+    /* TODO: Consider pre-allocating passes array for better memory locality */
     opt->passes = NULL;
     opt->pass_count = 0;
     opt->pass_capacity = 16;

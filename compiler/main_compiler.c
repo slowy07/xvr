@@ -269,14 +269,82 @@ int main(int argc, const char* argv[]) {
         }
     }
 
+    /* TODO: Consolidate output filename generation into a separate helper
+       function to avoid code duplication between shouldRun and else branches */
     if (shouldRun) {
         objFile = strdup("/tmp/xvr_compile.o");
+        /* BUG: strrchr with hardcoded -4 assumes .xvr extension - breaks if
+         * extension differs */
         if (Xvr_commandLine.outFile) {
             outFile = strdup(Xvr_commandLine.outFile);
+        } else if (Xvr_commandLine.sourceFile) {
+            const char* srcBaseNoExt = strrchr(Xvr_commandLine.sourceFile, '/');
+            srcBaseNoExt =
+                srcBaseNoExt ? srcBaseNoExt + 1 : Xvr_commandLine.sourceFile;
+            /* NOTE: Using hardcoded -4 for ".xvr" extension length */
+            size_t baseLen = strlen(srcBaseNoExt) - 4;
+            char* defaultName = malloc(baseLen + 1);
+            strncpy(defaultName, srcBaseNoExt, baseLen);
+            defaultName[baseLen] = '\0';
+            outFile = defaultName;
+        } else {
+            outFile = strdup("a.out");
         }
     } else {
-        outFile = Xvr_commandLine.outFile ? strdup(Xvr_commandLine.outFile)
-                                          : strdup("a.out");
+        if (Xvr_commandLine.outFile) {
+            outFile = strdup(Xvr_commandLine.outFile);
+        } else {
+            const char* srcBase = "a.out";
+            if (Xvr_commandLine.sourceFile) {
+                const char* srcBaseNoExt =
+                    strrchr(Xvr_commandLine.sourceFile, '/');
+                srcBaseNoExt = srcBaseNoExt ? srcBaseNoExt + 1
+                                            : Xvr_commandLine.sourceFile;
+                if (useEmitType) {
+                    if (emitFileType == 1) {
+                        /* TODO: Extract extension logic to a utility function
+                         */
+                        size_t baseLen = strlen(srcBaseNoExt) - 4;
+                        char* defaultName = malloc(baseLen + 3);
+                        strncpy(defaultName, srcBaseNoExt, baseLen);
+                        defaultName[baseLen] = '.';
+                        defaultName[baseLen + 1] = 's';
+                        defaultName[baseLen + 2] = '\0';
+                        outFile = defaultName;
+                    } else if (emitFileType == 2) {
+                        /* NOTE: LLVM IR output uses .ll extension */
+                        size_t baseLen = strlen(srcBaseNoExt) - 4;
+                        char* defaultName = malloc(baseLen + 4);
+                        strncpy(defaultName, srcBaseNoExt, baseLen);
+                        defaultName[baseLen] = '.';
+                        defaultName[baseLen + 1] = 'l';
+                        defaultName[baseLen + 2] = 'l';
+                        defaultName[baseLen + 3] = '\0';
+                        outFile = defaultName;
+                    } else {
+                        /* BUG: This branch should not happen - handle
+                         * emitFileType == 0 */
+                        outFile = strdup("a.out");
+                    }
+                } else if (Xvr_commandLine.compileOnly) {
+                    size_t baseLen = strlen(srcBaseNoExt) - 4;
+                    char* defaultName = malloc(baseLen + 3);
+                    strncpy(defaultName, srcBaseNoExt, baseLen);
+                    defaultName[baseLen] = '.';
+                    defaultName[baseLen + 1] = 'o';
+                    defaultName[baseLen + 2] = '\0';
+                    outFile = defaultName;
+                } else {
+                    size_t baseLen = strlen(srcBaseNoExt) - 4;
+                    char* defaultName = malloc(baseLen + 1);
+                    strncpy(defaultName, srcBaseNoExt, baseLen);
+                    defaultName[baseLen] = '\0';
+                    outFile = defaultName;
+                }
+            } else {
+                outFile = strdup("a.out");
+            }
+        }
         objFile = strdup(outFile);
     }
 
@@ -284,8 +352,8 @@ int main(int argc, const char* argv[]) {
         size_t ir_len = 0;
         char* ir = Xvr_LLVMCodegenPrintIR(codegen, &ir_len);
         if (ir) {
-            if (useEmitType && emitFileType == 2 && Xvr_commandLine.outFile) {
-                FILE* f = fopen(Xvr_commandLine.outFile, "w");
+            if (useEmitType && emitFileType == 2) {
+                FILE* f = fopen(outFile, "w");
                 if (f) {
                     fputs(ir, f);
                     fclose(f);
@@ -382,8 +450,7 @@ int main(int argc, const char* argv[]) {
         }
 
         char* cmd;
-        char* final_exe =
-            Xvr_commandLine.outFile ? Xvr_commandLine.outFile : "/tmp/xvr_bin";
+        char* final_exe = outFile ? outFile : "/tmp/xvr_bin";
 
         if (has_libxvr && libxvr_path) {
             asprintf(&cmd, "gcc %s -o %s -lm -lpthread -lxml2 -lcurl %s",
@@ -416,12 +483,13 @@ int main(int argc, const char* argv[]) {
         }
 
         if (rc == 0) {
-            system(final_exe);
+            char run_cmd[8192];
+            snprintf(run_cmd, sizeof(run_cmd), "./%s", outFile);
+            system(run_cmd);
         }
 
         unlink(objFile);
-        if (!Xvr_commandLine.outFile) {
-            unlink("/tmp/xvr_bin");
+        if (!Xvr_commandLine.outFile && !shouldRun) {
         }
     } else {
         long obj_size = get_file_size(outFile);
