@@ -29,6 +29,57 @@ static long get_file_size(const char* path) {
     return 0;
 }
 
+static char* get_filename_without_ext(const char* path) {
+    if (!path) {
+        return NULL;
+    }
+    const char* base = strrchr(path, '/');
+    base = base ? base + 1 : path;
+
+    size_t len = strlen(base);
+    if (len < 4) {
+        return NULL;
+    }
+
+    const char* ext = ".xvr";
+    if (len > 4 && strcmp(base + len - 4, ext) == 0) {
+        len -= 4;
+    }
+
+    char* result = malloc(len + 1);
+    if (!result) {
+        return NULL;
+    }
+    memcpy(result, base, len);
+    result[len] = '\0';
+    return result;
+}
+
+static char* build_output_filename(const char* sourceFile,
+                                   const char* extension) {
+    char* base = get_filename_without_ext(sourceFile);
+    if (!base) {
+        return NULL;
+    }
+
+    if (!extension) {
+        return base;
+    }
+
+    size_t extLen = strlen(extension);
+    size_t baseLen = strlen(base);
+    char* result = malloc(baseLen + extLen + 1);
+    if (!result) {
+        free(base);
+        return NULL;
+    }
+
+    memcpy(result, base, baseLen);
+    memcpy(result + baseLen, extension, extLen + 1);
+    free(base);
+    return result;
+}
+
 static void print_error(const char* filename, int line, const char* error_type,
                         const char* message) {
     if (filename) {
@@ -273,77 +324,38 @@ int main(int argc, const char* argv[]) {
        function to avoid code duplication between shouldRun and else branches */
     if (shouldRun) {
         objFile = strdup("/tmp/xvr_compile.o");
-        /* BUG: strrchr with hardcoded -4 assumes .xvr extension - breaks if
-         * extension differs */
+        /* NOTE: Use safe helper function to extract filename without extension
+         */
         if (Xvr_commandLine.outFile) {
             outFile = strdup(Xvr_commandLine.outFile);
         } else if (Xvr_commandLine.sourceFile) {
-            const char* srcBaseNoExt = strrchr(Xvr_commandLine.sourceFile, '/');
-            srcBaseNoExt =
-                srcBaseNoExt ? srcBaseNoExt + 1 : Xvr_commandLine.sourceFile;
-            /* NOTE: Using hardcoded -4 for ".xvr" extension length */
-            size_t baseLen = strlen(srcBaseNoExt) - 4;
-            char* defaultName = malloc(baseLen + 1);
-            strncpy(defaultName, srcBaseNoExt, baseLen);
-            defaultName[baseLen] = '\0';
-            outFile = defaultName;
+            outFile = get_filename_without_ext(Xvr_commandLine.sourceFile);
+            if (!outFile) {
+                outFile = strdup("a.out");
+            }
         } else {
             outFile = strdup("a.out");
         }
     } else {
         if (Xvr_commandLine.outFile) {
             outFile = strdup(Xvr_commandLine.outFile);
-        } else {
-            const char* srcBase = "a.out";
-            if (Xvr_commandLine.sourceFile) {
-                const char* srcBaseNoExt =
-                    strrchr(Xvr_commandLine.sourceFile, '/');
-                srcBaseNoExt = srcBaseNoExt ? srcBaseNoExt + 1
-                                            : Xvr_commandLine.sourceFile;
-                if (useEmitType) {
-                    if (emitFileType == 1) {
-                        /* TODO: Extract extension logic to a utility function
-                         */
-                        size_t baseLen = strlen(srcBaseNoExt) - 4;
-                        char* defaultName = malloc(baseLen + 3);
-                        strncpy(defaultName, srcBaseNoExt, baseLen);
-                        defaultName[baseLen] = '.';
-                        defaultName[baseLen + 1] = 's';
-                        defaultName[baseLen + 2] = '\0';
-                        outFile = defaultName;
-                    } else if (emitFileType == 2) {
-                        /* NOTE: LLVM IR output uses .ll extension */
-                        size_t baseLen = strlen(srcBaseNoExt) - 4;
-                        char* defaultName = malloc(baseLen + 4);
-                        strncpy(defaultName, srcBaseNoExt, baseLen);
-                        defaultName[baseLen] = '.';
-                        defaultName[baseLen + 1] = 'l';
-                        defaultName[baseLen + 2] = 'l';
-                        defaultName[baseLen + 3] = '\0';
-                        outFile = defaultName;
-                    } else {
-                        /* BUG: This branch should not happen - handle
-                         * emitFileType == 0 */
-                        outFile = strdup("a.out");
-                    }
-                } else if (Xvr_commandLine.compileOnly) {
-                    size_t baseLen = strlen(srcBaseNoExt) - 4;
-                    char* defaultName = malloc(baseLen + 3);
-                    strncpy(defaultName, srcBaseNoExt, baseLen);
-                    defaultName[baseLen] = '.';
-                    defaultName[baseLen + 1] = 'o';
-                    defaultName[baseLen + 2] = '\0';
-                    outFile = defaultName;
-                } else {
-                    size_t baseLen = strlen(srcBaseNoExt) - 4;
-                    char* defaultName = malloc(baseLen + 1);
-                    strncpy(defaultName, srcBaseNoExt, baseLen);
-                    defaultName[baseLen] = '\0';
-                    outFile = defaultName;
+        } else if (Xvr_commandLine.sourceFile) {
+            const char* ext = NULL;
+            if (useEmitType) {
+                if (emitFileType == 1) {
+                    ext = ".s";
+                } else if (emitFileType == 2) {
+                    ext = ".ll";
                 }
-            } else {
+            } else if (Xvr_commandLine.compileOnly) {
+                ext = ".o";
+            }
+            outFile = build_output_filename(Xvr_commandLine.sourceFile, ext);
+            if (!outFile) {
                 outFile = strdup("a.out");
             }
+        } else {
+            outFile = strdup("a.out");
         }
         objFile = strdup(outFile);
     }
