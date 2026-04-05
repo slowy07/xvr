@@ -141,11 +141,13 @@ int main(int argc, const char* argv[]) {
     }
 
     if (Xvr_commandLine.dumpAST) {
-        fprintf(stderr,
-                "\n" XVR_CC_NOTICE "AST:" XVR_CC_RESET " %d top-level nodes\n",
-                nodeCount);
+        static const char fmt[] =
+            "\n"
+            "AST: %d top-level nodes\n";
+        fprintf(stderr, fmt, nodeCount);
         for (int i = 0; i < nodeCount; i++) {
-            fprintf(stderr, "  [%d] node type %d\n", i, nodes[i]->type);
+            static const char node_fmt[] = "  [%d] node type %d\n";
+            fprintf(stderr, node_fmt, i, nodes[i]->type);
         }
         fprintf(stderr, "\n");
     }
@@ -181,10 +183,8 @@ int main(int argc, const char* argv[]) {
             Xvr_ASTOptimizerResult result =
                 Xvr_ASTOptimizerRun(ast_opt, nodes, nodeCount);
             if (Xvr_commandLine.verbose && result.changes_made > 0) {
-                fprintf(stderr,
-                        XVR_CC_NOTICE
-                        "AST optimization: %d changes\n" XVR_CC_RESET,
-                        result.changes_made);
+                static const char msg[] = "AST optimization: %d changes\n";
+                fprintf(stderr, msg, result.changes_made);
             }
         }
         Xvr_ASTOptimizerDestroy(ast_opt);

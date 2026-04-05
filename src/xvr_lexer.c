@@ -282,13 +282,8 @@ static Xvr_Token makeIntegerOrFloat(Xvr_Lexer* lexer) {
     token.line = lexer->line;
 
 #ifndef XVR_EXPORT
-    if (Xvr_commandLine.verbose) {
-        if (type == XVR_TOKEN_LITERAL_INTEGER) {
-            printf("int:");
-        } else {
-            printf("int suffix:");
-        }
-        Xvr_private_printToken(&token);
+    if (Xvr_commandLine.dumpTokens) {
+        printf("int:");
     }
 #endif
 
@@ -338,9 +333,8 @@ static Xvr_Token makeString(Xvr_Lexer* lexer, char terminator) {
     token.line = lexer->line;
 
 #ifndef XVR_EXPORT
-    if (Xvr_commandLine.verbose) {
+    if (Xvr_commandLine.dumpTokens) {
         printf("str:");
-        Xvr_private_printToken(&token);
     }
 #endif
 
@@ -368,9 +362,8 @@ static Xvr_Token makeKeywordOrIdentifier(Xvr_Lexer* lexer) {
             token.line = lexer->line;
 
 #ifndef XVR_EXPORT
-            if (Xvr_commandLine.verbose) {
+            if (Xvr_commandLine.dumpTokens) {
                 printf("kwd:");
-                Xvr_private_printToken(&token);
             }
 #endif
 
@@ -387,9 +380,8 @@ static Xvr_Token makeKeywordOrIdentifier(Xvr_Lexer* lexer) {
     token.line = lexer->line;
 
 #ifndef XVR_EXPORT
-    if (Xvr_commandLine.verbose) {
+    if (Xvr_commandLine.dumpTokens) {
         printf("idf:");
-        Xvr_private_printToken(&token);
     }
 #endif
 
