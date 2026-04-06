@@ -443,13 +443,17 @@ static char* convertAttToIntel(const char* input) {
                 char* reordered = reorderOperandsSimple(instr, ops);
                 if (reordered) {
                     size_t rl = strlen(reordered);
-                    memcpy(dst, reordered, rl);
-                    dst += rl;
+                    if (rl > 0) {
+                        memcpy(dst, reordered, rl);
+                        dst += rl;
+                    }
                     free(reordered);
                 } else if (ops) {
                     size_t ol = strlen(ops);
-                    memcpy(dst, ops, ol);
-                    dst += ol;
+                    if (ol > 0) {
+                        memcpy(dst, ops, ol);
+                        dst += ol;
+                    }
                 }
                 if (ops) free(ops);
             }
@@ -482,8 +486,10 @@ static char* convertAttToIntel(const char* input) {
             if (mem) {
                 *dst++ = '[';
                 size_t ml = strlen(mem);
-                memcpy(dst, mem, ml);
-                dst += ml;
+                if (ml > 0) {
+                    memcpy(dst, mem, ml);
+                    dst += ml;
+                }
                 *dst++ = ']';
                 free(mem);
             }
@@ -509,7 +515,9 @@ static char* extractOperandsSimple(const char* start) {
     if (len == 0) return NULL;
     char* result = malloc(len + 1);
     if (!result) return NULL;
-    memcpy(result, start, len);
+    if (len > 0) {
+        memcpy(result, start, len);
+    }
     result[len] = '\0';
     return result;
 }
@@ -600,7 +608,9 @@ static char* convertMemOperandSimple(const char* start) {
     size_t inner_len = inner_end - inner_start;
     char* inner = malloc(inner_len + 1);
     if (!inner) return NULL;
-    memcpy(inner, inner_start, inner_len);
+    if (inner_len > 0) {
+        memcpy(inner, inner_start, inner_len);
+    }
     inner[inner_len] = '\0';
 
     char* offset = NULL;
