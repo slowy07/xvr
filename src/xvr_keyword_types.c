@@ -3,6 +3,7 @@
 #include <string.h>
 
 #include "xvr_common.h"
+#include "xvr_string_utils.h"
 #include "xvr_token_types.h"
 
 Xvr_KeywordType Xvr_keywordTypes[] = {
@@ -80,7 +81,7 @@ char* Xvr_findKeywordByType(Xvr_TokenType type) {
 }
 
 Xvr_TokenType Xvr_findTypeByKeyword(const char* keyword) {
-    const int length = strlen(keyword);
+    const size_t length = xvr_safe_strlen(keyword, 64);
 
     for (int i = 0; Xvr_keywordTypes[i].keyword; i++) {
         if (!strncmp(keyword, Xvr_keywordTypes[i].keyword, length)) {

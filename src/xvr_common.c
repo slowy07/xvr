@@ -33,10 +33,14 @@ SOFTWARE.
 
 char* Xvr_strdup(const char* str) {
     if (!str) return NULL;
-    size_t len = strlen(str) + 1;
+    size_t len = xvr_safe_strlen(str, 4096) + 1;
+    if (len == 0) return NULL;
     char* dup = malloc(len);
     if (dup) {
-        memcpy(dup, str, len);
+        for (size_t i = 0; i < len; i++) {
+            dup[i] = str[i];
+            if (str[i] == '\0') break;
+        }
     }
     return dup;
 }
@@ -183,13 +187,14 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
 
         if (xvr_safe_strlen_bounded(argv[i], 256) >= 2 && argv[i][0] == '-' &&
             argv[i][1] == 'O') {
-            int optLevel = atoi(argv[i] + 2);
-            if (optLevel < 0 || optLevel > 3) {
+            char* endptr;
+            long optLevel = strtol(argv[i] + 2, &endptr, 10);
+            if (*endptr != '\0' || optLevel < 0 || optLevel > 3) {
                 fprintf(stderr, "error: optimization level must be 0-3\n");
                 Xvr_commandLine.error = true;
                 return;
             }
-            Xvr_commandLine.optimizationLevel = optLevel;
+            Xvr_commandLine.optimizationLevel = (int)optLevel;
             Xvr_commandLine.error = false;
             continue;
         }

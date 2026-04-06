@@ -329,9 +329,16 @@ void* Xvr_LLVMTargetMachineEmitToMemory(Xvr_LLVMTargetMachine* tm,
     }
 
     *out_size = LLVMGetBufferSize(buffer);
-    void* data = malloc(*out_size);
-    if (data) {
-        memcpy(data, LLVMGetBufferStart(buffer), *out_size);
+    void* data = NULL;
+    if (*out_size > 0 && *out_size < SIZE_MAX) {
+        data = malloc(*out_size);
+        if (data) {
+            memcpy(data, LLVMGetBufferStart(buffer), *out_size);
+        } else {
+            *out_size = 0;
+        }
+    } else {
+        *out_size = 0;
     }
 
     LLVMDisposeMemoryBuffer(buffer);
@@ -557,10 +564,14 @@ static char* extractOperandsSimple(const char* start) {
 
     size_t len = end - start;
     if (len == 0) return NULL;
+    if (len > SIZE_MAX - 1) return NULL;
     char* result = malloc(len + 1);
     if (!result) return NULL;
-    if (len > 0) {
+    if (len > 0 && len <= len + 1) {
         memcpy(result, start, len);
+    } else {
+        free(result);
+        return NULL;
     }
     result[len] = '\0';
     return result;
@@ -650,10 +661,14 @@ static char* convertMemOperandSimple(const char* start) {
     if (!*inner_end) return NULL;
 
     size_t inner_len = inner_end - inner_start;
+    if (inner_len > SIZE_MAX - 1) return NULL;
     char* inner = malloc(inner_len + 1);
     if (!inner) return NULL;
-    if (inner_len > 0) {
+    if (inner_len > 0 && inner_len <= inner_len + 1) {
         memcpy(inner, inner_start, inner_len);
+    } else {
+        free(inner);
+        return NULL;
     }
     inner[inner_len] = '\0';
 

@@ -25,9 +25,11 @@ SOFTWARE.
 #include "xvr_llvm_module_manager.h"
 
 #include <llvm-c/BitWriter.h>
+#include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+#include "../xvr_string_utils.h"
 #include "xvr_llvm_context.h"
 
 #define MAX_FUNCTIONS 256
@@ -95,7 +97,11 @@ bool Xvr_LLVMModuleManagerAddFunction(Xvr_LLVMModuleManager* mgr,
 
     fn = LLVMAddFunction(mgr->module, name, function_type);
     if (fn && mgr->function_count < MAX_FUNCTIONS) {
-        strncpy(mgr->functions[mgr->function_count].name, name, 127);
+        size_t name_len = xvr_safe_strlen(name, 128);
+        size_t copy_len = (name_len < 128) ? name_len : 127;
+        for (size_t i = 0; i < copy_len; i++) {
+            mgr->functions[mgr->function_count].name[i] = name[i];
+        }
         mgr->functions[mgr->function_count].name[127] = '\0';
         mgr->functions[mgr->function_count].type = function_type;
         mgr->function_count++;
@@ -116,7 +122,11 @@ void Xvr_LLVMModuleManagerRegisterFunctionType(Xvr_LLVMModuleManager* mgr,
                 return;
             }
         }
-        strncpy(mgr->functions[mgr->function_count].name, name, 127);
+        size_t name_len = xvr_safe_strlen(name, 128);
+        size_t copy_len = (name_len < 128) ? name_len : 127;
+        for (size_t i = 0; i < copy_len; i++) {
+            mgr->functions[mgr->function_count].name[i] = name[i];
+        }
         mgr->functions[mgr->function_count].name[127] = '\0';
         mgr->functions[mgr->function_count].type = function_type;
         mgr->function_count++;
@@ -178,10 +188,17 @@ char* Xvr_LLVMModuleManagerPrintIR(Xvr_LLVMModuleManager* mgr,
         return NULL;
     }
 
-    *out_len = strlen(ir) + 1;
+    size_t ir_len = xvr_safe_strlen(ir, 4096);
+    *out_len = ir_len + 1;
     char* result = malloc(*out_len);
-    if (result) {
-        memcpy(result, ir, *out_len);
+    if (result && ir_len > 0 && ir_len < *out_len) {
+        for (size_t i = 0; i < ir_len; i++) {
+            result[i] = ir[i];
+        }
+        result[ir_len] = '\0';
+    } else {
+        free(result);
+        result = NULL;
     }
     LLVMDisposeMessage(ir);
     return result;

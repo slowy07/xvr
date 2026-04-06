@@ -371,12 +371,16 @@ char* XvrFormatStringBuildPrintfFormat(const XvrFormatString* fmt,
                     const char* replacement =
                         format_type_to_printf(arg_types[placeholder_idx]);
                     size_t repl_len = xvr_safe_strlen(replacement, 32);
-                    memcpy(&result[result_pos], replacement, repl_len);
-                    result_pos += repl_len;
+                    if (result_pos + repl_len < result_size) {
+                        memcpy(&result[result_pos], replacement, repl_len);
+                        result_pos += repl_len;
+                    }
                 } else {
                     size_t spec_len = &src[i] - spec_start + 1;
-                    memcpy(&result[result_pos], spec_start, spec_len);
-                    result_pos += spec_len;
+                    if (result_pos + spec_len < result_size) {
+                        memcpy(&result[result_pos], spec_start, spec_len);
+                        result_pos += spec_len;
+                    }
                 }
                 placeholder_idx++;
             }

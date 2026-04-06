@@ -9,6 +9,7 @@
 #include "xvr_memory.h"
 #include "xvr_refstring.h"
 #include "xvr_scope.h"
+#include "xvr_string_utils.h"
 
 static Xvr_Literal addition(Xvr_Interpreter* interpreter, Xvr_Literal lhs,
                             Xvr_Literal rhs) {
@@ -1085,7 +1086,7 @@ int Xvr_private_index(Xvr_Interpreter* interpreter,
                     result[i] =
                         Xvr_toCString(XVR_AS_STRING(assign))[assignIndex++];
                 }
-                resultIndex = strlen(result);
+                resultIndex = xvr_safe_strlen(result, XVR_MAX_STRING_LENGTH);
             }
 
             // finally, swap out the compound for the result

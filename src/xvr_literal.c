@@ -9,6 +9,7 @@
 #include "xvr_memory.h"
 #include "xvr_refstring.h"
 #include "xvr_scope.h"
+#include "xvr_string_utils.h"
 
 static float halfToFloat(uint16_t half) {
     int sign = (half >> 15) & 1;
@@ -613,7 +614,8 @@ static size_t globalPrintCount = 0;
 static char quotes = 0;  // set to 0 to not show string quotes
 
 static void printToBuffer(const char* str) {
-    while (strlen(str) + globalPrintCount + 1 > globalPrintCapacity) {
+    size_t str_len = xvr_safe_strlen(str, 4096);
+    while (str_len + globalPrintCount + 1 > globalPrintCapacity) {
         int oldCapacity = globalPrintCapacity;
 
         globalPrintCapacity = XVR_GROW_CAPACITY(globalPrintCapacity);
@@ -621,8 +623,16 @@ static void printToBuffer(const char* str) {
                                            globalPrintCapacity);
     }
 
-    snprintf(globalPrintBuffer + globalPrintCount, strlen(str) + 1, "%s", str);
-    globalPrintCount += strlen(str);
+    size_t copy_len = str_len;
+    if (copy_len > globalPrintCapacity - globalPrintCount) {
+        copy_len = globalPrintCapacity - globalPrintCount;
+    }
+    if (copy_len > 0) {
+        for (size_t i = 0; i < copy_len; i++) {
+            globalPrintBuffer[globalPrintCount + i] = str[i];
+        }
+        globalPrintCount += copy_len;
+    }
 }
 
 // exposed functions
@@ -1023,8 +1033,8 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
 }
 
 static void printToBufferSimple(const char* str) {
-    int len = strlen(str);
-    if (globalPrintCount + len > globalPrintCapacity) {
+    size_t len = xvr_safe_strlen(str, 4096);
+    if (globalPrintCount + (int)len > globalPrintCapacity) {
         int avail = globalPrintCapacity - globalPrintCount;
         if (avail > 0) {
             memcpy(globalPrintBuffer + globalPrintCount, str, avail);

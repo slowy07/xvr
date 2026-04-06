@@ -381,10 +381,12 @@ static LLVMValueRef emit_string_concat(Xvr_LLVMExpressionEmitter* emitter,
             return NULL;
         }
 
-        if (lhs_len > 0 && lhs_len - 1 <= total_len) {
+        if (lhs_len > 0 && lhs_len - 1 <= total_len &&
+            lhs_len - 1 <= total_len + 1) {
             memcpy(combined, lhs_buf, lhs_len - 1);
         }
-        if (rhs_len > 0 && rhs_len <= total_len) {
+        if (rhs_len > 0 && rhs_len <= total_len &&
+            lhs_len - 1 + rhs_len <= total_len + 1) {
             memcpy(combined + lhs_len - 1, rhs_buf, rhs_len);
         }
         combined[total_len] = '\0';

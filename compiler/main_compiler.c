@@ -1,3 +1,4 @@
+#include <limits.h>
 #include <llvm-c/Core.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,6 +15,21 @@
 #include "xvr_console_colors.h"
 #include "xvr_parser.h"
 #include "xvr_unused.h"
+
+static int is_safe_path_component(const char* path) {
+    if (!path) return 0;
+    while (*path) {
+        if (*path == ';' || *path == '|' || *path == '&' || *path == '<' ||
+            *path == '>' || *path == '$' || *path == '`' || *path == '(' ||
+            *path == ')' || *path == '[' || *path == ']' || *path == '{' ||
+            *path == '}' || *path == '"' || *path == '\'' || *path == '\\' ||
+            *path == '\n' || *path == '\r') {
+            return 0;
+        }
+        path++;
+    }
+    return 1;
+}
 
 static double get_time_ms(void) {
     struct timespec ts;
@@ -454,13 +470,13 @@ int main(int argc, const char* argv[]) {
         int path_count = 0;
 
         const char* env_build = getenv("XVR_BUILD_DIR");
-        if (env_build) {
+        if (env_build && is_safe_path_component(env_build)) {
             snprintf(search_paths[path_count++], sizeof(search_paths[0]), "%s",
                      env_build);
         }
 
         const char* home = getenv("HOME");
-        if (home) {
+        if (home && is_safe_path_component(home)) {
             char path[4096];
             snprintf(path, sizeof(path),
                      "%s/Documents/project/xvrlang/xvr/build", home);
