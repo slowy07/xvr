@@ -67,7 +67,7 @@
 #    define XVR_DEBUG_MSG(...)                                          \
         do {                                                            \
             fprintf(stderr, "[XVR-DEBUG] %s:%d: ", __FILE__, __LINE__); \
-            fprintf(stderr, __VA_ARGS__);                               \
+            fprintf(stderr, "%s", __VA_ARGS__);                         \
         } while (0)
 #else
 #    define XVR_DEBUG_MSG(...) ((void)0)

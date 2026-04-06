@@ -112,8 +112,8 @@ void Xvr_freeLiteral(Xvr_Literal literal) {
 
 bool Xvr_private_isTruthy(Xvr_Literal x) {
     if (XVR_IS_NULL(x)) {
-        fprintf(stderr, XVR_CC_ERROR
-                "XVR_CC_ERROR: Null is neither true nor false\n" XVR_CC_RESET);
+        fprintf(stderr, "%sXVR_CC_ERROR: Null is neither true nor false\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         return false;
     }
 
@@ -306,10 +306,8 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
         return original;
 
     default:
-        fprintf(stderr,
-                XVR_CC_ERROR
-                "XVR_CC_ERROR: Can't copy that literal type: %d\n" XVR_CC_RESET,
-                original.type);
+        fprintf(stderr, "%sXVR_CC_ERROR: Can't copy that literal type: %d\n%s",
+                XVR_CC_ERROR, original.type, XVR_CC_RESET);
         return XVR_TO_NULL_LITERAL;
     }
 }
@@ -478,9 +476,8 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
         return true;
 
     case XVR_LITERAL_FUNCTION_INTERMEDIATE:
-        fprintf(
-            stderr, XVR_CC_ERROR
-            "[internal] Can't compare intermediate functions\n" XVR_CC_RESET);
+        fprintf(stderr, "%s[internal] Can't compare intermediate functions\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         return false;
 
     case XVR_LITERAL_INDEX_BLANK:
@@ -489,10 +486,9 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
     default:
         // should never be seen
         fprintf(stderr,
-                XVR_CC_ERROR
-                "[internal] Unrecognized literal type in equality: "
-                "%d\n" XVR_CC_RESET,
-                lhs.type);
+                "%s[internal] Unrecognized literal type in equality: "
+                "%d\n%s",
+                XVR_CC_ERROR, lhs.type, XVR_CC_RESET);
         return false;
     }
 
@@ -594,11 +590,9 @@ int Xvr_hashLiteral(Xvr_Literal lit) {
 
     default:
         // should never bee seen
-        fprintf(
-            stderr,
-            XVR_CC_ERROR
-            "[internal] Unrecognized literal type in hash: %d\n" XVR_CC_RESET,
-            lit.type);
+        fprintf(stderr,
+                "%s[internal] Unrecognized literal type in hash: %d\n%s",
+                XVR_CC_ERROR, lit.type, XVR_CC_RESET);
         return 0;
     }
 }
@@ -984,10 +978,9 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
         default:
             // should never be seen
             fprintf(stderr,
-                    XVR_CC_ERROR
-                    "[internal] Unrecognized literal type in print type: "
-                    "%d\n" XVR_CC_RESET,
-                    XVR_AS_TYPE(literal).typeOf);
+                    "%s[internal] Unrecognized literal type in print type: "
+                    "%d\n%s",
+                    XVR_CC_ERROR, XVR_AS_TYPE(literal).typeOf, XVR_CC_RESET);
         }
 
         // const (printed last)
@@ -1024,11 +1017,9 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
         break;
 
     default:
-        fprintf(
-            stderr,
-            XVR_CC_ERROR
-            "[internal] Unrecognized literal type in print: %d\n" XVR_CC_RESET,
-            literal.type);
+        fprintf(stderr,
+                "%s[internal] Unrecognized literal type in print: %d\n%s",
+                XVR_CC_ERROR, literal.type, XVR_CC_RESET);
     }
 }
 

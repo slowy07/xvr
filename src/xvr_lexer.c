@@ -504,8 +504,8 @@ static void trim(char** s, int* l) {  // all this to remove a newline?
 
 void Xvr_private_printToken(Xvr_Token* token) {
     if (token->type == XVR_TOKEN_ERROR) {
-        printf(XVR_CC_ERROR "Error\t%d\t%.*s\n" XVR_CC_RESET, token->line,
-               token->length, token->lexeme);
+        printf("%sError\t%d\t%.*s\n%s", XVR_CC_ERROR, token->line,
+               token->length, token->lexeme, XVR_CC_RESET);
         return;
     }
 

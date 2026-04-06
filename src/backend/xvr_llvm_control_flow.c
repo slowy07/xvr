@@ -71,11 +71,11 @@ static void emit_error(Xvr_LLVMControlFlow* cf, const char* fmt, ...) {
     cf->has_error = true;
 
     fprintf(stderr, "\n");
-    fprintf(stderr, XVR_CC_FONT_RED "error" XVR_CC_RESET ": %s\n",
+    fprintf(stderr, "%serror%s: %s\n", XVR_CC_FONT_RED, XVR_CC_RESET,
             cf->error_message);
 
     if (cf->error_hint[0] != '\0') {
-        fprintf(stderr, XVR_CC_NOTICE "help" XVR_CC_RESET ": %s\n",
+        fprintf(stderr, "%shelp%s: %s\n", XVR_CC_NOTICE, XVR_CC_RESET,
                 cf->error_hint);
     }
     fprintf(stderr, "\n");

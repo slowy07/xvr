@@ -4,6 +4,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/types.h>
+#include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
 
@@ -204,11 +206,11 @@ int main(int argc, const char* argv[]) {
     }
 
     if (Xvr_commandLine.verbose) {
-        printf(XVR_CC_NOTICE
-               "Xvr Programming Language Version %d.%d.%d, built "
-               "'%s'\n" XVR_CC_RESET,
-               XVR_VERSION_MAJOR, XVR_VERSION_MINOR, XVR_VERSION_PATCH,
-               XVR_VERSION_BUILD);
+        printf(
+            "%sXvr Programming Language Version %d.%d.%d, built "
+            "'%s'\n%s",
+            XVR_CC_NOTICE, XVR_VERSION_MAJOR, XVR_VERSION_MINOR,
+            XVR_VERSION_PATCH, XVR_VERSION_BUILD, XVR_CC_RESET);
     }
 
     const char* source = NULL;
@@ -519,46 +521,69 @@ int main(int argc, const char* argv[]) {
             }
         }
 
-        char* cmd;
         char* final_exe = outFile ? outFile : "/tmp/xvr_bin";
 
+        extern char** environ;
+        char* gcc_args[12];
+        int gcc_argc = 0;
+        gcc_args[gcc_argc++] = "gcc";
+        gcc_args[gcc_argc++] = objFile;
+        gcc_args[gcc_argc++] = "-o";
+        gcc_args[gcc_argc++] = final_exe;
+        gcc_args[gcc_argc++] = "-lm";
+        gcc_args[gcc_argc++] = "-lpthread";
+        gcc_args[gcc_argc++] = "-lxml2";
+        gcc_args[gcc_argc++] = "-lcurl";
         if (has_libxvr && libxvr_path) {
-            asprintf(&cmd, "gcc %s -o %s -lm -lpthread -lxml2 -lcurl %s",
-                     objFile, final_exe, libxvr_path);
-        } else {
-            asprintf(&cmd, "gcc %s -o %s -lm -lpthread -lxml2 -lcurl", objFile,
-                     final_exe);
+            gcc_args[gcc_argc++] = libxvr_path;
+        }
+        gcc_args[gcc_argc++] = NULL;
+
+        pid_t pid = fork();
+        if (pid == 0) {
+            execve("/usr/bin/gcc", gcc_args, environ);
+            _exit(127);
+        } else if (pid > 0) {
+            int status;
+            waitpid(pid, &status, 0);
+            if (libxvr_path) free(libxvr_path);
+
+            if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
+                fprintf(stderr, "error: failed to link executable\n");
+            } else if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+                long bin_size = get_file_size(final_exe);
+
+                if (Xvr_commandLine.showTiming) {
+                    const char* target = LLVMGetDefaultTargetTriple();
+                    printf("\n");
+                    printf("  " XVR_CC_NOTICE "Target:" XVR_CC_RESET " %s\n",
+                           target);
+                    printf("  " XVR_CC_NOTICE "Size:" XVR_CC_RESET " %.1f KB\n",
+                           bin_size / 1024.0);
+                    printf("  " XVR_CC_NOTICE "Time:" XVR_CC_RESET " %.2f ms\n",
+                           total_time);
+                    printf("\n");
+                    LLVMDisposeMessage((char*)target);
+                }
+
+                if (shouldRun && outFile) {
+                    char* run_args[2];
+                    run_args[0] = final_exe;
+                    run_args[1] = NULL;
+                    pid_t run_pid = fork();
+                    if (run_pid == 0) {
+                        execve(final_exe, run_args, NULL);
+                        _exit(127);
+                    } else if (run_pid > 0) {
+                        int run_status;
+                        waitpid(run_pid, &run_status, 0);
+                    }
+                }
+
+                unlink(objFile);
+            }
         }
 
-        int rc = system(cmd);
-        if (libxvr_path) free(libxvr_path);
-        free(cmd);
-
-        if (rc != 0) {
-            fprintf(stderr, "error: failed to link executable\n");
-        }
-
-        long bin_size = get_file_size(final_exe);
-
-        if (Xvr_commandLine.showTiming) {
-            const char* target = LLVMGetDefaultTargetTriple();
-            printf("\n");
-            printf("  " XVR_CC_NOTICE "Target:" XVR_CC_RESET " %s\n", target);
-            printf("  " XVR_CC_NOTICE "Size:" XVR_CC_RESET " %.1f KB\n",
-                   bin_size / 1024.0);
-            printf("  " XVR_CC_NOTICE "Time:" XVR_CC_RESET " %.2f ms\n",
-                   total_time);
-            printf("\n");
-            LLVMDisposeMessage((char*)target);
-        }
-
-        if (rc == 0) {
-            char run_cmd[8192];
-            snprintf(run_cmd, sizeof(run_cmd), "./%s", outFile);
-            system(run_cmd);
-        }
-
-        unlink(objFile);
         if (!Xvr_commandLine.outFile && !shouldRun) {
         }
     } else {
