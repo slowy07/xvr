@@ -394,7 +394,7 @@ static bool convertAsmToIntelSyntax(const char* filename) {
 static char* convertAttToIntel(const char* input) {
     if (!input) return NULL;
 
-    size_t len = strlen(input);
+    size_t len = xvr_safe_strlen(input, 4096);
     size_t alloc_size = len * 2 + 1;
     char* output = malloc(alloc_size);
     if (!output) return NULL;

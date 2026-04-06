@@ -43,8 +43,15 @@ Xvr_RefString* Xvr_createRefStringLength(const char* cstring, size_t length) {
 
     refString->refCount = 1;
     refString->length = length;
-    strncpy(refString->data, cstring, refString->length);
-
+    size_t copy_len = length;
+    if (copy_len > 0) {
+        if (copy_len > refString->length) {
+            copy_len = refString->length;
+        }
+        for (size_t i = 0; i < copy_len; i++) {
+            refString->data[i] = cstring[i];
+        }
+    }
     refString->data[refString->length] = '\0';
 
 #if defined(XVR_DEBUG) || defined(DEBUG)
