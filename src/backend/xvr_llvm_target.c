@@ -507,7 +507,7 @@ static char* convertAttToIntel(const char* input) {
                         }
                         free(reordered);
                     } else {
-                        if (ops_len < remaining) {
+                        if (ops_len > 0 && ops_len < remaining) {
                             memcpy(dst, ops, ops_len);
                             dst += ops_len;
                             remaining -= ops_len;
@@ -605,10 +605,10 @@ static char* reorderOperandsSimple(const char* instr, const char* operands) {
     char* token = strtok(copy, ",");
     while (token && count < 8) {
         while (*token == ' ' || *token == '\t') token++;
-        size_t tl = strlen(token);
+        size_t tl = safe_strlen(token, 256);
         while (tl > 0 && (token[tl - 1] == ' ' || token[tl - 1] == '\t'))
             token[--tl] = '\0';
-        if (strlen(token) > 0) parts[count++] = strdup(token);
+        if (tl > 0) parts[count++] = strdup(token);
         token = strtok(NULL, ",");
     }
     free(copy);
@@ -691,7 +691,7 @@ static char* convertMemOperandSimple(const char* start) {
     char* token = strtok(inner, "(,)");
     while (token) {
         while (*token == ' ' || *token == '\t') token++;
-        size_t tl = strlen(token);
+        size_t tl = safe_strlen(token, 256);
         while (tl > 0 && (token[tl - 1] == ' ' || token[tl - 1] == '\t'))
             token[--tl] = '\0';
 
@@ -700,7 +700,7 @@ static char* convertMemOperandSimple(const char* start) {
                 base = strdup(token + 1);
             else if (!index)
                 index = strdup(token + 1);
-        } else if (strlen(token) > 0) {
+        } else if (tl > 0) {
             if (!offset) offset = strdup(token);
         }
         token = strtok(NULL, "(,)");
@@ -720,7 +720,7 @@ static char* convertMemOperandSimple(const char* start) {
     size_t remaining = 128;
 
     if (offset) {
-        size_t offset_len = strlen(offset);
+        size_t offset_len = safe_strlen(offset, 128);
         if (offset_len < remaining) {
             snprintf(rdst, remaining, "%s", offset);
             rdst += offset_len;
@@ -732,7 +732,7 @@ static char* convertMemOperandSimple(const char* start) {
             *rdst++ = '+';
             remaining--;
         }
-        size_t base_len = strlen(base);
+        size_t base_len = safe_strlen(base, 128);
         if (base_len < remaining) {
             snprintf(rdst, remaining, "%s", base);
             rdst += base_len;
@@ -744,7 +744,7 @@ static char* convertMemOperandSimple(const char* start) {
             *rdst++ = '+';
             remaining--;
         }
-        size_t index_len = strlen(index);
+        size_t index_len = safe_strlen(index, 128);
         if (index_len < remaining) {
             snprintf(rdst, remaining, "%s", index);
             rdst += index_len;
