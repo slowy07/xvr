@@ -203,7 +203,7 @@ void Xvr_helpCommandLine(int argc, const char* argv[]);
  */
 #define XVR_VERSION_MAJOR 0
 #define XVR_VERSION_MINOR 6
-#define XVR_VERSION_PATCH 14
+#define XVR_VERSION_PATCH 16
 
 /**
  * @brief Private string duplicate implementation
