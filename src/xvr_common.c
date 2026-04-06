@@ -29,47 +29,14 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
+#include "xvr_string_utils.h"
+
 static size_t safe_strlen(const char* str) {
     size_t len = 0;
     while (str[len] != '\0') {
         len++;
     }
     return len;
-}
-
-static size_t safe_strlen_bounded(const char* str, size_t max_len) {
-    if (!str) return 0;
-    size_t len = 0;
-    while (str[len] != '\0' && len < max_len) {
-        len++;
-    }
-    return len;
-}
-
-static int safe_strcmp(const char* a, const char* b) {
-    size_t i = 0;
-    while (a[i] != '\0' && b[i] != '\0') {
-        if (a[i] != b[i]) {
-            return a[i] < b[i] ? -1 : 1;
-        }
-        i++;
-    }
-    if (a[i] == '\0' && b[i] == '\0') {
-        return 0;
-    }
-    return a[i] == '\0' ? -1 : 1;
-}
-
-static int safe_strncmp(const char* a, const char* b, size_t n) {
-    for (size_t i = 0; i < n; i++) {
-        if (a[i] != b[i]) {
-            return a[i] < b[i] ? -1 : 1;
-        }
-        if (a[i] == '\0') {
-            return 0;
-        }
-    }
-    return 0;
 }
 
 char* Xvr_strdup(const char* str) {
@@ -163,7 +130,7 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
         if (!strcmp(argv[i], "-c") || !strcmp(argv[i], "--compile")) {
             Xvr_commandLine.compileOnly = true;
             if (i + 1 < argc) {
-                size_t len = safe_strlen_bounded(argv[i + 1], 256);
+                size_t len = xvr_safe_strlen_bounded(argv[i + 1], 256);
                 if (argv[i + 1][0] != '-' && !(len >= 4)) {
                     Xvr_commandLine.outFile = (char*)argv[i + 1];
                     i++;
@@ -222,7 +189,7 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
             continue;
         }
 
-        if (safe_strlen_bounded(argv[i], 256) >= 2 && argv[i][0] == '-' &&
+        if (xvr_safe_strlen_bounded(argv[i], 256) >= 2 && argv[i][0] == '-' &&
             argv[i][1] == 'O') {
             int optLevel = atoi(argv[i] + 2);
             if (optLevel < 0 || optLevel > 3) {
@@ -254,7 +221,7 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
         }
 
         if (i < argc) {
-            size_t len = safe_strlen_bounded(argv[i], 256);
+            size_t len = xvr_safe_strlen_bounded(argv[i], 256);
             if (len >= 4) {
                 int is_xvr = 1;
                 for (int j = 0; j < 4; j++) {

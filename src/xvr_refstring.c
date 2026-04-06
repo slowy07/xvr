@@ -3,14 +3,7 @@
 #include <stdio.h>
 #include <string.h>
 
-static size_t safe_strlen(const char* str, size_t max_len) {
-    if (!str) return 0;
-    size_t len = 0;
-    while (str[len] != '\0' && len < max_len) {
-        len++;
-    }
-    return len;
-}
+#include "xvr_string_utils.h"
 
 #if defined(XVR_DEBUG) || defined(DEBUG)
 static int g_refstring_count = 0;
@@ -35,7 +28,7 @@ void Xvr_setRefStringAllocatorFn(Xvr_RefStringAllocatorFn allocator) {
 }
 
 Xvr_RefString* Xvr_createRefString(const char* cstring) {
-    size_t length = safe_strlen(cstring, 4096);
+    size_t length = xvr_safe_strlen(cstring, 4096);
 
     return Xvr_createRefStringLength(cstring, length);
 }
@@ -104,7 +97,7 @@ bool Xvr_equalsRefString(Xvr_RefString* lhs, Xvr_RefString* rhs) {
 }
 
 bool Xvr_equalsRefStringCString(Xvr_RefString* lhs, char* cstring) {
-    size_t length = safe_strlen(cstring, 4096);
+    size_t length = xvr_safe_strlen(cstring, 4096);
 
     if (lhs->length != length) {
         return false;

@@ -9,6 +9,8 @@
 #include <stdio.h>
 #include <string.h>
 
+#include "xvr_string_utils.h"
+
 #define MAX_PLACEHOLDERS 64
 
 static const char* format_type_to_printf(XvrFormatArgType type) {
@@ -84,7 +86,7 @@ XvrFormatString* XvrFormatStringParse(const char* format_str,
         return NULL;
     }
 
-    size_t fmt_len = strlen(format_str);
+    size_t fmt_len = xvr_safe_strlen(format_str, 4096);
 
     /* First pass: count placeholders and detect explicit types */
     uint32_t placeholder_count = 0;
@@ -294,7 +296,7 @@ char* XvrFormatStringBuildPrintfFormat(const XvrFormatString* fmt,
         return strdup("");
     }
 
-    size_t src_len = strlen(src);
+    size_t src_len = xvr_safe_strlen(src, 4096);
     size_t result_size = src_len * 2 + 1;
     char* result = malloc(result_size);
     if (!result) return NULL;
@@ -331,7 +333,7 @@ char* XvrFormatStringBuildPrintfFormat(const XvrFormatString* fmt,
                            arg_types[placeholder_idx] != XVR_FORMAT_ARG_INT) {
                     const char* replacement =
                         format_type_to_printf(arg_types[placeholder_idx]);
-                    size_t repl_len = strlen(replacement);
+                    size_t repl_len = xvr_safe_strlen(replacement, 32);
                     memcpy(&result[result_pos], replacement, repl_len);
                     result_pos += repl_len;
                 } else {
