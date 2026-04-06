@@ -34,6 +34,27 @@ SOFTWARE.
 #include "xvr_asm_config.h"
 #include "xvr_common.h"
 
+static size_t safe_strlen(const char* str, size_t max_len) {
+    if (!str) return 0;
+    size_t len = 0;
+    while (str[len] != '\0' && len < max_len) {
+        len++;
+    }
+    return len;
+}
+
+static char* safe_strdup(const char* str, size_t max_len) {
+    if (!str) return NULL;
+    size_t len = safe_strlen(str, max_len);
+    if (len == 0 || len >= max_len) return NULL;
+    char* result = malloc(len + 1);
+    if (result) {
+        memcpy(result, str, len);
+        result[len] = '\0';
+    }
+    return result;
+}
+
 typedef enum {
     XVR_EMIT_OBJECT = 0,
     XVR_EMIT_ASM = 1,
@@ -82,7 +103,7 @@ static bool set_string_field(char** field, const char* value) {
         return false;
     }
     free(*field);
-    *field = Xvr_strdup(value);
+    *field = strdup(value);
     return (*field != NULL);
 }
 
