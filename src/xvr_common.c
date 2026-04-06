@@ -105,6 +105,7 @@ Xvr_CommandLine Xvr_commandLine = {.error = false,
                                    .compileAndRun = true,
                                    .showTiming = false,
                                    .emitType = NULL,
+                                   .asmSyntax = "att",
                                    .optimizationLevel = 0};
 
 void Xvr_initCommandLine(int argc, const char* argv[]) {
@@ -196,6 +197,13 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
         if ((!strcmp(argv[i], "-e") || !strcmp(argv[i], "--emit")) &&
             i + 1 < argc) {
             Xvr_commandLine.emitType = (char*)argv[i + 1];
+            i++;
+            Xvr_commandLine.error = false;
+            continue;
+        }
+
+        if (!strcmp(argv[i], "--asm-syntax") && i + 1 < argc) {
+            Xvr_commandLine.asmSyntax = (char*)argv[i + 1];
             i++;
             Xvr_commandLine.error = false;
             continue;
@@ -300,6 +308,7 @@ void Xvr_helpCommandLine(int argc, const char* argv[]) {
     printf(
         "  -e, --emit <type>        Emit specific output (llvm-ir, asm, "
         "obj)\n");
+    printf("  --asm-syntax <intel|att> Set assembly syntax (default: att)\n");
     printf("  -t, --initial <file>     Set entry source file\n");
     printf(
         "  -n                        Disable trailing newline in print "

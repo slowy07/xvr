@@ -30,6 +30,7 @@ SOFTWARE.
 #include <stdbool.h>
 #include <stddef.h>
 
+#include "xvr_asm_config.h"
 #include "xvr_llvm_module_manager.h"
 
 typedef struct Xvr_LLVMTargetConfig Xvr_LLVMTargetConfig;
@@ -46,6 +47,10 @@ bool Xvr_LLVMTargetConfigSetReloc(Xvr_LLVMTargetConfig* config,
                                   const char* reloc);
 bool Xvr_LLVMTargetConfigSetCodeModel(Xvr_LLVMTargetConfig* config,
                                       const char* model);
+bool Xvr_LLVMTargetConfigSetAsmSyntax(Xvr_LLVMTargetConfig* config,
+                                      Xvr_AsmSyntax syntax);
+Xvr_AsmSyntax Xvr_LLVMTargetConfigGetAsmSyntax(
+    const Xvr_LLVMTargetConfig* config);
 
 typedef struct Xvr_LLVMTargetMachine Xvr_LLVMTargetMachine;
 

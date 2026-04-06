@@ -152,6 +152,7 @@ typedef struct {
     bool compileAndRun;
     bool showTiming;
     char* emitType;
+    char* asmSyntax;
     int optimizationLevel;
 } Xvr_CommandLine;
 
