@@ -15,6 +15,7 @@ set(XVR_SOURCES
     xvr_runtime.c
     xvr_scope.c
     xvr_semantic.c
+    xvr_string_utils.c
     xvr_type.c
     xvr_unused.c
     sema/xvr_builtin.c
@@ -51,6 +52,7 @@ set(XVR_HEADERS
     xvr_refstring.h
     xvr_scope.h
     xvr_semantic.h
+    xvr_string_utils.h
     xvr_token_types.h
     xvr_type.h
     xvr_unused.h

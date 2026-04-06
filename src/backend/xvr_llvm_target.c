@@ -31,34 +31,7 @@ SOFTWARE.
 #include <string.h>
 #include <unistd.h>
 
-#include "xvr_asm_config.h"
-#include "xvr_common.h"
-
-static size_t safe_strlen(const char* str, size_t max_len) {
-    if (!str) return 0;
-    size_t len = 0;
-    while (str[len] != '\0' && len < max_len) {
-        len++;
-    }
-    return len;
-}
-
-static char* safe_strdup(const char* str, size_t max_len) {
-    if (!str || max_len == 0) return NULL;
-    size_t len = safe_strlen(str, max_len);
-    if (len == 0 || len >= max_len) return NULL;
-    if (len > SIZE_MAX - 1) return NULL;
-    size_t alloc_size = len + 1;
-    char* result = malloc(alloc_size);
-    if (!result) return NULL;
-    if (len > alloc_size) {
-        free(result);
-        return NULL;
-    }
-    memcpy(result, str, len);
-    result[len] = '\0';
-    return result;
-}
+#include "../xvr_string_utils.h"
 
 typedef enum {
     XVR_EMIT_OBJECT = 0,
@@ -495,11 +468,11 @@ static char* convertAttToIntel(const char* input) {
 
             char* ops = extractOperandsSimple(ops_start);
             if (ops) {
-                size_t ops_len = safe_strlen(ops, 256);
+                size_t ops_len = xvr_safe_strlen(ops, 256);
                 if (ops_len > 0) {
                     char* reordered = reorderOperandsSimple(instr, ops);
                     if (reordered) {
-                        size_t rl = safe_strlen(reordered, 512);
+                        size_t rl = xvr_safe_strlen(reordered, 512);
                         if (rl > 0 && rl < remaining) {
                             memcpy(dst, reordered, rl);
                             dst += rl;
@@ -547,7 +520,7 @@ static char* convertAttToIntel(const char* input) {
                     *dst++ = '[';
                     remaining--;
                 }
-                size_t ml = safe_strlen(mem, 256);
+                size_t ml = xvr_safe_strlen(mem, 256);
                 if (ml > 0 && ml < remaining) {
                     memcpy(dst, mem, ml);
                     dst += ml;
@@ -605,7 +578,7 @@ static char* reorderOperandsSimple(const char* instr, const char* operands) {
     char* token = strtok(copy, ",");
     while (token && count < 8) {
         while (*token == ' ' || *token == '\t') token++;
-        size_t tl = safe_strlen(token, 256);
+        size_t tl = xvr_safe_strlen(token, 256);
         while (tl > 0 && (token[tl - 1] == ' ' || token[tl - 1] == '\t'))
             token[--tl] = '\0';
         if (tl > 0) parts[count++] = strdup(token);
@@ -691,7 +664,7 @@ static char* convertMemOperandSimple(const char* start) {
     char* token = strtok(inner, "(,)");
     while (token) {
         while (*token == ' ' || *token == '\t') token++;
-        size_t tl = safe_strlen(token, 256);
+        size_t tl = xvr_safe_strlen(token, 256);
         while (tl > 0 && (token[tl - 1] == ' ' || token[tl - 1] == '\t'))
             token[--tl] = '\0';
 
@@ -720,7 +693,7 @@ static char* convertMemOperandSimple(const char* start) {
     size_t remaining = 128;
 
     if (offset) {
-        size_t offset_len = safe_strlen(offset, 128);
+        size_t offset_len = xvr_safe_strlen(offset, 128);
         if (offset_len < remaining) {
             snprintf(rdst, remaining, "%s", offset);
             rdst += offset_len;
@@ -732,7 +705,7 @@ static char* convertMemOperandSimple(const char* start) {
             *rdst++ = '+';
             remaining--;
         }
-        size_t base_len = safe_strlen(base, 128);
+        size_t base_len = xvr_safe_strlen(base, 128);
         if (base_len < remaining) {
             snprintf(rdst, remaining, "%s", base);
             rdst += base_len;
@@ -744,7 +717,7 @@ static char* convertMemOperandSimple(const char* start) {
             *rdst++ = '+';
             remaining--;
         }
-        size_t index_len = safe_strlen(index, 128);
+        size_t index_len = xvr_safe_strlen(index, 128);
         if (index_len < remaining) {
             snprintf(rdst, remaining, "%s", index);
             rdst += index_len;
