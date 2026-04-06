@@ -48,8 +48,13 @@ static char* safe_strdup(const char* str, size_t max_len) {
     size_t len = safe_strlen(str, max_len);
     if (len == 0 || len >= max_len) return NULL;
     if (len > SIZE_MAX - 1) return NULL;
-    char* result = malloc(len + 1);
+    size_t alloc_size = len + 1;
+    char* result = malloc(alloc_size);
     if (!result) return NULL;
+    if (len > alloc_size) {
+        free(result);
+        return NULL;
+    }
     memcpy(result, str, len);
     result[len] = '\0';
     return result;
@@ -667,23 +672,45 @@ static char* convertMemOperandSimple(const char* start) {
 
     result[0] = '\0';
     char* rdst = result;
+    size_t remaining = 128;
 
     if (offset) {
-        strcpy(rdst, offset);
-        rdst += strlen(offset);
+        size_t offset_len = strlen(offset);
+        if (offset_len < remaining) {
+            snprintf(rdst, remaining, "%s", offset);
+            rdst += offset_len;
+            remaining -= offset_len;
+        }
     }
     if (base) {
-        if (offset) *rdst++ = '+';
-        strcpy(rdst, base);
-        rdst += strlen(base);
+        if (offset && remaining > 0) {
+            *rdst++ = '+';
+            remaining--;
+        }
+        size_t base_len = strlen(base);
+        if (base_len < remaining) {
+            snprintf(rdst, remaining, "%s", base);
+            rdst += base_len;
+            remaining -= base_len;
+        }
     }
     if (index) {
-        if (base || offset) *rdst++ = '+';
-        strcpy(rdst, index);
-        rdst += strlen(index);
-        *rdst++ = '*';
-        *rdst++ = '1';
-        *rdst++ = '1';
+        if ((base || offset) && remaining > 0) {
+            *rdst++ = '+';
+            remaining--;
+        }
+        size_t index_len = strlen(index);
+        if (index_len < remaining) {
+            snprintf(rdst, remaining, "%s", index);
+            rdst += index_len;
+            remaining -= index_len;
+        }
+        if (remaining >= 3) {
+            *rdst++ = '*';
+            *rdst++ = '1';
+            *rdst++ = '1';
+            remaining -= 3;
+        }
     }
 
     *rdst = '\0';
