@@ -21,12 +21,7 @@ size_t xvr_safe_strlen(const char* str, size_t max_len) {
 }
 
 size_t xvr_safe_strlen_bounded(const char* str, size_t max_len) {
-    if (!str) return 0;
-    size_t len = 0;
-    while (str[len] != '\0' && len < max_len) {
-        len++;
-    }
-    return len;
+    return xvr_safe_strlen(str, max_len);
 }
 
 int xvr_safe_strcmp(const char* a, const char* b) {

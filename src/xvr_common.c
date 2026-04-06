@@ -31,14 +31,6 @@ SOFTWARE.
 
 #include "xvr_string_utils.h"
 
-static size_t safe_strlen(const char* str) {
-    size_t len = 0;
-    while (str[len] != '\0') {
-        len++;
-    }
-    return len;
-}
-
 char* Xvr_strdup(const char* str) {
     if (!str) return NULL;
     size_t len = strlen(str) + 1;

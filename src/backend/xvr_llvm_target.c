@@ -32,26 +32,6 @@ SOFTWARE.
 #include <unistd.h>
 
 #include "../xvr_string_utils.h"
-#include "xvr_asm_config.h"
-#include "xvr_common.h"
-
-static char* safe_strdup(const char* str, size_t max_len) {
-    if (!str || max_len == 0) return NULL;
-    size_t len = xvr_safe_strlen(str, max_len);
-    if (len == 0 || len >= max_len) return NULL;
-    if (len > SIZE_MAX - 1) return NULL;
-    size_t alloc_size = len + 1;
-    if (len >= alloc_size) return NULL;
-    char* result = malloc(alloc_size);
-    if (!result) return NULL;
-    if (len > 0 && len <= alloc_size - 1) {
-        memcpy(result, str, len);
-        result[len] = '\0';
-        return result;
-    }
-    free(result);
-    return NULL;
-}
 
 typedef enum {
     XVR_EMIT_OBJECT = 0,
