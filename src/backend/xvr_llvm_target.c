@@ -422,29 +422,48 @@ static char* convertAttToIntel(const char* input) {
     if (!input) return NULL;
 
     size_t len = strlen(input);
-    char* output = malloc(len * 2 + 1);
+    size_t alloc_size = len * 2 + 1;
+    char* output = malloc(alloc_size);
     if (!output) return NULL;
 
     const char* src = input;
     char* dst = output;
+    size_t remaining = alloc_size;
     bool in_directive = false;
 
     while (*src) {
         if (*src == '.') {
             in_directive = true;
-            while (*src && *src != '\n') *dst++ = *src++;
+            while (*src && *src != '\n') {
+                if (remaining > 1) {
+                    *dst++ = *src++;
+                    remaining--;
+                } else {
+                    src++;
+                }
+            }
             continue;
         }
 
         if (*src == '\n') {
             in_directive = false;
-            *dst++ = *src++;
+            if (remaining > 1) {
+                *dst++ = *src++;
+                remaining--;
+            } else {
+                src++;
+            }
             continue;
         }
 
         if (*src == '\t' || *src == ' ') {
             if (in_directive) in_directive = false;
-            *dst++ = *src++;
+            if (remaining > 1) {
+                *dst++ = *src++;
+                remaining--;
+            } else {
+                src++;
+            }
             continue;
         }
 
@@ -458,30 +477,44 @@ static char* convertAttToIntel(const char* input) {
                 src++;
             }
 
-            for (int j = 0; j < i; j++) *dst++ = instr[j];
-            *dst++ = ' ';
+            for (int j = 0; j < i; j++) {
+                if (remaining > 1) {
+                    *dst++ = instr[j];
+                    remaining--;
+                }
+            }
+            if (remaining > 1) {
+                *dst++ = ' ';
+                remaining--;
+            } else {
+                continue;
+            }
 
             const char* ops_start = src;
             while (*ops_start == ' ' || *ops_start == '\t') ops_start++;
 
             char* ops = extractOperandsSimple(ops_start);
-            if (ops && strlen(ops) > 0) {
-                char* reordered = reorderOperandsSimple(instr, ops);
-                if (reordered) {
-                    size_t rl = strlen(reordered);
-                    if (rl > 0) {
-                        memcpy(dst, reordered, rl);
-                        dst += rl;
-                    }
-                    free(reordered);
-                } else if (ops) {
-                    size_t ol = strlen(ops);
-                    if (ol > 0) {
-                        memcpy(dst, ops, ol);
-                        dst += ol;
+            if (ops) {
+                size_t ops_len = safe_strlen(ops, 256);
+                if (ops_len > 0) {
+                    char* reordered = reorderOperandsSimple(instr, ops);
+                    if (reordered) {
+                        size_t rl = safe_strlen(reordered, 512);
+                        if (rl > 0 && rl < remaining) {
+                            memcpy(dst, reordered, rl);
+                            dst += rl;
+                            remaining -= rl;
+                        }
+                        free(reordered);
+                    } else {
+                        if (ops_len < remaining) {
+                            memcpy(dst, ops, ops_len);
+                            dst += ops_len;
+                            remaining -= ops_len;
+                        }
                     }
                 }
-                if (ops) free(ops);
+                free(ops);
             }
 
             while (*src && *src != '\n') src++;
@@ -510,13 +543,20 @@ static char* convertAttToIntel(const char* input) {
         if (*src == '(') {
             char* mem = convertMemOperandSimple(src);
             if (mem) {
-                *dst++ = '[';
-                size_t ml = strlen(mem);
-                if (ml > 0) {
+                if (remaining > 1) {
+                    *dst++ = '[';
+                    remaining--;
+                }
+                size_t ml = safe_strlen(mem, 256);
+                if (ml > 0 && ml < remaining) {
                     memcpy(dst, mem, ml);
                     dst += ml;
+                    remaining -= ml;
                 }
-                *dst++ = ']';
+                if (remaining > 1) {
+                    *dst++ = ']';
+                    remaining--;
+                }
                 free(mem);
             }
             while (*src && *src != ')') src++;
@@ -524,7 +564,12 @@ static char* convertAttToIntel(const char* input) {
             continue;
         }
 
-        *dst++ = *src++;
+        if (remaining > 1) {
+            *dst++ = *src++;
+            remaining--;
+        } else {
+            src++;
+        }
     }
 
     *dst = '\0';
