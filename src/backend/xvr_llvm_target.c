@@ -44,14 +44,14 @@ static size_t safe_strlen(const char* str, size_t max_len) {
 }
 
 static char* safe_strdup(const char* str, size_t max_len) {
-    if (!str) return NULL;
+    if (!str || max_len == 0) return NULL;
     size_t len = safe_strlen(str, max_len);
     if (len == 0 || len >= max_len) return NULL;
+    if (len > SIZE_MAX - 1) return NULL;
     char* result = malloc(len + 1);
-    if (result) {
-        memcpy(result, str, len);
-        result[len] = '\0';
-    }
+    if (!result) return NULL;
+    memcpy(result, str, len);
+    result[len] = '\0';
     return result;
 }
 
