@@ -482,21 +482,18 @@ static char* convertAttToIntel(const char* input) {
                     char* reordered = reorderOperandsSimple(instr, ops);
                     if (reordered) {
                         size_t rl = xvr_safe_strlen(reordered, 512);
-                        if (rl > 0 && rl < remaining) {
-                            if (rl <= remaining) {
-                                memcpy(dst, reordered, rl);
-                                dst += rl;
-                                remaining -= rl;
-                            }
+                        if (rl > 0 && rl < remaining && rl + 1 <= remaining) {
+                            memcpy(dst, reordered, rl);
+                            dst += rl;
+                            remaining -= rl;
                         }
                         free(reordered);
                     } else {
-                        if (ops_len > 0 && ops_len < remaining) {
-                            if (ops_len <= remaining) {
-                                memcpy(dst, ops, ops_len);
-                                dst += ops_len;
-                                remaining -= ops_len;
-                            }
+                        if (ops_len > 0 && ops_len < remaining &&
+                            ops_len + 1 <= remaining) {
+                            memcpy(dst, ops, ops_len);
+                            dst += ops_len;
+                            remaining -= ops_len;
                         }
                     }
                 }
