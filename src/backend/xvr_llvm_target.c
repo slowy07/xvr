@@ -506,6 +506,10 @@ static char* convertAttToIntel(const char* input) {
 
         if (*src == '%') {
             src++;
+            if (remaining > 1) {
+                *dst++ = '%';
+                remaining--;
+            }
             while (*src && ((*src >= 'a' && *src <= 'z') ||
                             (*src >= 'A' && *src <= 'Z') ||
                             (*src >= '0' && *src <= '9') || *src == '_')) {
@@ -535,6 +539,11 @@ static char* convertAttToIntel(const char* input) {
             }
             while (*src == ' ') src++;
             if (*src == '%') {
+                src++;
+                if (remaining > 1) {
+                    *dst++ = '%';
+                    remaining--;
+                }
                 while (*src && ((*src >= 'a' && *src <= 'z') ||
                                 (*src >= 'A' && *src <= 'Z') ||
                                 (*src >= '0' && *src <= '9') || *src == '_')) {
@@ -644,7 +653,8 @@ static char* reorderOperandsSimple(const char* instr, const char* operands) {
     if (!operands || !instr) return strdup(operands ? operands : "");
 
     int is_single_operand =
-        (strcmp(instr, "push") == 0 || strcmp(instr, "pushq") == 0 ||
+        (strcmp(instr, "mov") == 0 || strcmp(instr, "movq") == 0 ||
+         strcmp(instr, "push") == 0 || strcmp(instr, "pushq") == 0 ||
          strcmp(instr, "pop") == 0 || strcmp(instr, "popq") == 0 ||
          strcmp(instr, "call") == 0 || strcmp(instr, "callq") == 0 ||
          strcmp(instr, "jmp") == 0 || strcmp(instr, "jmpq") == 0 ||
@@ -652,25 +662,101 @@ static char* reorderOperandsSimple(const char* instr, const char* operands) {
 
     if (is_single_operand) {
         const char* ops = operands;
+        int had_asterisk = 0;
         while (*ops == ' ' || *ops == '\t') ops++;
-        if (*ops == '*') ops++;
+        if (*ops == '*') {
+            had_asterisk = 1;
+            ops++;
+        }
         while (*ops == ' ' || *ops == '\t') ops++;
 
         if (*ops == '(') {
-            char* mem = convertMemOperandSimple(ops);
-            if (mem) {
-                char* result = malloc(xvr_safe_strlen(mem, 256) + 3);
-                if (result) {
-                    result[0] = '[';
-                    size_t ml = xvr_safe_strlen(mem, 256);
-                    memcpy(result + 1, mem, ml);
-                    result[ml + 1] = ']';
-                    result[ml + 2] = '\0';
+            char* comma = strchr(ops, ',');
+            if (comma) {
+                char* mem_part = strndup(ops, comma - ops);
+                char* reg_part = strdup(comma + 1);
+                while (*reg_part == ' ' || *reg_part == '\t') reg_part++;
+                size_t reg_len = 0;
+                char* r = reg_part;
+                while (*r &&
+                       ((*r >= 'a' && *r <= 'z') || (*r >= 'A' && *r <= 'Z') ||
+                        (*r >= '0' && *r <= '9') || *r == '_')) {
+                    r++;
+                    reg_len++;
+                }
+                if (reg_len == 0) reg_len = 1;
+                char* mem = convertMemOperandSimple(mem_part);
+                free(mem_part);
+                if (mem) {
+                    char* result =
+                        malloc(xvr_safe_strlen(mem, 256) + reg_len + 8);
+                    if (result) {
+                        if (had_asterisk) {
+                            result[0] = '*';
+                            result[1] = '[';
+                            size_t ml = xvr_safe_strlen(mem, 256);
+                            memcpy(result + 2, mem, ml);
+                            result[ml + 2] = ']';
+                            result[ml + 3] = ',';
+                            result[ml + 4] = ' ';
+                            memcpy(result + ml + 5, reg_part, reg_len);
+                            result[ml + 5 + reg_len] = '\0';
+                        } else {
+                            result[0] = '[';
+                            size_t ml = xvr_safe_strlen(mem, 256);
+                            memcpy(result + 1, mem, ml);
+                            result[ml + 1] = ']';
+                            result[ml + 2] = ',';
+                            result[ml + 3] = ' ';
+                            memcpy(result + ml + 4, reg_part, reg_len);
+                            result[ml + 4 + reg_len] = '\0';
+                        }
+                        free(mem);
+                        free(reg_part);
+                        return result;
+                    }
                     free(mem);
+                }
+                free(reg_part);
+            } else {
+                char* mem = convertMemOperandSimple(ops);
+                if (mem) {
+                    char* result = malloc(xvr_safe_strlen(mem, 256) + 3);
+                    if (result) {
+                        result[0] = had_asterisk ? '*' : '[';
+                        size_t ml = xvr_safe_strlen(mem, 256);
+                        memcpy(result + 1, mem, ml);
+                        result[ml + 1] = ']';
+                        result[ml + 2] = '\0';
+                        free(mem);
+                        return result;
+                    }
+                    free(mem);
+                }
+            }
+        } else if (*ops == '%' && had_asterisk) {
+            const char* reg_start = ops + 1;
+            size_t reg_len = 0;
+            while ((*reg_start >= 'a' && *reg_start <= 'z') ||
+                   (*reg_start >= 'A' && *reg_start <= 'Z') ||
+                   (*reg_start >= '0' && *reg_start <= '9') ||
+                   *reg_start == '_') {
+                reg_start++;
+                reg_len++;
+            }
+            if (reg_len > 0) {
+                char* result = malloc(reg_len + 4);
+                if (result) {
+                    result[0] = '*';
+                    result[1] = '[';
+                    memcpy(result + 2, ops + 1, reg_len);
+                    result[reg_len + 2] = ']';
+                    result[reg_len + 3] = '\0';
                     return result;
                 }
-                free(mem);
             }
+        } else if (*ops == '%') {
+            return strdup(ops);
         }
         return strdup(ops);
     }
@@ -687,7 +773,10 @@ static char* reorderOperandsSimple(const char* instr, const char* operands) {
         size_t tl = xvr_safe_strlen(token, 256);
         while (tl > 0 && (token[tl - 1] == ' ' || token[tl - 1] == '\t'))
             token[--tl] = '\0';
-        if (tl > 0) parts[count++] = strdup(token);
+        if (tl > 0) {
+            parts[count] = strdup(token);
+            count++;
+        }
         token = strtok(NULL, ",");
     }
     free(copy);
@@ -705,11 +794,11 @@ static char* reorderOperandsSimple(const char* instr, const char* operands) {
         return strdup(operands);
     }
 
-    if (count >= 2) {
+    if (count == 2) {
         char* first = parts[0];
         char* second = parts[1];
-        int first_has_percent = (strchr(first, '%') != NULL);
-        int second_has_percent = (strchr(second, '%') != NULL);
+        int first_starts_immediate = (first[0] == '$');
+        int second_starts_immediate = (second[0] == '$');
         int first_is_label =
             (first[0] == '.' || (first[0] >= 'a' && first[0] <= 'z') ||
              (first[0] >= 'A' && first[0] <= 'Z'));
@@ -717,14 +806,10 @@ static char* reorderOperandsSimple(const char* instr, const char* operands) {
             (second[0] == '.' || (second[0] >= 'a' && second[0] <= 'z') ||
              (second[0] >= 'A' && second[0] <= 'Z'));
 
-        if (first_has_percent && second_has_percent) {
+        if (first_is_label || second_is_label) {
             snprintf(dst, 512, "%s, %s", first, second);
-        } else if (first_has_percent && !second_has_percent) {
+        } else if (first_starts_immediate || second_starts_immediate) {
             snprintf(dst, 512, "%s, %s", first, second);
-        } else if (!first_has_percent && second_has_percent) {
-            snprintf(dst, 512, "%s, %s", first, second);
-        } else if (first_is_label || second_is_label) {
-            snprintf(dst, 512, "%s, %s", second, first);
         } else {
             snprintf(dst, 512, "%s, %s", second, first);
         }
