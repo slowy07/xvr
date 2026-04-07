@@ -510,7 +510,8 @@ static char* convertAttToIntel(const char* input) {
         if (*src == '%') {
             src++;
             while (*src && ((*src >= 'a' && *src <= 'z') ||
-                            (*src >= '0' && *src <= '9'))) {
+                            (*src >= 'A' && *src <= 'Z') ||
+                            (*src >= '0' && *src <= '9') || *src == '_')) {
                 *dst++ = *src++;
             }
             continue;
@@ -518,10 +519,59 @@ static char* convertAttToIntel(const char* input) {
 
         if (*src == '$') {
             src++;
+            if (*src == '-') {
+                *dst++ = *src++;
+            }
             while (*src && ((*src >= '0' && *src <= '9') ||
                             (*src >= 'a' && *src <= 'f') ||
                             (*src >= 'A' && *src <= 'F'))) {
                 *dst++ = *src++;
+            }
+            continue;
+        }
+
+        if (*src == '*') {
+            src++;
+            if (remaining > 1) {
+                *dst++ = '*';
+                remaining--;
+            }
+            while (*src == ' ') src++;
+            if (*src == '%') {
+                while (*src && ((*src >= 'a' && *src <= 'z') ||
+                                (*src >= 'A' && *src <= 'Z') ||
+                                (*src >= '0' && *src <= '9') || *src == '_')) {
+                    if (remaining > 1) {
+                        *dst++ = *src++;
+                        remaining--;
+                    } else {
+                        src++;
+                    }
+                }
+            } else if (*src == '(') {
+                char* mem = convertMemOperandSimple(src);
+                if (mem) {
+                    size_t ml = xvr_safe_strlen(mem, 256);
+                    if (ml > 0 && ml < remaining && ml <= remaining) {
+                        memcpy(dst, mem, ml);
+                        dst += ml;
+                        remaining -= ml;
+                    }
+                    free(mem);
+                }
+                while (*src && *src != ')') src++;
+                if (*src == ')') src++;
+            } else if (*src >= '0' && *src <= '9') {
+                while (*src && ((*src >= '0' && *src <= '9') ||
+                                (*src >= 'a' && *src <= 'f') ||
+                                (*src >= 'A' && *src <= 'F'))) {
+                    if (remaining > 1) {
+                        *dst++ = *src++;
+                        remaining--;
+                    } else {
+                        src++;
+                    }
+                }
             }
             continue;
         }
