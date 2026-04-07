@@ -534,7 +534,6 @@ int main(int argc, const char* argv[]) {
         gcc_args[gcc_argc++] = "-lm";
         gcc_args[gcc_argc++] = "-lpthread";
         gcc_args[gcc_argc++] = "-lxml2";
-        gcc_args[gcc_argc++] = "-lcurl";
         if (has_libxvr && libxvr_path) {
             gcc_args[gcc_argc++] = libxvr_path;
         }
