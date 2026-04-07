@@ -209,80 +209,66 @@ make -j4
 
 ### How It Works
 
+The Intel syntax emission uses LLVM's `llc` compiler with the `--x86-asm-syntax=intel` flag to generate native Intel syntax assembly.
+
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
-│                    Intel Syntax Conversion Pipeline                         │
+│                    Intel Syntax Emission Pipeline                           │
 └─────────────────────────────────────────────────────────────────────────────┘
 
-  LLVM Assembly (AT&T)              Intel Converter              Intel Assembly
-  ─────────────────────              ──────────────              ───────────────
-        │                               │                              │
-        ▼                               ▼                              │
-  ┌───────────────────┐        ┌─────────────────┐                     │
-  │ Directive Handler │        │  convertAttTo   │                     │
-  │ (.text, .data)    │───────▶│    Intel()      │                     │
-  └───────────────────┘        └────────┬────────┘                     │
-        │                               │                              │
-        ▼                               ▼                              ▼
-  ┌───────────────────┐        ┌─────────────────┐         ┌─────────────────┐
-  │Instruction Parser │        │  Parse each     │         │  Intel Syntax   │
-  │  (movq, addq)     │───────▶│  instruction    │────────▶│    Output       │
-  └───────────────────┘        └────────┬────────┘         └─────────────────┘
-        │                               │
-        ▼                               ▼
-  ┌───────────────────┐        ┌─────────────────┐
-  │Operand Reorder    │        │Reorder: src→dest│
-  │ (AT&T: src,dest)  │───────▶│(Intel: dest,src)│
-  └───────────────────┘        └─────────────────┘
+  XVR Source          LLVM IR              llc (Intel)              Intel Assembly
+  ──────────          ───────              ──────────              ─────────────
+     │                  │                      │                        │
+     ▼                  ▼                      ▼                        ▼
+  ┌──────┐        ┌─────────┐         ┌──────────────┐       ┌──────────────┐
+  │Lexer │        │   LLVM  │         │     llc      │       │    Native    │
+  │      │───────▶│  IR Gen │───────▶ │--x86-asm-    │──────▶│    Intel     │
+  └──────┘        │         │         │ syntax=intel │       │    Output    │
+                  └─────────┘         └──────────────┘       └──────────────┘
 ```
+
+### Key Features
+
+- **Native Intel Syntax**: Uses `llc` with `--x86-asm-syntax=intel`
+- **Proper Directive**: Includes `.intel_syntax noprefix`
+- **Toolchain Compatible**: Works with standard gcc/clang
 
 ### Example Conversion
 
 #### Input (XVR)
 ```xvr
-var x: int32 = 42;
-var y: int32 = x + 10;
-std::print("{}", y);
-```
-
-#### AT&T Assembly (Default)
-```asm
-    .text
-    .globl  _main
-_main:
-    pushq   %rbp
-    movq    %rsp, %rbp
-    subq    $16, %rsp
-    movl    $42, -4(%rbp)
-    movl    -4(%rbp), %eax
-    addl    $10, %eax
-    movl    %eax, -8(%rbp)
-    leaq    L1(%rip), %rdi
-    movl    -8(%rbp), %esi
-    callq   _print_int
-    addq    $16, %rsp
-    popq    %rbp
-    retq
+std::println("Hello, World!");
 ```
 
 #### Intel Syntax (--asm-syntax intel)
 ```asm
-    .text
-    .globl  _main
-_main:
-    pushq   rbp
-    movq    rsp, rbp
-    subq    16, rsp
-    movl    DWORD PTR [rbp - 4], 42
-    movl    DWORD PTR [rbp - 4], eax
-    addl    eax, 10
-    movl    eax, DWORD PTR [rbp - 8]
-    leaq    L1(%rip), rdi
-    movl    DWORD PTR [rbp - 8], esi
-    callq   _print_int
-    addq    16, rsp
-    popq    rbp
-    retq
+	.intel_syntax noprefix
+	.file	"test"
+	.text
+	.globl	main
+	.p2align	4
+	.type	main,@function
+main:
+	.cfi_startproc
+# %bb.0:
+	push	rax
+	.cfi_def_cfa_offset 16
+	mov	edi, offset .Lfmt_str
+	xor	eax, eax
+	call	printf@PLT
+	xor	eax, eax
+	pop	rcx
+	.cfi_def_cfa_offset 8
+	ret
+.Lfunc_end0:
+	.size	main, .Lfunc_end0-main
+	.cfi_endproc
+	.type	.Lfmt_str,@object
+	.section	.rodata.str1.1,"aMS",@progbits,1
+.Lfmt_str:
+	.asciz	"Hello, World!\n"
+	.size	.Lfmt_str, 15
+	.section	".note.GNU-stack","",@progbits
 ```
 
 ### Key Differences
@@ -294,6 +280,24 @@ _main:
 | Memory | `(%rbp)` | `[rbp]` |
 | Offset | `-8(%rbp)` | `[rbp - 8]` |
 | Order | `movq src, dest` | `movq dest, src` |
+| Directive | (none) | `.intel_syntax noprefix` |
+
+### Compilation
+
+To compile Intel syntax assembly with gcc:
+
+```bash
+# Generate Intel assembly
+xvr source.xvr --emit asm --asm-syntax intel -o source.s
+
+# Compile with gcc (requires -no-pie for PIE compatibility)
+gcc -no-pie source.s -o source -lm -lpthread -lxml2
+
+# Run
+./source
+```
+
+> **Note**: The `-no-pie` flag is required because the generated assembly uses relocations that are incompatible with PIE (Position Independent Executable) by default.
 
 ---
 

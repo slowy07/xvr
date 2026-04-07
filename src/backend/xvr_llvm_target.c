@@ -253,6 +253,35 @@ bool Xvr_LLVMTargetMachineEmitToFile(Xvr_LLVMTargetMachine* tm,
     char* err_msg = NULL;
     LLVMBool result;
 
+    Xvr_AsmSyntax syntax = Xvr_LLVMTargetConfigGetAsmSyntax(tm->config);
+
+    if (emit_type == XVR_EMIT_ASM && syntax == XVR_ASM_SYNTAX_INTEL) {
+        char ir_file[512];
+        snprintf(ir_file, sizeof(ir_file), "%s.ll", filename);
+        char* ir = LLVMPrintModuleToString(mod);
+        if (!ir) {
+            return false;
+        }
+        FILE* f = fopen(ir_file, "w");
+        if (!f) {
+            LLVMDisposeMessage(ir);
+            return false;
+        }
+        fputs(ir, f);
+        fclose(f);
+        LLVMDisposeMessage(ir);
+
+        char cmd[1024];
+        snprintf(cmd, sizeof(cmd), "llc --x86-asm-syntax=intel -o %s %s",
+                 filename, ir_file);
+        int rc = system(cmd);
+        remove(ir_file);
+        if (rc != 0) {
+            return false;
+        }
+        return true;
+    }
+
     switch (emit_type) {
     case XVR_EMIT_ASM: {
         result = LLVMTargetMachineEmitToFile(machine, mod, filename,
@@ -288,13 +317,6 @@ bool Xvr_LLVMTargetMachineEmitToFile(Xvr_LLVMTargetMachine* tm,
             LLVMDisposeMessage(err_msg);
         }
         return false;
-    }
-
-    if (emit_type == XVR_EMIT_ASM) {
-        Xvr_AsmSyntax syntax = Xvr_LLVMTargetConfigGetAsmSyntax(tm->config);
-        if (syntax == XVR_ASM_SYNTAX_INTEL) {
-            return convertAsmToIntelSyntax(filename);
-        }
     }
 
     return true;
@@ -382,6 +404,19 @@ static bool convertAsmToIntelSyntax(const char* filename) {
     buffer[size] = '\0';
     fclose(f);
 
+    // Add Intel syntax directive at the beginning
+    char* header = ".intel_syntax noprefix\n";
+    size_t header_len = strlen(header);
+    char* full_content = malloc(header_len + size + 1);
+    if (!full_content) {
+        free(buffer);
+        return false;
+    }
+    memcpy(full_content, header, header_len);
+    memcpy(full_content + header_len, buffer, size + 1);
+    free(buffer);
+    buffer = full_content;
+
     char* converted = convertAttToIntel(buffer);
     free(buffer);
 
@@ -404,7 +439,7 @@ static char* convertAttToIntel(const char* input) {
     if (!input) return NULL;
 
     size_t len = xvr_safe_strlen(input, 4096);
-    size_t alloc_size = len * 2 + 1;
+    size_t alloc_size = len * 2 + 512;
     char* output = malloc(alloc_size);
     if (!output) return NULL;
 
@@ -413,39 +448,27 @@ static char* convertAttToIntel(const char* input) {
     size_t remaining = alloc_size;
     bool in_directive = false;
 
-    while (*src) {
+    while (*src && remaining > 1) {
         if (*src == '.') {
             in_directive = true;
-            while (*src && *src != '\n') {
-                if (remaining > 1) {
-                    *dst++ = *src++;
-                    remaining--;
-                } else {
-                    src++;
-                }
+            while (*src && *src != '\n' && remaining > 1) {
+                *dst++ = *src++;
+                remaining--;
             }
             continue;
         }
 
         if (*src == '\n') {
             in_directive = false;
-            if (remaining > 1) {
-                *dst++ = *src++;
-                remaining--;
-            } else {
-                src++;
-            }
+            *dst++ = *src++;
+            remaining--;
             continue;
         }
 
         if (*src == '\t' || *src == ' ') {
             if (in_directive) in_directive = false;
-            if (remaining > 1) {
-                *dst++ = *src++;
-                remaining--;
-            } else {
-                src++;
-            }
+            *dst++ = *src++;
+            remaining--;
             continue;
         }
 
@@ -459,45 +482,37 @@ static char* convertAttToIntel(const char* input) {
                 src++;
             }
 
-            for (int j = 0; j < i; j++) {
-                if (remaining > 1) {
-                    *dst++ = instr[j];
-                    remaining--;
+            for (int j = 0; j < i && remaining > 1; j++) {
+                if (instr[j] == 'q' && j == i - 1 && i > 1) {
+                    continue;
                 }
+                *dst++ = instr[j];
+                remaining--;
             }
+
             if (remaining > 1) {
                 *dst++ = ' ';
                 remaining--;
-            } else {
-                continue;
             }
 
             const char* ops_start = src;
             while (*ops_start == ' ' || *ops_start == '\t') ops_start++;
 
-            char* ops = extractOperandsSimple(ops_start);
-            if (ops) {
-                size_t ops_len = xvr_safe_strlen(ops, 256);
-                if (ops_len > 0) {
+            if (*ops_start && *ops_start != '\n') {
+                char* ops = extractOperandsSimple(ops_start);
+                if (ops) {
                     char* reordered = reorderOperandsSimple(instr, ops);
                     if (reordered) {
                         size_t rl = xvr_safe_strlen(reordered, 512);
-                        if (rl > 0 && rl < remaining && rl + 1 <= remaining) {
+                        if (rl > 0 && rl < remaining) {
                             memcpy(dst, reordered, rl);
                             dst += rl;
                             remaining -= rl;
                         }
                         free(reordered);
-                    } else {
-                        if (ops_len > 0 && ops_len < remaining &&
-                            ops_len + 1 <= remaining) {
-                            memcpy(dst, ops, ops_len);
-                            dst += ops_len;
-                            remaining -= ops_len;
-                        }
                     }
+                    free(ops);
                 }
-                free(ops);
             }
 
             while (*src && *src != '\n') src++;
@@ -506,122 +521,62 @@ static char* convertAttToIntel(const char* input) {
 
         if (*src == '%') {
             src++;
-            if (remaining > 1) {
-                *dst++ = '%';
-                remaining--;
-            }
-            while (*src && ((*src >= 'a' && *src <= 'z') ||
-                            (*src >= 'A' && *src <= 'Z') ||
-                            (*src >= '0' && *src <= '9') || *src == '_')) {
-                *dst++ = *src++;
-            }
             continue;
         }
 
         if (*src == '$') {
             src++;
-            if (*src == '-') {
-                *dst++ = *src++;
-            }
             while (*src && ((*src >= '0' && *src <= '9') ||
                             (*src >= 'a' && *src <= 'f') ||
                             (*src >= 'A' && *src <= 'F'))) {
-                *dst++ = *src++;
+                if (remaining > 1) {
+                    *dst++ = *src++;
+                    remaining--;
+                } else {
+                    src++;
+                }
             }
             continue;
         }
 
         if (*src == '*') {
             src++;
-            if (remaining > 1) {
-                *dst++ = '*';
-                remaining--;
-            }
-            while (*src == ' ') src++;
-            if (*src == '%') {
-                src++;
-                if (remaining > 1) {
-                    *dst++ = '%';
-                    remaining--;
-                }
-                while (*src && ((*src >= 'a' && *src <= 'z') ||
-                                (*src >= 'A' && *src <= 'Z') ||
-                                (*src >= '0' && *src <= '9') || *src == '_')) {
-                    if (remaining > 1) {
-                        *dst++ = *src++;
-                        remaining--;
-                    } else {
-                        src++;
-                    }
-                }
-            } else if (*src == '(') {
-                char* mem = convertMemOperandSimple(src);
-                if (mem) {
-                    size_t ml = xvr_safe_strlen(mem, 256);
-                    if (remaining > 1) {
-                        *dst++ = '[';
-                        remaining--;
-                    }
-                    if (ml > 0 && ml < remaining) {
-                        memcpy(dst, mem, ml);
-                        dst += ml;
-                        remaining -= ml;
-                    }
-                    if (remaining > 1) {
-                        *dst++ = ']';
-                        remaining--;
-                    }
-                    free(mem);
-                }
-                while (*src && *src != ')') src++;
-                if (*src == ')') src++;
-            } else if (*src >= '0' && *src <= '9') {
-                while (*src && ((*src >= '0' && *src <= '9') ||
-                                (*src >= 'a' && *src <= 'f') ||
-                                (*src >= 'A' && *src <= 'F'))) {
-                    if (remaining > 1) {
-                        *dst++ = *src++;
-                        remaining--;
-                    } else {
-                        src++;
-                    }
-                }
-            }
             continue;
         }
 
         if (*src == '(') {
-            char* mem = convertMemOperandSimple(src);
-            if (mem) {
-                if (remaining > 1) {
-                    *dst++ = '[';
-                    remaining--;
-                }
-                size_t ml = xvr_safe_strlen(mem, 256);
-                if (ml > 0 && ml < remaining) {
-                    if (ml <= remaining) {
-                        memcpy(dst, mem, ml);
-                        dst += ml;
-                        remaining -= ml;
+            while (*src && *src != ')' && remaining > 1) {
+                if (*src == '%') {
+                    src++;
+                    while (*src &&
+                           ((*src >= 'a' && *src <= 'z') ||
+                            (*src >= 'A' && *src <= 'Z') ||
+                            (*src >= '0' && *src <= '9') || *src == '_')) {
+                        if (remaining > 1) {
+                            *dst++ = *src++;
+                            remaining--;
+                        } else {
+                            src++;
+                        }
+                    }
+                } else {
+                    if (remaining > 1) {
+                        *dst++ = *src++;
+                        remaining--;
+                    } else {
+                        src++;
                     }
                 }
-                if (remaining > 1) {
-                    *dst++ = ']';
-                    remaining--;
-                }
-                free(mem);
             }
-            while (*src && *src != ')') src++;
-            if (*src == ')') src++;
+            if (*src == ')' && remaining > 1) {
+                *dst++ = *src++;
+                remaining--;
+            }
             continue;
         }
 
-        if (remaining > 1) {
-            *dst++ = *src++;
-            remaining--;
-        } else {
-            src++;
-        }
+        *dst++ = *src++;
+        remaining--;
     }
 
     *dst = '\0';

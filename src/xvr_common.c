@@ -173,7 +173,16 @@ void Xvr_initCommandLine(int argc, const char* argv[]) {
         }
 
         if (!strcmp(argv[i], "--asm-syntax") && i + 1 < argc) {
-            Xvr_commandLine.asmSyntax = (char*)argv[i + 1];
+            const char* syntax = argv[i + 1];
+            if (strcmp(syntax, "intel") != 0 && strcmp(syntax, "att") != 0) {
+                fprintf(stderr,
+                        "error: invalid asm-syntax '%s', must be 'intel' or "
+                        "'att'\n",
+                        syntax);
+                Xvr_commandLine.error = true;
+                return;
+            }
+            Xvr_commandLine.asmSyntax = (char*)syntax;
             i++;
             Xvr_commandLine.error = false;
             continue;
