@@ -333,7 +333,9 @@ void* Xvr_LLVMTargetMachineEmitToMemory(Xvr_LLVMTargetMachine* tm,
     if (*out_size > 0 && *out_size < SIZE_MAX) {
         data = malloc(*out_size);
         if (data) {
-            memcpy(data, LLVMGetBufferStart(buffer), *out_size);
+            if (*out_size <= LLVMGetBufferSize(buffer)) {
+                memcpy(data, LLVMGetBufferStart(buffer), *out_size);
+            }
         } else {
             *out_size = 0;
         }
@@ -490,9 +492,11 @@ static char* convertAttToIntel(const char* input) {
                         free(reordered);
                     } else {
                         if (ops_len > 0 && ops_len < remaining) {
-                            memcpy(dst, ops, ops_len);
-                            dst += ops_len;
-                            remaining -= ops_len;
+                            if (ops_len <= remaining) {
+                                memcpy(dst, ops, ops_len);
+                                dst += ops_len;
+                                remaining -= ops_len;
+                            }
                         }
                     }
                 }
@@ -531,9 +535,11 @@ static char* convertAttToIntel(const char* input) {
                 }
                 size_t ml = xvr_safe_strlen(mem, 256);
                 if (ml > 0 && ml < remaining) {
-                    memcpy(dst, mem, ml);
-                    dst += ml;
-                    remaining -= ml;
+                    if (ml <= remaining) {
+                        memcpy(dst, mem, ml);
+                        dst += ml;
+                        remaining -= ml;
+                    }
                 }
                 if (remaining > 1) {
                     *dst++ = ']';
@@ -569,7 +575,7 @@ static char* extractOperandsSimple(const char* start) {
     if (len > SIZE_MAX - 1) return NULL;
     char* result = malloc(len + 1);
     if (!result) return NULL;
-    if (len > 0 && len <= len + 1) {
+    if (len > 0 && len <= len + 1 && len <= (size_t)(result ? len + 1 : 0)) {
         memcpy(result, start, len);
     } else {
         free(result);

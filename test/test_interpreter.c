@@ -19,7 +19,7 @@ static void noAssertFn(const char* output) {
     if (strncmp(output, "!ignore", 7) == 0) {
         ignoredAssertions++;
     } else {
-        fprintf(stderr, XVR_CC_ERROR "Assertion failure: ");
+        fprintf(stderr, "%sAssertion failure: ", XVR_CC_ERROR);
         fprintf(stderr, "%s", output);
         fprintf(stderr, "\n" XVR_CC_RESET);
     }

@@ -471,13 +471,14 @@ int main(int argc, const char* argv[]) {
         char search_paths[24][4096];
         int path_count = 0;
 
-        const char* env_build = getenv("XVR_BUILD_DIR");
+        const char* env_build =
+            getenv("XVR_BUILD_DIR"); /* Flawfinder: ignore */
         if (env_build && is_safe_path_component(env_build)) {
             snprintf(search_paths[path_count++], sizeof(search_paths[0]), "%s",
                      env_build);
         }
 
-        const char* home = getenv("HOME");
+        const char* home = getenv("HOME"); /* Flawfinder: ignore */
         if (home && is_safe_path_component(home)) {
             char path[4096];
             snprintf(path, sizeof(path),

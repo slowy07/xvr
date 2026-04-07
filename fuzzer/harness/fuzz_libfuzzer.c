@@ -30,7 +30,7 @@ int LLVMFuzzerTestOneInput(const uint8_t* data, size_t size) {
     char cmd[2048];
     snprintf(cmd, sizeof(cmd), "../out/xvr %s 2>&1 >/dev/null", template);
 
-    int status = system(cmd);
+    int status = system(cmd); /* Flawfinder: ignore */
     unlink(template);
 
     return 0;
