@@ -1,5 +1,5 @@
 set(XVR_SOURCES
-    xvr_ast_node.c
+    core/types/xvr_type.c
     xvr_cast_emit.c
     xvr_common.c
     xvr_format_string.c
@@ -16,7 +16,6 @@ set(XVR_SOURCES
     xvr_scope.c
     xvr_semantic.c
     xvr_string_utils.c
-    xvr_type.c
     xvr_unused.c
     sema/xvr_builtin.c
     optimizer/xvr_ast_optimizer.c
@@ -32,9 +31,11 @@ set(XVR_SOURCES
     backend/xvr_llvm_target.c
     backend/xvr_llvm_type_mapper.c
     core/ir/xvr_ir.c
+    core/ast/xvr_ast_node.c
 )
 
 set(XVR_HEADERS
+    core/types/xvr_type.h
     xvr_ast_node.h
     xvr_cast_emit.h
     xvr_common.h
@@ -55,7 +56,7 @@ set(XVR_HEADERS
     xvr_semantic.h
     xvr_string_utils.h
     xvr_token_types.h
-    xvr_type.h
+    core/types/xvr_type.h
     xvr_unused.h
     sema/xvr_builtin.h
     optimizer/xvr_ast_optimizer.h
@@ -72,6 +73,7 @@ set(XVR_HEADERS
     backend/xvr_llvm_target.h
     backend/xvr_llvm_type_mapper.h
     core/ir/xvr_ir.h
+    core/ast/xvr_ast_node.h
 )
 
 add_library(xvr_objects OBJECT ${XVR_SOURCES} ${XVR_HEADERS})
