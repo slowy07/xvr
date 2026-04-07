@@ -454,7 +454,7 @@ static char* convertAttToIntel(const char* input) {
             int i = 0;
             while ((*src >= 'a' && *src <= 'z') ||
                    (*src >= 'A' && *src <= 'Z') ||
-                   (*src >= '0' && *src <= '9')) {
+                   (*src >= '0' && *src <= '9') || *src == '_' || *src == '.') {
                 if (i < 31) instr[i++] = *src;
                 src++;
             }
@@ -552,10 +552,18 @@ static char* convertAttToIntel(const char* input) {
                 char* mem = convertMemOperandSimple(src);
                 if (mem) {
                     size_t ml = xvr_safe_strlen(mem, 256);
-                    if (ml > 0 && ml < remaining && ml <= remaining) {
+                    if (remaining > 1) {
+                        *dst++ = '[';
+                        remaining--;
+                    }
+                    if (ml > 0 && ml < remaining) {
                         memcpy(dst, mem, ml);
                         dst += ml;
                         remaining -= ml;
+                    }
+                    if (remaining > 1) {
+                        *dst++ = ']';
+                        remaining--;
                     }
                     free(mem);
                 }
@@ -638,6 +646,38 @@ static char* extractOperandsSimple(const char* start) {
 static char* reorderOperandsSimple(const char* instr, const char* operands) {
     if (!operands || !instr) return strdup(operands ? operands : "");
 
+    int is_single_operand =
+        (strcmp(instr, "push") == 0 || strcmp(instr, "pushq") == 0 ||
+         strcmp(instr, "pop") == 0 || strcmp(instr, "popq") == 0 ||
+         strcmp(instr, "call") == 0 || strcmp(instr, "callq") == 0 ||
+         strcmp(instr, "jmp") == 0 || strcmp(instr, "jmpq") == 0 ||
+         strcmp(instr, "ret") == 0 || strcmp(instr, "retq") == 0);
+
+    if (is_single_operand) {
+        const char* ops = operands;
+        while (*ops == ' ' || *ops == '\t') ops++;
+        if (*ops == '*') ops++;
+        while (*ops == ' ' || *ops == '\t') ops++;
+
+        if (*ops == '(') {
+            char* mem = convertMemOperandSimple(ops);
+            if (mem) {
+                char* result = malloc(xvr_safe_strlen(mem, 256) + 3);
+                if (result) {
+                    result[0] = '[';
+                    size_t ml = xvr_safe_strlen(mem, 256);
+                    memcpy(result + 1, mem, ml);
+                    result[ml + 1] = ']';
+                    result[ml + 2] = '\0';
+                    free(mem);
+                    return result;
+                }
+                free(mem);
+            }
+        }
+        return strdup(ops);
+    }
+
     char* copy = strdup(operands);
     if (!copy) return NULL;
 
@@ -668,42 +708,31 @@ static char* reorderOperandsSimple(const char* instr, const char* operands) {
         return strdup(operands);
     }
 
-    int is_single_operand =
-        (strcmp(instr, "push") == 0 || strcmp(instr, "pushq") == 0 ||
-         strcmp(instr, "pop") == 0 || strcmp(instr, "popq") == 0 ||
-         strcmp(instr, "call") == 0 || strcmp(instr, "callq") == 0 ||
-         strcmp(instr, "jmp") == 0 || strcmp(instr, "jmpq") == 0 ||
-         strcmp(instr, "ret") == 0 || strcmp(instr, "retq") == 0);
+    if (count >= 2) {
+        char* first = parts[0];
+        char* second = parts[1];
+        int first_has_percent = (strchr(first, '%') != NULL);
+        int second_has_percent = (strchr(second, '%') != NULL);
+        int first_is_label =
+            (first[0] == '.' || (first[0] >= 'a' && first[0] <= 'z') ||
+             (first[0] >= 'A' && first[0] <= 'Z'));
+        int second_is_label =
+            (second[0] == '.' || (second[0] >= 'a' && second[0] <= 'z') ||
+             (second[0] >= 'A' && second[0] <= 'Z'));
 
-    if (is_single_operand) {
-        snprintf(dst, 512, "%s", parts[0]);
-    } else {
-        if (count >= 2) {
-            char* first = parts[0];
-            char* second = parts[1];
-            int first_has_percent = (strchr(first, '%') != NULL);
-            int second_has_percent = (strchr(second, '%') != NULL);
-            int first_is_label =
-                (first[0] == '.' || (first[0] >= 'a' && first[0] <= 'z') ||
-                 (first[0] >= 'A' && first[0] <= 'Z'));
-            int second_is_label =
-                (second[0] == '.' || (second[0] >= 'a' && second[0] <= 'z') ||
-                 (second[0] >= 'A' && second[0] <= 'Z'));
-
-            if (first_has_percent && second_has_percent) {
-                snprintf(dst, 512, "%s, %s", first, second);
-            } else if (first_has_percent && !second_has_percent) {
-                snprintf(dst, 512, "%s, %s", first, second);
-            } else if (!first_has_percent && second_has_percent) {
-                snprintf(dst, 512, "%s, %s", first, second);
-            } else if (first_is_label || second_is_label) {
-                snprintf(dst, 512, "%s, %s", second, first);
-            } else {
-                snprintf(dst, 512, "%s, %s", second, first);
-            }
+        if (first_has_percent && second_has_percent) {
+            snprintf(dst, 512, "%s, %s", first, second);
+        } else if (first_has_percent && !second_has_percent) {
+            snprintf(dst, 512, "%s, %s", first, second);
+        } else if (!first_has_percent && second_has_percent) {
+            snprintf(dst, 512, "%s, %s", first, second);
+        } else if (first_is_label || second_is_label) {
+            snprintf(dst, 512, "%s, %s", second, first);
         } else {
-            snprintf(dst, 512, "%s", parts[0]);
+            snprintf(dst, 512, "%s, %s", second, first);
         }
+    } else {
+        snprintf(dst, 512, "%s", parts[0]);
     }
 
     for (int i = 0; i < count; i++) free(parts[i]);
@@ -799,8 +828,7 @@ static char* convertMemOperandSimple(const char* start) {
         if (remaining >= 3) {
             *rdst++ = '*';
             *rdst++ = '1';
-            *rdst++ = '1';
-            remaining -= 3;
+            remaining -= 2;
         }
     }
 
