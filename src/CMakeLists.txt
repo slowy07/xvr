@@ -31,6 +31,7 @@ set(XVR_SOURCES
     backend/xvr_llvm_optimizer.c
     backend/xvr_llvm_target.c
     backend/xvr_llvm_type_mapper.c
+    core/ir/xvr_ir.c
 )
 
 set(XVR_HEADERS
@@ -70,6 +71,7 @@ set(XVR_HEADERS
     backend/xvr_llvm_optimizer.h
     backend/xvr_llvm_target.h
     backend/xvr_llvm_type_mapper.h
+    core/ir/xvr_ir.h
 )
 
 add_library(xvr_objects OBJECT ${XVR_SOURCES} ${XVR_HEADERS})
