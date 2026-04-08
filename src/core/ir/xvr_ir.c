@@ -49,20 +49,20 @@ static char* xvr_ir_strdup(const char* str, size_t max_len) {
     if (!str) {
         return NULL;
     }
-    size_t len = 0;
-    while (len < max_len && str[len] != '\0') {
-        len++;
+    size_t src_len = 0;
+    while (src_len < max_len && str[src_len] != '\0') {
+        src_len++;
     }
-    if (len >= max_len) {
+    if (src_len >= max_len) {
         return NULL;
     }
-    size_t alloc_size = len + 1;
-    char* copy = xvr_ir_xmalloc(alloc_size);
+    size_t dst_size = src_len + 1;
+    char* copy = xvr_ir_xmalloc(dst_size);
     if (!copy) {
         return NULL;
     }
-    if (alloc_size > 0) {
-        memcpy(copy, str, alloc_size);
+    if (dst_size > 0 && dst_size >= src_len + 1) {
+        memcpy(copy, str, dst_size);
     }
     return copy;
 }
