@@ -61,7 +61,9 @@ static char* xvr_ir_strdup(const char* str, size_t max_len) {
     if (!copy) {
         return NULL;
     }
-    memcpy(copy, str, len);
+    if (len > 0) {
+        memcpy(copy, str, len);
+    }
     return copy;
 }
 
