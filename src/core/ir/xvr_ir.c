@@ -56,13 +56,13 @@ static char* xvr_ir_strdup(const char* str, size_t max_len) {
     if (len >= max_len) {
         return NULL;
     }
-    len++;
-    char* copy = xvr_ir_xmalloc(len);
+    size_t alloc_size = len + 1;
+    char* copy = xvr_ir_xmalloc(alloc_size);
     if (!copy) {
         return NULL;
     }
-    if (len > 0) {
-        memcpy(copy, str, len);
+    if (alloc_size > 0) {
+        memcpy(copy, str, alloc_size);
     }
     return copy;
 }
