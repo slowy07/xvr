@@ -30,7 +30,7 @@ SOFTWARE.
 #include <stdio.h>
 #include <string.h>
 
-#include "../sema/xvr_builtin.h"
+#include "../../sema/xvr_builtin.h"
 
 static const char* literal_type_name(Xvr_LiteralType type) {
     switch (type) {

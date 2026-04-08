@@ -31,7 +31,7 @@ SOFTWARE.
 #include <string.h>
 #include <unistd.h>
 
-#include "../xvr_string_utils.h"
+#include "../../xvr_string_utils.h"
 
 typedef enum {
     XVR_EMIT_OBJECT = 0,

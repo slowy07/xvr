@@ -29,7 +29,7 @@ SOFTWARE.
 #include <stdlib.h>
 #include <string.h>
 
-#include "../xvr_string_utils.h"
+#include "../../xvr_string_utils.h"
 #include "xvr_llvm_context.h"
 
 #define MAX_FUNCTIONS 256

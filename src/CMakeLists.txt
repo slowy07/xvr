@@ -19,18 +19,20 @@ set(XVR_SOURCES
     xvr_unused.c
     sema/xvr_builtin.c
     optimizer/xvr_ast_optimizer.c
-    backend/xvr_asm_config.c
-    backend/xvr_llvm_codegen.c
-    backend/xvr_llvm_context.c
-    backend/xvr_llvm_control_flow.c
-    backend/xvr_llvm_expression_emitter.c
-    backend/xvr_llvm_function_emitter.c
-    backend/xvr_llvm_ir_builder.c
-    backend/xvr_llvm_module_manager.c
-    backend/xvr_llvm_optimizer.c
-    backend/xvr_llvm_target.c
-    backend/xvr_llvm_type_mapper.c
+<<<<<<< HEAD
+    adapters/llvm/xvr_asm_config.c
+    adapters/llvm/xvr_llvm_codegen.c
+    adapters/llvm/xvr_llvm_context.c
+    adapters/llvm/xvr_llvm_control_flow.c
+    adapters/llvm/xvr_llvm_expression_emitter.c
+    adapters/llvm/xvr_llvm_function_emitter.c
+    adapters/llvm/xvr_llvm_ir_builder.c
+    adapters/llvm/xvr_llvm_module_manager.c
+    adapters/llvm/xvr_llvm_optimizer.c
+    adapters/llvm/xvr_llvm_target.c
+    adapters/llvm/xvr_llvm_type_mapper.c
     core/ir/xvr_ir.c
+    core/ir/xvr_ir_generator.c
     core/ast/xvr_ast_node.c
 )
 
@@ -60,19 +62,21 @@ set(XVR_HEADERS
     xvr_unused.h
     sema/xvr_builtin.h
     optimizer/xvr_ast_optimizer.h
-    backend/xvr_asm_config.h
-    backend/xvr_llvm_backend.h
-    backend/xvr_llvm_codegen.h
-    backend/xvr_llvm_context.h
-    backend/xvr_llvm_control_flow.h
-    backend/xvr_llvm_expression_emitter.h
-    backend/xvr_llvm_function_emitter.h
-    backend/xvr_llvm_ir_builder.h
-    backend/xvr_llvm_module_manager.h
-    backend/xvr_llvm_optimizer.h
-    backend/xvr_llvm_target.h
-    backend/xvr_llvm_type_mapper.h
+<<<<<<< HEAD
+    adapters/llvm/xvr_asm_config.h
+    adapters/llvm/xvr_llvm_backend.h
+    adapters/llvm/xvr_llvm_codegen.h
+    adapters/llvm/xvr_llvm_context.h
+    adapters/llvm/xvr_llvm_control_flow.h
+    adapters/llvm/xvr_llvm_expression_emitter.h
+    adapters/llvm/xvr_llvm_function_emitter.h
+    adapters/llvm/xvr_llvm_ir_builder.h
+    adapters/llvm/xvr_llvm_module_manager.h
+    adapters/llvm/xvr_llvm_optimizer.h
+    adapters/llvm/xvr_llvm_target.h
+    adapters/llvm/xvr_llvm_type_mapper.h
     core/ir/xvr_ir.h
+    core/ir/xvr_ir_generator.h
     core/ast/xvr_ast_node.h
 )
 
