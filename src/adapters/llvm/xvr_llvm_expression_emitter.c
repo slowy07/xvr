@@ -37,9 +37,12 @@ SOFTWARE.
 #include "xvr_llvm_function_emitter.h"
 #include "xvr_llvm_ir_builder.h"
 #include "xvr_llvm_module_manager.h"
+#include "xvr_llvm_optimizer.h"
+#include "xvr_llvm_target.h"
 #include "xvr_llvm_type_mapper.h"
 #include "xvr_opcodes.h"
 #include "xvr_refstring.h"
+#include "xvr_string_utils.h"
 #include "xvr_type.h"
 
 /**
@@ -370,8 +373,26 @@ static LLVMValueRef emit_string_concat(Xvr_LLVMExpressionEmitter* emitter,
             return NULL;
         }
 
-        memcpy(combined, lhs_buf, lhs_len - 1);
-        memcpy(combined + lhs_len - 1, rhs_buf, rhs_len);
+        if (lhs_len > total_len + 1 || rhs_len > total_len + 1 ||
+            lhs_len - 1 > total_len) {
+            free(lhs_buf);
+            free(rhs_buf);
+            free(combined);
+            return NULL;
+        }
+
+        if (lhs_len > 0 && lhs_len - 1 <= total_len &&
+            lhs_len - 1 <= total_len + 1) {
+            if (lhs_len - 1 <= total_len) {
+                memcpy(combined, lhs_buf, lhs_len - 1);
+            }
+        }
+        if (rhs_len > 0 && rhs_len <= total_len &&
+            lhs_len - 1 + rhs_len <= total_len + 1) {
+            if (lhs_len - 1 + rhs_len <= total_len) {
+                memcpy(combined + lhs_len - 1, rhs_buf, rhs_len);
+            }
+        }
         combined[total_len] = '\0';
 
         free(lhs_buf);

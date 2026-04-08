@@ -17,10 +17,10 @@ static int g_initialized = 0;
 
 void Xvr_debugPrintMemoryStats(void) {
     fprintf(stderr,
-            XVR_CC_NOTICE
-            "[Memory] Allocations: %zu, Frees: %zu, "
-            "Current: %zu bytes, Peak: %zu bytes\n" XVR_CC_RESET,
-            g_alloc_count, g_free_count, g_current_memory, g_peak_memory);
+            "%s[Memory] Allocations: %zu, Frees: %zu, "
+            "Current: %zu bytes, Peak: %zu bytes\n%s",
+            XVR_CC_NOTICE, g_alloc_count, g_free_count, g_current_memory,
+            g_peak_memory, XVR_CC_RESET);
 }
 
 size_t Xvr_debugGetAllocCount(void) { return g_alloc_count; }
@@ -65,10 +65,9 @@ void* Xvr_private_defaultMemoryAllocator(void* pointer, size_t oldSize,
 
     if (mem == NULL) {
         fprintf(stderr,
-                XVR_CC_ERROR
-                "[internal] Memory allocation error (requested %d, replacing "
-                "%d)\n" XVR_CC_RESET,
-                (int)newSize, (int)oldSize);
+                "%s[internal] Memory allocation error (requested %d, replacing "
+                "%d)\n%s",
+                XVR_CC_ERROR, (int)newSize, (int)oldSize, XVR_CC_RESET);
         exit(-1);
     }
 
@@ -95,16 +94,17 @@ void* Xvr_reallocate(void* pointer, size_t oldSize, size_t newSize) {
 
 void Xvr_setMemoryAllocator(Xvr_MemoryAllocatorFn fn) {
     if (fn == NULL) {
-        fprintf(
-            stderr, XVR_CC_ERROR
-            "[internal] Memory allocator error (can't be null)\n" XVR_CC_RESET);
+        fprintf(stderr,
+                "%s[internal] Memory allocator error (can't be null)\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         exit(-1);
     }
 
     if (fn == Xvr_reallocate) {
-        fprintf(stderr, XVR_CC_ERROR
-                "[internal] Memory allocator error (can't loop the "
-                "Xvr_reallocate function)\n" XVR_CC_RESET);
+        fprintf(stderr,
+                "%s[internal] Memory allocator error (can't loop the "
+                "Xvr_reallocate function)\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         exit(-1);
     }
 

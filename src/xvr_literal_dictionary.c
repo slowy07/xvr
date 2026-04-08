@@ -150,21 +150,21 @@ void Xvr_freeLiteralDictionary(Xvr_LiteralDictionary* dictionary) {
 void Xvr_setLiteralDictionary(Xvr_LiteralDictionary* dictionary,
                               Xvr_Literal key, Xvr_Literal value) {
     if (XVR_IS_NULL(key)) {
-        fprintf(stderr, XVR_CC_ERROR
-                "Dictionaries can't have null keys (set)\n" XVR_CC_RESET);
+        fprintf(stderr, "%sDictionaries can't have null keys (set)\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         return;
     }
 
     if (XVR_IS_FUNCTION(key) || XVR_IS_FUNCTION_NATIVE(key) ||
         XVR_IS_FUNCTION_HOOK(key)) {
-        fprintf(stderr, XVR_CC_ERROR
-                "Dictionaries can't have function keys (set)\n" XVR_CC_RESET);
+        fprintf(stderr, "%sDictionaries can't have function keys (set)\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         return;
     }
 
     if (XVR_IS_OPAQUE(key)) {
-        fprintf(stderr, XVR_CC_ERROR
-                "Dictionaries can't have opaque keys (set)\n" XVR_CC_RESET);
+        fprintf(stderr, "%sDictionaries can't have opaque keys (set)\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         return;
     }
 
@@ -181,21 +181,21 @@ void Xvr_setLiteralDictionary(Xvr_LiteralDictionary* dictionary,
 Xvr_Literal Xvr_getLiteralDictionary(Xvr_LiteralDictionary* dictionary,
                                      Xvr_Literal key) {
     if (XVR_IS_NULL(key)) {
-        fprintf(stderr, XVR_CC_ERROR
-                "Dictionaries can't have null keys (get)\n" XVR_CC_RESET);
+        fprintf(stderr, "%sDictionaries can't have null keys (get)\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         return XVR_TO_NULL_LITERAL;
     }
 
     if (XVR_IS_FUNCTION(key) || XVR_IS_FUNCTION_NATIVE(key) ||
         XVR_IS_FUNCTION_HOOK(key)) {
-        fprintf(stderr, XVR_CC_ERROR
-                "Dictionaries can't have function keys (get)\n" XVR_CC_RESET);
+        fprintf(stderr, "%sDictionaries can't have function keys (get)\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         return XVR_TO_NULL_LITERAL;
     }
 
     if (XVR_IS_OPAQUE(key)) {
-        fprintf(stderr, XVR_CC_ERROR
-                "Dictionaries can't have opaque keys (get)\n" XVR_CC_RESET);
+        fprintf(stderr, "%sDictionaries can't have opaque keys (get)\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         return XVR_TO_NULL_LITERAL;
     }
 
@@ -213,22 +213,21 @@ Xvr_Literal Xvr_getLiteralDictionary(Xvr_LiteralDictionary* dictionary,
 void Xvr_removeLiteralDictionary(Xvr_LiteralDictionary* dictionary,
                                  Xvr_Literal key) {
     if (XVR_IS_NULL(key)) {
-        fprintf(stderr, XVR_CC_ERROR
-                "Dictionaries can't have null keys (remove)\n" XVR_CC_RESET);
+        fprintf(stderr, "%sDictionaries can't have null keys (remove)\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         return;
     }
 
     if (XVR_IS_FUNCTION(key) || XVR_IS_FUNCTION_NATIVE(key) ||
         XVR_IS_FUNCTION_HOOK(key)) {
-        fprintf(
-            stderr, XVR_CC_ERROR
-            "Dictionaries can't have function keys (remove)\n" XVR_CC_RESET);
+        fprintf(stderr, "%sDictionaries can't have function keys (remove)\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         return;
     }
 
     if (XVR_IS_OPAQUE(key)) {
-        fprintf(stderr, XVR_CC_ERROR
-                "Dictionaries can't have opaque keys (remove)\n" XVR_CC_RESET);
+        fprintf(stderr, "%sDictionaries can't have opaque keys (remove)\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         return;
     }
 

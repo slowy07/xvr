@@ -16,6 +16,24 @@
 #    define XVR_CC_RESET "\x1b[0m"
 #endif
 
+#define XVR_MAX_STRING_LENGTH 1048576
+
+char* xvr_string_concat(const char* lhs, const char* rhs) {
+    if (!lhs) lhs = "";
+    if (!rhs) rhs = "";
+    size_t lhs_len = strlen(lhs);
+    size_t rhs_len = strlen(rhs);
+    if (lhs_len + rhs_len > XVR_MAX_STRING_LENGTH) {
+        return NULL;
+    }
+    char* result = (char*)malloc(lhs_len + rhs_len + 1);
+    if (!result) return NULL;
+    memcpy(result, lhs, lhs_len);
+    memcpy(result + lhs_len, rhs, rhs_len);
+    result[lhs_len + rhs_len] = '\0';
+    return result;
+}
+
 typedef struct {
     int* data;
     int size;

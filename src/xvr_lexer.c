@@ -32,6 +32,7 @@ SOFTWARE.
 #include "xvr_common.h"
 #include "xvr_console_colors.h"
 #include "xvr_keyword_types.h"
+#include "xvr_string_utils.h"
 #include "xvr_token_types.h"
 
 static void cleanLexer(Xvr_Lexer* lexer) {
@@ -151,7 +152,7 @@ static Xvr_Token makeErrorToken(Xvr_Lexer* lexer, char* msg) {
 
     token.type = XVR_TOKEN_ERROR;
     token.lexeme = msg;
-    token.length = strlen(msg);
+    token.length = xvr_safe_strlen(msg, 256);
     token.line = lexer->line;
 
 #ifndef XVR_EXPORT
@@ -350,8 +351,8 @@ static Xvr_Token makeKeywordOrIdentifier(Xvr_Lexer* lexer) {
 
     // scan for a keyword
     for (int i = 0; Xvr_keywordTypes[i].keyword; i++) {
-        if (strlen(Xvr_keywordTypes[i].keyword) ==
-                (long unsigned int)(lexer->current - lexer->start) &&
+        size_t kw_len = xvr_safe_strlen(Xvr_keywordTypes[i].keyword, 64);
+        if (kw_len == (size_t)(lexer->current - lexer->start) &&
             !strncmp(Xvr_keywordTypes[i].keyword, &lexer->source[lexer->start],
                      lexer->current - lexer->start)) {
             Xvr_Token token;
@@ -503,8 +504,8 @@ static void trim(char** s, int* l) {  // all this to remove a newline?
 
 void Xvr_private_printToken(Xvr_Token* token) {
     if (token->type == XVR_TOKEN_ERROR) {
-        printf(XVR_CC_ERROR "Error\t%d\t%.*s\n" XVR_CC_RESET, token->line,
-               token->length, token->lexeme);
+        printf("%sError\t%d\t%.*s\n%s", XVR_CC_ERROR, token->line,
+               token->length, token->lexeme, XVR_CC_RESET);
         return;
     }
 

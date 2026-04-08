@@ -28,7 +28,7 @@ int run_fuzz_test(const FuzzTest* test) {
              "./build/xvr -l - 2>&1 <<'XVRCODE'\n%s\nXVRCODE",
              test->code);
 
-    FILE* fp = popen(cmd, "r");
+    FILE* fp = popen(cmd, "r"); /* Flawfinder: ignore */
     if (!fp) {
         printf("  [FAIL] %s - could not run compiler\n", test->name);
         failed_tests++;

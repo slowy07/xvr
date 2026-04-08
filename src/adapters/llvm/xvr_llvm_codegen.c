@@ -30,7 +30,7 @@ SOFTWARE.
 #include <stdio.h>
 #include <string.h>
 
-#include "../sema/xvr_builtin.h"
+#include "../../sema/xvr_builtin.h"
 
 static const char* literal_type_name(Xvr_LiteralType type) {
     switch (type) {
@@ -242,6 +242,12 @@ Xvr_LLVMCodegen* Xvr_LLVMCodegenCreate(const char* module_name) {
     }
     Xvr_LLVMTargetConfigSetReloc(target_config, "PIC");
     Xvr_LLVMTargetConfigSetCodeModel(target_config, "jitdefault");
+
+    if (Xvr_commandLine.asmSyntax) {
+        Xvr_AsmSyntax syntax =
+            Xvr_AsmSyntaxFromString(Xvr_commandLine.asmSyntax);
+        Xvr_LLVMTargetConfigSetAsmSyntax(target_config, syntax);
+    }
 
     codegen->target_machine = Xvr_LLVMTargetMachineCreate(target_config);
     if (!codegen->target_machine) {

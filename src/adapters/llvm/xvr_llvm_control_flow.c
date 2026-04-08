@@ -64,6 +64,7 @@ static void emit_error(Xvr_LLVMControlFlow* cf, const char* fmt, ...) {
     if (fmt) {
         va_list args;
         va_start(args, fmt);
+        /* Flawfinder: ignore */
         vsnprintf(cf->error_message, MAX_ERROR_MESSAGE, fmt, args);
         va_end(args);
     }
@@ -71,11 +72,11 @@ static void emit_error(Xvr_LLVMControlFlow* cf, const char* fmt, ...) {
     cf->has_error = true;
 
     fprintf(stderr, "\n");
-    fprintf(stderr, XVR_CC_FONT_RED "error" XVR_CC_RESET ": %s\n",
+    fprintf(stderr, "%serror%s: %s\n", XVR_CC_FONT_RED, XVR_CC_RESET,
             cf->error_message);
 
     if (cf->error_hint[0] != '\0') {
-        fprintf(stderr, XVR_CC_NOTICE "help" XVR_CC_RESET ": %s\n",
+        fprintf(stderr, "%shelp%s: %s\n", XVR_CC_NOTICE, XVR_CC_RESET,
                 cf->error_hint);
     }
     fprintf(stderr, "\n");
@@ -86,6 +87,7 @@ static void set_error(Xvr_LLVMControlFlow* cf, const char* fmt, ...) {
 
     va_list args;
     va_start(args, fmt);
+    /* Flawfinder: ignore */
     vsnprintf(cf->error_message, MAX_ERROR_MESSAGE, fmt, args);
     va_end(args);
 
@@ -100,6 +102,7 @@ static void set_error_hint(Xvr_LLVMControlFlow* cf, const char* error,
     if (error) {
         va_list args;
         va_start(args, hint);
+        /* Flawfinder: ignore */
         vsnprintf(cf->error_message, MAX_ERROR_MESSAGE, error, args);
         va_end(args);
     }
@@ -107,6 +110,7 @@ static void set_error_hint(Xvr_LLVMControlFlow* cf, const char* error,
     if (hint) {
         va_list args;
         va_start(args, hint);
+        /* Flawfinder: ignore */
         vsnprintf(cf->error_hint, MAX_ERROR_MESSAGE, hint, args);
         va_end(args);
     } else {

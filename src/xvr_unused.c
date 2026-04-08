@@ -35,23 +35,20 @@ static void popScope(Xvr_UnusedChecker* checker) {
             int line = scope->declarations[i].line;
 
             fprintf(stderr, "\n");
-            fprintf(stderr,
-                    XVR_CC_FONT_RED "error" XVR_CC_RESET ": unused %s '%s'\n",
-                    kind, name);
+            fprintf(stderr, "%serror%s: unused %s '%s'\n", XVR_CC_FONT_RED,
+                    XVR_CC_RESET, kind, name);
             fprintf(stderr, "  --> line %d\n", line);
-            fprintf(stderr,
-                    XVR_CC_NOTICE "help" XVR_CC_RESET
-                                  ": %s '%s' is declared but never used\n",
-                    kind, name);
+            fprintf(stderr, "%shelp%s: %s '%s' is declared but never used\n",
+                    XVR_CC_NOTICE, XVR_CC_RESET, kind, name);
 
             if (!scope->declarations[i].isFunction) {
-                fprintf(stderr, XVR_CC_NOTICE "help" XVR_CC_RESET
-                                              ": remove the unused variable or "
-                                              "use it in an expression\n");
-            } else {
                 fprintf(stderr,
-                        XVR_CC_NOTICE "help" XVR_CC_RESET
-                                      ": call the procedure or remove it\n");
+                        "%shelp%s: remove the unused variable or "
+                        "use it in an expression\n",
+                        XVR_CC_NOTICE, XVR_CC_RESET);
+            } else {
+                fprintf(stderr, "%shelp%s: call the procedure or remove it\n",
+                        XVR_CC_NOTICE, XVR_CC_RESET);
             }
             fprintf(stderr, "\n");
         }

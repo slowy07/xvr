@@ -17,16 +17,15 @@ static void error(Xvr_Parser* parser, Xvr_Token token, const char* message) {
     if (parser->panic) return;
 
     fprintf(stderr, "\n");
-    fprintf(stderr, XVR_CC_FONT_RED "error" XVR_CC_RESET ": %s\n", message);
+    fprintf(stderr, "%serror%s: %s\n", XVR_CC_FONT_RED, XVR_CC_RESET, message);
     fprintf(stderr, "  --> line %d\n", token.line);
 
     if (token.type == XVR_TOKEN_EOF) {
-        fprintf(stderr,
-                XVR_CC_NOTICE "help" XVR_CC_RESET ": unexpected end of file\n");
+        fprintf(stderr, "%shelp%s: unexpected end of file\n", XVR_CC_NOTICE,
+                XVR_CC_RESET);
     } else {
-        fprintf(stderr,
-                XVR_CC_NOTICE "help" XVR_CC_RESET ": unexpected token '%.*s'\n",
-                token.length, token.lexeme);
+        fprintf(stderr, "%shelp%s: unexpected token '%.*s'\n", XVR_CC_NOTICE,
+                XVR_CC_RESET, token.length, token.lexeme);
     }
     fprintf(stderr, "\n");
 
@@ -77,7 +76,8 @@ static void consume(Xvr_Parser* parser, Xvr_TokenType tokenType,
 static void synchronize(Xvr_Parser* parser) {
 #ifndef XVR_EXPORT
     if (Xvr_commandLine.verbose) {
-        fprintf(stderr, XVR_CC_ERROR "Synchronizing input\n" XVR_CC_RESET);
+        fprintf(stderr, "%sSynchronizing input\n%s", XVR_CC_ERROR,
+                XVR_CC_RESET);
     }
 #endif
 
@@ -324,10 +324,8 @@ static Xvr_Opcode string(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
             default: {
                 char msg[256];
                 snprintf(
-                    msg, 256,
-                    XVR_CC_ERROR
-                    "Unrecognized escape character %c in string" XVR_CC_RESET,
-                    parser->previous.lexeme[i]);
+                    msg, 256, "%sUnrecognized escape character %c in string%s",
+                    XVR_CC_ERROR, parser->previous.lexeme[i], XVR_CC_RESET);
                 error(parser, parser->previous, msg);
             }
             }
@@ -338,10 +336,9 @@ static Xvr_Opcode string(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
             strLength = XVR_MAX_STRING_LENGTH;
             char msg[256];
             snprintf(msg, 256,
-                     XVR_CC_ERROR
-                     "Strings can only be a maximum of %d characters "
-                     "long" XVR_CC_RESET,
-                     XVR_MAX_STRING_LENGTH);
+                     "%sStrings can only be a maximum of %d characters "
+                     "long%s",
+                     XVR_CC_ERROR, XVR_MAX_STRING_LENGTH, XVR_CC_RESET);
             error(parser, parser->previous, msg);
         }
 

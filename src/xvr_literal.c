@@ -9,6 +9,7 @@
 #include "xvr_memory.h"
 #include "xvr_refstring.h"
 #include "xvr_scope.h"
+#include "xvr_string_utils.h"
 
 static float halfToFloat(uint16_t half) {
     int sign = (half >> 15) & 1;
@@ -111,8 +112,8 @@ void Xvr_freeLiteral(Xvr_Literal literal) {
 
 bool Xvr_private_isTruthy(Xvr_Literal x) {
     if (XVR_IS_NULL(x)) {
-        fprintf(stderr, XVR_CC_ERROR
-                "XVR_CC_ERROR: Null is neither true nor false\n" XVR_CC_RESET);
+        fprintf(stderr, "%sXVR_CC_ERROR: Null is neither true nor false\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         return false;
     }
 
@@ -305,10 +306,8 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
         return original;
 
     default:
-        fprintf(stderr,
-                XVR_CC_ERROR
-                "XVR_CC_ERROR: Can't copy that literal type: %d\n" XVR_CC_RESET,
-                original.type);
+        fprintf(stderr, "%sXVR_CC_ERROR: Can't copy that literal type: %d\n%s",
+                XVR_CC_ERROR, original.type, XVR_CC_RESET);
         return XVR_TO_NULL_LITERAL;
     }
 }
@@ -477,9 +476,8 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
         return true;
 
     case XVR_LITERAL_FUNCTION_INTERMEDIATE:
-        fprintf(
-            stderr, XVR_CC_ERROR
-            "[internal] Can't compare intermediate functions\n" XVR_CC_RESET);
+        fprintf(stderr, "%s[internal] Can't compare intermediate functions\n%s",
+                XVR_CC_ERROR, XVR_CC_RESET);
         return false;
 
     case XVR_LITERAL_INDEX_BLANK:
@@ -488,10 +486,9 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
     default:
         // should never be seen
         fprintf(stderr,
-                XVR_CC_ERROR
-                "[internal] Unrecognized literal type in equality: "
-                "%d\n" XVR_CC_RESET,
-                lhs.type);
+                "%s[internal] Unrecognized literal type in equality: "
+                "%d\n%s",
+                XVR_CC_ERROR, lhs.type, XVR_CC_RESET);
         return false;
     }
 
@@ -593,11 +590,9 @@ int Xvr_hashLiteral(Xvr_Literal lit) {
 
     default:
         // should never bee seen
-        fprintf(
-            stderr,
-            XVR_CC_ERROR
-            "[internal] Unrecognized literal type in hash: %d\n" XVR_CC_RESET,
-            lit.type);
+        fprintf(stderr,
+                "%s[internal] Unrecognized literal type in hash: %d\n%s",
+                XVR_CC_ERROR, lit.type, XVR_CC_RESET);
         return 0;
     }
 }
@@ -613,7 +608,8 @@ static size_t globalPrintCount = 0;
 static char quotes = 0;  // set to 0 to not show string quotes
 
 static void printToBuffer(const char* str) {
-    while (strlen(str) + globalPrintCount + 1 > globalPrintCapacity) {
+    size_t str_len = xvr_safe_strlen(str, 4096);
+    while (str_len + globalPrintCount + 1 > globalPrintCapacity) {
         int oldCapacity = globalPrintCapacity;
 
         globalPrintCapacity = XVR_GROW_CAPACITY(globalPrintCapacity);
@@ -621,8 +617,16 @@ static void printToBuffer(const char* str) {
                                            globalPrintCapacity);
     }
 
-    snprintf(globalPrintBuffer + globalPrintCount, strlen(str) + 1, "%s", str);
-    globalPrintCount += strlen(str);
+    size_t copy_len = str_len;
+    if (copy_len > globalPrintCapacity - globalPrintCount) {
+        copy_len = globalPrintCapacity - globalPrintCount;
+    }
+    if (copy_len > 0) {
+        for (size_t i = 0; i < copy_len; i++) {
+            globalPrintBuffer[globalPrintCount + i] = str[i];
+        }
+        globalPrintCount += copy_len;
+    }
 }
 
 // exposed functions
@@ -974,10 +978,9 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
         default:
             // should never be seen
             fprintf(stderr,
-                    XVR_CC_ERROR
-                    "[internal] Unrecognized literal type in print type: "
-                    "%d\n" XVR_CC_RESET,
-                    XVR_AS_TYPE(literal).typeOf);
+                    "%s[internal] Unrecognized literal type in print type: "
+                    "%d\n%s",
+                    XVR_CC_ERROR, XVR_AS_TYPE(literal).typeOf, XVR_CC_RESET);
         }
 
         // const (printed last)
@@ -1014,17 +1017,15 @@ void Xvr_printLiteralCustom(Xvr_Literal literal, void(printFn)(const char*)) {
         break;
 
     default:
-        fprintf(
-            stderr,
-            XVR_CC_ERROR
-            "[internal] Unrecognized literal type in print: %d\n" XVR_CC_RESET,
-            literal.type);
+        fprintf(stderr,
+                "%s[internal] Unrecognized literal type in print: %d\n%s",
+                XVR_CC_ERROR, literal.type, XVR_CC_RESET);
     }
 }
 
 static void printToBufferSimple(const char* str) {
-    int len = strlen(str);
-    if (globalPrintCount + len > globalPrintCapacity) {
+    size_t len = xvr_safe_strlen(str, 4096);
+    if (globalPrintCount + (int)len > globalPrintCapacity) {
         int avail = globalPrintCapacity - globalPrintCount;
         if (avail > 0) {
             memcpy(globalPrintBuffer + globalPrintCount, str, avail);

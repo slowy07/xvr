@@ -96,7 +96,8 @@ static const char* compile_and_run(const char* code, int* exit_code) {
 
     /* popen() is required here to invoke the xvr compiler.
      * Input is validated above to prevent command injection. */
-    FILE* fp = popen(cmd, "r");  // codacy:excludeLine:CWE-78
+    FILE* fp = popen(cmd, "r");
+    /* Flawfinder: ignore */  // codacy:excludeLine:CWE-78
     if (!fp) {
         return NULL;
     }

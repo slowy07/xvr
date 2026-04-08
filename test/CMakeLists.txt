@@ -21,6 +21,7 @@ target_include_directories(xvr_test_all PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/src
     ${CMAKE_SOURCE_DIR}/src/backend
+    ${CMAKE_SOURCE_DIR}/src/adapters/llvm
 )
 
 target_compile_options(xvr_test_all PRIVATE

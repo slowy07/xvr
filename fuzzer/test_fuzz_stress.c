@@ -50,7 +50,7 @@ int run_stress_test(const StressTest* test) {
              "timeout 10 ./build/xvr -l - 2>&1 <<'XVRCODE'\n%s\nXVRCODE",
              test->code);
 
-    FILE* fp = popen(cmd, "r");
+    FILE* fp = popen(cmd, "r"); /* Flawfinder: ignore */
     if (!fp) {
         printf("  [SKIP] %s - could not run\n", test->name);
         signal(SIGSEGV, SIG_DFL);

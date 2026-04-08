@@ -7,9 +7,16 @@
 #include "xvr_format_string.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 
+#include "xvr_string_utils.h"
+
 #define MAX_PLACEHOLDERS 64
+
+static size_t safe_strlen(const char* str) {
+    return xvr_safe_strlen(str, 4096);
+}
 
 static const char* format_type_to_printf(XvrFormatArgType type) {
     switch (type) {
@@ -84,7 +91,7 @@ XvrFormatString* XvrFormatStringParse(const char* format_str,
         return NULL;
     }
 
-    size_t fmt_len = strlen(format_str);
+    size_t fmt_len = xvr_safe_strlen(format_str, 4096);
 
     /* First pass: count placeholders and detect explicit types */
     uint32_t placeholder_count = 0;
@@ -193,6 +200,8 @@ XvrFormatString* XvrFormatStringParse(const char* format_str,
     }
 
     result[0] = '\0';
+    size_t result_pos = 0;
+    size_t remaining = result_size;
     placeholder_count = 0;
     p = format_str;
     pos = 0;
@@ -200,13 +209,23 @@ XvrFormatString* XvrFormatStringParse(const char* format_str,
     while (*p && pos < fmt_len) {
         /* Handle escaped braces {{ or }} */
         if (p[0] == '{' && p[1] == '{') {
-            strcat(result, "{");
+            if (remaining > 1) {
+                result[result_pos++] = '{';
+                result[result_pos++] = '}';
+                result[result_pos] = '\0';
+                remaining -= 2;
+            }
             p += 2;
             pos += 2;
             continue;
         }
         if (p[0] == '}' && p[1] == '}') {
-            strcat(result, "}");
+            if (remaining > 1) {
+                result[result_pos++] = '}';
+                result[result_pos++] = '}';
+                result[result_pos] = '\0';
+                remaining -= 2;
+            }
             p += 2;
             pos += 2;
             continue;
@@ -222,31 +241,51 @@ XvrFormatString* XvrFormatStringParse(const char* format_str,
                 if (*start == ':') {
                     const char* spec = start + 1;
                     /* Copy the specifier as-is */
-                    size_t spec_len = end - spec;
-                    char spec_str[32] = {0};
-                    if (spec_len < sizeof(spec_str)) {
-                        strncpy(spec_str, spec, spec_len);
-                        strcat(result, "%");
-                        strcat(result, spec_str);
+                    size_t spec_len = xvr_safe_strlen(spec, 32);
+                    if (spec_len < 32 && remaining > spec_len + 2) {
+                        snprintf(&result[result_pos], remaining, "%%");
+                        result_pos += 1;
+                        remaining -= 1;
+                        for (size_t j = 0; j < spec_len; j++) {
+                            if (remaining > 1) {
+                                result[result_pos++] = spec[j];
+                                remaining--;
+                            }
+                        }
+                        result[result_pos] = '\0';
                     }
                 } else {
                     /* No explicit type - use placeholder position to determine
                      * type */
                     XvrFormatArgType arg_type =
                         fmt->placeholders[placeholder_count].type;
-                    strcat(result, format_type_to_printf(arg_type));
+                    const char* replacement = format_type_to_printf(arg_type);
+                    size_t repl_len = xvr_safe_strlen(replacement, 32);
+                    if (repl_len < remaining) {
+                        snprintf(&result[result_pos], remaining, "%s",
+                                 replacement);
+                        result_pos += repl_len;
+                        remaining -= repl_len;
+                    }
                 }
                 placeholder_count++;
                 p = end + 1;
             } else {
                 /* Malformed */
-                strcat(result, *p == '{' ? "{" : "}");
+                if (remaining > 1) {
+                    result[result_pos++] = *p;
+                    result[result_pos] = '\0';
+                    remaining--;
+                }
                 p++;
             }
         } else {
             /* Regular character */
-            char tmp[2] = {*p, '\0'};
-            strcat(result, tmp);
+            if (remaining > 1) {
+                result[result_pos++] = *p;
+                result[result_pos] = '\0';
+                remaining--;
+            }
             p++;
         }
     }
@@ -294,7 +333,7 @@ char* XvrFormatStringBuildPrintfFormat(const XvrFormatString* fmt,
         return strdup("");
     }
 
-    size_t src_len = strlen(src);
+    size_t src_len = xvr_safe_strlen(src, 4096);
     size_t result_size = src_len * 2 + 1;
     char* result = malloc(result_size);
     if (!result) return NULL;
@@ -331,13 +370,17 @@ char* XvrFormatStringBuildPrintfFormat(const XvrFormatString* fmt,
                            arg_types[placeholder_idx] != XVR_FORMAT_ARG_INT) {
                     const char* replacement =
                         format_type_to_printf(arg_types[placeholder_idx]);
-                    size_t repl_len = strlen(replacement);
-                    memcpy(&result[result_pos], replacement, repl_len);
-                    result_pos += repl_len;
+                    size_t repl_len = xvr_safe_strlen(replacement, 32);
+                    if (result_pos + repl_len < result_size) {
+                        memcpy(&result[result_pos], replacement, repl_len);
+                        result_pos += repl_len;
+                    }
                 } else {
                     size_t spec_len = &src[i] - spec_start + 1;
-                    memcpy(&result[result_pos], spec_start, spec_len);
-                    result_pos += spec_len;
+                    if (result_pos + spec_len < result_size) {
+                        memcpy(&result[result_pos], spec_start, spec_len);
+                        result_pos += spec_len;
+                    }
                 }
                 placeholder_idx++;
             }
