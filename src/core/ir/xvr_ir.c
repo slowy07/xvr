@@ -45,11 +45,18 @@ static void* xvr_ir_xcalloc(size_t nmemb, size_t size) {
     return ptr;
 }
 
-static char* xvr_ir_strdup(const char* str) {
+static char* xvr_ir_strdup(const char* str, size_t max_len) {
     if (!str) {
         return NULL;
     }
-    size_t len = strlen(str) + 1;
+    size_t len = 0;
+    while (len < max_len && str[len] != '\0') {
+        len++;
+    }
+    if (len >= max_len) {
+        return NULL;
+    }
+    len++;
     char* copy = xvr_ir_xmalloc(len);
     if (!copy) {
         return NULL;
@@ -178,7 +185,7 @@ Xvr_IRModule* Xvr_IRModuleCreate(const char* name) {
     if (!module) {
         return NULL;
     }
-    module->name = xvr_ir_strdup(name);
+    module->name = xvr_ir_strdup(name, 256);
     if (!module->name) {
         free(module);
         return NULL;
@@ -197,7 +204,7 @@ Xvr_IRFunction* Xvr_IRModuleAddFunction(Xvr_IRModule* module, const char* name,
     if (!func) {
         return NULL;
     }
-    func->name = xvr_ir_strdup(name);
+    func->name = xvr_ir_strdup(name, 256);
     if (!func->name) {
         free(func);
         return NULL;
@@ -244,7 +251,7 @@ Xvr_IRBasicBlock* Xvr_IRFunctionAddBlock(Xvr_IRFunction* func,
     if (!block) {
         return NULL;
     }
-    block->name = xvr_ir_strdup(name);
+    block->name = xvr_ir_strdup(name, 256);
     if (!block->name) {
         free(block);
         return NULL;
@@ -412,7 +419,7 @@ Xvr_IRValue* Xvr_IRValueCreate(Xvr_IRType* type, const char* name) {
         return NULL;
     }
     value->type = type;
-    value->name = xvr_ir_strdup(name);
+    value->name = xvr_ir_strdup(name, 256);
     if (!value->name) {
         free(value);
         return NULL;
