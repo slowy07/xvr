@@ -19,7 +19,6 @@ set(XVR_SOURCES
     xvr_unused.c
     sema/xvr_builtin.c
     optimizer/xvr_ast_optimizer.c
-<<<<<<< HEAD
     adapters/llvm/xvr_asm_config.c
     adapters/llvm/xvr_llvm_codegen.c
     adapters/llvm/xvr_llvm_context.c
@@ -62,7 +61,6 @@ set(XVR_HEADERS
     xvr_unused.h
     sema/xvr_builtin.h
     optimizer/xvr_ast_optimizer.h
-<<<<<<< HEAD
     adapters/llvm/xvr_asm_config.h
     adapters/llvm/xvr_llvm_backend.h
     adapters/llvm/xvr_llvm_codegen.h
