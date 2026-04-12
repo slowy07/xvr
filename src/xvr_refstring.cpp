@@ -1,11 +1,12 @@
 #include "xvr_refstring.hpp"
+#include "xvr_memory.h"
 #include <cstring>
 
 namespace xvr {
 
 void RefString::allocateAndCopy(const char* str, size_t len) {
     capacity_ = len + 1;
-    data_ = static_cast<char*>(::xvr::reallocate(nullptr, 0, capacity_));
+    data_ = static_cast<char*>(Xvr_reallocate(nullptr, 0, capacity_));
     length_ = len;
     refCount_ = 1;
     if (str) {
@@ -86,7 +87,7 @@ void RefString::incrementRef() {
 
 void RefString::decrementRef() {
     if (data_ && --refCount_ == 0) {
-        ::xvr::free<char>(data_, capacity_);
+        XVR_FREE(char, data_);
         data_ = nullptr;
     }
 }
