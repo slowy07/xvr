@@ -23,7 +23,7 @@ struct Xvr_SemanticAnalyzer {
 };
 
 Xvr_SemanticAnalyzer* Xvr_SemanticAnalyzerCreate(void) {
-    Xvr_SemanticAnalyzer* analyzer = calloc(1, sizeof(Xvr_SemanticAnalyzer));
+    Xvr_SemanticAnalyzer* analyzer = (Xvr_SemanticAnalyzer*)calloc(1, sizeof(Xvr_SemanticAnalyzer));
     return analyzer;
 }
 
