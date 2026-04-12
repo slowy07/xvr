@@ -35,7 +35,7 @@ char* Xvr_strdup(const char* str) {
     if (!str) return NULL;
     size_t len = xvr_safe_strlen(str, 4096) + 1;
     if (len == 0) return NULL;
-    char* dup = malloc(len);
+    char* dup = (char*)malloc(len);
     if (dup) {
         for (size_t i = 0; i < len; i++) {
             dup[i] = str[i];
@@ -57,8 +57,6 @@ STATIC_ASSERT(sizeof(unsigned short) == 2);
 STATIC_ASSERT(sizeof(unsigned int) == 4);
 
 #ifndef XVR_EXPORT
-
-Xvr_CommandLine Xvr_commandLine;
 
 Xvr_CommandLine Xvr_commandLine = {.error = false,
                                    .help = false,
