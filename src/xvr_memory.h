@@ -53,6 +53,10 @@ SOFTWARE.
 #ifndef XVR_MEMORY_H
 #define XVR_MEMORY_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "xvr_common.h"
 
 #define XVR_ALLOCATE(type, count) \
@@ -116,5 +120,9 @@ typedef void* (*Xvr_MemoryAllocatorFn)(void* pointer, size_t oldSize,
  * higher-level allocators.
  */
 XVR_API void Xvr_setMemoryAllocator(Xvr_MemoryAllocatorFn);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // !XVR_MEMORY_H
