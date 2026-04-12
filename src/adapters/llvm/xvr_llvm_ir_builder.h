@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef XVR_LLVM_IR_BUILDER_H
 #define XVR_LLVM_IR_BUILDER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <llvm-c/Core.h>
 #include <llvm-c/IRReader.h>
 #include <llvm-c/Types.h>
@@ -131,5 +135,9 @@ LLVMBasicBlockRef Xvr_LLVMIRBuilderCreateBlock(Xvr_LLVMIRBuilder* builder,
 
 LLVMBasicBlockRef Xvr_LLVMIRBuilderCreateBlockInFunction(
     Xvr_LLVMIRBuilder* builder, LLVMValueRef function, const char* name);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

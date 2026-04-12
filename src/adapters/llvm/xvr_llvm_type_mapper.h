@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef XVR_LLVM_TYPE_MAPPER_H
 #define XVR_LLVM_TYPE_MAPPER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <llvm-c/Core.h>
 #include <stdbool.h>
 
@@ -43,5 +47,9 @@ LLVMTypeRef Xvr_LLVMTypeMapperGetPointerType(Xvr_LLVMTypeMapper* mapper,
 LLVMTypeRef Xvr_LLVMTypeMapperGetRuntimeType(Xvr_LLVMTypeMapper* mapper);
 
 bool Xvr_LLVMTypeMapperIsSigned(Xvr_LiteralType type);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

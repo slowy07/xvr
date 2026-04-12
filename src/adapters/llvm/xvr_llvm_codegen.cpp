@@ -128,7 +128,7 @@ Xvr_LLVMCodegen* Xvr_LLVMCodegenCreate(const char* module_name) {
         return NULL;
     }
 
-    Xvr_LLVMCodegen* codegen = calloc(1, sizeof(Xvr_LLVMCodegen));
+    Xvr_LLVMCodegen* codegen = (Xvr_LLVMCodegen*) calloc(1, sizeof(Xvr_LLVMCodegen));
     if (!codegen) {
         return NULL;
     }

@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef XVR_LLVM_TARGET_H
 #define XVR_LLVM_TARGET_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <llvm-c/Target.h>
 #include <llvm-c/TargetMachine.h>
 #include <stdbool.h>
@@ -71,5 +75,9 @@ const char* Xvr_LLVMTargetMachineGetDefaultCPU(void);
 
 LLVMTargetMachineRef Xvr_LLVMTargetMachineGetLLVMTargetMachine(
     Xvr_LLVMTargetMachine* tm);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

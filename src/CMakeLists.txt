@@ -21,7 +21,7 @@ set(XVR_SOURCES
     sema/xvr_builtin.c
     optimizer/xvr_ast_optimizer.c
     adapters/llvm/xvr_asm_config.c
-    adapters/llvm/xvr_llvm_codegen.c
+    adapters/llvm/xvr_llvm_codegen.cpp
     adapters/llvm/xvr_llvm_context.cpp
     adapters/llvm/xvr_llvm_control_flow.c
     adapters/llvm/xvr_llvm_expression_emitter.c
