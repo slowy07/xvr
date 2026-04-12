@@ -9,7 +9,7 @@ set(XVR_SOURCES
     xvr_literal_array.c
     xvr_literal_dictionary.c
     xvr_memory.cpp
-    xvr_parser.c
+    xvr_parser.cpp
     xvr_print_handler.c
     xvr_refstring.c
     xvr_refstring.cpp
@@ -96,6 +96,8 @@ set_source_files_properties(xvr_refstring.cpp PROPERTIES
     CXX_STANDARD 20
     LANGUAGE CXX
 )
+
+
 
 if(XVR_SANITIZER)
     target_compile_options(xvr_objects PRIVATE -fno-omit-frame-pointer)

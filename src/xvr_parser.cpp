@@ -131,8 +131,7 @@ typedef struct {
     PrecedenceRule precedence;
 } ParseRule;
 
-// no static!
-ParseRule parseRules[];
+#define XVR_TOKEN_COUNT 103
 
 // forward declarations
 static void declaration(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle);

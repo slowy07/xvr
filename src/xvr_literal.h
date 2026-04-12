@@ -447,4 +447,204 @@ XVR_API bool Xvr_isFixedSizeInteger(Xvr_LiteralType type);
 XVR_API int Xvr_getFloatBitWidth(Xvr_LiteralType type);
 XVR_API bool Xvr_isFixedSizeFloat(Xvr_LiteralType type);
 
+#ifdef __cplusplus
+inline Xvr_Literal Xvr_toTypeLiteralCpp(Xvr_LiteralType value, bool constant) {
+    Xvr_Literal l = {0};
+    l.as.type.typeOf = value;
+    l.as.type.constant = constant;
+    l.as.type.subtypes = NULL;
+    l.as.type.capacity = 0;
+    l.as.type.count = 0;
+    l.type = XVR_LITERAL_TYPE;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toNullLiteralCpp() {
+    Xvr_Literal l = {0};
+    l.as.integer = 0;
+    l.type = XVR_LITERAL_NULL;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toBoolLiteralCpp(bool value) {
+    Xvr_Literal l = {0};
+    l.as.boolean = value;
+    l.type = XVR_LITERAL_BOOLEAN;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toInt8LiteralCpp(signed char value) {
+    Xvr_Literal l = {0};
+    l.as.int8_value = value;
+    l.type = XVR_LITERAL_INT8;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toInt16LiteralCpp(short value) {
+    Xvr_Literal l = {0};
+    l.as.int16_value = value;
+    l.type = XVR_LITERAL_INT16;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toInt32LiteralCpp(int value) {
+    Xvr_Literal l = {0};
+    l.as.int32_value = value;
+    l.type = XVR_LITERAL_INT32;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toInt64LiteralCpp(long long value) {
+    Xvr_Literal l = {0};
+    l.as.int64_value = value;
+    l.type = XVR_LITERAL_INT64;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toUInt8LiteralCpp(unsigned char value) {
+    Xvr_Literal l = {0};
+    l.as.uint8_value = value;
+    l.type = XVR_LITERAL_UINT8;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toUInt16LiteralCpp(unsigned short value) {
+    Xvr_Literal l = {0};
+    l.as.uint16_value = value;
+    l.type = XVR_LITERAL_UINT16;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toUInt32LiteralCpp(unsigned int value) {
+    Xvr_Literal l = {0};
+    l.as.uint32_value = value;
+    l.type = XVR_LITERAL_UINT32;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toUInt64LiteralCpp(unsigned long long value) {
+    Xvr_Literal l = {0};
+    l.as.uint64_value = value;
+    l.type = XVR_LITERAL_UINT64;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toFloat32LiteralCpp(float value) {
+    Xvr_Literal l = {0};
+    l.as.float32_value = value;
+    l.type = XVR_LITERAL_FLOAT32;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toFloat64LiteralCpp(double value) {
+    Xvr_Literal l = {0};
+    l.as.float64_value = value;
+    l.type = XVR_LITERAL_FLOAT64;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toStringLiteralCpp(Xvr_RefString* value) {
+    Xvr_Literal l = {0};
+    l.as.string.ptr = value;
+    l.type = XVR_LITERAL_STRING;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toIdentifierLiteralCpp(Xvr_RefString* value, int hash) {
+    Xvr_Literal l = {0};
+    l.as.identifier.ptr = value;
+    l.as.identifier.hash = hash;
+    l.type = XVR_LITERAL_IDENTIFIER;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toArrayLiteralCpp(void* value, int count) {
+    (void)count;
+    Xvr_Literal l = {0};
+    l.as.array = value;
+    l.type = XVR_LITERAL_ARRAY;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toDictLiteralCpp(void* value) {
+    Xvr_Literal l = {0};
+    l.as.dictionary = value;
+    l.type = XVR_LITERAL_DICTIONARY;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toFunctionNativeLiteralCpp(void* value) {
+    Xvr_Literal l = {0};
+    l.as.function.inner.bytecode = reinterpret_cast<void*>(value);
+    l.as.function.scope = NULL;
+    l.type = XVR_LITERAL_FUNCTION_NATIVE;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toFunctionHookLiteralCpp(void* value) {
+    Xvr_Literal l = {0};
+    l.as.function.inner.bytecode = reinterpret_cast<void*>(value);
+    l.as.function.scope = NULL;
+    l.type = XVR_LITERAL_FUNCTION_HOOK;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toOpaqueLiteralCpp(void* value, int tag) {
+    Xvr_Literal l = {0};
+    l.as.opaque.ptr = value;
+    l.as.opaque.tag = tag;
+    l.type = XVR_LITERAL_OPAQUE;
+    l.bytecodeLength = 0;
+    return l;
+}
+#    define XVR_TO_TYPE_LITERAL(value, c) Xvr_toTypeLiteralCpp(value, c)
+#    define XVR_TO_NULL_LITERAL Xvr_toNullLiteralCpp()
+#    define XVR_TO_BOOL_LITERAL(value) Xvr_toBoolLiteralCpp(value)
+#    define XVR_TO_INT8_LITERAL(value) Xvr_toInt8LiteralCpp(value)
+#    define XVR_TO_INT16_LITERAL(value) Xvr_toInt16LiteralCpp(value)
+#    define XVR_TO_INT32_LITERAL(value) Xvr_toInt32LiteralCpp(value)
+#    define XVR_TO_INT64_LITERAL(value) Xvr_toInt64LiteralCpp(value)
+#    define XVR_TO_UINT8_LITERAL(value) Xvr_toUInt8LiteralCpp(value)
+#    define XVR_TO_UINT16_LITERAL(value) Xvr_toUInt16LiteralCpp(value)
+#    define XVR_TO_UINT32_LITERAL(value) Xvr_toUInt32LiteralCpp(value)
+#    define XVR_TO_UINT64_LITERAL(value) Xvr_toUInt64LiteralCpp(value)
+#    define XVR_TO_FLOAT32_LITERAL(value) Xvr_toFloat32LiteralCpp(value)
+#    define XVR_TO_FLOAT64_LITERAL(value) Xvr_toFloat64LiteralCpp(value)
+#    define XVR_TO_STRING_LITERAL(value) Xvr_toStringLiteralCpp(value)
+#    define XVR_TO_IDENTIFIER_LITERAL(value) \
+        Xvr_toIdentifierLiteralCpp(value, 0)
+#    define XVR_TO_ARRAY_LITERAL(value, count) \
+        Xvr_toArrayLiteralCpp(value, count)
+#    define XVR_TO_DICTIONARY_LITERAL(value) Xvr_toDictLiteralCpp(value)
+#    define XVR_TO_FUNCTION_NATIVE_LITERAL(value) \
+        Xvr_toFunctionNativeLiteralCpp(value)
+#    define XVR_TO_FUNCTION_HOOK_LITERAL(value) \
+        Xvr_toFunctionHookLiteralCpp(value)
+#    define XVR_TO_OPAQUE_LITERAL(value, t) Xvr_toOpaqueLiteralCpp(value, t)
+inline Xvr_Literal Xvr_toIntegerLiteralCpp(long long value) {
+    Xvr_Literal l = {0};
+    l.as.integer = value;
+    l.type = XVR_LITERAL_INTEGER;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toFloatLiteralCpp(double value) {
+    Xvr_Literal l = {0};
+    l.as.number = value;
+    l.type = XVR_LITERAL_FLOAT;
+    l.bytecodeLength = 0;
+    return l;
+}
+inline Xvr_Literal Xvr_toVoidLiteralCpp() {
+    Xvr_Literal l = {0};
+    l.as.integer = 0;
+    l.type = XVR_LITERAL_VOID;
+    l.bytecodeLength = 0;
+    return l;
+}
+#    define XVR_TO_INTEGER_LITERAL(value) Xvr_toIntegerLiteralCpp(value)
+#    define XVR_TO_FLOAT_LITERAL(value) Xvr_toFloatLiteralCpp(value)
+#    define XVR_TO_VOID_LITERAL Xvr_toVoidLiteralCpp()
+#endif  // __cplusplus
+
 #endif  // !XVR_LITERAL_H
