@@ -255,13 +255,13 @@ Xvr_Scope* Xvr_popScope(Xvr_Scope* scope) {
         // handle keys, just in case
         if (XVR_IS_FUNCTION(scope->variables.entries[i].key)) {
             Xvr_popScope(
-                XVR_AS_FUNCTION(scope->variables.entries[i].key).scope);
+                (Xvr_Scope*)XVR_AS_FUNCTION(scope->variables.entries[i].key).scope);
             XVR_AS_FUNCTION(scope->variables.entries[i].key).scope = NULL;
         }
 
         if (XVR_IS_FUNCTION(scope->variables.entries[i].value)) {
             Xvr_popScope(
-                XVR_AS_FUNCTION(scope->variables.entries[i].value).scope);
+                (Xvr_Scope*)XVR_AS_FUNCTION(scope->variables.entries[i].value).scope);
             XVR_AS_FUNCTION(scope->variables.entries[i].value).scope = NULL;
         }
     }

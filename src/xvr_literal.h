@@ -48,6 +48,10 @@ SOFTWARE.
 #include "xvr_common.h"
 #include "xvr_refstring.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 struct Xvr_Literal;
 struct Xvr_Interpreter;
 struct Xvr_LiteralArray;
@@ -646,5 +650,9 @@ inline Xvr_Literal Xvr_toVoidLiteralCpp() {
 #    define XVR_TO_FLOAT_LITERAL(value) Xvr_toFloatLiteralCpp(value)
 #    define XVR_TO_VOID_LITERAL Xvr_toVoidLiteralCpp()
 #endif  // __cplusplus
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // !XVR_LITERAL_H

@@ -14,7 +14,7 @@ set(XVR_SOURCES
     xvr_refstring.c
     xvr_refstring.cpp
     xvr_runtime.c
-    xvr_scope.c
+    xvr_scope.cpp
     core/semantic/xvr_semantic.c
     xvr_string_utils.c
     xvr_unused.c
