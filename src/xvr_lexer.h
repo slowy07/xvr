@@ -53,6 +53,10 @@ SOFTWARE.
 #include "xvr_common.h"
 #include "xvr_token_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @struct Xvr_Lexer
  * @brief lexer state machine - source code input to token stream
@@ -116,5 +120,9 @@ XVR_API Xvr_Token Xvr_private_scanLexer(Xvr_Lexer* lexer);
  * function.
  */
 XVR_API void Xvr_private_printToken(Xvr_Token* token);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // !XVR_LEXER_H
