@@ -3,8 +3,8 @@ set(XVR_SOURCES
     xvr_cast_emit.c
     xvr_common.cpp
     xvr_format_string.c
-    xvr_keyword_types.c
-    xvr_lexer.c
+    xvr_keyword_types.cpp
+    xvr_lexer.cpp
     xvr_literal.c
     xvr_literal_array.c
     xvr_literal_dictionary.c

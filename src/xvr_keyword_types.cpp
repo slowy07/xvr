@@ -6,6 +6,10 @@
 #include "xvr_string_utils.h"
 #include "xvr_token_types.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 Xvr_KeywordType Xvr_keywordTypes[] = {
     // type keywords
     {XVR_TOKEN_NULL, "null"},
@@ -91,3 +95,7 @@ Xvr_TokenType Xvr_findTypeByKeyword(const char* keyword) {
 
     return XVR_TOKEN_EOF;
 }
+
+#ifdef __cplusplus
+}
+#endif
