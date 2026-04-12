@@ -12,6 +12,7 @@ set(XVR_SOURCES
     xvr_parser.c
     xvr_print_handler.c
     xvr_refstring.c
+    xvr_refstring.cpp
     xvr_runtime.c
     xvr_scope.c
     core/semantic/xvr_semantic.c
@@ -53,6 +54,7 @@ set(XVR_HEADERS
     xvr_parser.h
     xvr_print_handler.h
     xvr_refstring.h
+    xvr_refstring.hpp
     xvr_scope.h
     xvr_semantic.h
     xvr_string_utils.h
@@ -78,10 +80,22 @@ set(XVR_HEADERS
     core/ast/xvr_ast_node.h
 )
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD_REQUIRED ON)
+
 add_library(xvr_objects OBJECT ${XVR_SOURCES} ${XVR_HEADERS})
 
 target_include_directories(xvr_objects PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(xvr_objects PRIVATE ${XVR_COMPILE_FLAGS})
+
+set_source_files_properties(xvr_refstring.cpp PROPERTIES
+    CXX_STANDARD 20
+    LANGUAGE CXX
+)
 
 if(XVR_SANITIZER)
     target_compile_options(xvr_objects PRIVATE -fno-omit-frame-pointer)
