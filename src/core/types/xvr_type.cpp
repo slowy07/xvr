@@ -34,7 +34,7 @@ Xvr_Type* Xvr_TypeCreateInteger(int size_bits, Xvr_Signedness signedness) {
     Xvr_Type* type = find_or_create_type(name, XVR_KIND_INTEGER);
     if (type) return type;
 
-    type = calloc(1, sizeof(Xvr_Type));
+    type = (Xvr_Type*)calloc(1, sizeof(Xvr_Type));
     if (!type) return NULL;
 
     type->kind = XVR_KIND_INTEGER;
@@ -56,7 +56,7 @@ Xvr_Type* Xvr_TypeCreateFloat(int size_bits) {
     Xvr_Type* type = find_or_create_type(name, XVR_KIND_FLOAT);
     if (type) return type;
 
-    type = calloc(1, sizeof(Xvr_Type));
+    type = (Xvr_Type*)calloc(1, sizeof(Xvr_Type));
     if (!type) return NULL;
 
     type->kind = XVR_KIND_FLOAT;
@@ -71,7 +71,7 @@ Xvr_Type* Xvr_TypeCreateFloat(int size_bits) {
 }
 
 Xvr_Type* Xvr_TypeCreatePointer(Xvr_Type* pointee) {
-    Xvr_Type* type = calloc(1, sizeof(Xvr_Type));
+    Xvr_Type* type = (Xvr_Type*)calloc(1, sizeof(Xvr_Type));
     if (!type) return NULL;
 
     type->kind = XVR_KIND_POINTER;
@@ -85,7 +85,7 @@ Xvr_Type* Xvr_TypeCreateBool(void) {
     static Xvr_Type* bool_type = NULL;
     if (bool_type) return bool_type;
 
-    bool_type = calloc(1, sizeof(Xvr_Type));
+    bool_type = (Xvr_Type*)calloc(1, sizeof(Xvr_Type));
     if (!bool_type) return NULL;
 
     bool_type->kind = XVR_KIND_BOOL;
@@ -98,7 +98,7 @@ Xvr_Type* Xvr_TypeCreateVoid(void) {
     static Xvr_Type* void_type = NULL;
     if (void_type) return void_type;
 
-    void_type = calloc(1, sizeof(Xvr_Type));
+    void_type = (Xvr_Type*)calloc(1, sizeof(Xvr_Type));
     if (!void_type) return NULL;
 
     void_type->kind = XVR_KIND_VOID;
@@ -111,7 +111,7 @@ Xvr_Type* Xvr_TypeCreateString(void) {
     static Xvr_Type* string_type = NULL;
     if (string_type) return string_type;
 
-    string_type = calloc(1, sizeof(Xvr_Type));
+    string_type = (Xvr_Type*)calloc(1, sizeof(Xvr_Type));
     if (!string_type) return NULL;
 
     string_type->kind = XVR_KIND_STRING;

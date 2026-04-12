@@ -1,5 +1,5 @@
 set(XVR_SOURCES
-    core/types/xvr_type.c
+    core/types/xvr_type.cpp
     xvr_cast_emit.c
     xvr_common.cpp
     xvr_format_string.c
