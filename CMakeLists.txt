@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
-project(xvr LANGUAGES C)
+project(xvr LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
+set(CMAKE_CXX_EXTENSIONS ON)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -37,7 +40,7 @@ add_definitions(${LLVM_DEFINITIONS})
 link_directories(${LLVM_LIBRARY_DIRS})
 
 set(XVR_COMPILE_FLAGS
-    -std=c11
+    -std=c++20
     -pedantic
     -Wall
     -Wextra
@@ -68,7 +71,7 @@ add_definitions(${LLVM_DEFINITIONS})
 link_directories(${LLVM_LIBRARY_DIRS})
 
 set(XVR_COMPILE_FLAGS
-    -std=c11
+    -std=c++20
     -pedantic
     -Wall
     -Wextra
