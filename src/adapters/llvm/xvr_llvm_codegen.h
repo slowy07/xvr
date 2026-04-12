@@ -40,6 +40,10 @@ SOFTWARE.
 #include "xvr_llvm_target.h"
 #include "xvr_llvm_type_mapper.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 typedef struct Xvr_LLVMCodegen Xvr_LLVMCodegen;
 
 Xvr_LLVMCodegen* Xvr_LLVMCodegenCreate(const char* module_name);
@@ -69,5 +73,9 @@ bool Xvr_LLVMCodegenExecuteJIT(Xvr_LLVMCodegen* codegen);
 
 bool Xvr_LLVMCodegenHasError(Xvr_LLVMCodegen* codegen);
 const char* Xvr_LLVMCodegenGetError(Xvr_LLVMCodegen* codegen);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
