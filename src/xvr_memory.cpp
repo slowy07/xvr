@@ -36,6 +36,8 @@ void Xvr_debugResetMemoryStats(void) {
 }
 #endif
 
+extern "C" {
+
 void* Xvr_private_defaultMemoryAllocator(void* pointer, size_t oldSize,
                                          size_t newSize) {
     /* NOTE: This allocator uses standard malloc/free - consider arena
@@ -111,3 +113,5 @@ void Xvr_setMemoryAllocator(Xvr_MemoryAllocatorFn fn) {
     allocator = fn;
     Xvr_setRefStringAllocatorFn(fn);
 }
+
+}  // extern "C"

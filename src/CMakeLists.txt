@@ -8,7 +8,7 @@ set(XVR_SOURCES
     xvr_literal.c
     xvr_literal_array.c
     xvr_literal_dictionary.c
-    xvr_memory.c
+    xvr_memory.cpp
     xvr_parser.c
     xvr_print_handler.c
     xvr_refstring.c
