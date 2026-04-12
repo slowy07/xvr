@@ -51,6 +51,10 @@ SOFTWARE.
 #ifndef XVR_REFSTRING_H
 #define XVR_REFSTRING_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -186,6 +190,10 @@ bool Xvr_equalsRefStringCString(Xvr_RefString* lhs, char* cstring);
 void Xvr_debugPrintRefStringStats(void);
 int Xvr_debugGetRefStringCount(void);
 void Xvr_debugResetRefStringStats(void);
+#endif
+
+#ifdef __cplusplus
+}
 #endif
 
 #endif  // !XVR_REFSTRING_H
