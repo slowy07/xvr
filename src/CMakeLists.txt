@@ -31,7 +31,7 @@ set(XVR_SOURCES
     adapters/llvm/xvr_llvm_optimizer.c
     adapters/llvm/xvr_llvm_target.c
     adapters/llvm/xvr_llvm_type_mapper.c
-    core/ir/xvr_ir.c
+    core/ir/xvr_ir.cpp
     core/ir/xvr_ir_generator.c
     core/ast/xvr_ast_node.cpp
 )

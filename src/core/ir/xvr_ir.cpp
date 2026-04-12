@@ -57,7 +57,7 @@ static char* xvr_ir_strdup(const char* str, size_t max_len) {
         return NULL;
     }
     size_t dst_size = src_len + 1;
-    char* copy = xvr_ir_xmalloc(dst_size);
+    char* copy = (char*)xvr_ir_xmalloc(dst_size);
     if (!copy) {
         return NULL;
     }
@@ -183,7 +183,7 @@ void Xvr_IRModuleDestroy(Xvr_IRModule* module) {
 }
 
 Xvr_IRModule* Xvr_IRModuleCreate(const char* name) {
-    Xvr_IRModule* module = xvr_ir_xcalloc(1, sizeof(Xvr_IRModule));
+    Xvr_IRModule* module = (Xvr_IRModule*)xvr_ir_xcalloc(1, sizeof(Xvr_IRModule));
     if (!module) {
         return NULL;
     }
@@ -202,7 +202,7 @@ Xvr_IRFunction* Xvr_IRModuleAddFunction(Xvr_IRModule* module, const char* name,
     if (!module || !name) {
         return NULL;
     }
-    Xvr_IRFunction* func = xvr_ir_xcalloc(1, sizeof(Xvr_IRFunction));
+    Xvr_IRFunction* func = (Xvr_IRFunction*)xvr_ir_xcalloc(1, sizeof(Xvr_IRFunction));
     if (!func) {
         return NULL;
     }
@@ -214,7 +214,7 @@ Xvr_IRFunction* Xvr_IRModuleAddFunction(Xvr_IRModule* module, const char* name,
     func->return_type = return_type;
     func->param_count = param_count;
     if (param_count > 0 && param_types) {
-        func->param_types = xvr_ir_xcalloc(param_count, sizeof(Xvr_IRType*));
+        func->param_types = (Xvr_IRType**)xvr_ir_xcalloc(param_count, sizeof(Xvr_IRType*));
         if (!func->param_types) {
             free((char*)func->name);
             free(func);
@@ -227,7 +227,7 @@ Xvr_IRFunction* Xvr_IRModuleAddFunction(Xvr_IRModule* module, const char* name,
         func->param_types = NULL;
     }
     Xvr_IRFunction** new_functions =
-        realloc(module->functions,
+        (Xvr_IRFunction**)realloc(module->functions,
                 (module->function_count + 1) * sizeof(Xvr_IRFunction*));
     if (!new_functions) {
         for (size_t i = 0; i < param_count; i++) {
@@ -249,7 +249,7 @@ Xvr_IRBasicBlock* Xvr_IRFunctionAddBlock(Xvr_IRFunction* func,
     if (!func || !name) {
         return NULL;
     }
-    Xvr_IRBasicBlock* block = xvr_ir_xcalloc(1, sizeof(Xvr_IRBasicBlock));
+    Xvr_IRBasicBlock* block = (Xvr_IRBasicBlock*)xvr_ir_xcalloc(1, sizeof(Xvr_IRBasicBlock));
     if (!block) {
         return NULL;
     }
@@ -277,7 +277,7 @@ Xvr_IRInstruction* Xvr_IRBasicBlockAppendInstr(Xvr_IRBasicBlock* block,
     if (!block) {
         return NULL;
     }
-    Xvr_IRInstruction* instr = xvr_ir_xcalloc(1, sizeof(Xvr_IRInstruction));
+    Xvr_IRInstruction* instr = (Xvr_IRInstruction*)xvr_ir_xcalloc(1, sizeof(Xvr_IRInstruction));
     if (!instr) {
         return NULL;
     }
@@ -286,7 +286,7 @@ Xvr_IRInstruction* Xvr_IRBasicBlockAppendInstr(Xvr_IRBasicBlock* block,
     instr->operand_count = operand_count;
     instr->id = g_instruction_id++;
     if (operand_count > 0 && operands) {
-        instr->operands = xvr_ir_xcalloc(operand_count, sizeof(Xvr_IRValue*));
+        instr->operands = (Xvr_IRValue**)xvr_ir_xcalloc(operand_count, sizeof(Xvr_IRValue*));
         if (!instr->operands) {
             free(instr);
             return NULL;
@@ -308,7 +308,7 @@ Xvr_IRInstruction* Xvr_IRBasicBlockAppendInstr(Xvr_IRBasicBlock* block,
 }
 
 Xvr_IRType* Xvr_IRTypeCreateVoid(void) {
-    Xvr_IRType* type = xvr_ir_xcalloc(1, sizeof(Xvr_IRType));
+    Xvr_IRType* type = (Xvr_IRType*)xvr_ir_xcalloc(1, sizeof(Xvr_IRType));
     if (!type) {
         return NULL;
     }
@@ -317,7 +317,7 @@ Xvr_IRType* Xvr_IRTypeCreateVoid(void) {
 }
 
 Xvr_IRType* Xvr_IRTypeCreateInt(size_t bits) {
-    Xvr_IRType* type = xvr_ir_xcalloc(1, sizeof(Xvr_IRType));
+    Xvr_IRType* type = (Xvr_IRType*)xvr_ir_xcalloc(1, sizeof(Xvr_IRType));
     if (!type) {
         return NULL;
     }
@@ -345,7 +345,7 @@ Xvr_IRType* Xvr_IRTypeCreateInt(size_t bits) {
 }
 
 Xvr_IRType* Xvr_IRTypeCreateFloat(void) {
-    Xvr_IRType* type = xvr_ir_xcalloc(1, sizeof(Xvr_IRType));
+    Xvr_IRType* type = (Xvr_IRType*)xvr_ir_xcalloc(1, sizeof(Xvr_IRType));
     if (!type) {
         return NULL;
     }
@@ -354,7 +354,7 @@ Xvr_IRType* Xvr_IRTypeCreateFloat(void) {
 }
 
 Xvr_IRType* Xvr_IRTypeCreateDouble(void) {
-    Xvr_IRType* type = xvr_ir_xcalloc(1, sizeof(Xvr_IRType));
+    Xvr_IRType* type = (Xvr_IRType*)xvr_ir_xcalloc(1, sizeof(Xvr_IRType));
     if (!type) {
         return NULL;
     }
@@ -366,7 +366,7 @@ Xvr_IRType* Xvr_IRTypeCreatePointer(Xvr_IRType* elem_type) {
     if (!elem_type) {
         return NULL;
     }
-    Xvr_IRType* type = xvr_ir_xcalloc(1, sizeof(Xvr_IRType));
+    Xvr_IRType* type = (Xvr_IRType*)xvr_ir_xcalloc(1, sizeof(Xvr_IRType));
     if (!type) {
         return NULL;
     }
@@ -379,7 +379,7 @@ Xvr_IRType* Xvr_IRTypeCreateArray(Xvr_IRType* elem_type, size_t count) {
     if (!elem_type) {
         return NULL;
     }
-    Xvr_IRType* type = xvr_ir_xcalloc(1, sizeof(Xvr_IRType));
+    Xvr_IRType* type = (Xvr_IRType*)xvr_ir_xcalloc(1, sizeof(Xvr_IRType));
     if (!type) {
         return NULL;
     }
@@ -392,7 +392,7 @@ Xvr_IRType* Xvr_IRTypeCreateArray(Xvr_IRType* elem_type, size_t count) {
 Xvr_IRType* Xvr_IRTypeCreateFunction(Xvr_IRType* return_type,
                                      Xvr_IRType** param_types,
                                      size_t param_count) {
-    Xvr_IRType* type = xvr_ir_xcalloc(1, sizeof(Xvr_IRType));
+    Xvr_IRType* type = (Xvr_IRType*)xvr_ir_xcalloc(1, sizeof(Xvr_IRType));
     if (!type) {
         return NULL;
     }
@@ -401,7 +401,7 @@ Xvr_IRType* Xvr_IRTypeCreateFunction(Xvr_IRType* return_type,
     type->data.function.param_count = param_count;
     if (param_count > 0 && param_types) {
         type->data.function.param_types =
-            xvr_ir_xcalloc(param_count, sizeof(Xvr_IRType*));
+            (Xvr_IRType**)xvr_ir_xcalloc(param_count, sizeof(Xvr_IRType*));
         if (!type->data.function.param_types) {
             free(type);
             return NULL;
@@ -416,7 +416,7 @@ Xvr_IRType* Xvr_IRTypeCreateFunction(Xvr_IRType* return_type,
 }
 
 Xvr_IRValue* Xvr_IRValueCreate(Xvr_IRType* type, const char* name) {
-    Xvr_IRValue* value = xvr_ir_xcalloc(1, sizeof(Xvr_IRValue));
+    Xvr_IRValue* value = (Xvr_IRValue*)xvr_ir_xcalloc(1, sizeof(Xvr_IRValue));
     if (!value) {
         return NULL;
     }
