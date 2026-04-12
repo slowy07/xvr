@@ -41,6 +41,10 @@ SOFTWARE.
 #ifndef XVR_PARSER_H
 #define XVR_PARSER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "xvr_ast_node.h"
 #include "xvr_common.h"
 #include "xvr_lexer.h"
@@ -109,5 +113,9 @@ XVR_API void Xvr_freeParser(Xvr_Parser* parser);
  *  - may return partial AST even if error == true
  */
 XVR_API Xvr_ASTNode* Xvr_scanParser(Xvr_Parser* parser);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // !XVR_PARSER_H
