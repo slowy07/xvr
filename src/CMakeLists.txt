@@ -33,7 +33,7 @@ set(XVR_SOURCES
     adapters/llvm/xvr_llvm_type_mapper.c
     core/ir/xvr_ir.c
     core/ir/xvr_ir_generator.c
-    core/ast/xvr_ast_node.c
+    core/ast/xvr_ast_node.cpp
 )
 
 set(XVR_HEADERS
