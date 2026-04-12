@@ -9,6 +9,10 @@
 #ifndef XVR_CORE_TYPE_H
 #define XVR_CORE_TYPE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -100,4 +104,8 @@ const char* Xvr_TypeToString(const Xvr_Type* type);
 
 void Xvr_TypeDestroy(Xvr_Type* type);
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif  // XVR_CORE_TYPE_H
