@@ -36,7 +36,7 @@ struct Xvr_LLVMContext {
 };
 
 Xvr_LLVMContext* Xvr_LLVMContextCreate(void) {
-    Xvr_LLVMContext* ctx = calloc(1, sizeof(Xvr_LLVMContext));
+    Xvr_LLVMContext* ctx = (Xvr_LLVMContext*)calloc(1, sizeof(Xvr_LLVMContext));
     if (!ctx) {
         return NULL;
     }

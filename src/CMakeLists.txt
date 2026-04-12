@@ -22,7 +22,7 @@ set(XVR_SOURCES
     optimizer/xvr_ast_optimizer.c
     adapters/llvm/xvr_asm_config.c
     adapters/llvm/xvr_llvm_codegen.c
-    adapters/llvm/xvr_llvm_context.c
+    adapters/llvm/xvr_llvm_context.cpp
     adapters/llvm/xvr_llvm_control_flow.c
     adapters/llvm/xvr_llvm_expression_emitter.c
     adapters/llvm/xvr_llvm_function_emitter.c
