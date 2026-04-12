@@ -6,6 +6,10 @@
 #ifndef XVR_TEST_H
 #define XVR_TEST_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -219,5 +223,9 @@ typedef int (*Xvr_TestFn)(void);
             return 1;                                                        \
         }                                                                    \
     } while (0)
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* XVR_TEST_H */
