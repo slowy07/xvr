@@ -272,7 +272,7 @@ static void translate_function(Xvr_IRGenerator* gen, Xvr_ASTNode* node) {
         Xvr_NodeCompound* params = &fn_decl->arguments->compound;
         param_count = (size_t)params->count;
         if (param_count > 0) {
-            param_types = calloc(param_count, sizeof(Xvr_IRType*));
+            param_types = (Xvr_IRType**)calloc(param_count, sizeof(Xvr_IRType*));
             if (param_types) {
                 for (size_t i = 0; i < param_count; i++) {
                     if (params->nodes[i].type == XVR_AST_NODE_VAR_DECL) {
@@ -313,7 +313,7 @@ static void translate_function(Xvr_IRGenerator* gen, Xvr_ASTNode* node) {
 }
 
 Xvr_IRGenerator* Xvr_IRGeneratorCreate(Xvr_DiagnosticsPort* diagnostics) {
-    Xvr_IRGenerator* gen = calloc(1, sizeof(Xvr_IRGenerator));
+    Xvr_IRGenerator* gen = (Xvr_IRGenerator*)calloc(1, sizeof(Xvr_IRGenerator));
     if (!gen) {
         return NULL;
     }
