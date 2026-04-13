@@ -115,7 +115,7 @@ static LLVMValueRef handle_panic(void* context, LLVMBuilderRef builder,
 }
 
 Xvr_BuiltinRegistry* Xvr_BuiltinRegistryCreate(void) {
-    Xvr_BuiltinRegistry* registry = calloc(1, sizeof(Xvr_BuiltinRegistry));
+    Xvr_BuiltinRegistry* registry = (Xvr_BuiltinRegistry*)calloc(1, sizeof(Xvr_BuiltinRegistry));
     if (!registry) {
         return NULL;
     }
@@ -157,7 +157,7 @@ bool Xvr_BuiltinRegistryRegister(Xvr_BuiltinRegistry* registry,
         return false;
     }
 
-    Xvr_BuiltinInfo* info = calloc(1, sizeof(Xvr_BuiltinInfo));
+    Xvr_BuiltinInfo* info = (Xvr_BuiltinInfo*)calloc(1, sizeof(Xvr_BuiltinInfo));
     if (!info) {
         return false;
     }
@@ -207,7 +207,7 @@ void Xvr_BuiltinRegistryInitDefaults(Xvr_BuiltinRegistry* registry) {
 }
 
 Xvr_ModuleResolver* Xvr_ModuleResolverCreate(const char* stdlib_path) {
-    Xvr_ModuleResolver* resolver = calloc(1, sizeof(Xvr_ModuleResolver));
+    Xvr_ModuleResolver* resolver = (Xvr_ModuleResolver*)calloc(1, sizeof(Xvr_ModuleResolver));
     if (!resolver) {
         return NULL;
     }
@@ -268,7 +268,7 @@ bool Xvr_ModuleResolverResolve(Xvr_ModuleResolver* resolver,
     }
 
     size_t path_len = stdlib_len + name_len + 16;
-    char* path = malloc(path_len);
+    char* path = (char*)malloc(path_len);
     if (!path) {
         return false;
     }
@@ -299,7 +299,7 @@ static const unsigned char* read_file(const char* path, size_t* size) {
         return NULL;
     }
 
-    unsigned char* buffer = malloc(len + 1);
+    unsigned char* buffer = (unsigned char*)malloc(len + 1);
     if (!buffer) {
         fclose(f);
         return NULL;

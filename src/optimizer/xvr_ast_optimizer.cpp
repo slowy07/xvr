@@ -40,7 +40,7 @@ struct Xvr_ASTOptimizer {
 Xvr_ASTOptimizer* Xvr_ASTOptimizerCreate(void) {
     /* NOTE: Default optimization level is O2 for balanced compile
      * time/performance */
-    Xvr_ASTOptimizer* opt = calloc(1, sizeof(Xvr_ASTOptimizer));
+    Xvr_ASTOptimizer* opt = (Xvr_ASTOptimizer*)calloc(1, sizeof(Xvr_ASTOptimizer));
     if (!opt) {
         return NULL;
     }
@@ -83,7 +83,7 @@ bool Xvr_ASTOptimizerAddPass(Xvr_ASTOptimizer* opt,
     if (!opt->passes || opt->pass_count >= opt->pass_capacity) {
         int new_cap = opt->pass_capacity > 0 ? opt->pass_capacity * 2 : 4;
         Xvr_ASTOptimizerPass* new_passes =
-            realloc(opt->passes, new_cap * sizeof(Xvr_ASTOptimizerPass));
+            (Xvr_ASTOptimizerPass*)realloc(opt->passes, new_cap * sizeof(Xvr_ASTOptimizerPass));
         if (!new_passes) {
             return false;
         }
@@ -242,9 +242,10 @@ static Xvr_ASTNode* fold_binary_arithmetic(Xvr_ASTNode* node) {
     }
 
     Xvr_ASTNode* new_node = NULL;
-    Xvr_Literal lit = {.as.integer = result_val,
-                       .type = XVR_LITERAL_INTEGER,
-                       0};
+    Xvr_Literal lit = {0};
+    lit.as.integer = result_val;
+    lit.type = XVR_LITERAL_INTEGER;
+    lit.bytecodeLength = 0;
     Xvr_emitASTNodeLiteral(&new_node, lit);
     return new_node;
 }
@@ -365,7 +366,7 @@ bool Xvr_ASTOptimizerAddStandardPasses(Xvr_ASTOptimizer* opt) {
     }
 
     Xvr_ConstantFoldingContext* cf_ctx =
-        calloc(1, sizeof(Xvr_ConstantFoldingContext));
+        (Xvr_ConstantFoldingContext*)calloc(1, sizeof(Xvr_ConstantFoldingContext));
     Xvr_ASTOptimizerPass cf_pass = {.type = XVR_PASS_CONSTANT_FOLDING,
                                     .name = "constant_folding",
                                     .run = run_constant_folding,
@@ -374,7 +375,7 @@ bool Xvr_ASTOptimizerAddStandardPasses(Xvr_ASTOptimizer* opt) {
                                     .enabled = true};
     Xvr_ASTOptimizerAddPass(opt, &cf_pass);
 
-    Xvr_DCEContext* dce_ctx = calloc(1, sizeof(Xvr_DCEContext));
+    Xvr_DCEContext* dce_ctx = (Xvr_DCEContext*)calloc(1, sizeof(Xvr_DCEContext));
     Xvr_ASTOptimizerPass dce_pass = {.type = XVR_PASS_DEAD_CODE_ELIMINATION,
                                      .name = "dead_code_elimination",
                                      .run = run_dead_code_elimination,
