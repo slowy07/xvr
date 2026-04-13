@@ -62,7 +62,7 @@ char* xvr_safe_strdup(const char* str, size_t max_len) {
     size_t alloc_size = len + 1;
     if (alloc_size < len || alloc_size == 0) return NULL;
 
-    char* result = malloc(alloc_size);
+    char* result = (char*)malloc(alloc_size);
     if (!result) return NULL;
 
     for (size_t i = 0; i < len; i++) {

@@ -89,7 +89,7 @@ void Xvr_freeLiteral(Xvr_Literal literal) {
 
     // complex literals
     if (XVR_IS_FUNCTION(literal)) {
-        Xvr_popScope(XVR_AS_FUNCTION(literal).scope);
+        Xvr_popScope((Xvr_Scope*)XVR_AS_FUNCTION(literal).scope);
         XVR_AS_FUNCTION(literal).scope = NULL;
         XVR_FREE_ARRAY(unsigned char, XVR_AS_FUNCTION(literal).inner.bytecode,
                        XVR_AS_FUNCTION_BYTECODE_LENGTH(literal));
@@ -125,15 +125,21 @@ bool Xvr_private_isTruthy(Xvr_Literal x) {
 }
 
 Xvr_Literal Xvr_private_toStringLiteral(Xvr_RefString* ptr) {
-    return ((Xvr_Literal){{.string.ptr = ptr}, XVR_LITERAL_STRING, 0});
+    Xvr_Literal l = {0};
+    l.as.string.ptr = ptr;
+    l.type = XVR_LITERAL_STRING;
+    l.bytecodeLength = 0;
+    return l;
 }
 
 Xvr_Literal Xvr_private_toIdentifierLiteral(Xvr_RefString* ptr) {
-    return ((Xvr_Literal){{.identifier.ptr = ptr,
-                           .identifier.hash = hashString(
-                               Xvr_toCString(ptr), Xvr_lengthRefString(ptr))},
-                          XVR_LITERAL_IDENTIFIER,
-                          0});
+    Xvr_Literal l = {0};
+    l.as.identifier.ptr = ptr;
+    l.as.identifier.hash =
+        (int)hashString(Xvr_toCString(ptr), Xvr_lengthRefString(ptr));
+    l.type = XVR_LITERAL_IDENTIFIER;
+    l.bytecodeLength = 0;
+    return l;
 }
 
 Xvr_Literal* Xvr_private_typePushSubtype(Xvr_Literal* lit,
@@ -215,7 +221,7 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
         Xvr_Literal literal = XVR_TO_FUNCTION_LITERAL(
             buffer, XVR_AS_FUNCTION_BYTECODE_LENGTH(original));
         XVR_AS_FUNCTION(literal).scope =
-            Xvr_copyScope(XVR_AS_FUNCTION(original).scope);
+            Xvr_copyScope((Xvr_Scope*)XVR_AS_FUNCTION(original).scope);
         return literal;
     }
 

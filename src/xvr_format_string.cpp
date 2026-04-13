@@ -80,12 +80,12 @@ XvrFormatString* XvrFormatStringParse(const char* format_str,
         return NULL;
     }
 
-    XvrFormatString* fmt = calloc(1, sizeof(XvrFormatString));
+    XvrFormatString* fmt = (XvrFormatString*)calloc(1, sizeof(XvrFormatString));
     if (!fmt) {
         return NULL;
     }
 
-    fmt->placeholders = calloc(MAX_PLACEHOLDERS, sizeof(XvrFormatPlaceholder));
+    fmt->placeholders = (XvrFormatPlaceholder*)calloc(MAX_PLACEHOLDERS, sizeof(XvrFormatPlaceholder));
     if (!fmt->placeholders) {
         free(fmt);
         return NULL;
@@ -193,7 +193,7 @@ XvrFormatString* XvrFormatStringParse(const char* format_str,
 
     /* Second pass: build printf format string */
     size_t result_size = fmt_len * 2 + 1; /* Extra space for % */
-    char* result = malloc(result_size);
+    char* result = (char*)malloc(result_size);
     if (!result) {
         fmt->is_valid = false;
         return fmt;
@@ -335,7 +335,7 @@ char* XvrFormatStringBuildPrintfFormat(const XvrFormatString* fmt,
 
     size_t src_len = xvr_safe_strlen(src, 4096);
     size_t result_size = src_len * 2 + 1;
-    char* result = malloc(result_size);
+    char* result = (char*)malloc(result_size);
     if (!result) return NULL;
 
     size_t result_pos = 0;

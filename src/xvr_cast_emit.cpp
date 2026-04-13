@@ -22,7 +22,7 @@ struct Xvr_LLVMCastEmitter {
 
 Xvr_LLVMCastEmitter* Xvr_LLVMCastEmitterCreate(LLVMModuleRef module,
                                                LLVMBuilderRef builder) {
-    Xvr_LLVMCastEmitter* emitter = calloc(1, sizeof(Xvr_LLVMCastEmitter));
+    Xvr_LLVMCastEmitter* emitter = (Xvr_LLVMCastEmitter*)calloc(1, sizeof(Xvr_LLVMCastEmitter));
     if (!emitter) return NULL;
 
     emitter->module = module;
