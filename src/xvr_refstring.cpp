@@ -1,4 +1,5 @@
 #include "xvr_refstring.hpp"
+#include "xvr_refstring.h"
 #include "xvr_memory.h"
 #include <cstring>
 
