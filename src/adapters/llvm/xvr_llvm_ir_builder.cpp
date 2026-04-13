@@ -39,7 +39,7 @@ Xvr_LLVMIRBuilder* Xvr_LLVMIRBuilderCreate(Xvr_LLVMContext* ctx,
         return NULL;
     }
 
-    Xvr_LLVMIRBuilder* builder = calloc(1, sizeof(Xvr_LLVMIRBuilder));
+    Xvr_LLVMIRBuilder* builder = (Xvr_LLVMIRBuilder*)calloc(1, sizeof(Xvr_LLVMIRBuilder));
     if (!builder) {
         return NULL;
     }

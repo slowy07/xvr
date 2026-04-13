@@ -68,7 +68,7 @@ Xvr_LLVMFunctionEmitter* Xvr_LLVMFunctionEmitterCreate(
     }
 
     Xvr_LLVMFunctionEmitter* emitter =
-        calloc(1, sizeof(Xvr_LLVMFunctionEmitter));
+        (Xvr_LLVMFunctionEmitter*)calloc(1, sizeof(Xvr_LLVMFunctionEmitter));
     if (!emitter) {
         return NULL;
     }

@@ -132,7 +132,7 @@ Xvr_LLVMControlFlow* Xvr_LLVMControlFlowCreate(
         return NULL;
     }
 
-    Xvr_LLVMControlFlow* cf = calloc(1, sizeof(Xvr_LLVMControlFlow));
+    Xvr_LLVMControlFlow* cf = (Xvr_LLVMControlFlow*)calloc(1, sizeof(Xvr_LLVMControlFlow));
     if (!cf) {
         return NULL;
     }

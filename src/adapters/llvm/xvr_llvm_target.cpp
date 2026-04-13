@@ -57,7 +57,7 @@ struct Xvr_LLVMTargetConfig {
 };
 
 Xvr_LLVMTargetConfig* Xvr_LLVMTargetConfigCreate(void) {
-    Xvr_LLVMTargetConfig* config = calloc(1, sizeof(Xvr_LLVMTargetConfig));
+    Xvr_LLVMTargetConfig* config = (Xvr_LLVMTargetConfig*)calloc(1, sizeof(Xvr_LLVMTargetConfig));
     if (!config) {
         return NULL;
     }
@@ -211,7 +211,7 @@ Xvr_LLVMTargetMachine* Xvr_LLVMTargetMachineCreate(
         return NULL;
     }
 
-    Xvr_LLVMTargetMachine* result = calloc(1, sizeof(Xvr_LLVMTargetMachine));
+    Xvr_LLVMTargetMachine* result = (Xvr_LLVMTargetMachine*)calloc(1, sizeof(Xvr_LLVMTargetMachine));
     if (!result) {
         LLVMDisposeTargetMachine(tm);
         return NULL;
@@ -394,7 +394,7 @@ static bool convertAsmToIntelSyntax(const char* filename) {
     long size = ftell(f);
     fseek(f, 0, SEEK_SET);
 
-    char* buffer = malloc(size + 1);
+    char* buffer = (char*)malloc(size + 1);
     if (!buffer) {
         fclose(f);
         return false;
@@ -407,7 +407,7 @@ static bool convertAsmToIntelSyntax(const char* filename) {
     // Add Intel syntax directive at the beginning
     char* header = ".intel_syntax noprefix\n";
     size_t header_len = strlen(header);
-    char* full_content = malloc(header_len + size + 1);
+    char* full_content = (char*)malloc(header_len + size + 1);
     if (!full_content) {
         free(buffer);
         return false;
@@ -440,7 +440,7 @@ static char* convertAttToIntel(const char* input) {
 
     size_t len = xvr_safe_strlen(input, 4096);
     size_t alloc_size = len * 2 + 512;
-    char* output = malloc(alloc_size);
+    char* output = (char*)malloc(alloc_size);
     if (!output) return NULL;
 
     const char* src = input;
@@ -592,7 +592,7 @@ static char* extractOperandsSimple(const char* start) {
     size_t len = end - start;
     if (len == 0) return NULL;
     if (len > SIZE_MAX - 1) return NULL;
-    char* result = malloc(len + 1);
+    char* result = (char*)malloc(len + 1);
     if (!result) return NULL;
     if (len > 0 && len <= len + 1 && len <= (size_t)(result ? len + 1 : 0)) {
         memcpy(result, start, len);
@@ -626,10 +626,10 @@ static char* reorderOperandsSimple(const char* instr, const char* operands) {
         while (*ops == ' ' || *ops == '\t') ops++;
 
         if (*ops == '(') {
-            char* comma = strchr(ops, ',');
+            const char* comma = strchr(ops, ',');
             if (comma) {
-                char* mem_part = strndup(ops, comma - ops);
-                char* reg_part = strdup(comma + 1);
+                char* mem_part = (char*)strndup(ops, comma - ops);
+                char* reg_part = (char*)strdup(comma + 1);
                 while (*reg_part == ' ' || *reg_part == '\t') reg_part++;
                 size_t reg_len = 0;
                 char* r = reg_part;
@@ -644,7 +644,7 @@ static char* reorderOperandsSimple(const char* instr, const char* operands) {
                 free(mem_part);
                 if (mem) {
                     char* result =
-                        malloc(xvr_safe_strlen(mem, 256) + reg_len + 8);
+                        (char*)malloc(xvr_safe_strlen(mem, 256) + reg_len + 8);
                     if (result) {
                         if (had_asterisk) {
                             result[0] = '*';
@@ -676,7 +676,7 @@ static char* reorderOperandsSimple(const char* instr, const char* operands) {
             } else {
                 char* mem = convertMemOperandSimple(ops);
                 if (mem) {
-                    char* result = malloc(xvr_safe_strlen(mem, 256) + 3);
+                    char* result = (char*)malloc(xvr_safe_strlen(mem, 256) + 3);
                     if (result) {
                         result[0] = had_asterisk ? '*' : '[';
                         size_t ml = xvr_safe_strlen(mem, 256);
@@ -700,7 +700,7 @@ static char* reorderOperandsSimple(const char* instr, const char* operands) {
                 reg_len++;
             }
             if (reg_len > 0) {
-                char* result = malloc(reg_len + 4);
+                char* result = (char*)malloc(reg_len + 4);
                 if (result) {
                     result[0] = '*';
                     result[1] = '[';
@@ -743,7 +743,7 @@ static char* reorderOperandsSimple(const char* instr, const char* operands) {
         return result;
     }
 
-    char* dst = malloc(512);
+    char* dst = (char*)malloc(512);
     if (!dst) {
         for (int i = 0; i < count; i++) free(parts[i]);
         return strdup(operands);
@@ -786,7 +786,7 @@ static char* convertMemOperandSimple(const char* start) {
 
     size_t inner_len = inner_end - inner_start;
     if (inner_len > SIZE_MAX - 1) return NULL;
-    char* inner = malloc(inner_len + 1);
+    char* inner = (char*)malloc(inner_len + 1);
     if (!inner) return NULL;
     if (inner_len > 0 && inner_len <= inner_len + 1) {
         memcpy(inner, inner_start, inner_len);
@@ -819,7 +819,7 @@ static char* convertMemOperandSimple(const char* start) {
     }
     free(inner);
 
-    char* result = malloc(128);
+    char* result = (char*)malloc(128);
     if (!result) {
         if (offset) free(offset);
         if (base) free(base);

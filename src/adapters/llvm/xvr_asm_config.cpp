@@ -33,7 +33,7 @@ struct Xvr_AsmConfig {
 };
 
 Xvr_AsmConfig* Xvr_AsmConfigCreate(void) {
-    Xvr_AsmConfig* config = calloc(1, sizeof(Xvr_AsmConfig));
+    Xvr_AsmConfig* config = (Xvr_AsmConfig*)calloc(1, sizeof(Xvr_AsmConfig));
     if (config) {
         config->syntax = XVR_ASM_SYNTAX_INTEL;
         config->verbose = false;

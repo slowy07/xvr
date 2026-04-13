@@ -53,7 +53,7 @@ Xvr_LLVMModuleManager* Xvr_LLVMModuleManagerCreate(Xvr_LLVMContext* ctx,
         return NULL;
     }
 
-    Xvr_LLVMModuleManager* mgr = calloc(1, sizeof(Xvr_LLVMModuleManager));
+    Xvr_LLVMModuleManager* mgr = (Xvr_LLVMModuleManager*)calloc(1, sizeof(Xvr_LLVMModuleManager));
     if (!mgr) {
         return NULL;
     }
@@ -190,7 +190,7 @@ char* Xvr_LLVMModuleManagerPrintIR(Xvr_LLVMModuleManager* mgr,
 
     size_t ir_len = xvr_safe_strlen(ir, 4096);
     *out_len = ir_len + 1;
-    char* result = malloc(*out_len);
+    char* result = (char*)malloc(*out_len);
     if (result && ir_len > 0 && ir_len < *out_len) {
         for (size_t i = 0; i < ir_len; i++) {
             result[i] = ir[i];

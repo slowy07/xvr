@@ -75,7 +75,7 @@ Xvr_LLVMExpressionEmitter* Xvr_LLVMExpressionEmitterCreate(
 
     /* Allocate emitter structure */
     Xvr_LLVMExpressionEmitter* emitter =
-        calloc(1, sizeof(Xvr_LLVMExpressionEmitter));
+        (Xvr_LLVMExpressionEmitter*)calloc(1, sizeof(Xvr_LLVMExpressionEmitter));
     if (!emitter) {
         return NULL;
     }
@@ -3853,7 +3853,7 @@ static LLVMValueRef emit_unary_op(Xvr_LLVMExpressionEmitter* emitter,
         } else if (type_kind == LLVMPointerTypeKind) {
             LLVMTypeRef pointee_type = LLVMGetElementType(operand_type);
             LLVMTypeKind pointee_kind =
-                pointee_type ? LLVMGetTypeKind(pointee_type) : 0;
+                pointee_type ? LLVMGetTypeKind(pointee_type) : (LLVMTypeKind)0;
             if (!pointee_type) {
                 /* Try using the variable's allocated type instead */
                 LLVMTypeRef operand_val_type = LLVMGetAllocatedType(operand);
@@ -4378,7 +4378,7 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
 
             if (elem_kind == LLVMArrayTypeKind) {
                 LLVMValueRef* values =
-                    malloc(sizeof(LLVMValueRef) * compound->count);
+                    (LLVMValueRef*)malloc(sizeof(LLVMValueRef) * compound->count);
                 values[0] = first_elem;
                 for (int i = 1; i < compound->count; i++) {
                     LLVMValueRef elem = Xvr_LLVMExpressionEmitterEmit(
@@ -4397,7 +4397,7 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
                 LLVMTypeRef array_type =
                     LLVMArrayType(elem_type, compound->count);
                 LLVMValueRef* values =
-                    malloc(sizeof(LLVMValueRef) * compound->count);
+                    (LLVMValueRef*)malloc(sizeof(LLVMValueRef) * compound->count);
                 values[0] = first_elem;
                 for (int i = 1; i < compound->count; i++) {
                     LLVMValueRef elem = Xvr_LLVMExpressionEmitterEmit(

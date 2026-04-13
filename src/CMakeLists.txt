@@ -20,17 +20,17 @@ set(XVR_SOURCES
     xvr_unused.c
     sema/xvr_builtin.c
     optimizer/xvr_ast_optimizer.c
-    adapters/llvm/xvr_asm_config.c
+    adapters/llvm/xvr_asm_config.cpp
     adapters/llvm/xvr_llvm_codegen.cpp
     adapters/llvm/xvr_llvm_context.cpp
-    adapters/llvm/xvr_llvm_control_flow.c
-    adapters/llvm/xvr_llvm_expression_emitter.c
-    adapters/llvm/xvr_llvm_function_emitter.c
-    adapters/llvm/xvr_llvm_ir_builder.c
-    adapters/llvm/xvr_llvm_module_manager.c
-    adapters/llvm/xvr_llvm_optimizer.c
-    adapters/llvm/xvr_llvm_target.c
-    adapters/llvm/xvr_llvm_type_mapper.c
+    adapters/llvm/xvr_llvm_control_flow.cpp
+    adapters/llvm/xvr_llvm_expression_emitter.cpp
+    adapters/llvm/xvr_llvm_function_emitter.cpp
+    adapters/llvm/xvr_llvm_ir_builder.cpp
+    adapters/llvm/xvr_llvm_module_manager.cpp
+    adapters/llvm/xvr_llvm_optimizer.cpp
+    adapters/llvm/xvr_llvm_target.cpp
+    adapters/llvm/xvr_llvm_type_mapper.cpp
     core/ir/xvr_ir.cpp
     core/ir/xvr_ir_generator.cpp
     core/ast/xvr_ast_node.cpp

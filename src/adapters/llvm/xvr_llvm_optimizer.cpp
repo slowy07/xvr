@@ -50,7 +50,7 @@ struct Xvr_LLVMOptimizer {
 };
 
 Xvr_LLVMOptimizer* Xvr_LLVMOptimizerCreate(void) {
-    Xvr_LLVMOptimizer* opt = calloc(1, sizeof(Xvr_LLVMOptimizer));
+    Xvr_LLVMOptimizer* opt = (Xvr_LLVMOptimizer*)calloc(1, sizeof(Xvr_LLVMOptimizer));
     if (!opt) {
         return NULL;
     }

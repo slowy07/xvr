@@ -47,7 +47,7 @@ Xvr_LLVMTypeMapper* Xvr_LLVMTypeMapperCreate(Xvr_LLVMContext* ctx) {
         return NULL;
     }
 
-    Xvr_LLVMTypeMapper* mapper = calloc(1, sizeof(Xvr_LLVMTypeMapper));
+    Xvr_LLVMTypeMapper* mapper = (Xvr_LLVMTypeMapper*)calloc(1, sizeof(Xvr_LLVMTypeMapper));
     if (!mapper) {
         return NULL;
     }
