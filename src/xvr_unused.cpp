@@ -1,6 +1,6 @@
 #include "xvr_unused.h"
 
-#include <stdio.h>
+#include <cstdio>
 
 #include "xvr_console_colors.h"
 #include "xvr_literal.h"
@@ -270,6 +270,8 @@ static void checkNode(Xvr_UnusedChecker* checker, Xvr_ASTNode* node) {
     }
 }
 
+extern "C" {
+
 void Xvr_initUnusedChecker(Xvr_UnusedChecker* checker) {
     checker->scopes = NULL;
     checker->scopeCount = 0;
@@ -297,4 +299,6 @@ void Xvr_checkUnusedNode(Xvr_UnusedChecker* checker, Xvr_ASTNode* node) {
 bool Xvr_checkUnusedEnd(Xvr_UnusedChecker* checker) {
     popScope(checker);
     return !checker->hasError;
+}
+
 }

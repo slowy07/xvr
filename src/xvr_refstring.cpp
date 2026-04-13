@@ -1,112 +1,123 @@
-#include "xvr_refstring.hpp"
 #include "xvr_refstring.h"
-#include "xvr_memory.h"
+
 #include <cstring>
+#include <cstdio>
 
-namespace xvr {
+#include "xvr_memory.h"
+#include "xvr_string_utils.h"
 
-void RefString::allocateAndCopy(const char* str, size_t len) {
-    capacity_ = len + 1;
-    data_ = static_cast<char*>(Xvr_reallocate(nullptr, 0, capacity_));
-    length_ = len;
-    refCount_ = 1;
-    if (str) {
-        std::memcpy(data_, str, len);
-        data_[len] = '\0';
+#if defined(XVR_DEBUG) || defined(DEBUG)
+static int g_refstring_count = 0;
+#endif
+
+static Xvr_RefStringAllocatorFn allocate = [](void* pointer, size_t oldSize, size_t newSize) -> void* {
+    return Xvr_reallocate(pointer, oldSize, newSize);
+};
+
+extern "C" {
+
+void Xvr_setRefStringAllocatorFn(Xvr_RefStringAllocatorFn allocator) {
+    allocate = allocator;
+}
+
+Xvr_RefString* Xvr_createRefString(const char* cstring) {
+    size_t length = xvr_safe_strlen(cstring, 4096);
+    return Xvr_createRefStringLength(cstring, length);
+}
+
+Xvr_RefString* Xvr_createRefStringLength(const char* cstring, size_t length) {
+    size_t totalSize = sizeof(size_t) + sizeof(int) + sizeof(char) * (length + 1);
+    Xvr_RefString* refString = static_cast<Xvr_RefString*>(allocate(NULL, 0, totalSize));
+
+    if (refString == NULL) {
+        return NULL;
+    }
+
+    refString->refCount = 1;
+    refString->length = length;
+    
+    if (cstring && length > 0) {
+        std::memcpy(refString->data, cstring, length);
+    }
+    refString->data[length] = '\0';
+
+#if defined(XVR_DEBUG) || defined(DEBUG)
+    g_refstring_count++;
+#endif
+
+    return refString;
+}
+
+void Xvr_deleteRefString(Xvr_RefString* refString) {
+    if (!refString) return;
+    
+    refString->refCount--;
+    if (refString->refCount <= 0) {
+#if defined(XVR_DEBUG) || defined(DEBUG)
+        g_refstring_count--;
+#endif
+        size_t totalSize = sizeof(size_t) + sizeof(int) + sizeof(char) * (refString->length + 1);
+        allocate(refString, totalSize, 0);
     }
 }
 
-RefString::RefString(const char* str) {
-    if (str) {
-        allocateAndCopy(str, std::strlen(str));
+int Xvr_countRefString(Xvr_RefString* refString) { 
+    if (!refString) return 0;
+    return refString->refCount; 
+}
+
+size_t Xvr_lengthRefString(Xvr_RefString* refString) {
+    if (!refString) return 0;
+    return refString->length;
+}
+
+Xvr_RefString* Xvr_copyRefString(Xvr_RefString* refString) {
+    if (!refString) return NULL;
+    refString->refCount++;
+    return refString;
+}
+
+Xvr_RefString* Xvr_deepCopyRefString(Xvr_RefString* refString) {
+    if (!refString) return NULL;
+    return Xvr_createRefStringLength(refString->data, refString->length);
+}
+
+const char* Xvr_toCString(Xvr_RefString* refString) { 
+    if (!refString) return "";
+    return refString->data; 
+}
+
+bool Xvr_equalsRefString(Xvr_RefString* lhs, Xvr_RefString* rhs) {
+    if (lhs == rhs) {
+        return true;
     }
-}
-
-RefString::RefString(const char* str, size_t len) {
-    if (str && len > 0) {
-        allocateAndCopy(str, len);
+    if (!lhs || !rhs) {
+        return false;
     }
-}
-
-RefString::RefString(std::string_view view) {
-    if (!view.empty()) {
-        allocateAndCopy(view.data(), view.size());
+    if (lhs->length != rhs->length) {
+        return false;
     }
+    return std::strncmp(lhs->data, rhs->data, lhs->length) == 0;
 }
 
-RefString::RefString(const RefString& other) 
-    : data_(other.data_), length_(other.length_), 
-      refCount_(other.refCount_), capacity_(other.capacity_) {
-    incrementRef();
-}
-
-RefString& RefString::operator=(const RefString& other) {
-    if (this != &other) {
-        decrementRef();
-        data_ = other.data_;
-        length_ = other.length_;
-        refCount_ = other.refCount_;
-        capacity_ = other.capacity_;
-        incrementRef();
+bool Xvr_equalsRefStringCString(Xvr_RefString* lhs, char* cstring) {
+    if (!lhs || !cstring) return false;
+    
+    size_t length = xvr_safe_strlen(cstring, 4096);
+    if (lhs->length != length) {
+        return false;
     }
-    return *this;
+    return std::strncmp(lhs->data, cstring, lhs->length) == 0;
 }
 
-RefString::RefString(RefString&& other) noexcept 
-    : data_(other.data_), length_(other.length_),
-      refCount_(other.refCount_), capacity_(other.capacity_) {
-    other.data_ = nullptr;
-    other.length_ = 0;
-    other.refCount_ = 0;
-    other.capacity_ = 0;
+#if defined(XVR_DEBUG) || defined(DEBUG)
+void Xvr_debugPrintRefStringStats(void) {
+    fprintf(stderr, "[RefString] Active strings: %d\n", g_refstring_count);
 }
 
-RefString& RefString::operator=(RefString&& other) noexcept {
-    if (this != &other) {
-        decrementRef();
-        data_ = other.data_;
-        length_ = other.length_;
-        refCount_ = other.refCount_;
-        capacity_ = other.capacity_;
-        other.data_ = nullptr;
-        other.length_ = 0;
-        other.refCount_ = 0;
-        other.capacity_ = 0;
-    }
-    return *this;
-}
+int Xvr_debugGetRefStringCount(void) { return g_refstring_count; }
 
-RefString::~RefString() {
-    decrementRef();
-}
+void Xvr_debugResetRefStringStats(void) { g_refstring_count = 0; }
+#endif
 
-void RefString::incrementRef() {
-    if (data_) {
-        ++refCount_;
-    }
 }
-
-void RefString::decrementRef() {
-    if (data_ && --refCount_ == 0) {
-        XVR_FREE(char, data_);
-        data_ = nullptr;
-    }
-}
-
-RefString* RefString::create(const char* str) {
-    return new RefString(str);
-}
-
-RefString* RefString::create(const char* str, size_t len) {
-    return new RefString(str, len);
-}
-
-RefString* RefString::create(std::string_view view) {
-    return new RefString(view);
-}
-
-void RefString::destroy(RefString* rs) {
-    delete rs;
-}
-
-}  // namespace xvr

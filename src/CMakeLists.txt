@@ -11,13 +11,12 @@ set(XVR_SOURCES
     xvr_memory.cpp
     xvr_parser.cpp
     xvr_print_handler.cpp
-xvr_refstring.c
     xvr_refstring.cpp
     xvr_runtime.cpp
     xvr_scope.cpp
     core/semantic/xvr_semantic.cpp
     xvr_string_utils.cpp
-    xvr_unused.c
+    xvr_unused.cpp
     sema/xvr_builtin.cpp
     optimizer/xvr_ast_optimizer.cpp
     adapters/llvm/xvr_asm_config.cpp
