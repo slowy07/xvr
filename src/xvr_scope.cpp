@@ -24,6 +24,7 @@ SOFTWARE.
 
 #include "xvr_scope.h"
 
+#include <cstdio>
 #include <stdatomic.h>
 
 #include "xvr_literal.h"

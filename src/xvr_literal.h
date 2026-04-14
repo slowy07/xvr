@@ -301,6 +301,8 @@ typedef struct Xvr_Literal {
 #define XVR_AS_TYPE(value) ((value).as.type)
 #define XVR_AS_OPAQUE(value) ((value).as.opaque.ptr)
 
+#define XVR_TO_IDENTIFIER_LITERAL(value) Xvr_private_toIdentifierLiteral(value)
+
 #ifndef __cplusplus
 #    define XVR_TO_NULL_LITERAL \
         ((Xvr_Literal){{.integer = 0}, XVR_LITERAL_NULL, 0})
@@ -329,8 +331,6 @@ typedef struct Xvr_Literal {
         ((Xvr_Literal){{.function.inner.hook = value, .function.scope = NULL}, \
                        XVR_LITERAL_FUNCTION_HOOK,                              \
                        0})
-#    define XVR_TO_IDENTIFIER_LITERAL(value) \
-        Xvr_private_toIdentifierLiteral(value)
 #    define XVR_TO_TYPE_LITERAL(value, c)      \
         ((Xvr_Literal){{.type.typeOf = value,  \
                         .type.constant = c,    \
@@ -560,14 +560,6 @@ inline Xvr_Literal Xvr_toStringLiteralCpp(Xvr_RefString* value) {
     l.bytecodeLength = 0;
     return l;
 }
-inline Xvr_Literal Xvr_toIdentifierLiteralCpp(Xvr_RefString* value, int hash) {
-    Xvr_Literal l = {0};
-    l.as.identifier.ptr = value;
-    l.as.identifier.hash = hash;
-    l.type = XVR_LITERAL_IDENTIFIER;
-    l.bytecodeLength = 0;
-    return l;
-}
 inline Xvr_Literal Xvr_toArrayLiteralCpp(void* value, int count) {
     (void)count;
     Xvr_Literal l = {0};
@@ -644,8 +636,6 @@ inline Xvr_Literal Xvr_toIndexBlankLiteralCpp() {
 #    define XVR_TO_FLOAT32_LITERAL(value) Xvr_toFloat32LiteralCpp(value)
 #    define XVR_TO_FLOAT64_LITERAL(value) Xvr_toFloat64LiteralCpp(value)
 #    define XVR_TO_STRING_LITERAL(value) Xvr_toStringLiteralCpp(value)
-#    define XVR_TO_IDENTIFIER_LITERAL(value) \
-        Xvr_toIdentifierLiteralCpp(value, 0)
 #    define XVR_TO_ARRAY_LITERAL(value) Xvr_toArrayLiteralCpp(value, 0)
 #    define XVR_TO_FUNCTION_LITERAL(value, length) \
         Xvr_toFunctionLiteralCpp(value, length)

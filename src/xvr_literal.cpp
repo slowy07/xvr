@@ -319,9 +319,7 @@ Xvr_Literal Xvr_copyLiteral(Xvr_Literal original) {
 }
 
 bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
-    // utility for other things
     if (lhs.type != rhs.type) {
-        // ints and floats are compatible
         if ((XVR_IS_INTEGER(lhs) || XVR_IS_FLOAT(lhs)) &&
             (XVR_IS_INTEGER(rhs) || XVR_IS_FLOAT(rhs))) {
             float lhsVal = XVR_IS_INTEGER(lhs) ? (float)XVR_AS_INTEGER(lhs)
@@ -437,14 +435,15 @@ bool Xvr_literalsAreEqual(Xvr_Literal lhs, Xvr_Literal rhs) {
         return false;  // functions are never equal
         break;
 
-    case XVR_LITERAL_IDENTIFIER:
-        // check shortcuts
-        if (XVR_HASH_I(lhs) != XVR_HASH_I(rhs)) {
+    case XVR_LITERAL_IDENTIFIER: {
+        int lhsHash = XVR_HASH_I(lhs);
+        int rhsHash = XVR_HASH_I(rhs);
+        if (lhsHash != rhsHash) {
             return false;
         }
-
         return Xvr_equalsRefString(XVR_AS_IDENTIFIER(lhs),
                                    XVR_AS_IDENTIFIER(rhs));
+    }
 
     case XVR_LITERAL_TYPE:
         // check types
