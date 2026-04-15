@@ -41,20 +41,18 @@ jobs:
           cd ${{ env.BUILD_DIR }}
           ln -sf xvr_test_all ../xvr_test_all 2>/dev/null || true
 
-      - name: Run tests
-        run: |
-          cd ${{ env.BUILD_DIR }}
-          ./xvr_test_all || exit 1
-
       - name: Run tests with verbose output
         run: |
           cd ${{ env.BUILD_DIR }}
-          ./xvr_test_all -v --success || true
+          ./xvr_test_all -s --verbosity high 2>&1 | tee test_output.txt
+          echo "---"
+          echo "Test Summary:"
+          grep -E "passed|failed|assertions|test cases|All tests" test_output.txt | tail -10
 
       - name: List all tests
         run: |
           cd ${{ env.BUILD_DIR }}
-          ./xvr_test_all --list-tests || true
+          ./xvr_test_all --list-tests --list-tags || true
 
       - name: Verify build outputs
         run: |
@@ -113,7 +111,11 @@ jobs:
         run: |
           cd ${{ env.BUILD_DIR }}-asan
           ln -sf xvr_test_all ../xvr_test_all 2>/dev/null || true
-          ASAN_OPTIONS=detect_leaks=0 ./xvr_test_all 2>&1 || true
+          echo "Running tests with AddressSanitizer..."
+          ASAN_OPTIONS=detect_leaks=0 ./xvr_test_all -s --verbosity high 2>&1 | tee asan_output.txt || true
+          echo "---"
+          echo "ASAN Summary:"
+          grep -E "passed|failed|assertions|ERROR|All tests" asan_output.txt | tail -10
 
   build-static-only:
     name: Static Library Only
@@ -169,19 +171,23 @@ jobs:
       - name: Run unit tests only
         run: |
           cd ${{ env.BUILD_DIR }}
-          ./xvr_test_all "[unit]" --success
+          echo "=== Running [unit] tests ==="
+          ./xvr_test_all "[unit]" -s --verbosity high
 
       - name: Run lexer tests
         run: |
           cd ${{ env.BUILD_DIR }}
-          ./xvr_test_all "[lexer]" --success
+          echo "=== Running [lexer] tests ==="
+          ./xvr_test_all "[lexer]" -s --verbosity high
 
       - name: Run parser tests
         run: |
           cd ${{ env.BUILD_DIR }}
-          ./xvr_test_all "[parser]" --success
+          echo "=== Running [parser] tests ==="
+          ./xvr_test_all "[parser]" -s --verbosity high
 
       - name: Run llvm backend tests
         run: |
           cd ${{ env.BUILD_DIR }}
-          ./xvr_test_all "[llvm]" --success
+          echo "=== Running [llvm] tests ==="
+          ./xvr_test_all "[llvm]" -s --verbosity high
