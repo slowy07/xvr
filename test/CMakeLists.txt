@@ -11,7 +11,7 @@ FetchContent_MakeAvailable(catch2)
 set(TEST_SOURCES
     xvr_test_main.cpp
     fixtures/xvr_test_fixture.cpp
-    test_literal.c
+    test_literal.cpp
     test_scope.c
     test_lexer.c
     test_parser.c
