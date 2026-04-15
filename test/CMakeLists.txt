@@ -15,11 +15,11 @@ set(TEST_SOURCES
     test_scope.cpp
     test_lexer.cpp
     test_parser.cpp
-    test_memory.c
-    test_compiler.c
-    test_llvm_backend.c
-    test_std.c
-    test_ast_node.c
+    test_memory.cpp
+    test_std.cpp
+    test_ast_node.cpp
+    test_compiler.cpp
+    test_llvm_backend.cpp
 )
 
 add_executable(xvr_test_all ${TEST_SOURCES})
