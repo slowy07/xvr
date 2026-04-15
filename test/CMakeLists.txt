@@ -13,7 +13,7 @@ set(TEST_SOURCES
     fixtures/xvr_test_fixture.cpp
     test_literal.cpp
     test_scope.cpp
-    test_lexer.c
+    test_lexer.cpp
     test_parser.c
     test_memory.c
     test_compiler.c
