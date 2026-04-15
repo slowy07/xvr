@@ -14,7 +14,7 @@ set(TEST_SOURCES
     test_literal.cpp
     test_scope.cpp
     test_lexer.cpp
-    test_parser.c
+    test_parser.cpp
     test_memory.c
     test_compiler.c
     test_llvm_backend.c
