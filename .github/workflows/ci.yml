@@ -2,7 +2,7 @@ name: CI - CMake Build and Test
 
 on:
   push:
-    branches: [main]
+    branches: [main, migrate-codebase]
   pull_request:
     branches: [main]
 
@@ -36,10 +36,25 @@ jobs:
           cd ${{ env.BUILD_DIR }}
           cmake --build . -j$(nproc)
 
-      - name: Run tests with CTest
+      - name: Create test symlink
         run: |
           cd ${{ env.BUILD_DIR }}
-          ctest --output-on-failure
+          ln -sf xvr_test_all ../xvr_test_all 2>/dev/null || true
+
+      - name: Run tests
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          ./xvr_test_all || exit 1
+
+      - name: Run tests with verbose output
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          ./xvr_test_all -v --success || true
+
+      - name: List all tests
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          ./xvr_test_all --list-tests || true
 
       - name: Verify build outputs
         run: |
@@ -97,6 +112,7 @@ jobs:
       - name: Run sanitized tests
         run: |
           cd ${{ env.BUILD_DIR }}-asan
+          ln -sf xvr_test_all ../xvr_test_all 2>/dev/null || true
           ASAN_OPTIONS=detect_leaks=0 ./xvr_test_all 2>&1 || true
 
   build-static-only:
@@ -124,3 +140,48 @@ jobs:
         run: |
           test -f ${{ env.BUILD_DIR }}-static/src/libxvr.a && echo "Static build successful"
           test -f ${{ env.BUILD_DIR }}-static/xvr && echo "Executable built"
+
+  test-tags:
+    name: Test with Tags
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM ${{ env.LLVM_VERSION }}
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null > /dev/null
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+
+      - name: Configure CMake
+        run: |
+          mkdir -p ${{ env.BUILD_DIR }}
+          cd ${{ env.BUILD_DIR }}
+          cmake .. -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          cmake --build . -j$(nproc)
+
+      - name: Run unit tests only
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          ./xvr_test_all "[unit]" --success
+
+      - name: Run lexer tests
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          ./xvr_test_all "[lexer]" --success
+
+      - name: Run parser tests
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          ./xvr_test_all "[parser]" --success
+
+      - name: Run llvm backend tests
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          ./xvr_test_all "[llvm]" --success
