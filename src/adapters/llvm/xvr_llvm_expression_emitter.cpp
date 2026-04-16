@@ -4313,8 +4313,19 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
                         insert_callee = LLVMAddFunction(
                             module, "xvr_array_insert_int", insert_fn_type);
                     } else {
-                        insert_fn_type =
-                            LLVMGetElementType(LLVMTypeOf(insert_callee));
+                        LLVMTypeRef callee_type = LLVMTypeOf(insert_callee);
+                        if (callee_type) {
+                            insert_fn_type = LLVMGetElementType(callee_type);
+                        }
+                    }
+
+                    if (!insert_fn_type) {
+                        LLVMTypeRef param_types[2] = {
+                            LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx),
+                                            0),
+                            LLVMInt32TypeInContext(llvm_ctx)};
+                        insert_fn_type = LLVMFunctionType(
+                            LLVMVoidTypeInContext(llvm_ctx), param_types, 2, 0);
                     }
 
                     for (int i = 0; i < comp->count && i < array_count; i++) {
@@ -4569,11 +4580,55 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmit(Xvr_LLVMExpressionEmitter* emitter,
             }
 
             LLVMValueRef args[2] = {array_ptr, index};
-            return LLVMBuildCall2(llvm_builder, fn_type, callee, args, 2,
-                                  "array_elem");
+            LLVMValueRef result =
+                LLVMBuildCall2(llvm_builder, fn_type, callee, args, 2,
+                              "array_elem");
+
+            /* Handle third index for nested array access (e.g., matrix[0][0]) */
+            if (index_node->third) {
+                LLVMValueRef third_index =
+                    Xvr_LLVMExpressionEmitterEmit(emitter, index_node->third);
+                if (!third_index) {
+                    return NULL;
+                }
+
+                /* Store the intermediate result to the stack and get its pointer */
+                LLVMTypeRef result_type = LLVMTypeOf(result);
+                LLVMValueRef temp_alloca =
+                    LLVMBuildAlloca(llvm_builder, result_type, "temp_elem");
+                LLVMBuildStore(llvm_builder, result, temp_alloca);
+
+                /* Load as pointer to array and index with third_index */
+                LLVMContextRef llvm_ctx =
+                    Xvr_LLVMContextGetLLVMContext(emitter->context);
+                LLVMValueRef array_ptr2 = LLVMBuildLoad2(
+                    llvm_builder,
+                    LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx), 0),
+                    temp_alloca, "temp_elem_ptr");
+
+                LLVMValueRef callee2 =
+                    LLVMGetNamedFunction(module, "xvr_array_get_int");
+                LLVMTypeRef fn_type2 = NULL;
+                if (!callee2) {
+                    LLVMTypeRef param_types[2] = {
+                        LLVMPointerType(LLVMInt32TypeInContext(llvm_ctx), 0),
+                        LLVMInt32TypeInContext(llvm_ctx)};
+                    fn_type2 = LLVMFunctionType(LLVMInt32TypeInContext(llvm_ctx),
+                                               param_types, 2, 0);
+                    callee2 = LLVMAddFunction(module, "xvr_array_get_int", fn_type2);
+                } else {
+                    fn_type2 = LLVMGetElementType(LLVMTypeOf(callee2));
+                }
+
+                LLVMValueRef args2[2] = {array_ptr2, third_index};
+                return LLVMBuildCall2(llvm_builder, fn_type2, callee2, args2, 2,
+                                      "nested_array_elem");
+            }
+
+            return result;
         }
 
-        /* Handle general index expressions (e.g., matrix[0][0]) */
+        /* Handle general index expressions (e.g., (expr)[0]) */
         LLVMValueRef base =
             Xvr_LLVMExpressionEmitterEmit(emitter, index_node->first);
         if (!base) {

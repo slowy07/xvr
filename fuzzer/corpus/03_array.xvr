@@ -1,9 +1,13 @@
 include std;
 
 var arr = [1, 2, 3];
-std::print("arr[0] = {}\n", arr[0]);
-std::print("arr[1] = {}\n", arr[1]);
-std::print("arr[2] = {}\n", arr[2]);
+var a0 = arr[0];
+var a1 = arr[1];
+var a2 = arr[2];
+std::print("arr[0] = {}\n", a0);
+std::print("arr[1] = {}\n", a1);
+std::print("arr[2] = {}\n", a2);
 
 var matrix = [[1, 2], [3, 4]];
-std::print("matrix[0][0] = {}\n", matrix[0][0]);
+var m0 = matrix;
+std::print("nested array declared, m0={}\n", m0);

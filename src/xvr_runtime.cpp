@@ -10,6 +10,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #ifndef XVR_CC_ERROR
 #    define XVR_CC_ERROR "\x1b[31m"
 #    define XVR_CC_NOTICE "\x1b[38;2;140;207;126m"
@@ -126,3 +130,7 @@ void xvr_array_set_int(void* arr_ptr, int index, int value) {
     }
     arr->data[index] = value;
 }
+
+#ifdef __cplusplus
+}
+#endif

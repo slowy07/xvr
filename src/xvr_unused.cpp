@@ -201,7 +201,8 @@ static void checkNode(Xvr_UnusedChecker* checker, Xvr_ASTNode* node) {
         break;
 
     case XVR_AST_NODE_FN_CALL:
-        if (node->fnCall.arguments) {
+        if (node->fnCall.arguments &&
+            node->fnCall.arguments->type == XVR_AST_NODE_FN_COLLECTION) {
             for (int i = 0; i < node->fnCall.arguments->fnCollection.count;
                  i++) {
                 checkNode(checker,
@@ -211,7 +212,8 @@ static void checkNode(Xvr_UnusedChecker* checker, Xvr_ASTNode* node) {
         break;
 
     case XVR_AST_NODE_FN_RETURN:
-        if (node->returns.returns) {
+        if (node->returns.returns &&
+            node->returns.returns->type == XVR_AST_NODE_FN_COLLECTION) {
             for (int i = 0; i < node->returns.returns->fnCollection.count;
                  i++) {
                 checkNode(checker,
