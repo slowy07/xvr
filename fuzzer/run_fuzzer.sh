@@ -7,8 +7,10 @@
 
 set -e
 
-XVR_COMPILER="./build/xvr"
-CORPUS_DIR="fuzzer/corpus"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
+XVR_COMPILER="$PROJECT_DIR/build/xvr"
+CORPUS_DIR="$SCRIPT_DIR/corpus"
 TEST_COUNT=0
 PASS_COUNT=0
 FAIL_COUNT=0

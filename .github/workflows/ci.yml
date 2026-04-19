@@ -196,6 +196,5 @@ jobs:
 
       - name: Run fuzzer corpus tests
         run: |
-          cd ${{ env.BUILD_DIR }}
           echo "=== Running fuzzer corpus ==="
-          cd ../fuzzer && ./run_fuzzer.sh
+          cd fuzzer && ./run_fuzzer.sh
