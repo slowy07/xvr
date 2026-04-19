@@ -71,6 +71,7 @@ CTestTestfile.cmake
 
 # Symlink to build/xvr (auto-created by build system)
 xvr
+xvr_test_all
 xvr_std_test.xvr
 
 # Compiler build artifacts

@@ -25,34 +25,39 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev clang-format
 
-      - name: Configure CMake
+      - name: Configure CMake (compiler only)
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}
-          cd ${{ env.BUILD_DIR }}
-          cmake .. -DCMAKE_BUILD_TYPE=Debug
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Debug -DXVR_BUILD_TESTS=OFF
 
-      - name: Build
+      - name: Build compiler
         run: |
-          cd ${{ env.BUILD_DIR }}
-          cmake --build . -j$(nproc)
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
 
-      - name: Create test symlink
+      - name: Configure CMake (with tests)
         run: |
-          cd ${{ env.BUILD_DIR }}
+          cmake -S . -B ${{ env.BUILD_DIR }}-test -DCMAKE_BUILD_TYPE=Debug -DXVR_BUILD_TESTS=ON
+
+      - name: Build tests
+        run: |
+          cmake --build ${{ env.BUILD_DIR }}-test -j$(nproc)
+
+      - name: Create test symlinks
+        run: |
+          cd ${{ env.BUILD_DIR }}-test
           ln -sf xvr_test_all ../xvr_test_all 2>/dev/null || true
+          cd ..
+          ln -sf build-test/xvr ./xvr 2>/dev/null || true
 
       - name: Run tests with verbose output
         run: |
-          cd ${{ env.BUILD_DIR }}
-          ./xvr_test_all -s --verbosity high 2>&1 | tee test_output.txt
+          ${{ env.BUILD_DIR }}/xvr_test_all -s --verbosity high 2>&1 | tee test_output.txt
           echo "---"
           echo "Test Summary:"
           grep -E "passed|failed|assertions|test cases|All tests" test_output.txt | tail -10
 
       - name: List all tests
         run: |
-          cd ${{ env.BUILD_DIR }}
-          ./xvr_test_all --list-tests --list-tags || true
+          ${{ env.BUILD_DIR }}/xvr_test_all --list-tests --list-tags || true
 
       - name: Verify build outputs
         run: |
@@ -77,9 +82,7 @@ jobs:
 
       - name: Configure and build Release
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}
-          cd ${{ env.BUILD_DIR }}
-          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Release
           cmake --build . -j$(nproc)
 
       - name: Verify Release build
@@ -102,15 +105,19 @@ jobs:
 
       - name: Build with AddressSanitizer
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}-asan
-          cd ${{ env.BUILD_DIR }}-asan
-          cmake .. -DXVR_SANITIZE=address -DCMAKE_BUILD_TYPE=Debug
+          cmake -S . -B ${{ env.BUILD_DIR }}-asan -DXVR_SANITIZE=address -DCMAKE_BUILD_TYPE=Debug
           cmake --build . -j$(nproc)
+
+      - name: Create test symlinks
+        run: |
+          cd ${{ env.BUILD_DIR }}-asan
+          ln -sf xvr_test_all ../xvr_test_all 2>/dev/null || true
+          cd ..
+          ln -sf build-asan/xvr ./xvr 2>/dev/null || true
 
       - name: Run sanitized tests
         run: |
           cd ${{ env.BUILD_DIR }}-asan
-          ln -sf xvr_test_all ../xvr_test_all 2>/dev/null || true
           echo "Running tests with AddressSanitizer..."
           ASAN_OPTIONS=detect_leaks=0 ./xvr_test_all -s --verbosity high 2>&1 | tee asan_output.txt || true
           echo "---"
@@ -133,9 +140,7 @@ jobs:
 
       - name: Build static only
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}-static
-          cd ${{ env.BUILD_DIR }}-static
-          cmake .. -DXVR_BUILD_SHARED=OFF -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B ${{ env.BUILD_DIR }}-static -DXVR_BUILD_SHARED=OFF -DCMAKE_BUILD_TYPE=Release
           cmake --build . -j$(nproc)
 
       - name: Verify static build
@@ -159,14 +164,11 @@ jobs:
 
       - name: Configure CMake
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}
-          cd ${{ env.BUILD_DIR }}
-          cmake .. -DCMAKE_BUILD_TYPE=Debug
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Debug
 
       - name: Build
         run: |
-          cd ${{ env.BUILD_DIR }}
-          cmake --build . -j$(nproc)
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
 
       - name: Run unit tests only
         run: |
@@ -191,3 +193,9 @@ jobs:
           cd ${{ env.BUILD_DIR }}
           echo "=== Running [llvm] tests ==="
           ./xvr_test_all "[llvm]" -s --verbosity high
+
+      - name: Run fuzzer corpus tests
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          echo "=== Running fuzzer corpus ==="
+          cd ../fuzzer && ./run_fuzzer.sh

@@ -3,32 +3,90 @@
 ## Table of Contents
 
 1. [Quick Start](#quick-start)
-2. [Compilation Flow](#compilation-flow)
-3. [Build Commands](#build-commands)
-4. [Emit Options](#emit-options)
-5. [Intel Syntax](#intel-syntax)
-6. [Running Compiled Programs](#running-compiled-programs)
-7. [Troubleshooting](#troubleshooting)
+2. [CMake Build](#cmake-build)
+3. [Compilation Flow](#compilation-flow)
+4. [Build Commands](#build-commands)
+5. [Emit Options](#emit-options)
+6. [Intel Syntax](#intel-syntax)
+7. [Running Compiled Programs](#running-compiled-programs)
+8. [Testing](#testing)
+9. [Troubleshooting](#troubleshooting)
 
 ---
 
 ## Quick Start
 
 ```bash
-# Build the compiler
-cd build && make -j4
+# Configure and build (compiler only - fast)
+cmake -S . -B build -DXVR_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Debug
+cmake --build build -j4
+
+# Or build with tests
+cmake -S . -B build -DXVR_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug
+cmake --build build -j4
 
 # Compile and run
-./xvr ../code/hello.xvr --run
+./build/xvr code/hello.xvr -r
 
 # Compile to executable
-./xvr ../code/hello.xvr -o hello
+./build/xvr code/hello.xvr -o hello
 
 # Emit assembly (ATT syntax - default)
-./xvr ../code/hello.xvr --emit asm -o hello.s
+./build/xvr code/hello.xvr --emit asm -o hello.s
 
 # Emit assembly (Intel syntax)
-./xvr ../code/hello.xvr --emit asm --asm-syntax intel -o hello.s
+./build/xvr code/hello.xvr --emit asm --asm-syntax intel -o hello.s
+```
+
+---
+
+## CMake Build
+
+### Build Without Tests (Recommended for Development)
+
+```bash
+# Configure - skips Catch2 FetchContent (much faster)
+cmake -S . -B build -DXVR_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Debug
+
+# Build
+cmake --build build -j$(nproc)
+```
+
+### Build With Tests
+
+```bash
+# Configure with tests enabled (will download Catch2)
+cmake -S . -B build -DXVR_BUILD_TESTS=ON -DCMAKE_BUILD_TYPE=Debug
+
+# Build
+cmake --build build -j$(nproc)
+
+# Run tests
+./build/xvr_test_all
+```
+
+### Build Options
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `CMAKE_BUILD_TYPE` | Build type: Debug, Release | Debug |
+| `XVR_BUILD_TESTS` | Build test suite | OFF |
+| `XVR_BUILD_SHARED` | Build shared library | ON |
+| `XVR_BUILD_STATIC` | Build static library | ON |
+| `XVR_SANITIZE` | Sanitizer: address, undefined, thread, all | (none) |
+
+### Release Build
+
+```bash
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+```
+
+### Build with Sanitizers
+
+```bash
+cmake -S . -B build -DXVR_SANITIZE=address -DCMAKE_BUILD_TYPE=Debug
+cmake --build build -j$(nproc)
 ```
 
 ---
@@ -346,6 +404,55 @@ cat output.ll
 # Show timing info
 ./xvr source.xvr --timing
 ```
+
+---
+
+## Testing
+
+### Run Unit Tests
+
+```bash
+# First ensure tests are built with XVR_BUILD_TESTS=ON
+cmake -S . -B build -DXVR_BUILD_TESTS=ON
+cmake --build build -j$(nproc)
+
+# Create symlink for tests
+ln -sf build/xvr ./xvr
+ln -sf build/xvr_test_all ./xvr_test_all
+
+# Run all tests
+./xvr_test_all
+
+# Run with verbose output
+./xvr_test_all -s --verbosity high
+
+# Run specific test tags
+./xvr_test_all "[lexer]"
+./xvr_test_all "[parser]"
+./xvr_test_all "[llvm]"
+./xvr_test_all "[std]"
+```
+
+### Run Fuzzer Tests
+
+```bash
+# Build compiler first
+cmake -S . -B build -DXVR_BUILD_TESTS=OFF -DCMAKE_BUILD_TYPE=Release
+cmake --build build -j$(nproc)
+
+# Run fuzzer corpus
+cd fuzzer && ./run_fuzzer.sh
+```
+
+### Test Tags
+
+| Tag | Description |
+|-----|-------------|
+| `[unit]` | Unit tests |
+| `[lexer]` | Lexer tests |
+| `[parser]` | Parser tests |
+| `[llvm]` | LLVM backend tests |
+| `[std]` | Standard library tests |
 
 ---
 
