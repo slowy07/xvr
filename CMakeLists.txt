@@ -44,7 +44,6 @@ link_directories(${LLVM_LIBRARY_DIRS})
 
 set(XVR_COMPILE_FLAGS
     -std=c++20
-    -pedantic
     -Wall
     -Wextra
     -Wno-unused-parameter
