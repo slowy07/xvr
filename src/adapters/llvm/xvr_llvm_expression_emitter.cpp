@@ -766,11 +766,11 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
                                     var_ptr, "array_ptr");
 
                                 const char* len_fn_name = "xvr_array_len";
+                                LLVMTypeRef len_param_types[] = {
+                                    LLVMPointerType(LLVMInt32TypeInContext(ctx), 0)};
                                 LLVMTypeRef len_fn_type = LLVMFunctionType(
                                     LLVMInt32TypeInContext(ctx),
-                                    (LLVMTypeRef[]){LLVMPointerType(
-                                        LLVMInt32TypeInContext(ctx), 0)},
-                                    1, false);
+                                    len_param_types, 1, false);
                                 LLVMValueRef len_fn =
                                     LLVMGetNamedFunction(m, len_fn_name);
                                 if (!len_fn) {
@@ -816,10 +816,11 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitBinary(
                             LLVMBuilderRef b = Xvr_LLVMIRBuilderGetLLVMBuilder(
                                 emitter->builder);
                             const char* len_fn_name = "xvr_str_len";
+                            LLVMTypeRef str_len_param_types[] = {
+                                LLVMInt8TypeInContext(ctx)};
                             LLVMTypeRef len_fn_type = LLVMFunctionType(
                                 LLVMInt32TypeInContext(ctx),
-                                (LLVMTypeRef[]){LLVMInt8TypeInContext(ctx)}, 1,
-                                false);
+                                str_len_param_types, 1, false);
                             LLVMValueRef len_fn =
                                 LLVMGetNamedFunction(m, len_fn_name);
                             if (!len_fn) {
@@ -1534,12 +1535,12 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
                 LLVMValueRef fmt_global =
                     LLVMBuildGlobalStringPtr(llvm_builder, fmt_str, "fmt_str");
                 LLVMValueRef all_args[2] = {fmt_global, print_arg};
+                LLVMTypeRef printf_param_types[] = {
+                    LLVMPointerType(LLVMInt8TypeInContext(llvm_ctx), 0),
+                    arg_type};
                 LLVMTypeRef printf_type = LLVMFunctionType(
                     LLVMInt32TypeInContext(llvm_ctx),
-                    (LLVMTypeRef[]){
-                        LLVMPointerType(LLVMInt8TypeInContext(llvm_ctx), 0),
-                        arg_type},
-                    2, true);
+                    printf_param_types, 2, true);
                 LLVMBuildCall2(llvm_builder, printf_type, printf_fn, all_args,
                                2, "printf_call");
             }
@@ -1710,13 +1711,13 @@ static LLVMValueRef emit_printf(Xvr_LLVMExpressionEmitter* emitter,
                         Xvr_LLVMExpressionEmitterEmit(emitter, format_node);
                     if (arg_val) {
                         LLVMValueRef all_args[2] = {fmt_global, arg_val};
+                        LLVMTypeRef printf_param_types[] = {
+                            LLVMPointerType(LLVMInt8TypeInContext(llvm_ctx),
+                                            0),
+                            LLVMTypeOf(arg_val)};
                         LLVMTypeRef printf_type = LLVMFunctionType(
                             LLVMInt32TypeInContext(llvm_ctx),
-                            (LLVMTypeRef[]){
-                                LLVMPointerType(LLVMInt8TypeInContext(llvm_ctx),
-                                                0),
-                                LLVMTypeOf(arg_val)},
-                            2, true);
+                            printf_param_types, 2, true);
                         LLVMBuildCall2(llvm_builder, printf_type, printf_fn,
                                        all_args, 2, "printf_call");
                     }
@@ -1850,12 +1851,12 @@ static LLVMValueRef emit_printfln(Xvr_LLVMExpressionEmitter* emitter,
             LLVMValueRef fmt_global =
                 LLVMBuildGlobalStringPtr(llvm_builder, fmt_str, "fmt_str");
             LLVMValueRef all_args[2] = {fmt_global, print_arg};
+            LLVMTypeRef println_param_types[] = {
+                LLVMPointerType(LLVMInt8TypeInContext(llvm_ctx), 0),
+                arg_type};
             LLVMTypeRef printf_type = LLVMFunctionType(
                 LLVMInt32TypeInContext(llvm_ctx),
-                (LLVMTypeRef[]){
-                    LLVMPointerType(LLVMInt8TypeInContext(llvm_ctx), 0),
-                    arg_type},
-                2, true);
+                println_param_types, 2, true);
             LLVMBuildCall2(llvm_builder, printf_type, printf_fn, all_args, 2,
                            "printf_call");
         }
@@ -3818,11 +3819,11 @@ static LLVMValueRef emit_unary_op(Xvr_LLVMExpressionEmitter* emitter,
 
         /* Get or create printf function */
         LLVMValueRef callee = LLVMGetNamedFunction(module, "printf");
+        LLVMTypeRef printf_param_types[] = {
+            LLVMPointerType(LLVMInt8TypeInContext(llvm_ctx), 0)};
         LLVMTypeRef printf_type =
             LLVMFunctionType(LLVMInt32TypeInContext(llvm_ctx),
-                             (LLVMTypeRef[]){LLVMPointerType(
-                                 LLVMInt8TypeInContext(llvm_ctx), 0)},
-                             1, true);
+                            printf_param_types, 1, true);
         if (!callee) {
             callee = LLVMAddFunction(module, "printf", printf_type);
         }
