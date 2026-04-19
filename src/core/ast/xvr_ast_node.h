@@ -40,6 +40,10 @@ SOFTWARE.
 #ifndef XVR_AST_NODE_H
 #define XVR_AST_NODE_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "xvr_common.h"
 #include "xvr_literal.h"
 #include "xvr_opcodes.h"
@@ -532,5 +536,9 @@ union Xvr_private_node {
  * @note safe to call multiple time (idempotent)
  */
 XVR_API void Xvr_freeASTNode(Xvr_ASTNode* node);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // !XVR_AST_NODE_H

@@ -1,37 +1,49 @@
 include math;
 include std;
 
-proc test_sqrt_loop(): void {
+proc test_sqrt_loop(): float {
+    var sum = 0.0;
     var i = 0;
     while (i < 100) {
         var x = math::sqrt(float64(i));
+        sum = sum + x;
         i = i + 1;
     }
+    return sum;
 }
 
-proc test_pow_loop(): void {
+proc test_pow_loop(): float {
+    var sum = 0.0;
     var i = 0;
     while (i < 50) {
         var x = math::pow(2.0, float64(i));
+        sum = sum + x;
         i = i + 1;
     }
+    return sum;
 }
 
-proc test_trig_loop(): void {
+proc test_trig_loop(): float {
+    var sum = 0.0;
     var i = 0;
     while (i < 100) {
         var s = math::sin(float64(i) * 0.1);
         var c = math::cos(float64(i) * 0.1);
+        sum = sum + s + c;
         i = i + 1;
     }
+    return sum;
 }
 
-proc test_abs_loop(): void {
+proc test_abs_loop(): int {
+    var sum = 0;
     var i = -50;
     while (i < 50) {
         var x = math::abs(i);
+        sum = sum + x;
         i = i + 1;
     }
+    return sum;
 }
 
 proc test_combined(): float {
@@ -47,24 +59,33 @@ proc test_combined(): float {
     return result;
 }
 
-proc test_nested(): void {
+proc test_nested(): float {
+    var sum = 0.0;
     var i = 0;
     while (i < 10) {
         var j = 0;
         while (j < 10) {
             var x = math::sqrt(float64(i * i + j * j));
             var y = math::pow(float64(i), 2.0) + math::pow(float64(j), 2.0);
+            sum = sum + x + y;
             j = j + 1;
         }
         i = i + 1;
     }
+    return sum;
 }
 
-test_sqrt_loop();
-test_pow_loop();
-test_trig_loop();
-test_abs_loop();
+var sqrt_result = test_sqrt_loop();
+var pow_result = test_pow_loop();
+var trig_result = test_trig_loop();
+var abs_result = float64(test_abs_loop());
 var combined = test_combined();
-test_nested();
+var nested = test_nested();
 
+std::println("sqrt sum: {}", sqrt_result);
+std::println("pow sum: {}", pow_result);
+std::println("trig sum: {}", trig_result);
+std::println("abs sum: {}", abs_result);
+std::println("combined: {}", combined);
+std::println("nested: {}", nested);
 std::println("All stress tests completed");

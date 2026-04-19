@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef XVR_LLVM_CONTEXT_H
 #define XVR_LLVM_CONTEXT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <llvm-c/Core.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -115,5 +119,9 @@ void Xvr_LLVMContextClearError(Xvr_LLVMContext* ctx);
  * making Xvr_LLVMContextHasError() return true.
  */
 void Xvr_LLVMContextSetError(Xvr_LLVMContext* ctx, const char* message);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

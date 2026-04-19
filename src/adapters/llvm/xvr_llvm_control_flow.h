@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef XVR_LLVM_CONTROL_FLOW_H
 #define XVR_LLVM_CONTROL_FLOW_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <llvm-c/Core.h>
 #include <stdbool.h>
 
@@ -63,5 +67,9 @@ void Xvr_LLVMControlFlowPrintError(Xvr_LLVMControlFlow* cf);
 
 LLVMValueRef Xvr_LLVMControlFlowGetLastExpressionResult(
     Xvr_LLVMControlFlow* cf);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

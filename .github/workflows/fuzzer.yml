@@ -39,14 +39,11 @@ jobs:
 
       - name: Configure CMake
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}
-          cd ${{ env.BUILD_DIR }}
-          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Release
 
       - name: Build
         run: |
-          cd ${{ env.BUILD_DIR }}
-          cmake --build . -j$(nproc)
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
 
       - name: Verify build
         run: |
@@ -71,10 +68,8 @@ jobs:
 
       - name: Build
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}
-          cd ${{ env.BUILD_DIR }}
-          cmake .. -DCMAKE_BUILD_TYPE=Release
-          cmake --build . -j$(nproc)
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Release
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
 
       - name: Run fuzzing test suite
         run: |
@@ -106,10 +101,8 @@ jobs:
 
       - name: Build
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}
-          cd ${{ env.BUILD_DIR }}
-          cmake .. -DCMAKE_BUILD_TYPE=Release
-          cmake --build . -j$(nproc)
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Release
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
 
       - name: Run regression tests
         run: |
@@ -141,10 +134,8 @@ jobs:
 
       - name: Build
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}
-          cd ${{ env.BUILD_DIR }}
-          cmake .. -DCMAKE_BUILD_TYPE=Release
-          cmake --build . -j$(nproc)
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Release
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
 
       - name: Test corpus files
         run: |
@@ -188,10 +179,8 @@ jobs:
 
       - name: Build
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}
-          cd ${{ env.BUILD_DIR }}
-          cmake .. -DCMAKE_BUILD_TYPE=Release
-          cmake --build . -j$(nproc)
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Release
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
 
       - name: Run stress tests
         run: |

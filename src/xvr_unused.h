@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef XVR_UNUSED_H
 #define XVR_UNUSED_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 
 #include "xvr_ast_node.h"
@@ -150,5 +154,9 @@ XVR_API void Xvr_checkUnusedNode(Xvr_UnusedChecker* checker, Xvr_ASTNode* node);
  * @return true if no unused declarations were found, false otherwise.
  */
 XVR_API bool Xvr_checkUnusedEnd(Xvr_UnusedChecker* checker);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

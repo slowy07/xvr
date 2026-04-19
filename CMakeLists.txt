@@ -1,9 +1,12 @@
 cmake_minimum_required(VERSION 3.16)
-project(xvr LANGUAGES C)
+project(xvr LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_EXTENSIONS ON)
+set(CMAKE_CXX_EXTENSIONS ON)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -37,38 +40,7 @@ add_definitions(${LLVM_DEFINITIONS})
 link_directories(${LLVM_LIBRARY_DIRS})
 
 set(XVR_COMPILE_FLAGS
-    -std=c11
-    -pedantic
-    -Wall
-    -Wextra
-    -Wno-unused-parameter
-    -Wno-unused-function
-    -Wno-unused-variable
-)
-
-if(XVR_DEBUG)
-    set(XVR_DEBUG ON)
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-    list(APPEND XVR_COMPILE_FLAGS -O2)
-endif()
-
-set(XVR_OUTPUT_DIR ${CMAKE_BINARY_DIR})
-set(XVR_LIB_DIR ${XVR_OUTPUT_DIR})
-set(XVR_BIN_DIR ${XVR_OUTPUT_DIR})
-
-include(GNUInstallDirs)
-
-find_package(LLVM REQUIRED CONFIG)
-
-message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
-message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
-
-include_directories(${LLVM_INCLUDE_DIRS})
-add_definitions(${LLVM_DEFINITIONS})
-link_directories(${LLVM_LIBRARY_DIRS})
-
-set(XVR_COMPILE_FLAGS
-    -std=c11
+    -std=c++20
     -pedantic
     -Wall
     -Wextra
@@ -80,20 +52,6 @@ set(XVR_COMPILE_FLAGS
 if(XVR_DEBUG)
     list(APPEND XVR_COMPILE_FLAGS -g -DDEBUG -DXVR_DEBUG=1)
     list(APPEND XVR_COMPILE_FLAGS -fno-omit-frame-pointer)
-endif()
-
-if(XVR_SANITIZE)
-    if(XVR_SANITIZE STREQUAL "address")
-        set(XVR_SANITIZER address)
-    elseif(XVR_SANITIZE STREQUAL "undefined")
-        set(XVR_SANITIZER undefined)
-    elseif(XVR_SANITIZE STREQUAL "thread")
-        set(XVR_SANITIZER thread)
-    elseif(XVR_SANITIZE STREQUAL "memory")
-        set(XVR_SANITIZER memory)
-    elseif(XVR_SANITIZE STREQUAL "all")
-        set(XVR_SANITIZER "address,undefined,thread")
-    endif()
 endif()
 
 if(XVR_SANITIZE)
@@ -113,6 +71,7 @@ endif()
 add_subdirectory(src)
 add_subdirectory(compiler)
 
+option(XVR_BUILD_TESTS "Build test suite" OFF)
 if(XVR_BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)

@@ -43,6 +43,10 @@ SOFTWARE.
 #include "xvr_literal_array.h"
 #include "xvr_literal_dictionary.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @struct Xvr_scope
  * @brief single lexical environment frame
@@ -169,3 +173,7 @@ bool Xvr_getScopeVariable(Xvr_Scope* scope, Xvr_Literal key,
 Xvr_Literal Xvr_getScopeType(Xvr_Scope* scope, Xvr_Literal key);
 
 #endif  // !XVR_SCOPE_H
+
+#ifdef __cplusplus
+}
+#endif

@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef XVR_LLVM_MODULE_MANAGER_H
 #define XVR_LLVM_MODULE_MANAGER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <llvm-c/Core.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -58,5 +62,9 @@ bool Xvr_LLVMModuleManagerWriteBitcode(Xvr_LLVMModuleManager* mgr,
                                        const char* filepath);
 bool Xvr_LLVMModuleManagerWriteObjectFile(Xvr_LLVMModuleManager* mgr,
                                           const char* filepath);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

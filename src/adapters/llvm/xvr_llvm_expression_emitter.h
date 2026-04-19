@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef XVR_LLVM_EXPRESSION_EMITTER_H
 #define XVR_LLVM_EXPRESSION_EMITTER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <llvm-c/Core.h>
 
 #include "xvr_ast_node.h"
@@ -97,5 +101,9 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitLiteral(
 
 LLVMValueRef Xvr_LLVMExpressionEmitterEmitIdentifier(
     Xvr_LLVMExpressionEmitter* emitter, Xvr_Literal identifier);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

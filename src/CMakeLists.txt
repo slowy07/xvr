@@ -1,38 +1,38 @@
 set(XVR_SOURCES
-    core/types/xvr_type.c
-    xvr_cast_emit.c
-    xvr_common.c
-    xvr_format_string.c
-    xvr_keyword_types.c
-    xvr_lexer.c
-    xvr_literal.c
-    xvr_literal_array.c
-    xvr_literal_dictionary.c
-    xvr_memory.c
-    xvr_parser.c
-    xvr_print_handler.c
-    xvr_refstring.c
-    xvr_runtime.c
-    xvr_scope.c
-    core/semantic/xvr_semantic.c
-    xvr_string_utils.c
-    xvr_unused.c
-    sema/xvr_builtin.c
-    optimizer/xvr_ast_optimizer.c
-    adapters/llvm/xvr_asm_config.c
-    adapters/llvm/xvr_llvm_codegen.c
-    adapters/llvm/xvr_llvm_context.c
-    adapters/llvm/xvr_llvm_control_flow.c
-    adapters/llvm/xvr_llvm_expression_emitter.c
-    adapters/llvm/xvr_llvm_function_emitter.c
-    adapters/llvm/xvr_llvm_ir_builder.c
-    adapters/llvm/xvr_llvm_module_manager.c
-    adapters/llvm/xvr_llvm_optimizer.c
-    adapters/llvm/xvr_llvm_target.c
-    adapters/llvm/xvr_llvm_type_mapper.c
-    core/ir/xvr_ir.c
-    core/ir/xvr_ir_generator.c
-    core/ast/xvr_ast_node.c
+    core/types/xvr_type.cpp
+    xvr_cast_emit.cpp
+    xvr_common.cpp
+    xvr_format_string.cpp
+    xvr_keyword_types.cpp
+    xvr_lexer.cpp
+    xvr_literal.cpp
+    xvr_literal_array.cpp
+    xvr_literal_dictionary.cpp
+    xvr_memory.cpp
+    xvr_parser.cpp
+    xvr_print_handler.cpp
+    xvr_refstring.cpp
+    xvr_runtime.cpp
+    xvr_scope.cpp
+    core/semantic/xvr_semantic.cpp
+    xvr_string_utils.cpp
+    xvr_unused.cpp
+    sema/xvr_builtin.cpp
+    optimizer/xvr_ast_optimizer.cpp
+    adapters/llvm/xvr_asm_config.cpp
+    adapters/llvm/xvr_llvm_codegen.cpp
+    adapters/llvm/xvr_llvm_context.cpp
+    adapters/llvm/xvr_llvm_control_flow.cpp
+    adapters/llvm/xvr_llvm_expression_emitter.cpp
+    adapters/llvm/xvr_llvm_function_emitter.cpp
+    adapters/llvm/xvr_llvm_ir_builder.cpp
+    adapters/llvm/xvr_llvm_module_manager.cpp
+    adapters/llvm/xvr_llvm_optimizer.cpp
+    adapters/llvm/xvr_llvm_target.cpp
+    adapters/llvm/xvr_llvm_type_mapper.cpp
+    core/ir/xvr_ir.cpp
+    core/ir/xvr_ir_generator.cpp
+    core/ast/xvr_ast_node.cpp
 )
 
 set(XVR_HEADERS
@@ -53,6 +53,7 @@ set(XVR_HEADERS
     xvr_parser.h
     xvr_print_handler.h
     xvr_refstring.h
+    xvr_refstring.hpp
     xvr_scope.h
     xvr_semantic.h
     xvr_string_utils.h
@@ -78,10 +79,21 @@ set(XVR_HEADERS
     core/ast/xvr_ast_node.h
 )
 
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
 add_library(xvr_objects OBJECT ${XVR_SOURCES} ${XVR_HEADERS})
 
 target_include_directories(xvr_objects PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(xvr_objects PRIVATE ${XVR_COMPILE_FLAGS})
+
+set_source_files_properties(xvr_refstring.cpp PROPERTIES
+    CXX_STANDARD 20
+    LANGUAGE CXX
+)
+
+
 
 if(XVR_SANITIZER)
     target_compile_options(xvr_objects PRIVATE -fno-omit-frame-pointer)

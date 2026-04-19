@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef XVR_COMMON_H
 #define XVR_COMMON_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -216,5 +220,9 @@ void Xvr_helpCommandLine(int argc, const char* argv[]);
  * @return Newly allocated string copy, or NULL if str is NULL
  */
 char* Xvr_strdup(const char* str);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // !XVR_COMMON_H

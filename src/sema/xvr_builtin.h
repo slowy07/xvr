@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef XVR_BUILTIN_H
 #define XVR_BUILTIN_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <llvm-c/Core.h>
 #include <stdbool.h>
 #include <stdint.h>
@@ -89,5 +93,9 @@ bool Xvr_ModuleResolverLoadModule(Xvr_ModuleResolver* resolver,
 const char* Xvr_ModuleResolverGetStdlibPath(Xvr_ModuleResolver* resolver);
 void Xvr_ModuleResolverSetStdlibPath(Xvr_ModuleResolver* resolver,
                                      const char* path);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

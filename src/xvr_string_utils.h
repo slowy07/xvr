@@ -27,6 +27,10 @@ SOFTWARE.
 
 #include <stddef.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 size_t xvr_safe_strlen(const char* str, size_t max_len);
 
 size_t xvr_safe_strlen_bounded(const char* str, size_t max_len);
@@ -36,5 +40,9 @@ int xvr_safe_strcmp(const char* a, const char* b);
 int xvr_safe_strncmp(const char* a, const char* b, size_t n);
 
 char* xvr_safe_strdup(const char* str, size_t max_len);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* XVR_STRING_UTILS_H */

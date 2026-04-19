@@ -22,25 +22,6 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 */
 
-/**
- * @brief bidirectional mapping between keyword strings and token types
- *
- * `Xvr_KeywordType` providing lookup table for converting between
- *   - keyword strings: if, var, return, etc
- *   - token type: XVR_TOKEN_IF, XVR_TOKEN_VAR, XVR_TOKEN_RETURN, etc.
- *
- * design:
- *   - fast lookup: O(1) array access for type -> keyword
- *   - fast search: O(n) linear search for keyword -> type (n = ~20 keyword)
- *   - memory safety: immutable lookup table
- *   - maintability: single source of truth for keywrod definitions
- *
- * memory management:
- *  - keyword string are static literals (no allocation)
- *  - array is read-only after initialization
- *  - no ownership transfer - all data is immutable
- */
-
 #ifndef XVR_KEYWORD_TYPES_H
 #define XVR_KEYWORD_TYPES_H
 
@@ -69,6 +50,10 @@ typedef struct {
  *   - [0..N - 1]: valid keyword-type pairs
  * - [N]: sentinel `{XVR_TOKEN_EOF, NULL}` to mark end
  */
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 extern Xvr_KeywordType Xvr_keywordTypes[];
 
 /**
@@ -94,5 +79,9 @@ char* Xvr_findKeywordByType(Xvr_TokenType type);
  * @note performance: O(n) -> linear search through keyword table (n ~ 20)
  */
 Xvr_TokenType Xvr_findTypeByKeyword(const char* keyword);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // !XVR_KEYWORD_TYPES_H

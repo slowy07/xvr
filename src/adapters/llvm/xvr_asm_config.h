@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef XVR_ASM_CONFIG_H
 #define XVR_ASM_CONFIG_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 
 typedef enum Xvr_AsmSyntax {
@@ -46,4 +50,8 @@ bool Xvr_AsmConfigIsVerbose(const Xvr_AsmConfig* config);
 const char* Xvr_AsmSyntaxToString(Xvr_AsmSyntax syntax);
 Xvr_AsmSyntax Xvr_AsmSyntaxFromString(const char* str);
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* XVR_ASM_CONFIG_H */

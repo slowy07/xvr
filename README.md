@@ -17,15 +17,13 @@
 - C compiler (gcc/clang)
 
 ### Build with CMake
-```sh
-# Create build directory
-mkdir build && cd build
 
-# Configure (Debug build by default)
-cmake ..
+```sh
+# Configure (compiler only - fast)
+cmake -S . -B build -DXVR_BUILD_TESTS=OFF
 
 # Build the project
-cmake --build .
+cmake --build build -j$(nproc)
 
 # The compiler output is in ./build/xvr
 ```
@@ -34,32 +32,34 @@ cmake --build .
 
 ```sh
 # Release build with optimizations
-cmake -DCMAKE_BUILD_TYPE=Release ..
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
 
 # Debug build
-cmake -DCMAKE_BUILD_TYPE=Debug ..
+cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+
+# Build with tests (enables Catch2 via FetchContent)
+cmake -S . -B build -DXVR_BUILD_TESTS=ON
 
 # Build with AddressSanitizer
-cmake -DXVR_SANITIZER=address ..
+cmake -S . -B build -DXVR_SANITIZE=address -DCMAKE_BUILD_TYPE=Debug
 
 # Build with UndefinedBehaviorSanitizer
-cmake -DXVR_SANITIZER=undefined ..
-
-# Build without tests
-cmake -DXVR_BUILD_TESTS=OFF ..
+cmake -S . -B build -DXVR_SANITIZE=undefined -DCMAKE_BUILD_TYPE=Debug
 
 # Build without shared library
-cmake -DXVR_BUILD_SHARED=OFF ..
+cmake -S . -B build -DXVR_BUILD_SHARED=OFF
 ```
 
 ### Quick Reference
 
 | Command | Description |
 |---------|-------------|
-| `cmake -B build && cmake --build build` | Debug build |
-| `cmake -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build` | Release build |
-| `cmake -B build -DXVR_SANITIZER=address && cmake --build build` | Build with AddressSanitizer |
-| `ctest --test-dir build` | Run tests |
+| `cmake -S . -B build && cmake --build build -j$(nproc)` | Debug build (compiler only) |
+| `cmake -S . -B build -DCMAKE_BUILD_TYPE=Release && cmake --build build -j$(nproc)` | Release build |
+| `cmake -S . -B build -DXVR_BUILD_TESTS=ON && cmake --build build -j$(nproc)` | Build with tests |
+| `cmake -B build -DXVR_SANITIZE=address && cmake --build build` | Build with AddressSanitizer |
+| `./build/xvr_test_all` | Run unit tests |
+| `./fuzzer/run_fuzzer.sh` | Run fuzzer tests |
 | `cmake --install build --prefix /usr/local` | Install |
 
 ## Usage

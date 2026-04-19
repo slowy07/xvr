@@ -11,6 +11,10 @@
 #ifndef XVR_FORMAT_STRING_H
 #define XVR_FORMAT_STRING_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -97,5 +101,9 @@ char* XvrFormatStringBuildPrintfFormat(const XvrFormatString* fmt,
  * @return true if string contains {} placeholders
  */
 bool XvrFormatStringHasPlaceholders(const char* str);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif /* XVR_FORMAT_STRING_H */

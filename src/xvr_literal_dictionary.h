@@ -52,6 +52,10 @@ SOFTWARE.
 #include "xvr_common.h"
 #include "xvr_literal.h"
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 /**
  * @def XVR_DICTIONARY_MAX_LOAD
  * @brief max load factor before resize (0.75 = 75% full)
@@ -176,5 +180,9 @@ XVR_API void Xvr_removeLiteralDictionary(Xvr_LiteralDictionary* dictionary,
  */
 XVR_API bool Xvr_existsLiteralDictionary(Xvr_LiteralDictionary* dictionary,
                                          Xvr_Literal key);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif  // !XVR_LITERAL_DICTIONARY_H

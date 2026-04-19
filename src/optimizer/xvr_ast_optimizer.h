@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef XVR_AST_OPTIMIZER_H
 #define XVR_AST_OPTIMIZER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -89,5 +93,9 @@ Xvr_ASTOptimizerResult Xvr_ASTOptimizerRun(Xvr_ASTOptimizer* opt,
                                            Xvr_ASTNode** nodes, int node_count);
 
 Xvr_OptimizationLevel Xvr_OptimizationLevelFromInt(int level);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

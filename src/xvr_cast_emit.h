@@ -9,6 +9,10 @@
 #ifndef XVR_CAST_EMIT_H
 #define XVR_CAST_EMIT_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <llvm-c/Core.h>
 
 #include "xvr_type.h"
@@ -65,4 +69,8 @@ bool Xvr_CastEmitterCheckSafety(Xvr_LLVMCastEmitter* emitter,
 
 const char* Xvr_LLVMCastTypeToString(Xvr_LLVMCastType type);
 
+#ifdef __cplusplus
+}
 #endif
+
+#endif /* XVR_CAST_EMIT_H */

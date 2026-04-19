@@ -43,6 +43,10 @@ SOFTWARE.
 #ifndef XVR_CORE_IR_H
 #define XVR_CORE_IR_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <stdbool.h>
 #include <stddef.h>
 
@@ -178,5 +182,9 @@ Xvr_IRType* Xvr_IRTypeCreateFunction(Xvr_IRType* return_type,
                                      Xvr_IRType** param_types,
                                      size_t param_count);
 Xvr_IRValue* Xvr_IRValueCreate(Xvr_IRType* type, const char* name);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

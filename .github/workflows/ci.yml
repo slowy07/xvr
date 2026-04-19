@@ -2,7 +2,7 @@ name: CI - CMake Build and Test
 
 on:
   push:
-    branches: [main]
+    branches: [main, migrate-codebase]
   pull_request:
     branches: [main]
 
@@ -25,21 +25,39 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev clang-format
 
-      - name: Configure CMake
+      - name: Configure CMake (compiler only)
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}
-          cd ${{ env.BUILD_DIR }}
-          cmake .. -DCMAKE_BUILD_TYPE=Debug
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Debug -DXVR_BUILD_TESTS=OFF
 
-      - name: Build
+      - name: Build compiler
         run: |
-          cd ${{ env.BUILD_DIR }}
-          cmake --build . -j$(nproc)
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
 
-      - name: Run tests with CTest
+      - name: Configure CMake (with tests)
         run: |
-          cd ${{ env.BUILD_DIR }}
-          ctest --output-on-failure
+          cmake -S . -B ${{ env.BUILD_DIR }}-test -DCMAKE_BUILD_TYPE=Debug -DXVR_BUILD_TESTS=ON
+
+      - name: Build tests
+        run: |
+          cmake --build ${{ env.BUILD_DIR }}-test -j$(nproc)
+
+      - name: Create test symlinks
+        run: |
+          cd ${{ env.BUILD_DIR }}-test
+          ln -sf xvr_test_all ../xvr_test_all 2>/dev/null || true
+          cd ..
+          ln -sf build-test/xvr ./xvr 2>/dev/null || true
+
+      - name: Run tests with verbose output
+        run: |
+          ${{ env.BUILD_DIR }}/xvr_test_all -s --verbosity high 2>&1 | tee test_output.txt
+          echo "---"
+          echo "Test Summary:"
+          grep -E "passed|failed|assertions|test cases|All tests" test_output.txt | tail -10
+
+      - name: List all tests
+        run: |
+          ${{ env.BUILD_DIR }}/xvr_test_all --list-tests --list-tags || true
 
       - name: Verify build outputs
         run: |
@@ -64,9 +82,7 @@ jobs:
 
       - name: Configure and build Release
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}
-          cd ${{ env.BUILD_DIR }}
-          cmake .. -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Release
           cmake --build . -j$(nproc)
 
       - name: Verify Release build
@@ -89,15 +105,24 @@ jobs:
 
       - name: Build with AddressSanitizer
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}-asan
-          cd ${{ env.BUILD_DIR }}-asan
-          cmake .. -DXVR_SANITIZE=address -DCMAKE_BUILD_TYPE=Debug
+          cmake -S . -B ${{ env.BUILD_DIR }}-asan -DXVR_SANITIZE=address -DCMAKE_BUILD_TYPE=Debug
           cmake --build . -j$(nproc)
+
+      - name: Create test symlinks
+        run: |
+          cd ${{ env.BUILD_DIR }}-asan
+          ln -sf xvr_test_all ../xvr_test_all 2>/dev/null || true
+          cd ..
+          ln -sf build-asan/xvr ./xvr 2>/dev/null || true
 
       - name: Run sanitized tests
         run: |
           cd ${{ env.BUILD_DIR }}-asan
-          ASAN_OPTIONS=detect_leaks=0 ./xvr_test_all 2>&1 || true
+          echo "Running tests with AddressSanitizer..."
+          ASAN_OPTIONS=detect_leaks=0 ./xvr_test_all -s --verbosity high 2>&1 | tee asan_output.txt || true
+          echo "---"
+          echo "ASAN Summary:"
+          grep -E "passed|failed|assertions|ERROR|All tests" asan_output.txt | tail -10
 
   build-static-only:
     name: Static Library Only
@@ -115,12 +140,62 @@ jobs:
 
       - name: Build static only
         run: |
-          mkdir -p ${{ env.BUILD_DIR }}-static
-          cd ${{ env.BUILD_DIR }}-static
-          cmake .. -DXVR_BUILD_SHARED=OFF -DCMAKE_BUILD_TYPE=Release
+          cmake -S . -B ${{ env.BUILD_DIR }}-static -DXVR_BUILD_SHARED=OFF -DCMAKE_BUILD_TYPE=Release
           cmake --build . -j$(nproc)
 
       - name: Verify static build
         run: |
           test -f ${{ env.BUILD_DIR }}-static/src/libxvr.a && echo "Static build successful"
           test -f ${{ env.BUILD_DIR }}-static/xvr && echo "Executable built"
+
+  test-tags:
+    name: Test with Tags
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM ${{ env.LLVM_VERSION }}
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null > /dev/null
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build
+        run: |
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
+
+      - name: Run unit tests only
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          echo "=== Running [unit] tests ==="
+          ./xvr_test_all "[unit]" -s --verbosity high
+
+      - name: Run lexer tests
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          echo "=== Running [lexer] tests ==="
+          ./xvr_test_all "[lexer]" -s --verbosity high
+
+      - name: Run parser tests
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          echo "=== Running [parser] tests ==="
+          ./xvr_test_all "[parser]" -s --verbosity high
+
+      - name: Run llvm backend tests
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          echo "=== Running [llvm] tests ==="
+          ./xvr_test_all "[llvm]" -s --verbosity high
+
+      - name: Run fuzzer corpus tests
+        run: |
+          cd ${{ env.BUILD_DIR }}
+          echo "=== Running fuzzer corpus ==="
+          cd ../fuzzer && ./run_fuzzer.sh

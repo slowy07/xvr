@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef XVR_LLVM_FUNCTION_EMITTER_H
 #define XVR_LLVM_FUNCTION_EMITTER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <llvm-c/Core.h>
 #include <stdbool.h>
 
@@ -116,5 +120,9 @@ void Xvr_LLVMFunctionEmitterEnterScope(Xvr_LLVMFunctionEmitter* emitter);
  * @param emitter Function emitter
  */
 void Xvr_LLVMFunctionEmitterExitScope(Xvr_LLVMFunctionEmitter* emitter);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif

@@ -1,21 +1,28 @@
+include(FetchContent)
+
+FetchContent_Declare(
+    catch2
+    GIT_REPOSITORY https://github.com/catchorg/Catch2.git
+    GIT_TAG v3.4.0
+)
+
+FetchContent_MakeAvailable(catch2)
+
 set(TEST_SOURCES
-    test_all.c
-    test_ast_node.c
-    test_lexer.c
-    test_parser.c
-    test_compiler.c
-    test_literal.c
-    test_memory.c
-    test_scope.c
-    test_llvm_backend.c
-    test_std.c
+    xvr_test_main.cpp
+    fixtures/xvr_test_fixture.cpp
+    test_literal.cpp
+    test_scope.cpp
+    test_lexer.cpp
+    test_parser.cpp
+    test_memory.cpp
+    test_std.cpp
+    test_ast_node.cpp
+    test_compiler.cpp
+    test_llvm_backend.cpp
 )
 
-set(TEST_HEADERS
-    xvr_test.h
-)
-
-add_executable(xvr_test_all ${TEST_SOURCES} ${TEST_HEADERS})
+add_executable(xvr_test_all ${TEST_SOURCES})
 
 target_include_directories(xvr_test_all PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
@@ -24,18 +31,22 @@ target_include_directories(xvr_test_all PRIVATE
     ${CMAKE_SOURCE_DIR}/src/adapters/llvm
 )
 
-target_compile_options(xvr_test_all PRIVATE
-    ${XVR_COMPILE_FLAGS}
-    -DXVR_EXPORT_LLVM
+target_link_libraries(xvr_test_all PRIVATE
+    Catch2::Catch2
+    xvr_objects
 )
 
 if(XVR_SANITIZER)
-    target_link_libraries(xvr_test_all PRIVATE xvr_objects -fsanitize=${XVR_SANITIZER} xvr_llvm_libs m)
-elseif(XVR_BUILD_STATIC)
-    target_link_libraries(xvr_test_all PRIVATE xvr_static xvr_llvm_libs m)
-else()
-    target_link_libraries(xvr_test_all PRIVATE xvr_shared xvr_llvm_libs m)
+    target_link_libraries(xvr_test_all PRIVATE -fsanitize=${XVR_SANITIZER})
 endif()
+
+if(XVR_BUILD_STATIC)
+    target_link_libraries(xvr_test_all PRIVATE xvr_static)
+else()
+    target_link_libraries(xvr_test_all PRIVATE xvr_shared)
+endif()
+
+target_link_libraries(xvr_test_all PRIVATE xvr_llvm_libs m)
 
 set_target_properties(xvr_test_all PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${XVR_OUTPUT_DIR}

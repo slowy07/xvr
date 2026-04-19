@@ -25,6 +25,10 @@ SOFTWARE.
 #ifndef XVR_LLVM_OPTIMIZER_H
 #define XVR_LLVM_OPTIMIZER_H
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include <llvm-c/TargetMachine.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -55,5 +59,9 @@ bool Xvr_LLVMOptimizerRun(Xvr_LLVMOptimizer* opt,
 
 bool Xvr_LLVMOptimizerAddPass(Xvr_LLVMOptimizer* opt, const char* pass_name);
 bool Xvr_LLVMOptimizerAddStandardPasses(Xvr_LLVMOptimizer* opt);
+
+#ifdef __cplusplus
+}
+#endif
 
 #endif
