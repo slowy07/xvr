@@ -425,8 +425,8 @@ static LLVMValueRef emit_string_concat(Xvr_LLVMExpressionEmitter* emitter,
     if (!fn_type) {
         LLVMContextRef ctx = Xvr_LLVMContextGetLLVMContext(emitter->context);
         LLVMTypeRef i8_ptr = LLVMPointerType(LLVMInt8TypeInContext(ctx), 0);
-        fn_type =
-            LLVMFunctionType(i8_ptr, (LLVMTypeRef[]){i8_ptr, i8_ptr}, 2, false);
+        LLVMTypeRef param_types[] = {i8_ptr, i8_ptr};
+        fn_type = LLVMFunctionType(i8_ptr, param_types, 2, false);
         Xvr_LLVMModuleManagerRegisterFunctionType(emitter->module,
                                                   "xvr_string_concat", fn_type);
     }
