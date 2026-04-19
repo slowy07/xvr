@@ -27,18 +27,11 @@ add_executable(xvr_test_all ${TEST_SOURCES})
 target_include_directories(xvr_test_all PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}
     ${CMAKE_SOURCE_DIR}/src
-    ${CMAKE_SOURCE_DIR}/src/backend
-    ${CMAKE_SOURCE_DIR}/src/adapters/llvm
 )
 
 target_link_libraries(xvr_test_all PRIVATE
     Catch2::Catch2
-    xvr_objects
 )
-
-if(XVR_SANITIZER)
-    target_link_libraries(xvr_test_all PRIVATE -fsanitize=${XVR_SANITIZER})
-endif()
 
 if(XVR_BUILD_STATIC)
     target_link_libraries(xvr_test_all PRIVATE xvr_static)
@@ -46,7 +39,7 @@ else()
     target_link_libraries(xvr_test_all PRIVATE xvr_shared)
 endif()
 
-target_link_libraries(xvr_test_all PRIVATE xvr_llvm_libs m)
+target_link_libraries(xvr_test_all PRIVATE m)
 
 set_target_properties(xvr_test_all PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${XVR_OUTPUT_DIR}

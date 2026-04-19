@@ -88,21 +88,17 @@ add_library(xvr_objects OBJECT ${XVR_SOURCES} ${XVR_HEADERS})
 target_include_directories(xvr_objects PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_compile_options(xvr_objects PRIVATE ${XVR_COMPILE_FLAGS})
 
-set_source_files_properties(xvr_refstring.cpp PROPERTIES
-    CXX_STANDARD 20
-    LANGUAGE CXX
-)
-
-
-
 if(XVR_SANITIZER)
     target_compile_options(xvr_objects PRIVATE -fno-omit-frame-pointer)
 endif()
 
-set(LLVM_LIBS -lLLVM-22)
-
 add_library(xvr_llvm_libs INTERFACE)
-target_link_libraries(xvr_llvm_libs INTERFACE ${LLVM_LIBS})
+
+if(APPLE)
+    target_link_libraries(xvr_llvm_libs INTERFACE -lLLVM)
+elseif(UNIX)
+    target_link_libraries(xvr_llvm_libs INTERFACE -lLLVM)
+endif()
 
 if(XVR_BUILD_STATIC)
     add_library(xvr_static STATIC $<TARGET_OBJECTS:xvr_objects>)

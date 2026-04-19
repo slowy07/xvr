@@ -1,12 +1,12 @@
-cmake_minimum_required(VERSION 3.16)
+cmake_minimum_required(VERSION 3.20)
 project(xvr LANGUAGES C CXX)
 
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
-set(CMAKE_C_EXTENSIONS ON)
-set(CMAKE_CXX_EXTENSIONS ON)
+set(CMAKE_C_EXTENSIONS OFF)
+set(CMAKE_CXX_EXTENSIONS OFF)
 
 set_property(GLOBAL PROPERTY USE_FOLDERS ON)
 
@@ -20,7 +20,9 @@ endif()
 
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
     set(XVR_DEBUG ON)
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Release")
     list(APPEND XVR_COMPILE_FLAGS -O2)
 endif()
 
@@ -30,7 +32,8 @@ set(XVR_BIN_DIR ${XVR_OUTPUT_DIR})
 
 include(GNUInstallDirs)
 
-find_package(LLVM REQUIRED CONFIG)
+find_package(LLVM REQUIRED)
+message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 
 message(STATUS "Found LLVM ${LLVM_PACKAGE_VERSION}")
 message(STATUS "Using LLVMConfig.cmake in: ${LLVM_DIR}")
@@ -71,7 +74,6 @@ endif()
 add_subdirectory(src)
 add_subdirectory(compiler)
 
-option(XVR_BUILD_TESTS "Build test suite" OFF)
 if(XVR_BUILD_TESTS)
     enable_testing()
     add_subdirectory(test)
