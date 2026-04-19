@@ -83,7 +83,7 @@ jobs:
       - name: Configure and build Release
         run: |
           cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Release
-          cmake --build . -j$(nproc)
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
 
       - name: Verify Release build
         run: |
@@ -106,7 +106,7 @@ jobs:
       - name: Build with AddressSanitizer
         run: |
           cmake -S . -B ${{ env.BUILD_DIR }}-asan -DXVR_SANITIZE=address -DCMAKE_BUILD_TYPE=Debug
-          cmake --build . -j$(nproc)
+          cmake --build ${{ env.BUILD_DIR }}-asan -j$(nproc)
 
       - name: Create test symlinks
         run: |
@@ -141,7 +141,7 @@ jobs:
       - name: Build static only
         run: |
           cmake -S . -B ${{ env.BUILD_DIR }}-static -DXVR_BUILD_SHARED=OFF -DCMAKE_BUILD_TYPE=Release
-          cmake --build . -j$(nproc)
+          cmake --build ${{ env.BUILD_DIR }}-static -j$(nproc)
 
       - name: Verify static build
         run: |
