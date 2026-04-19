@@ -90,7 +90,7 @@ void Xvr_setRefStringAllocatorFn(Xvr_RefStringAllocatorFn);
 typedef struct Xvr_RefString {
     size_t length;
     int refCount;
-    char data[];
+    char data[1];
 } Xvr_RefString;
 
 /**

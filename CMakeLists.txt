@@ -49,6 +49,7 @@ set(XVR_COMPILE_FLAGS
     -Wno-unused-parameter
     -Wno-unused-function
     -Wno-unused-variable
+    -Wno-missing-field-initializers
 )
 
 if(XVR_DEBUG)
