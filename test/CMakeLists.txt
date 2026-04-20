@@ -39,7 +39,7 @@ else()
     target_link_libraries(xvr_test_all PRIVATE xvr_shared)
 endif()
 
-target_link_libraries(xvr_test_all PRIVATE m)
+target_link_libraries(xvr_test_all PRIVATE m ${XVR_LINK_FLAGS})
 
 set_target_properties(xvr_test_all PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${XVR_OUTPUT_DIR}

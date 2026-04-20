@@ -23,11 +23,7 @@ target_compile_options(xvr PRIVATE
     -DXVR_EXPORT_LLVM
 )
 
-if(XVR_SANITIZER)
-    target_link_libraries(xvr PRIVATE xvr_objects -fsanitize=${XVR_SANITIZER} xvr_llvm_libs m)
-else()
-    target_link_libraries(xvr PRIVATE xvr_objects xvr_llvm_libs m)
-endif()
+target_link_libraries(xvr PRIVATE xvr_objects xvr_llvm_libs m ${XVR_LINK_FLAGS})
 
 set_target_properties(xvr PROPERTIES
     RUNTIME_OUTPUT_DIRECTORY ${XVR_OUTPUT_DIR}

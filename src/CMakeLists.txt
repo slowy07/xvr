@@ -103,7 +103,7 @@ endif()
 if(XVR_BUILD_STATIC)
     add_library(xvr_static STATIC $<TARGET_OBJECTS:xvr_objects>)
     target_compile_options(xvr_static PRIVATE ${XVR_COMPILE_FLAGS})
-    target_link_libraries(xvr_static PRIVATE xvr_llvm_libs)
+    target_link_libraries(xvr_static PRIVATE xvr_llvm_libs ${XVR_LINK_FLAGS})
     set_target_properties(xvr_static PROPERTIES
         OUTPUT_NAME xvr
         PREFIX lib
@@ -115,7 +115,7 @@ endif()
 if(XVR_BUILD_SHARED)
     add_library(xvr_shared SHARED $<TARGET_OBJECTS:xvr_objects>)
     target_compile_options(xvr_shared PRIVATE ${XVR_COMPILE_FLAGS} -fPIC -DXVR_IMPORT)
-    target_link_libraries(xvr_shared PRIVATE xvr_llvm_libs)
+    target_link_libraries(xvr_shared PRIVATE xvr_llvm_libs ${XVR_LINK_FLAGS})
     set_target_properties(xvr_shared PROPERTIES
         OUTPUT_NAME xvr
         PREFIX lib
