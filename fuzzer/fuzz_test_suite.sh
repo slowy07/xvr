@@ -48,8 +48,18 @@ run_test() {
     local output
     local exit_code
     
-    output=$("$XVR" "$TEMP_DIR/test.xvr" 2>&1)
+    # Timeout after 5 seconds to prevent infinite loops
+    timeout 5s "$XVR" "$TEMP_DIR/test.xvr" > "$TEMP_DIR/output.txt" 2>&1
     exit_code=$?
+    
+    # Check for timeout (124 means timeout occurred)
+    if [ $exit_code -eq 124 ]; then
+        echo "TIMEOUT: $name (compiler or runtime hung)"
+        ((FAIL++))
+        return 1
+    fi
+    
+    output=$(cat "$TEMP_DIR/output.txt")
     
     # Check for crashes (signals)
     if [ $exit_code -ge 128 ]; then
