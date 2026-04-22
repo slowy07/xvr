@@ -1,10 +1,7 @@
 include std;
-include token;
 include lexer;
 
-std::println("Testing lexer...");
-initLexer("42");
-nextToken();
-
-var count = tokenCount();
-std::println("Token count: {}", count);
+proc test_lexer(source: string) {
+    initLexer(source);
+    std::println("Testing: {}", source);
+}
