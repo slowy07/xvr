@@ -393,6 +393,12 @@ int main(int argc, const char* argv[]) {
             if (!outFile) {
                 outFile = strdup("a.out");
             }
+            // Check if output file name conflicts with existing directory
+            struct stat st;
+            if (stat(outFile, &st) == 0 && S_ISDIR(st.st_mode)) {
+                free(outFile);
+                outFile = strdup("xvr_out");
+            }
         } else {
             outFile = strdup("a.out");
         }
@@ -413,6 +419,12 @@ int main(int argc, const char* argv[]) {
             outFile = build_output_filename(Xvr_commandLine.sourceFile, ext);
             if (!outFile) {
                 outFile = strdup("a.out");
+            }
+            // Check if output file name conflicts with existing directory
+            struct stat st;
+            if (stat(outFile, &st) == 0 && S_ISDIR(st.st_mode)) {
+                free(outFile);
+                asprintf(&outFile, "xvr_%s", ext ? ext : "out");
             }
         } else {
             outFile = strdup("a.out");
