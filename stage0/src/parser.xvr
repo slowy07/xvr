@@ -27,6 +27,11 @@ const TOK_ELSE: i32 = 11;
 const TOK_WHILE: i32 = 12;
 const TOK_RETURN: i32 = 14;
 
+proc initParser() {
+    g_astNodes = [];
+    g_astKinds = [];
+}
+
 proc advance() {
     g_currentToken = g_currentToken + 1;
 }
