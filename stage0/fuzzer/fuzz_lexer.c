@@ -2,6 +2,12 @@
 #include <stdlib.h>
 #include <string.h>
 
+void test_with_xvr(const char *source) {
+    char cmd[1024];
+    snprintf(cmd, sizeof(cmd), "echo '%s' | ./build/xvr -i 'include std;'", source);
+    system(cmd);
+}
+
 __attribute__((weak))
 int LLVMFuzzerTestOneInput(const char *data, size_t size) {
     char *source = malloc(size + 1);

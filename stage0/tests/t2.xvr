@@ -1,0 +1,8 @@
+include std;
+include lexer;
+
+initLexer("abc");
+nextToken();
+var c = tokenCount();
+std::print("C: ");
+std::println("{}", c);
