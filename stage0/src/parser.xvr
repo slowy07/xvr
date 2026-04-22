@@ -1,0 +1,174 @@
+include lexer;
+
+var g_astNodes: [string];
+var g_astKinds: [i32];
+var g_astValues: [string];
+var g_astLefts: [i32];
+var g_astRights: [i32];
+var g_currentToken: i32;
+var g_tokenCount: i32;
+var g_nodeCount: i32;
+
+const NODE_PROGRAM: i32 = 0;
+const NODE_LITERAL: i32 = 1;
+const NODE_IDENTIFIER: i32 = 2;
+const NODE_BINARY_OP: i32 = 3;
+const NODE_VARIABLE_DECL: i32 = 4;
+const NODE_FUNCTION_DECL: i32 = 5;
+const NODE_IF_STMT: i32 = 6;
+const NODE_WHILE_STMT: i32 = 7;
+const NODE_RETURN_STMT: i32 = 8;
+
+const TOK_IDENT: i32 = 4;
+const TOK_INT_LITERAL: i32 = 5;
+const TOK_VAR: i32 = 9;
+const TOK_IF: i32 = 10;
+const TOK_ELSE: i32 = 11;
+const TOK_WHILE: i32 = 12;
+const TOK_RETURN: i32 = 14;
+
+proc advance() {
+    g_currentToken = g_currentToken + 1;
+}
+
+proc currentTokenType() -> i32 {
+    if (g_currentToken < lexer::tokenCount()) {
+        return lexer::getTokenType(g_currentToken);
+    }
+    return 0;
+}
+
+proc currentLexeme() -> string {
+    if (g_currentToken < lexer::tokenCount()) {
+        return lexer::getTokenLexeme(g_currentToken);
+    }
+    return "";
+}
+
+proc addNode(kind: i32, value: string, left: i32, right: i32) -> i32 {
+    g_astKinds.insert(kind);
+    g_astValues.insert(value);
+    g_astLefts.insert(left);
+    g_astRights.insert(right);
+    var index = g_nodeCount;
+    g_nodeCount = g_nodeCount + 1;
+    return index;
+}
+
+proc parseExpression() -> i32 {
+    var tokType: i32;
+    tokType = currentTokenType();
+
+    if (tokType == TOK_IDENT) {
+        var value: string;
+        value = currentLexeme();
+        advance();
+        return addNode(NODE_IDENTIFIER, value, -1, -1);
+    }
+
+    if (tokType == TOK_INT_LITERAL) {
+        var value: string;
+        value = currentLexeme();
+        advance();
+        return addNode(NODE_LITERAL, value, -1, -1);
+    }
+
+    return -1;
+}
+
+proc parseStatement() -> i32 {
+    var tokType: i32;
+    tokType = currentTokenType();
+
+    if (tokType == TOK_VAR) {
+        advance();
+        var name: string;
+        name = currentLexeme();
+        advance();
+        var value: i32;
+        value = parseExpression();
+        advance();
+        return addNode(NODE_VARIABLE_DECL, name, value, -1);
+    }
+
+    if (tokType == TOK_IF) {
+        advance();
+        var cond: i32;
+        cond = parseExpression();
+        advance();
+        var thenBranch: i32;
+        thenBranch = parseExpression();
+        var elseBranch: i32;
+        elseBranch = -1;
+        if (currentTokenType() == TOK_ELSE) {
+            advance();
+            elseBranch = parseExpression();
+        }
+        advance();
+        return addNode(NODE_IF_STMT, "", cond, thenBranch);
+    }
+
+    if (tokType == TOK_WHILE) {
+        advance();
+        var cond: i32;
+        cond = parseExpression();
+        advance();
+        var body: i32;
+        body = parseExpression();
+        advance();
+        return addNode(NODE_WHILE_STMT, "", cond, body);
+    }
+
+    if (tokType == TOK_RETURN) {
+        advance();
+        var value: i32;
+        value = parseExpression();
+        advance();
+        return addNode(NODE_RETURN_STMT, "", value, -1);
+    }
+
+    return parseExpression();
+}
+
+proc parseBlock() -> i32 {
+    advance();
+    var count: i32;
+    count = 0;
+    while (g_currentToken < lexer::tokenCount() - 1) {
+        var stmt: i32;
+        stmt = parseStatement();
+        if (stmt >= 0) {
+            count = count + 1;
+        }
+    }
+    advance();
+    return count;
+}
+
+var g_result: i32;
+
+proc finalizeParse() {
+    g_result = g_nodeCount;
+}
+
+proc parse(tokens: [i32]) -> i32 {
+    g_astKinds = [];
+    g_astValues = [];
+    g_astLefts = [];
+    g_astRights = [];
+    g_currentToken = 0;
+    g_nodeCount = 1;
+    g_astKinds.insert(NODE_PROGRAM);
+    g_astValues.insert("");
+    g_astLefts.insert(-1);
+    g_astRights.insert(-1);
+    g_tokenCount = lexer::tokenCount();
+    while (g_currentToken < g_tokenCount - 1) {
+        var stmt = parseStatement();
+        if (stmt == -1) {
+            g_currentToken = g_currentToken + 1;
+        }
+    }
+    finalizeParse();
+    return g_result;
+}

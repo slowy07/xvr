@@ -1,0 +1,18 @@
+enum NodeKind {
+    PROGRAM,
+    LITERAL,
+    IDENTIFIER,
+    BINARY_OP,
+    VARIABLE_DECL,
+    FUNCTION_DECL,
+    IF_STMT,
+    WHILE_STMT,
+    RETURN_STMT,
+}
+
+struct Node {
+    kind: NodeKind,
+    value: string,
+    left: i32,
+    right: i32,
+}
