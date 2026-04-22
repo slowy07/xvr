@@ -53,9 +53,9 @@ proc nextToken(): Token {
                 tok.type = INT_LITERAL;
                 tok.lexeme = lexeme;
                 tok.line = g_line;
-                g_tokenTypes = g_tokenTypes + [tok.type];
-                g_tokenLexemes = g_tokenLexemes + [tok.lexeme];
-                g_tokenLines = g_tokenLines + [tok.line];
+                g_tokenTypes.insert(tok.type);
+                g_tokenLexemes.insert(tok.lexeme);
+                g_tokenLines.insert(tok.line);
                 g_tokenCount = g_tokenCount + 1;
                 return tok;
             } else {
@@ -91,9 +91,9 @@ proc nextToken(): Token {
                     if (lexeme == "proc") { tok.type = KW_PROC; }
                     if (lexeme == "true") { tok.type = KW_TRUE; }
                     if (lexeme == "false") { tok.type = KW_FALSE; }
-                    g_tokenTypes = g_tokenTypes + [tok.type];
-                    g_tokenLexemes = g_tokenLexemes + [tok.lexeme];
-                    g_tokenLines = g_tokenLines + [tok.line];
+                    g_tokenTypes.insert(tok.type);
+                    g_tokenLexemes.insert(tok.lexeme);
+                    g_tokenLines.insert(tok.line);
                     g_tokenCount = g_tokenCount + 1;
                     return tok;
                 } else {
@@ -116,9 +116,9 @@ proc nextToken(): Token {
                     if (c == "/") { tok.type = OP_SLASH; }
                     if (c == "=") { tok.type = OP_ASSIGN; }
 
-                    g_tokenTypes = g_tokenTypes + [tok.type];
-                    g_tokenLexemes = g_tokenLexemes + [tok.lexeme];
-                    g_tokenLines = g_tokenLines + [tok.line];
+                    g_tokenTypes.insert(tok.type);
+                    g_tokenLexemes.insert(tok.lexeme);
+                    g_tokenLines.insert(tok.line);
                     g_tokenCount = g_tokenCount + 1;
                     g_pos = g_pos + 1;
                     return tok;
@@ -131,14 +131,14 @@ proc nextToken(): Token {
     eof.type = EOF;
     eof.lexeme = "";
     eof.line = g_line;
-    g_tokenTypes = g_tokenTypes + [eof.type];
-    g_tokenLexemes = g_tokenLexemes + [eof.lexeme];
-    g_tokenLines = g_tokenLines + [eof.line];
+    g_tokenTypes.insert(eof.type);
+    g_tokenLexemes.insert(eof.lexeme);
+    g_tokenLines.insert(eof.line);
     g_tokenCount = g_tokenCount + 1;
     return eof;
 }
 
-proc lex(source: string): [Token] {
+proc lex(source: string) -> [Token] {
     initLexer(source);
     nextToken();
     while (g_pos < len(g_source)) {
@@ -149,18 +149,18 @@ proc lex(source: string): [Token] {
     return result;
 }
 
-proc tokenCount(): i32 {
+proc tokenCount() -> i32 {
     return g_tokenCount;
 }
 
-proc getTokenType(n: i32): TokenType {
+proc getTokenType(n: i32) -> TokenType {
     if (n < g_tokenCount) {
         return g_tokenTypes[n];
     }
     return INVALID;
 }
 
-proc getTokenLexeme(n: i32): string {
+proc getTokenLexeme(n: i32) -> string {
     if (n < g_tokenCount) {
         return g_tokenLexemes[n];
     }

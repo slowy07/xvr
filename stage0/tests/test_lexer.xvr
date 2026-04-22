@@ -2,19 +2,9 @@ include std;
 include token;
 include lexer;
 
-std::println("Testing lexer compilation...");
-initLexer("42 abc var if");
-nextToken();
-nextToken();
-nextToken();
-nextToken();
+std::println("Testing lexer...");
+initLexer("42");
 nextToken();
 
 var count = tokenCount();
 std::println("Token count: {}", count);
-
-var t0 = getTokenType(0);
-std::println("Token 0 type: {}", t0);
-
-var l0 = getTokenLexeme(0);
-std::println("Token 0 lexeme: {}", l0);

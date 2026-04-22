@@ -49,5 +49,5 @@ enum TokenType {
 struct Token {
     type: TokenType,
     lexeme: string,
-    line: i32,
+    line: int,
 }
