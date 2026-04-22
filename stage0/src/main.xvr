@@ -1,0 +1,6 @@
+include std;
+
+proc main(args: [string]) -> int {
+    std::println("Stage0 compiler");
+    return 0;
+}
