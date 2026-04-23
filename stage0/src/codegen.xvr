@@ -4,7 +4,7 @@ proc initCodegen() {
     g_ir = "";
 }
 
-proc generate() {
+proc generate() -> string {
     g_ir = "; Module ID 'stage0'";
     g_ir = g_ir + "\nsource_filename = \"stage0.llvm\"";
     g_ir = g_ir + "\n";
