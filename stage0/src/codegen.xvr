@@ -1,0 +1,20 @@
+var g_ir: string;
+
+proc initCodegen() {
+    g_ir = "";
+}
+
+proc generate() {
+    g_ir = "; Module ID 'stage0'";
+    g_ir = g_ir + "\nsource_filename = \"stage0.llvm\"";
+    g_ir = g_ir + "\n";
+    g_ir = g_ir + "\ndefine i32 @main() {";
+    g_ir = g_ir + "\nentry:";
+    g_ir = g_ir + "\n  %result = add i32 0, 0";
+    g_ir = g_ir + "\n  ret i32 %result";
+    g_ir = g_ir + "\n}";
+}
+
+proc getIR() -> string {
+    return g_ir;
+}
