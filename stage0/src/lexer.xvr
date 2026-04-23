@@ -42,15 +42,26 @@ proc nextToken(): Token {
             if (isDigit) {
                 var lexeme: string;
                 lexeme = "";
-                while (isDigit) {
-                    lexeme = lexeme + c;
-                    g_pos = g_pos + 1;
-                    c = g_source.subString(g_pos, 1);
-                    isDigit = false;
-                    if (c >= "0") { if (c <= "9") { isDigit = true; } }
+                var isFloat = false;
+                
+                while (g_pos < len(g_source)) {
+                    var currC: string;
+                    currC = g_source.subString(g_pos, 1);
+                    
+                    if (currC == "." && !isFloat) {
+                        isFloat = true;
+                        lexeme = lexeme + currC;
+                        g_pos = g_pos + 1;
+                    } else if (currC >= "0" && currC <= "9") {
+                        lexeme = lexeme + currC;
+                        g_pos = g_pos + 1;
+                    } else {
+                        break;
+                    }
                 }
+                
                 var tok: Token;
-                tok.type = INT_LITERAL;
+                tok.type = if (isFloat) { FLOAT_LITERAL } else { INT_LITERAL };
                 tok.lexeme = lexeme;
                 tok.line = g_line;
                 g_tokenTypeValues.insert(5);
@@ -94,6 +105,29 @@ proc nextToken(): Token {
                     tok.lexeme = lexeme;
                     tok.line = g_line;
                     g_tokenTypeValues.insert(tokType);
+                    g_tokenLexemes.insert(lexeme);
+                    g_tokenLines.insert(g_line);
+                    g_tokenCount = g_tokenCount + 1;
+                    return tok;
+                } else if (c == "\"") {
+                    var lexeme: string;
+                    lexeme = "";
+                    g_pos = g_pos + 1;
+                    while (g_pos < len(g_source)) {
+                        var currC: string;
+                        currC = g_source.subString(g_pos, 1);
+                        if (currC == "\"") {
+                            g_pos = g_pos + 1;
+                            break;
+                        }
+                        lexeme = lexeme + currC;
+                        g_pos = g_pos + 1;
+                    }
+                    var tok: Token;
+                    tok.type = STRING_LITERAL;
+                    tok.lexeme = lexeme;
+                    tok.line = g_line;
+                    g_tokenTypeValues.insert(6);
                     g_tokenLexemes.insert(lexeme);
                     g_tokenLines.insert(g_line);
                     g_tokenCount = g_tokenCount + 1;
