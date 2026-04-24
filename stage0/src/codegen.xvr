@@ -35,13 +35,48 @@ proc generateFunction(name: string, body: string): string {
     return ir;
 }
 
+proc generateIf(cond: string, thenBlock: string, elseBlock: string) -> string {
+    var ir: string;
+    var thenLabel = "if_then";
+    var elseLabel = "if_else";
+    var endLabel = "if_end";
+    
+    ir = "  br i1 " + cond + ", label %" + thenLabel + ", label %" + elseLabel + "\n";
+    ir = ir + thenLabel + ":\n";
+    ir = ir + thenBlock;
+    ir = ir + "  br label %" + endLabel + "\n";
+    ir = ir + elseLabel + ":\n";
+    if (len(elseBlock) > 0) {
+        ir = ir + elseBlock;
+    }
+    ir = ir + "  br label %" + endLabel + "\n";
+    ir = ir + endLabel + ":\n";
+    return ir;
+}
+
+proc generateWhile(cond: string, body: string) -> string {
+    var ir: string;
+    var condLabel = "while_cond";
+    var bodyLabel = "while_body";
+    var endLabel = "while_end";
+    
+    ir = "  br label %" + condLabel + "\n";
+    ir = ir + condLabel + ":\n";
+    ir = ir + "  br i1 " + cond + ", label %" + bodyLabel + ", label %" + endLabel + "\n";
+    ir = ir + bodyLabel + ":\n";
+    ir = ir + body;
+    ir = ir + "  br label %" + condLabel + "\n";
+    ir = ir + endLabel + ":\n";
+    return ir;
+}
+
 proc generateCall(fnName: string): string {
     var ir: string;
     ir = "  %result = call i32 @" + fnName + "()\n";
     return ir;
 }
 
-proc generateNode(kind: i32, left: i32, right: i32, values: [string]) {
+proc generateNode(kind: i32, left: i32, right: i32, extra: i32, values: [string]) {
     if (kind == 4) {
         var name: string;
         var value: string;
@@ -58,6 +93,26 @@ proc generateNode(kind: i32, left: i32, right: i32, values: [string]) {
         fnName = values[left];
         fnBody = values[right];
         g_ir = g_ir + generateFunction(fnName, fnBody);
+    }
+
+    if (kind == 6) {
+        var cond: string;
+        var thenBlock: string;
+        var elseBlock: string;
+        cond = values[left];
+        thenBlock = values[right];
+        if (extra >= 0) {
+            elseBlock = values[extra];
+        }
+        g_ir = g_ir + generateIf(cond, thenBlock, elseBlock);
+    }
+
+    if (kind == 7) {
+        var cond: string;
+        var body: string;
+        cond = values[left];
+        body = values[right];
+        g_ir = g_ir + generateWhile(cond, body);
     }
 }
 
