@@ -1,0 +1,199 @@
+var g_ir: string;
+var g_vars: [string];
+var g_varCount: i32;
+var g_structs: [string];
+var g_structFieldCount: [i32];
+
+proc initCodegen() {
+    g_ir = "";
+    g_vars = [];
+    g_varCount = 0;
+    g_structs = [];
+    g_structFieldCount = [];
+}
+
+proc addVariable(name: string) {
+    g_vars.insert(name);
+    g_varCount = g_varCount + 1;
+}
+
+proc findVariable(name: string): i32 {
+    var i: i32;
+    i = 0;
+    while (i < g_varCount) {
+        if (g_vars[i] == name) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return -1;
+}
+
+proc generateFunction(name: string, body: string): string {
+    var ir: string;
+    ir = "define i32 @" + name + "() {\n";
+    ir = ir + "entry:\n";
+    ir = ir + body;
+    ir = ir + "  ret i32 0\n";
+    ir = ir + "}\n";
+    return ir;
+}
+
+proc generateIf(cond: string, thenBlock: string, elseBlock: string) -> string {
+    var ir: string;
+    var thenLabel = "if_then";
+    var elseLabel = "if_else";
+    var endLabel = "if_end";
+    
+    ir = "  br i1 " + cond + ", label %" + thenLabel + ", label %" + elseLabel + "\n";
+    ir = ir + thenLabel + ":\n";
+    ir = ir + thenBlock;
+    ir = ir + "  br label %" + endLabel + "\n";
+    ir = ir + elseLabel + ":\n";
+    if (len(elseBlock) > 0) {
+        ir = ir + elseBlock;
+    }
+    ir = ir + "  br label %" + endLabel + "\n";
+    ir = ir + endLabel + ":\n";
+    return ir;
+}
+
+proc generateWhile(cond: string, body: string) -> string {
+    var ir: string;
+    var condLabel = "while_cond";
+    var bodyLabel = "while_body";
+    var endLabel = "while_end";
+    
+    ir = "  br label %" + condLabel + "\n";
+    ir = ir + condLabel + ":\n";
+    ir = ir + "  br i1 " + cond + ", label %" + bodyLabel + ", label %" + endLabel + "\n";
+    ir = ir + bodyLabel + ":\n";
+    ir = ir + body;
+    ir = ir + "  br label %" + condLabel + "\n";
+    ir = ir + endLabel + ":\n";
+    return ir;
+}
+
+proc generateCall(fnName: string): string {
+    var ir: string;
+    ir = "  %result = call i32 @" + fnName + "()\n";
+    return ir;
+}
+
+proc generateStruct(structName: string, fieldCount: i32): string {
+    var ir: string;
+    ir = "; Struct definition: " + structName + " with " + fieldCount + " fields\n";
+    ir = ir + "%" + structName + " = type { ";
+    
+    var i = 0;
+    while (i < fieldCount) {
+        ir = ir + "i32";
+        if (i < fieldCount - 1) {
+            ir = ir + ", ";
+        }
+        i = i + 1;
+    }
+    ir = ir + " }\n";
+    
+    g_structs.insert(structName);
+    g_structFieldCount.insert(fieldCount);
+    
+    return ir;
+}
+
+proc generateStructInit(structName: string, values: [string]): string {
+    var ir: string;
+    var structIdx = -1;
+    
+    var i = 0;
+    while (i < len(g_structs)) {
+        if (g_structs[i] == structName) {
+            structIdx = i;
+            break;
+        }
+        i = i + 1;
+    }
+    
+    if (structIdx >= 0) {
+        var fieldCount = g_structFieldCount[structIdx];
+        ir = "  %" + structName + "_inst = alloca %" + structName + ", align 4\n";
+        
+        i = 0;
+        while (i < fieldCount && i < len(values)) {
+            ir = ir + "  %field" + i + " = getelementptr %" + structName + ", %" + structName + "* %" + structName + "_inst, i32 0, i32 " + i + "\n";
+            ir = ir + "  store i32 " + values[i] + ", i32* %field" + i + ", align 4\n";
+            i = i + 1;
+        }
+    }
+    
+    return ir;
+}
+
+proc generateNode(kind: i32, left: i32, right: i32, extra: i32, values: [string]) {
+    if (kind == 4) {
+        var name: string;
+        var value: string;
+        name = values[left];
+        value = values[right];
+        addVariable(name);
+        g_ir = g_ir + "  %" + name + " = alloca i32, align 4\n";
+        g_ir = g_ir + "  store i32 " + value + ", i32* %" + name + ", align 4\n";
+    }
+
+    if (kind == 5) {
+        var fnName: string;
+        var fnBody: string;
+        fnName = values[left];
+        fnBody = values[right];
+        g_ir = g_ir + generateFunction(fnName, fnBody);
+    }
+
+    if (kind == 6) {
+        var cond: string;
+        var thenBlock: string;
+        var elseBlock: string;
+        cond = values[left];
+        thenBlock = values[right];
+        if (extra >= 0) {
+            elseBlock = values[extra];
+        }
+        g_ir = g_ir + generateIf(cond, thenBlock, elseBlock);
+    }
+
+    if (kind == 7) {
+        var cond: string;
+        var body: string;
+        cond = values[left];
+        body = values[right];
+        g_ir = g_ir + generateWhile(cond, body);
+    }
+
+    if (kind == 9) {
+        var structName: string;
+        var fieldCount: i32;
+        structName = values[left];
+        fieldCount = right;
+        g_ir = g_ir + generateStruct(structName, fieldCount);
+    }
+
+    if (kind == 11) {
+        var structName: string;
+        structName = values[left];
+        g_ir = g_ir + generateStructInit(structName, values);
+    }
+}
+
+proc generate(): string {
+    g_ir = "; Module ID 'stage0'";
+    g_ir = g_ir + "\nsource_filename = \"stage0.llvm\"";
+    g_ir = g_ir + "\n";
+    g_ir = g_ir + "\ndefine i32 @main() {";
+    g_ir = g_ir + "\nentry:";
+    g_ir = g_ir + "\n  %result = add i32 0, 0";
+    g_ir = g_ir + "\n  ret i32 %result";
+    g_ir = g_ir + "\n}";
+}
+
+proc getIR(): string {
+    return g_ir;
+}

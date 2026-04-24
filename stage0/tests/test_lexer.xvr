@@ -1,0 +1,7 @@
+include std;
+include lexer;
+
+proc test_lexer(source: string) {
+    initLexer(source);
+    std::println("Testing: {}", source);
+}

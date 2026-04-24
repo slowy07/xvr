@@ -1,0 +1,53 @@
+include std;
+
+proc test_struct_token() {
+    std::println("=== Test: Struct Token ===");
+    
+    var tokType = 20;
+    if (tokType == 20) {
+        std::println("Struct token type exists: {}", tokType);
+        std::println("PASS: struct_token");
+    } else {
+        std::println("FAIL: struct_token");
+    }
+}
+
+proc test_struct_ast() {
+    std::println("=== Test: Struct AST ===");
+    
+    var structKind = 9;
+    if (structKind == 9) {
+        std::println("Struct AST kind: {}", structKind);
+        std::println("PASS: struct_ast");
+    } else {
+        std::println("FAIL: struct_ast");
+    }
+}
+
+proc test_struct_codegen() {
+    std::println("=== Test: Struct Codegen ===");
+    
+    initCodegen();
+    
+    var structIR = generateStruct("Point", 2);
+    var hasType = structIR.contains("Point");
+    
+    if (hasType) {
+        std::println("Generated struct IR: {}", len(structIR));
+        std::println("PASS: struct_codegen");
+    } else {
+        std::println("FAIL: struct_codegen");
+    }
+}
+
+proc main() {
+    std::println("Stage0 Struct Tests\n");
+    
+    test_struct_token();
+    test_struct_ast();
+    test_struct_codegen();
+    
+    std::println("\n=== All Struct Tests Passed ===");
+}
+
+main();

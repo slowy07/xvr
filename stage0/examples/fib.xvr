@@ -1,0 +1,16 @@
+include std;
+
+var n = 10;
+var a = 0;
+var b = 1;
+var i = 0;
+var temp = 0;
+
+while (i < n) {
+    temp = a + b;
+    a = b;
+    b = temp;
+    i = i + 1;
+}
+
+std::print("fib({}) = {}\n", n, a);

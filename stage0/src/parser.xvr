@@ -1,0 +1,247 @@
+include lexer;
+
+var g_astKinds: [i32];
+var g_astValues: [string];
+var g_astLefts: [i32];
+var g_astRights: [i32];
+var g_astExtras: [i32];
+var g_currentToken: i32;
+var g_tokenCount: i32;
+var g_nodeCount: i32;
+
+var NODE_PROGRAM: i32;
+var NODE_LITERAL: i32;
+var NODE_IDENTIFIER: i32;
+var NODE_BINARY_OP: i32;
+var NODE_VARIABLE_DECL: i32;
+var NODE_FUNCTION_DECL: i32;
+var NODE_IF_STMT: i32;
+var NODE_WHILE_STMT: i32;
+var NODE_RETURN_STMT: i32;
+var NODE_STRUCT_DEF: i32;
+var NODE_STRUCT_FIELD: i32;
+var NODE_STRUCT_INIT: i32;
+var NODE_STRUCT_ACCESS: i32;
+
+var g_structs: [string];
+var g_structFieldNames: [string];
+var g_structFieldTypes: [string];
+
+var TOK_IDENT: i32;
+var TOK_INT_LITERAL: i32;
+var TOK_VAR: i32;
+var TOK_IF: i32;
+var TOK_ELSE: i32;
+var TOK_WHILE: i32;
+var TOK_RETURN: i32;
+var TOK_PROC: i32;
+var TOK_INT: i32;
+
+proc initParser() {
+    NODE_PROGRAM = 0;
+    NODE_LITERAL = 1;
+    NODE_IDENTIFIER = 2;
+    NODE_BINARY_OP = 3;
+    NODE_VARIABLE_DECL = 4;
+    NODE_FUNCTION_DECL = 5;
+    NODE_IF_STMT = 6;
+    NODE_WHILE_STMT = 7;
+    NODE_RETURN_STMT = 8;
+
+    TOK_IDENT = 4;
+    TOK_INT_LITERAL = 5;
+    TOK_VAR = 9;
+    TOK_IF = 10;
+    TOK_ELSE = 11;
+    TOK_WHILE = 12;
+    TOK_RETURN = 14;
+    TOK_PROC = 15;
+    TOK_INT = 18;
+
+    g_astKinds = [];
+    g_astExtras = [];
+}
+
+proc advance() {
+    g_currentToken = g_currentToken + 1;
+}
+
+proc currentTokenType(): i32 {
+    if (g_currentToken < lexer::tokenCount()) {
+        return lexer::getTokenType(g_currentToken);
+    }
+    return 0;
+}
+
+proc currentLexeme(): string {
+    if (g_currentToken < lexer::tokenCount()) {
+        return lexer::getTokenLexeme(g_currentToken);
+    }
+    return "";
+}
+
+proc addNode(kind: i32, value: string, left: i32, right: i32, extra: i32): i32 {
+    g_astKinds.insert(kind);
+    g_astValues.insert(value);
+    g_astLefts.insert(left);
+    g_astRights.insert(right);
+    g_astExtras.insert(extra);
+    var index: i32;
+    index = g_nodeCount;
+    g_nodeCount = g_nodeCount + 1;
+    return index;
+}
+
+proc parseExpression(): i32 {
+    var tokType: i32;
+    tokType = currentTokenType();
+
+    if (tokType == TOK_IDENT) {
+        var value: string;
+        value = currentLexeme();
+        advance();
+        return addNode(NODE_IDENTIFIER, value, -1, -1, -1);
+    }
+
+    if (tokType == TOK_INT_LITERAL) {
+        var value: string;
+        value = currentLexeme();
+        advance();
+        return addNode(NODE_LITERAL, value, -1, -1, -1);
+    }
+
+    return -1;
+}
+
+proc parseStatement(): i32 {
+    var tokType: i32;
+    tokType = currentTokenType();
+
+    if (tokType == TOK_VAR) {
+        advance();
+        var name: string;
+        name = currentLexeme();
+        advance();
+        var value: i32;
+        value = parseExpression();
+        return addNode(NODE_VARIABLE_DECL, name, value, -1, -1);
+    }
+
+    if (tokType == TOK_IF) {
+        advance();
+        var cond: i32;
+        cond = parseExpression();
+        var thenBranch: i32;
+        thenBranch = parseExpression();
+        var elseBranch: i32;
+        elseBranch = -1;
+        if (currentTokenType() == TOK_ELSE) {
+            advance();
+            elseBranch = parseExpression();
+        }
+        return addNode(NODE_IF_STMT, "", cond, thenBranch, elseBranch);
+    }
+
+    if (tokType == TOK_WHILE) {
+        advance();
+        var cond: i32;
+        cond = parseExpression();
+        var body: i32;
+        body = parseExpression();
+        return addNode(NODE_WHILE_STMT, "", cond, body, -1);
+    }
+
+    if (tokType == TOK_RETURN) {
+        advance();
+        var value: i32;
+        value = parseExpression();
+        return addNode(NODE_RETURN_STMT, "", value, -1, -1);
+    }
+
+    if (tokType == TOK_PROC) {
+        advance();
+        var name: string;
+        name = currentLexeme();
+        advance();
+        advance();
+        advance();
+        var body: i32;
+        body = parseBlock();
+        return addNode(NODE_FUNCTION_DECL, name, body, -1, -1);
+    }
+
+    if (tokType == 21) {
+        advance();
+        var name: string;
+        name = currentLexeme();
+        advance();
+        advance();
+        var structName: string;
+        structName = currentLexeme();
+        advance();
+        advance();
+        
+        g_structs.insert(structName);
+        
+        var fieldCount = 0;
+        while (g_currentToken < lexer::tokenCount() - 1) {
+            var fieldName = currentLexeme();
+            if (fieldName == "}") {
+                break;
+            }
+            advance();
+            advance();
+            fieldCount = fieldCount + 1;
+        }
+        
+        return addNode(NODE_STRUCT_DEF, structName, fieldCount, -1, -1);
+    }
+
+    return parseExpression();
+}
+
+proc parseBlock(): i32 {
+    advance();
+    var count: i32;
+    count = 0;
+    while (g_currentToken < lexer::tokenCount() - 1) {
+        var stmt: i32;
+        stmt = parseStatement();
+        if (stmt >= 0) {
+            count = count + 1;
+        }
+    }
+    advance();
+    return count;
+}
+
+var g_result: i32;
+
+proc finalizeParse() {
+    g_result = g_nodeCount;
+}
+
+proc parse(tokens: [i32]): i32 {
+    g_astKinds = [];
+    g_astValues = [];
+    g_astLefts = [];
+    g_astRights = [];
+    g_astExtras = [];
+    g_currentToken = 0;
+    g_nodeCount = 1;
+    g_astKinds.insert(NODE_PROGRAM);
+    g_astValues.insert("");
+    g_astLefts.insert(-1);
+    g_astRights.insert(-1);
+    g_astExtras.insert(-1);
+    g_tokenCount = lexer::tokenCount();
+    while (g_currentToken < g_tokenCount - 1) {
+        var stmt: i32;
+        stmt = parseStatement();
+        if (stmt == -1) {
+            g_currentToken = g_currentToken + 1;
+        }
+    }
+    finalizeParse();
+    return g_result;
+}

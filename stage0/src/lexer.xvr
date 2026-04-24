@@ -1,0 +1,207 @@
+include token;
+
+var g_source: string;
+var g_pos: i32;
+var g_line: i32;
+var g_tokenCount: i32;
+var g_tokenTypeValues: [i32];
+var g_tokenLexemes: [string];
+var g_tokenLines: [i32];
+
+proc initLexer(source: string) {
+    g_source = source;
+    g_pos = 0;
+    g_line = 1;
+    g_tokenCount = 0;
+    g_tokenTypeValues = [];
+    g_tokenLexemes = [];
+    g_tokenLines = [];
+}
+
+proc nextToken(): Token {
+    while (g_pos < len(g_source)) {
+        var c: string;
+        c = g_source.subString(g_pos, 1);
+
+        var isSpace: bool;
+        isSpace = false;
+        if (c == " ") { isSpace = true; }
+        if (c == "\t") { isSpace = true; }
+        if (c == "\n") { isSpace = true; }
+
+        if (isSpace) {
+            if (c == "\n") {
+                g_line = g_line + 1;
+            }
+            g_pos = g_pos + 1;
+        } else {
+            var isDigit: bool;
+            isDigit = false;
+            if (c >= "0") { if (c <= "9") { isDigit = true; } }
+
+            if (isDigit) {
+                var lexeme: string;
+                lexeme = "";
+                var isFloat = false;
+                
+                while (g_pos < len(g_source)) {
+                    var currC: string;
+                    currC = g_source.subString(g_pos, 1);
+                    
+                    if (currC == "." && !isFloat) {
+                        isFloat = true;
+                        lexeme = lexeme + currC;
+                        g_pos = g_pos + 1;
+                    } else if (currC >= "0" && currC <= "9") {
+                        lexeme = lexeme + currC;
+                        g_pos = g_pos + 1;
+                    } else {
+                        break;
+                    }
+                }
+                
+                var tok: Token;
+                tok.type = if (isFloat) { FLOAT_LITERAL } else { INT_LITERAL };
+                tok.lexeme = lexeme;
+                tok.line = g_line;
+                g_tokenTypeValues.insert(5);
+                g_tokenLexemes.insert(lexeme);
+                g_tokenLines.insert(g_line);
+                g_tokenCount = g_tokenCount + 1;
+                return tok;
+            } else {
+                var isAlpha: bool;
+                isAlpha = false;
+                if (c >= "a") { if (c <= "z") { isAlpha = true; } }
+                if (c >= "A") { if (c <= "Z") { isAlpha = true; } }
+                if (c == "_") { isAlpha = true; }
+
+                if (isAlpha) {
+                    var lexeme: string;
+                    lexeme = "";
+                    while (isAlpha) {
+                        lexeme = lexeme + c;
+                        g_pos = g_pos + 1;
+                        c = g_source.subString(g_pos, 1);
+                        isAlpha = false;
+                        if (c >= "a") { if (c <= "z") { isAlpha = true; } }
+                        if (c >= "A") { if (c <= "Z") { isAlpha = true; } }
+                        if (c == "_") { isAlpha = true; }
+                        if (c >= "0") { if (c <= "9") { isAlpha = true; } }
+                    }
+                    var tokType: i32;
+                    tokType = 3;
+                    if (lexeme == "var") { tokType = 9; }
+                    if (lexeme == "if") { tokType = 10; }
+                    if (lexeme == "else") { tokType = 11; }
+                    if (lexeme == "while") { tokType = 12; }
+                    if (lexeme == "for") { tokType = 13; }
+                    if (lexeme == "return") { tokType = 14; }
+                    if (lexeme == "proc") { tokType = 15; }
+                    if (lexeme == "true") { tokType = 16; }
+                    if (lexeme == "false") { tokType = 17; }
+                    if (lexeme == "struct") { tokType = 20; }
+                    if (lexeme == "const") { tokType = 21; }
+                    if (lexeme == "fn") { tokType = 22; }
+                    var tok: Token;
+                    tok.type = tokType;
+                    tok.lexeme = lexeme;
+                    tok.line = g_line;
+                    g_tokenTypeValues.insert(tokType);
+                    g_tokenLexemes.insert(lexeme);
+                    g_tokenLines.insert(g_line);
+                    g_tokenCount = g_tokenCount + 1;
+                    return tok;
+                } else if (c == "\"") {
+                    var lexeme: string;
+                    lexeme = "";
+                    g_pos = g_pos + 1;
+                    while (g_pos < len(g_source)) {
+                        var currC: string;
+                        currC = g_source.subString(g_pos, 1);
+                        if (currC == "\"") {
+                            g_pos = g_pos + 1;
+                            break;
+                        }
+                        lexeme = lexeme + currC;
+                        g_pos = g_pos + 1;
+                    }
+                    var tok: Token;
+                    tok.type = STRING_LITERAL;
+                    tok.lexeme = lexeme;
+                    tok.line = g_line;
+                    g_tokenTypeValues.insert(6);
+                    g_tokenLexemes.insert(lexeme);
+                    g_tokenLines.insert(g_line);
+                    g_tokenCount = g_tokenCount + 1;
+                    return tok;
+                } else {
+                    var tokType: i32;
+                    tokType = 2;
+                    if (c == "(") { tokType = 38; }
+                    if (c == ")") { tokType = 39; }
+                    if (c == "{") { tokType = 40; }
+                    if (c == "}") { tokType = 41; }
+                    if (c == "[") { tokType = 42; }
+                    if (c == "]") { tokType = 43; }
+                    if (c == ",") { tokType = 44; }
+                    if (c == ";") { tokType = 45; }
+                    if (c == "+") { tokType = 22; }
+                    if (c == "-") { tokType = 23; }
+                    if (c == "*") { tokType = 24; }
+                    if (c == "/") { tokType = 25; }
+                    if (c == "=") { tokType = 21; }
+                    var tok: Token;
+                    tok.lexeme = c;
+                    tok.line = g_line;
+                    tok.type = INVALID;
+                    g_tokenTypeValues.insert(tokType);
+                    g_tokenLexemes.insert(c);
+                    g_tokenLines.insert(g_line);
+                    g_tokenCount = g_tokenCount + 1;
+                    g_pos = g_pos + 1;
+                    return tok;
+                }
+            }
+        }
+    }
+
+    var eof: Token;
+    eof.type = EOF;
+    eof.lexeme = "";
+    eof.line = g_line;
+    g_tokenTypeValues.insert(0);
+    g_tokenLexemes.insert("");
+    g_tokenLines.insert(g_line);
+    g_tokenCount = g_tokenCount + 1;
+    return eof;
+}
+
+proc lex(source: string): [Token] {
+    initLexer(source);
+    nextToken();
+    while (g_pos < len(g_source)) {
+        nextToken();
+    }
+    var result: [Token];
+    result = [];
+    return result;
+}
+
+proc tokenCount(): i32 {
+    return g_tokenCount;
+}
+
+proc getTokenType(n: i32): i32 {
+    if (n < g_tokenCount) {
+        return g_tokenTypeValues[n];
+    }
+    return 0;
+}
+
+proc getTokenLexeme(n: i32): string {
+    if (n < g_tokenCount) {
+        return g_tokenLexemes[n];
+    }
+    return "";
+}
