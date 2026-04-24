@@ -1,7 +1,37 @@
 var g_ir: string;
+var g_vars: [string];
+var g_varCount: i32;
 
 proc initCodegen() {
     g_ir = "";
+    g_vars = [];
+    g_varCount = 0;
+}
+
+proc addVariable(name: string) {
+    g_vars.insert(name);
+    g_varCount = g_varCount + 1;
+}
+
+proc findVariable(name: string) -> i32 {
+    var i = 0;
+    while (i < g_varCount) {
+        if (g_vars[i] == name) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return -1;
+}
+
+proc generateNode(kind: NodeKind, left: i32, right: i32, values: [string]) {
+    if (kind == NODE_VAR_DECL) {
+        var name = values[left];
+        var value = values[right];
+        addVariable(name);
+        g_ir = g_ir + "  %" + name + " = alloca i32, align 4\n";
+        g_ir = g_ir + "  store i32 " + value + ", i32* %" + name + ", align 4\n";
+    }
 }
 
 proc generate() -> string {
