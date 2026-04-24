@@ -1,11 +1,15 @@
 var g_ir: string;
 var g_vars: [string];
 var g_varCount: i32;
+var g_structs: [string];
+var g_structFieldCount: [i32];
 
 proc initCodegen() {
     g_ir = "";
     g_vars = [];
     g_varCount = 0;
+    g_structs = [];
+    g_structFieldCount = [];
 }
 
 proc addVariable(name: string) {
@@ -76,6 +80,55 @@ proc generateCall(fnName: string): string {
     return ir;
 }
 
+proc generateStruct(structName: string, fieldCount: i32): string {
+    var ir: string;
+    ir = "; Struct definition: " + structName + " with " + fieldCount + " fields\n";
+    ir = ir + "%" + structName + " = type { ";
+    
+    var i = 0;
+    while (i < fieldCount) {
+        ir = ir + "i32";
+        if (i < fieldCount - 1) {
+            ir = ir + ", ";
+        }
+        i = i + 1;
+    }
+    ir = ir + " }\n";
+    
+    g_structs.insert(structName);
+    g_structFieldCount.insert(fieldCount);
+    
+    return ir;
+}
+
+proc generateStructInit(structName: string, values: [string]): string {
+    var ir: string;
+    var structIdx = -1;
+    
+    var i = 0;
+    while (i < len(g_structs)) {
+        if (g_structs[i] == structName) {
+            structIdx = i;
+            break;
+        }
+        i = i + 1;
+    }
+    
+    if (structIdx >= 0) {
+        var fieldCount = g_structFieldCount[structIdx];
+        ir = "  %" + structName + "_inst = alloca %" + structName + ", align 4\n";
+        
+        i = 0;
+        while (i < fieldCount && i < len(values)) {
+            ir = ir + "  %field" + i + " = getelementptr %" + structName + ", %" + structName + "* %" + structName + "_inst, i32 0, i32 " + i + "\n";
+            ir = ir + "  store i32 " + values[i] + ", i32* %field" + i + ", align 4\n";
+            i = i + 1;
+        }
+    }
+    
+    return ir;
+}
+
 proc generateNode(kind: i32, left: i32, right: i32, extra: i32, values: [string]) {
     if (kind == 4) {
         var name: string;
@@ -113,6 +166,20 @@ proc generateNode(kind: i32, left: i32, right: i32, extra: i32, values: [string]
         cond = values[left];
         body = values[right];
         g_ir = g_ir + generateWhile(cond, body);
+    }
+
+    if (kind == 9) {
+        var structName: string;
+        var fieldCount: i32;
+        structName = values[left];
+        fieldCount = right;
+        g_ir = g_ir + generateStruct(structName, fieldCount);
+    }
+
+    if (kind == 11) {
+        var structName: string;
+        structName = values[left];
+        g_ir = g_ir + generateStructInit(structName, values);
     }
 }
 

@@ -8,6 +8,21 @@ enum NodeKind {
     IF_STMT,
     WHILE_STMT,
     RETURN_STMT,
+    STRUCT_DEF,
+    STRUCT_FIELD,
+    STRUCT_INIT,
+    STRUCT_FIELD_ACCESS,
+}
+
+struct StructField {
+    name: string,
+    type: string,
+    defaultValue: string,
+}
+
+struct StructDef {
+    name: string,
+    fields: [StructField],
 }
 
 struct Node {
@@ -15,4 +30,6 @@ struct Node {
     value: string,
     left: i32,
     right: i32,
+    structName: string,
+    fieldName: string,
 }

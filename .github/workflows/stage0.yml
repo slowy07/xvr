@@ -1,0 +1,224 @@
+name: CI - Stage0 Bootstrap Compiler
+
+on:
+  push:
+    branches: [stage0, main]
+  pull_request:
+    branches: [stage0, main]
+
+env:
+  BUILD_DIR: build
+  LLVM_VERSION: "22"
+
+jobs:
+  stage0-build:
+    name: Build Stage0 Compiler
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Debug -DXVR_BUILD_TESTS=OFF
+
+      - name: Build XVR Compiler
+        run: |
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
+
+      - name: Verify compiler
+        run: |
+          ./${{ env.BUILD_DIR }}/xvr --version
+
+  stage0-lexer-tests:
+    name: Stage0 Lexer Tests
+    runs-on: ubuntu-latest
+    needs: stage0-build
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build XVR Compiler
+        run: |
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
+
+      - name: Build Stage0 Lexer Tests
+        run: |
+          ./${{ env.BUILD_DIR }}/xvr stage0/tests/test_lexer_stage0.xvr -o stage0/tests/test_lexer
+
+      - name: Run Stage0 Lexer Tests
+        run: |
+          cd stage0/tests
+          ./test_lexer
+
+  stage0-parser-tests:
+    name: Stage0 Parser Tests
+    runs-on: ubuntu-latest
+    needs: stage0-build
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build XVR Compiler
+        run: |
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
+
+      - name: Build Stage0 Parser Tests
+        run: |
+          ./${{ env.BUILD_DIR }}/xvr stage0/tests/test_parser_stage0.xvr -o stage0/tests/test_parser
+
+      - name: Run Stage0 Parser Tests
+        run: |
+          cd stage0/tests
+          ./test_parser
+
+  stage0-codegen-tests:
+    name: Stage0 Codegen Tests
+    runs-on: ubuntu-latest
+    needs: stage0-build
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build XVR Compiler
+        run: |
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
+
+      - name: Build Stage0 Codegen Tests
+        run: |
+          ./${{ env.BUILD_DIR }}/xvr stage0/tests/test_codegen_stage0.xvr -o stage0/tests/test_codegen
+
+      - name: Run Stage0 Codegen Tests
+        run: |
+          cd stage0/tests
+          ./test_codegen
+
+  stage0-integration-tests:
+    name: Stage0 Integration Tests
+    runs-on: ubuntu-latest
+    needs: stage0-build
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build XVR Compiler
+        run: |
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
+
+      - name: Build Stage0 All Tests
+        run: |
+          ./${{ env.BUILD_DIR }}/xvr stage0/tests/test_stage0_all.xvr -o stage0/tests/test_all
+
+      - name: Run Stage0 Integration Tests
+        run: |
+          cd stage0/tests
+          ./test_all
+
+  stage0-fuzzer:
+    name: Stage0 Fuzzer Tests
+    runs-on: ubuntu-latest
+    needs: stage0-build
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM and Fuzzer
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev clang
+
+      - name: Build Fuzzer
+        run: |
+          cd stage0/fuzzer
+          chmod +x build.sh
+          ./build.sh
+
+      - name: Run Fuzzer (quick)
+        run: |
+          cd stage0/fuzzer
+          timeout 30 ./fuzz_all corpus/ 2>&1 || true
+          echo "Fuzzer test completed"
+
+  stage0-examples:
+    name: Stage0 Examples
+    runs-on: ubuntu-latest
+    needs: stage0-build
+    
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install LLVM
+        run: |
+          wget -qO- https://apt.llvm.org/llvm-snapshot.gpg.key | sudo tee /etc/apt/trusted.gpg.d/apt.llvm.org.asc > /dev/null
+          echo "deb http://apt.llvm.org/noble/ llvm-toolchain-noble-${{ env.LLVM_VERSION }} main" | sudo tee /etc/apt/sources.list.d/llvm.list
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends llvm-${{ env.LLVM_VERSION }} llvm-${{ env.LLVM_VERSION }}-dev
+
+      - name: Configure CMake
+        run: |
+          cmake -S . -B ${{ env.BUILD_DIR }} -DCMAKE_BUILD_TYPE=Debug
+
+      - name: Build XVR Compiler
+        run: |
+          cmake --build ${{ env.BUILD_DIR }} -j$(nproc)
+
+      - name: Build Stage0 Compiler
+        run: |
+          ./${{ env.BUILD_DIR }}/xvr stage0/src/main.xvr -o stage0/stage0
+
+      - name: Run Stage0 Examples
+        run: |
+          ./stage0/stage0

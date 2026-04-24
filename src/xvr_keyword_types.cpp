@@ -53,6 +53,8 @@ Xvr_KeywordType Xvr_keywordTypes[] = {
     {XVR_TOKEN_OF, "of"},
     {XVR_TOKEN_PRINT, "print"},
     {XVR_TOKEN_RETURN, "return"},
+    {XVR_TOKEN_STRUCT, "struct"},
+    {XVR_TOKEN_FN, "fn"},
     {XVR_TOKEN_TYPE, "type"},
     {XVR_TOKEN_ASTYPE, "astype"},
     {XVR_TOKEN_TYPEOF, "typeof"},

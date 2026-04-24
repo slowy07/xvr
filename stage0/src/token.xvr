@@ -18,6 +18,9 @@ enum TokenType {
     KW_FALSE,
     KW_INCLUDE,
     KW_VOID,
+    KW_STRUCT,
+    KW_CONST,
+    KW_FN,
 
     OP_ASSIGN,
     OP_PLUS,
@@ -44,6 +47,8 @@ enum TokenType {
     COMMA,
     SEMICOLON,
     COLON,
+    DOT,
+    EQ,
 }
 
 struct Token {

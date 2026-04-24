@@ -18,6 +18,14 @@ var NODE_FUNCTION_DECL: i32;
 var NODE_IF_STMT: i32;
 var NODE_WHILE_STMT: i32;
 var NODE_RETURN_STMT: i32;
+var NODE_STRUCT_DEF: i32;
+var NODE_STRUCT_FIELD: i32;
+var NODE_STRUCT_INIT: i32;
+var NODE_STRUCT_ACCESS: i32;
+
+var g_structs: [string];
+var g_structFieldNames: [string];
+var g_structFieldTypes: [string];
 
 var TOK_IDENT: i32;
 var TOK_INT_LITERAL: i32;
@@ -160,6 +168,33 @@ proc parseStatement(): i32 {
         var body: i32;
         body = parseBlock();
         return addNode(NODE_FUNCTION_DECL, name, body, -1, -1);
+    }
+
+    if (tokType == 21) {
+        advance();
+        var name: string;
+        name = currentLexeme();
+        advance();
+        advance();
+        var structName: string;
+        structName = currentLexeme();
+        advance();
+        advance();
+        
+        g_structs.insert(structName);
+        
+        var fieldCount = 0;
+        while (g_currentToken < lexer::tokenCount() - 1) {
+            var fieldName = currentLexeme();
+            if (fieldName == "}") {
+                break;
+            }
+            advance();
+            advance();
+            fieldCount = fieldCount + 1;
+        }
+        
+        return addNode(NODE_STRUCT_DEF, structName, fieldCount, -1, -1);
     }
 
     return parseExpression();

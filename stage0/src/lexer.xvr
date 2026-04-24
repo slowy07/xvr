@@ -100,6 +100,9 @@ proc nextToken(): Token {
                     if (lexeme == "proc") { tokType = 15; }
                     if (lexeme == "true") { tokType = 16; }
                     if (lexeme == "false") { tokType = 17; }
+                    if (lexeme == "struct") { tokType = 20; }
+                    if (lexeme == "const") { tokType = 21; }
+                    if (lexeme == "fn") { tokType = 22; }
                     var tok: Token;
                     tok.type = tokType;
                     tok.lexeme = lexeme;
