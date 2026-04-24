@@ -13,8 +13,9 @@ proc addVariable(name: string) {
     g_varCount = g_varCount + 1;
 }
 
-proc findVariable(name: string) -> i32 {
-    var i = 0;
+proc findVariable(name: string): i32 {
+    var i: i32;
+    i = 0;
     while (i < g_varCount) {
         if (g_vars[i] == name) {
             return i;
@@ -24,17 +25,43 @@ proc findVariable(name: string) -> i32 {
     return -1;
 }
 
-proc generateNode(kind: NodeKind, left: i32, right: i32, values: [string]) {
-    if (kind == NODE_VAR_DECL) {
-        var name = values[left];
-        var value = values[right];
+proc generateFunction(name: string, body: string): string {
+    var ir: string;
+    ir = "define i32 @" + name + "() {\n";
+    ir = ir + "entry:\n";
+    ir = ir + body;
+    ir = ir + "  ret i32 0\n";
+    ir = ir + "}\n";
+    return ir;
+}
+
+proc generateCall(fnName: string): string {
+    var ir: string;
+    ir = "  %result = call i32 @" + fnName + "()\n";
+    return ir;
+}
+
+proc generateNode(kind: i32, left: i32, right: i32, values: [string]) {
+    if (kind == 4) {
+        var name: string;
+        var value: string;
+        name = values[left];
+        value = values[right];
         addVariable(name);
         g_ir = g_ir + "  %" + name + " = alloca i32, align 4\n";
         g_ir = g_ir + "  store i32 " + value + ", i32* %" + name + ", align 4\n";
     }
+
+    if (kind == 5) {
+        var fnName: string;
+        var fnBody: string;
+        fnName = values[left];
+        fnBody = values[right];
+        g_ir = g_ir + generateFunction(fnName, fnBody);
+    }
 }
 
-proc generate() -> string {
+proc generate(): string {
     g_ir = "; Module ID 'stage0'";
     g_ir = g_ir + "\nsource_filename = \"stage0.llvm\"";
     g_ir = g_ir + "\n";
@@ -45,6 +72,6 @@ proc generate() -> string {
     g_ir = g_ir + "\n}";
 }
 
-proc getIR() -> string {
+proc getIR(): string {
     return g_ir;
 }

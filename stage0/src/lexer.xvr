@@ -174,7 +174,7 @@ proc nextToken(): Token {
     return eof;
 }
 
-proc lex(source: string) -> [Token] {
+proc lex(source: string): [Token] {
     initLexer(source);
     nextToken();
     while (g_pos < len(g_source)) {
@@ -185,18 +185,18 @@ proc lex(source: string) -> [Token] {
     return result;
 }
 
-proc tokenCount() -> i32 {
+proc tokenCount(): i32 {
     return g_tokenCount;
 }
 
-proc getTokenType(n: i32) -> TokenType {
+proc getTokenType(n: i32): i32 {
     if (n < g_tokenCount) {
         return g_tokenTypeValues[n];
     }
-    return INVALID;
+    return 0;
 }
 
-proc getTokenLexeme(n: i32) -> string {
+proc getTokenLexeme(n: i32): string {
     if (n < g_tokenCount) {
         return g_tokenLexemes[n];
     }
