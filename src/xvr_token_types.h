@@ -91,6 +91,7 @@ typedef enum Xvr_TokenType {
     XVR_TOKEN_FOREACH,
     XVR_TOKEN_IF,
     XVR_TOKEN_IMPORT,
+    XVR_TOKEN_INCLUDE,
     XVR_TOKEN_IN,
     XVR_TOKEN_OF,
     XVR_TOKEN_PRINT,

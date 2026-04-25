@@ -49,6 +49,7 @@ Xvr_KeywordType Xvr_keywordTypes[] = {
     {XVR_TOKEN_FOREACH, "foreach"},
     {XVR_TOKEN_IF, "if"},
     {XVR_TOKEN_IMPORT, "import"},
+    {XVR_TOKEN_INCLUDE, "include"},
     {XVR_TOKEN_IN, "in"},
     {XVR_TOKEN_OF, "of"},
     {XVR_TOKEN_PRINT, "print"},

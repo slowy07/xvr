@@ -1652,7 +1652,8 @@ static bool calcStaticMathFn(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     const char* namespace_name =
         (const char*)(*nodeHandle)
             ->binary.left->atomic.literal.as.string.ptr->data;
-    if (!namespace_name || strcmp(namespace_name, "math") != 0) {
+    if (!namespace_name || (strcmp(namespace_name, "math") != 0 &&
+        strcmp(namespace_name, "std") != 0)) {
         return true;
     }
 
@@ -2485,8 +2486,8 @@ static void statement(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         return;
     }
 
-    // import
-    if (match(parser, XVR_TOKEN_IMPORT)) {
+    // import or include
+    if (match(parser, XVR_TOKEN_IMPORT) || match(parser, XVR_TOKEN_INCLUDE)) {
         importStmt(parser, nodeHandle);
         return;
     }
