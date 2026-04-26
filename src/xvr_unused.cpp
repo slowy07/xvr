@@ -27,6 +27,13 @@ static void popScope(Xvr_UnusedChecker* checker) {
 
     for (int i = 0; i < scope->count; i++) {
         if (!scope->declarations[i].used) {
+            // Allow 'main' proc to be unused (auto-entry point)
+            const char* decl_name = Xvr_toCString(
+                scope->declarations[i].identifier.as.identifier.ptr);
+            if (scope->declarations[i].isFunction && strcmp(decl_name, "main") == 0) {
+                continue;
+            }
+            
             checker->hasError = true;
             const char* name = Xvr_toCString(
                 scope->declarations[i].identifier.as.identifier.ptr);

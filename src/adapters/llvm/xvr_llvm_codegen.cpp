@@ -475,7 +475,7 @@ bool Xvr_LLVMCodegenEmitAST(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* ast) {
         return result;
     }
 
-    if (ast->type == XVR_AST_NODE_FN_DECL) {
+if (ast->type == XVR_AST_NODE_FN_DECL) {
         bool result = Xvr_LLVMFunctionEmitterEmit(codegen->fn_emitter, ast);
         if (result) {
             ensure_main_function(codegen);
