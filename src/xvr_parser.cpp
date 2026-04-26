@@ -590,6 +590,7 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         Xvr_Literal identifier = XVR_TO_IDENTIFIER_LITERAL(
             Xvr_createRefStringLength(parser->previous.lexeme, length));
         
+        // Check for std:: first (always allowed)
         if (match(parser, XVR_TOKEN_COLON_COLON)) {
             // std::print - create namespace.member access
             if (parser->current.type != XVR_TOKEN_IDENTIFIER) {
@@ -641,6 +642,16 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
             
             Xvr_freeLiteral(identifier);
             return XVR_OP_DOT;
+        }
+        
+        // Bare print() is not allowed - must use std::print()
+        bool is_print_fn = (identifier.type == XVR_LITERAL_IDENTIFIER && 
+                     strcmp(identifier.as.identifier.ptr->data, "print") == 0);
+        if (is_print_fn && match(parser, XVR_TOKEN_PAREN_LEFT)) {
+            error(parser, parser->previous, 
+                 "print() requires namespace - use std::print() instead");
+            Xvr_freeLiteral(identifier);
+            return XVR_OP_EOF;
         }
         
         if (match(parser, XVR_TOKEN_PAREN_LEFT)) {
@@ -2525,6 +2536,12 @@ static void importStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_Literal idn = Xvr_copyLiteral(node->atomic.literal);
     Xvr_freeASTNode(node);
 
+    // Track if std was imported
+    if (idn.type == XVR_LITERAL_IDENTIFIER && 
+        strcmp(idn.as.identifier.ptr->data, "std") == 0) {
+        parser->stdImported = true;
+    }
+
     Xvr_Literal alias = XVR_TO_NULL_LITERAL;
 
     if (match(parser, XVR_TOKEN_AS)) {
@@ -3000,6 +3017,7 @@ void Xvr_initParser(Xvr_Parser* parser, Xvr_Lexer* lexer) {
     parser->lexer = lexer;
     parser->error = false;
     parser->panic = false;
+    parser->stdImported = false;
 
     parser->previous.type = XVR_TOKEN_NULL;
     parser->current.type = XVR_TOKEN_NULL;

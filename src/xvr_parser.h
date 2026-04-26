@@ -68,6 +68,7 @@ typedef struct {
     Xvr_Lexer* lexer;  // source of tokens
     bool error;        // true if any syntax error occured
     bool panic;        // true if in error recovery mode
+    bool stdImported;  // true if 'include std' was used
 
     Xvr_Token current;   // current token to process
     Xvr_Token previous;  // last consumed token
