@@ -629,6 +629,31 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         return XVR_OP_EOF;
     }
 
+    case XVR_TOKEN_LITERAL_STRING: {
+        int length = parser->previous.length;
+        if (length > 256) length = 256;
+        char* buffer = XVR_ALLOCATE(char, length + 1);
+        int strLen = 0;
+        for (int i = 0; i < length && i < parser->previous.length; i++) {
+            if (parser->previous.lexeme[i] != '\\' || i + 1 >= parser->previous.length) {
+                buffer[strLen++] = parser->previous.lexeme[i];
+            } else {
+                switch (parser->previous.lexeme[++i]) {
+                case 'n': buffer[strLen++] = '\n'; break;
+                case 't': buffer[strLen++] = '\t'; break;
+                case 'r': buffer[strLen++] = '\r'; break;
+                case '"': buffer[strLen++] = '"'; break;
+                case '\\': buffer[strLen++] = '\\'; break;
+                default: buffer[strLen++] = parser->previous.lexeme[i]; break;
+                }
+            }
+        }
+        buffer[strLen] = '\0';
+        Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_STRING_LITERAL(Xvr_createRefStringLength(buffer, strLen)));
+        XVR_FREE(char, buffer);
+        return XVR_OP_EOF;
+    }
+
     case XVR_TOKEN_LITERAL_TRUE:
         Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_BOOLEAN_LITERAL(true));
         return XVR_OP_EOF;
@@ -2536,6 +2561,12 @@ static void statement(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     // import or include
     if (match(parser, XVR_TOKEN_IMPORT) || match(parser, XVR_TOKEN_INCLUDE)) {
         importStmt(parser, nodeHandle);
+        return;
+    }
+
+    // print statement
+    if (match(parser, XVR_TOKEN_PRINT)) {
+        printStmt(parser, nodeHandle);
         return;
     }
 
