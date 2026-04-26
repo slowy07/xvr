@@ -584,6 +584,51 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_NULL_LITERAL);
         return XVR_OP_EOF;
 
+    case XVR_TOKEN_IDENTIFIER: {
+        int length = parser->previous.length;
+        if (length > 256) length = 256;
+        Xvr_Literal identifier = XVR_TO_IDENTIFIER_LITERAL(
+            Xvr_createRefStringLength(parser->previous.lexeme, length));
+        
+        if (match(parser, XVR_TOKEN_PAREN_LEFT)) {
+            Xvr_ASTNode* arguments = NULL;
+            Xvr_emitASTNodeFnCollection(&arguments);
+            
+            if (arguments->fnCollection.capacity == 0) {
+                arguments->fnCollection.capacity = 4;
+                arguments->fnCollection.nodes = XVR_GROW_ARRAY(
+                    Xvr_ASTNode, arguments->fnCollection.nodes, 0, 4);
+            }
+            
+            if (!match(parser, XVR_TOKEN_PAREN_RIGHT)) {
+                do {
+                    Xvr_ASTNode* tmpArg = NULL;
+                    parsePrecedence(parser, &tmpArg, PREC_TERNARY);
+                    if (tmpArg) {
+                        if (arguments->fnCollection.capacity < arguments->fnCollection.count + 1) {
+                            int oldCap = arguments->fnCollection.capacity;
+                            arguments->fnCollection.capacity = XVR_GROW_CAPACITY(oldCap);
+                            arguments->fnCollection.nodes = XVR_GROW_ARRAY(
+                                Xvr_ASTNode, arguments->fnCollection.nodes, oldCap,
+                                arguments->fnCollection.capacity);
+                        }
+                        arguments->fnCollection.nodes[arguments->fnCollection.count++] = *tmpArg;
+                        XVR_FREE(Xvr_ASTNode, tmpArg);
+                    }
+                } while (match(parser, XVR_TOKEN_COMMA));
+                consume(parser, XVR_TOKEN_PAREN_RIGHT, "Expected ')'");
+            }
+            
+            Xvr_emitASTNodeFnCall(nodeHandle, arguments);
+            Xvr_freeLiteral(identifier);
+            return XVR_OP_FN_CALL;
+        }
+        
+        Xvr_emitASTNodeLiteral(nodeHandle, identifier);
+        Xvr_freeLiteral(identifier);
+        return XVR_OP_EOF;
+    }
+
     case XVR_TOKEN_LITERAL_TRUE:
         Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_BOOLEAN_LITERAL(true));
         return XVR_OP_EOF;
@@ -1231,7 +1276,8 @@ static Xvr_Opcode dot(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
                         // the wrong order
 }
 
-ParseRule parseRules[] = {
+// let compiler determine size from initializers
+static ParseRule parseRules[] = {
     // must match the token types
     // types
     {atomic, NULL, PREC_PRIMARY},      // TOKEN_NULL,
@@ -1284,7 +1330,7 @@ ParseRule parseRules[] = {
     {NULL, NULL, PREC_NONE},                   // TOKEN_WHILE,
 
     // literal values
-    {identifier, castingInfix, PREC_PRIMARY},  // TOKEN_IDENTIFIER,
+    {atomic, NULL, PREC_CALL},  // TOKEN_IDENTIFIER,
     {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_TRUE,
     {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_FALSE,
     {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_INTEGER,
@@ -2035,8 +2081,12 @@ static void parsePrecedence(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle,
     bool canBeAssigned = rule <= PREC_ASSIGNMENT;
     prefixRule(parser, nodeHandle);  // ignore the returned opcode
 
-    // infix rules are left-recursive
-    while (rule <= getRule(parser->current.type)->precedence) {
+// infix rules are left-recursive
+    while (true) {
+        PrecedenceRule currentPrec = getRule(parser->current.type)->precedence;
+        if (rule > currentPrec && currentPrec != PREC_CALL) {
+            break;
+        }
         ParseFn infixRule = getRule(parser->current.type)->infix;
 
         if (infixRule == NULL) {
