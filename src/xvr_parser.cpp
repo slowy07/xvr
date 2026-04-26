@@ -2617,12 +2617,6 @@ static void statement(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         return;
     }
 
-    // print statement
-    if (match(parser, XVR_TOKEN_PRINT)) {
-        printStmt(parser, nodeHandle);
-        return;
-    }
-
     // default
     expressionStmt(parser, nodeHandle);
 }
