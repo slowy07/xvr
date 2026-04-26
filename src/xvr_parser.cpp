@@ -2082,11 +2082,7 @@ static void parsePrecedence(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle,
     prefixRule(parser, nodeHandle);  // ignore the returned opcode
 
 // infix rules are left-recursive
-    while (true) {
-        PrecedenceRule currentPrec = getRule(parser->current.type)->precedence;
-        if (rule > currentPrec && currentPrec != PREC_CALL) {
-            break;
-        }
+    while (rule <= getRule(parser->current.type)->precedence) {
         ParseFn infixRule = getRule(parser->current.type)->infix;
 
         if (infixRule == NULL) {
