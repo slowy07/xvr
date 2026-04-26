@@ -590,6 +590,59 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         Xvr_Literal identifier = XVR_TO_IDENTIFIER_LITERAL(
             Xvr_createRefStringLength(parser->previous.lexeme, length));
         
+        if (match(parser, XVR_TOKEN_COLON_COLON)) {
+            // std::print - create namespace.member access
+            if (parser->current.type != XVR_TOKEN_IDENTIFIER) {
+                error(parser, parser->current, "Expected identifier after '::'");
+                Xvr_freeLiteral(identifier);
+                return XVR_OP_EOF;
+            }
+            // Manually parse the identifier and check for parens
+            advance(parser);
+            Xvr_Literal memberId = XVR_TO_IDENTIFIER_LITERAL(
+                Xvr_createRefStringLength(parser->previous.lexeme, parser->previous.length));
+            
+            // Check if it's a function call: std::print(...)
+            if (match(parser, XVR_TOKEN_PAREN_LEFT)) {
+                Xvr_ASTNode* argsNode = NULL;
+                Xvr_emitASTNodeFnCollection(&argsNode);
+                if (argsNode->fnCollection.capacity == 0) {
+                    argsNode->fnCollection.capacity = 4;
+                    argsNode->fnCollection.nodes = XVR_GROW_ARRAY(
+                        Xvr_ASTNode, argsNode->fnCollection.nodes, 0, 4);
+                }
+                if (!match(parser, XVR_TOKEN_PAREN_RIGHT)) {
+                    do {
+                        Xvr_ASTNode* tmpArg = NULL;
+                        parsePrecedence(parser, &tmpArg, PREC_TERNARY);
+                        if (tmpArg) {
+                            if (argsNode->fnCollection.capacity < argsNode->fnCollection.count + 1) {
+                                int oldCap = argsNode->fnCollection.capacity;
+                                argsNode->fnCollection.capacity = XVR_GROW_CAPACITY(oldCap);
+                                argsNode->fnCollection.nodes = XVR_GROW_ARRAY(
+                                    Xvr_ASTNode, argsNode->fnCollection.nodes, oldCap,
+                                    argsNode->fnCollection.capacity);
+                            }
+                            argsNode->fnCollection.nodes[argsNode->fnCollection.count++] = *tmpArg;
+                            XVR_FREE(Xvr_ASTNode, tmpArg);
+                        }
+                    } while (match(parser, XVR_TOKEN_COMMA));
+                    consume(parser, XVR_TOKEN_PAREN_RIGHT, "Expected ')'");
+                }
+                Xvr_emitASTNodeFnCall(nodeHandle, argsNode);
+                Xvr_freeLiteral(memberId);
+                Xvr_freeLiteral(identifier);
+                return XVR_OP_FN_CALL;
+            } else {
+                // Just std::member (not a function call)
+                Xvr_emitASTNodeLiteral(nodeHandle, memberId);
+                Xvr_freeLiteral(memberId);
+            }
+            
+            Xvr_freeLiteral(identifier);
+            return XVR_OP_DOT;
+        }
+        
         if (match(parser, XVR_TOKEN_PAREN_LEFT)) {
             Xvr_ASTNode* arguments = NULL;
             Xvr_emitASTNodeFnCollection(&arguments);

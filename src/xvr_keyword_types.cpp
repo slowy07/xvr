@@ -52,7 +52,7 @@ Xvr_KeywordType Xvr_keywordTypes[] = {
     {XVR_TOKEN_INCLUDE, "include"},
     {XVR_TOKEN_IN, "in"},
     {XVR_TOKEN_OF, "of"},
-    {XVR_TOKEN_PRINT, "print"},
+    // print is handled as function call in parser, not as keyword
     {XVR_TOKEN_RETURN, "return"},
     {XVR_TOKEN_STRUCT, "struct"},
     {XVR_TOKEN_FN, "fn"},
