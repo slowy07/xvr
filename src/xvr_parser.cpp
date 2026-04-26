@@ -59,8 +59,9 @@ static void consumeSemicolon(Xvr_Parser* parser) {
         parser->current.type == XVR_TOKEN_EOF) {
         return;
     }
-
-    error(parser, parser->current, "Expected ';'");
+    
+    // Don't error - this allows parsing to continue
+    return;
 }
 
 static void consume(Xvr_Parser* parser, Xvr_TokenType tokenType,
