@@ -17,6 +17,7 @@
 #include "xvr_console_colors.h"
 #include "xvr_parser.h"
 #include "xvr_unused.h"
+#include "xvr_namespace.h"
 
 static int is_safe_path_component(const char* path) {
     if (!path) return 0;
@@ -189,6 +190,10 @@ static void print_compiler_error(const char* filename, int line,
 
 int main(int argc, const char* argv[]) {
     Xvr_initCommandLine(argc, argv);
+
+    // Initialize namespace system (for std::, math:: etc.)
+    Xvr_NamespaceInit();
+    Xvr_NamespaceRegisterBuiltins();
 
     if (Xvr_commandLine.error) {
         Xvr_usageCommandLine(argc, argv);
