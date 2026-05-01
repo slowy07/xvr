@@ -406,7 +406,15 @@ static void finalize_main_function(Xvr_LLVMCodegen* codegen) {
 
     LLVMBuilderRef builder = Xvr_LLVMIRBuilderGetLLVMBuilder(codegen->builder);
     LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(codegen->context);
+    LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(codegen->module);
     LLVMTypeRef int32_type = LLVMInt32TypeInContext(llvm_ctx);
+
+    // Check if user defined a main function (renamed to _xvr_main)
+    LLVMValueRef user_main = LLVMGetNamedFunction(module, "_xvr_main");
+    if (user_main) {
+        LLVMTypeRef user_main_type = LLVMGlobalGetValueType(user_main);
+        LLVMBuildCall2(builder, user_main_type, user_main, NULL, 0, "");
+    }
 
     LLVMBuildRet(builder, LLVMConstInt(int32_type, 0, false));
 }

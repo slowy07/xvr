@@ -399,10 +399,17 @@ static bool emit_function_body(Xvr_LLVMFunctionEmitter* emitter,
         fn_name = (const char*)fn_decl->identifier.as.string.ptr->data;
     }
 
-    LLVMValueRef function = LLVMAddFunction(
-        Xvr_LLVMModuleManagerGetModule(module), fn_name, function_type);
+    // If user defines "main", rename it to "_xvr_main" to avoid conflict
+    // with the auto-generated entry point
+    const char* llvm_fn_name = fn_name;
+    if (strcmp(fn_name, "main") == 0) {
+        llvm_fn_name = "_xvr_main";
+    }
 
-    Xvr_LLVMModuleManagerRegisterFunctionType(module, fn_name, function_type);
+    LLVMValueRef function = LLVMAddFunction(
+        Xvr_LLVMModuleManagerGetModule(module), llvm_fn_name, function_type);
+
+    Xvr_LLVMModuleManagerRegisterFunctionType(module, llvm_fn_name, function_type);
 
     emitter->current_function = function;
 

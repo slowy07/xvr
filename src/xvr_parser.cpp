@@ -628,7 +628,11 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
                             parsePrecedence(parser, &tmpArg, PREC_TERNARY);
                             break;
                         case XVR_TOKEN_IDENTIFIER:
-                            atomic(parser, &tmpArg);
+                            parsePrecedence(parser, &tmpArg, PREC_TERNARY);
+                            break;
+                        case XVR_TOKEN_MINUS:
+                        case XVR_TOKEN_NOT:
+                            parsePrecedence(parser, &tmpArg, PREC_UNARY);
                             break;
                         case XVR_TOKEN_PAREN_LEFT: {
                             advance(parser);
@@ -661,7 +665,7 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
                 // Create binary: DOT(std, FN_CALL(print, args))
                 // This matches the structure the LLVM emitter expects
                 Xvr_ASTNode* fnCallNode = NULL;
-                Xvr_emitASTNodeFnCall(&fnCallNode, argsNode);
+                Xvr_emitASTNodeFnCall(&fnCallNode, memberId, argsNode);
                 
                 // Create left side: the "std" identifier as a literal
                 Xvr_ASTNode* stdNode = NULL;
@@ -673,8 +677,7 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
                 dotNode->binary.left = stdNode;
                 
                 *nodeHandle = dotNode;
-                Xvr_freeLiteral(memberId);
-                // Note: identifier is now owned by stdNode, don't free it here
+                // Note: memberId is now owned by fnCallNode, identifier by stdNode
                 return XVR_OP_DOT;
             } else {
                 // Just std::member (not a function call)
@@ -736,8 +739,7 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
                 consume(parser, XVR_TOKEN_PAREN_RIGHT, "Expected ')'");
             }
             
-            Xvr_emitASTNodeFnCall(nodeHandle, arguments);
-            Xvr_freeLiteral(identifier);
+            Xvr_emitASTNodeFnCall(nodeHandle, identifier, arguments);
             return XVR_OP_FN_CALL;
         }
         
@@ -1312,7 +1314,12 @@ static Xvr_Opcode fnCall(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         }
 
         // emit the call
-        Xvr_emitASTNodeFnCall(nodeHandle, arguments);
+        // Extract identifier from the left side (*nodeHandle)
+        Xvr_Literal fnIdentifier = XVR_TO_NULL_LITERAL;
+        if (*nodeHandle && (*nodeHandle)->type == XVR_AST_NODE_LITERAL) {
+            fnIdentifier = Xvr_copyLiteral((*nodeHandle)->atomic.literal);
+        }
+        Xvr_emitASTNodeFnCall(nodeHandle, fnIdentifier, arguments);
 
         return XVR_OP_FN_CALL;
     } break;
@@ -1440,7 +1447,7 @@ static ParseRule parseRules[] = {
     {castingPrefix, NULL, PREC_CALL},           // TOKEN_BOOLEAN,
     {castingPrefix, NULL, PREC_CALL},           // TOKEN_INTEGER,
     {castingPrefix, NULL, PREC_CALL},           // TOKEN_FLOAT,
-    {atomic, NULL, PREC_PRIMARY},              // TOKEN_STRING,
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_STRING,
     {NULL, NULL, PREC_NONE},                   // TOKEN_ARRAY,
     {NULL, NULL, PREC_NONE},                   // TOKEN_DICTIONARY,
     {NULL, NULL, PREC_NONE},                   // TOKEN_FUNCTION,
@@ -3096,7 +3103,7 @@ static void fnDecl(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 static void declaration(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     if (match(parser, XVR_TOKEN_VAR)) {
         varDecl(parser, nodeHandle);
-    } else if (match(parser, XVR_TOKEN_FUNCTION) || match(parser, XVR_TOKEN_FN)) {
+    } else if (match(parser, XVR_TOKEN_FUNCTION)) {
         fnDecl(parser, nodeHandle);
     } else {
         statement(parser, nodeHandle);

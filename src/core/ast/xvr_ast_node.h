@@ -293,7 +293,8 @@ typedef struct Xvr_NodeFnDecl {
     int line;              // line number
 } Xvr_NodeFnDecl;
 
-void Xvr_emitASTNodeFnCall(Xvr_ASTNode** nodeHandle, Xvr_ASTNode* arguments);
+void Xvr_emitASTNodeFnCall(Xvr_ASTNode** nodeHandle, Xvr_Literal identifier,
+                           Xvr_ASTNode* arguments);
 
 /**
  * @struct Xvr_NodeFnCall
@@ -304,6 +305,7 @@ void Xvr_emitASTNodeFnCall(Xvr_ASTNode** nodeHandle, Xvr_ASTNode* arguments);
  */
 typedef struct Xvr_NodeFnCall {
     Xvr_ASTNodeType type;    // XVR_AST_NODE_FN_CALL
+    Xvr_Literal identifier;  // function name identifier
     Xvr_ASTNode* arguments;  // argument list
     int argumentCount;       // cached count
 } Xvr_NodeFnCall;

@@ -87,6 +87,7 @@ static void freeASTNodeCustom(Xvr_ASTNode* node, bool freeSelf) {
         break;
 
     case XVR_AST_NODE_FN_CALL:
+        Xvr_freeLiteral(node->fnCall.identifier);
         Xvr_freeASTNode(node->fnCall.arguments);
         break;
 
@@ -286,10 +287,12 @@ void Xvr_emitASTNodeFnDecl(Xvr_ASTNode** nodeHandle, Xvr_Literal identifier,
     *nodeHandle = tmp;
 }
 
-void Xvr_emitASTNodeFnCall(Xvr_ASTNode** nodeHandle, Xvr_ASTNode* arguments) {
+void Xvr_emitASTNodeFnCall(Xvr_ASTNode** nodeHandle, Xvr_Literal identifier,
+                           Xvr_ASTNode* arguments) {
     Xvr_ASTNode* tmp = XVR_ALLOCATE(Xvr_ASTNode, 1);
 
     tmp->type = XVR_AST_NODE_FN_CALL;
+    tmp->fnCall.identifier = identifier;
     tmp->fnCall.arguments = arguments;
     tmp->fnCall.argumentCount = arguments->fnCollection.count;
 
