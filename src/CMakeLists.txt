@@ -9,6 +9,7 @@ set(XVR_SOURCES
     xvr_literal_array.cpp
     xvr_literal_dictionary.cpp
     xvr_memory.cpp
+    xvr_namespace.cpp
     xvr_parser.cpp
     xvr_print_handler.cpp
     xvr_refstring.cpp

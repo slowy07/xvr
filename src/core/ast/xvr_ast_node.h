@@ -94,6 +94,10 @@ typedef enum Xvr_ASTNodeType {
     XVR_AST_NODE_POSTFIX_DECREMENT,  // x--
     XVR_AST_NODE_CAST,               // type(expr) - explicit type conversion
     XVR_AST_NODE_IMPORT,             // import lib as alias
+    XVR_AST_NODE_STRUCT_DECL,        // struct Point { x: i32, y: i32 }
+    XVR_AST_NODE_STRUCT_FIELD,       // struct field definition
+    XVR_AST_NODE_STRUCT_INIT,        // struct initialization: Point{.x = 1, .y = 2}
+    XVR_AST_NODE_STRUCT_ACCESS,      // struct field access: point.x
     XVR_AST_NODE_PASS                // for do nothing
 } Xvr_ASTNodeType;
 
@@ -289,7 +293,8 @@ typedef struct Xvr_NodeFnDecl {
     int line;              // line number
 } Xvr_NodeFnDecl;
 
-void Xvr_emitASTNodeFnCall(Xvr_ASTNode** nodeHandle, Xvr_ASTNode* arguments);
+void Xvr_emitASTNodeFnCall(Xvr_ASTNode** nodeHandle, Xvr_Literal identifier,
+                           Xvr_ASTNode* arguments);
 
 /**
  * @struct Xvr_NodeFnCall
@@ -300,6 +305,7 @@ void Xvr_emitASTNodeFnCall(Xvr_ASTNode** nodeHandle, Xvr_ASTNode* arguments);
  */
 typedef struct Xvr_NodeFnCall {
     Xvr_ASTNodeType type;    // XVR_AST_NODE_FN_CALL
+    Xvr_Literal identifier;  // function name identifier
     Xvr_ASTNode* arguments;  // argument list
     int argumentCount;       // cached count
 } Xvr_NodeFnCall;
@@ -484,6 +490,44 @@ typedef struct Xvr_NodeImport {
 } Xvr_NodeImport;
 
 /**
+ * @struct Xvr_NodeStructDecl
+ * @brief struct definition
+ *
+ * example: struct Point { x: i32, y: i32 }
+ */
+typedef struct Xvr_NodeStructDecl {
+    Xvr_ASTNodeType type;
+    Xvr_Literal name;
+    Xvr_Literal* fields;
+    size_t field_count;
+} Xvr_NodeStructDecl;
+
+/**
+ * @struct Xvr_NodeStructInit
+ * @brief struct initialization
+ *
+ * example: Point{.x = 10, .y = 20}
+ */
+typedef struct Xvr_NodeStructInit {
+    Xvr_ASTNodeType type;
+    Xvr_Literal struct_type;
+    Xvr_Literal* field_values;
+    size_t field_count;
+} Xvr_NodeStructInit;
+
+/**
+ * @struct Xvr_NodeStructAccess
+ * @brief struct field access
+ *
+ * example: point.x
+ */
+typedef struct Xvr_NodeStructAccess {
+    Xvr_ASTNodeType type;
+    Xvr_ASTNode* object;
+    Xvr_Literal field_name;
+} Xvr_NodeStructAccess;
+
+/**
  *  @brief perform single compiler pass over an AST node,
  *      generate bytecode transform based on the node type
  *
@@ -526,6 +570,9 @@ union Xvr_private_node {
         postfixDecrement;  // XVR_AST_NODE_POSTFIX_DECREMENT
     Xvr_NodeCast cast;     // XVR_AST_NODE_CAST
     Xvr_NodeImport import;
+    Xvr_NodeStructDecl structDecl;
+    Xvr_NodeStructInit structInit;
+    Xvr_NodeStructAccess structAccess;
 };
 
 /**

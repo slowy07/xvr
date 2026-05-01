@@ -1,0 +1,10 @@
+// XVR Standard Library
+// Core functionality: print, println, max
+
+// Return the maximum of two integers
+proc max(a: int, b: int): int {
+    if (a > b) {
+        return a;
+    }
+    return b;
+}

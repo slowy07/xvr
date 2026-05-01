@@ -1,0 +1,15 @@
+proc main() {
+    std::println("Stage0 Bootstrap Compiler Tests");
+    std::println("Note: Running with stage0 compiler, not main xvr");
+    std::println("");
+    std::println("Tests will validate:");
+    std::println("  - Token types work");
+    std::println("  - Keywords recognized");
+    std::println("  - Parser generates AST");
+    std::println("  - Codegen produces LLVM IR");
+    std::println("");
+    std::println("Build stage0: ./build/xvr stage0/src/main.xvr -o stage0/stage0");
+    std::println("Run stage0: ./stage0/stage0");
+}
+
+main();

@@ -1,0 +1,7 @@
+include std;
+include codegen;
+
+codegen::initCodegen();
+codegen::generate();
+
+std::println("codegen works");

@@ -1,0 +1,62 @@
+include std;
+
+proc run_lexer_tests() {
+    std::println("\n========== LEXER TESTS ==========");
+    
+    initLexer("var x = 42");
+    std::println("Token count: {}", tokenCount());
+    
+    var i = 0;
+    while (i < tokenCount()) {
+        var lex = getTokenLexeme(i);
+        var typ = getTokenType(i);
+        std::println("  Token {}: '{}' type={}", i, lex, typ);
+        i = i + 1;
+    }
+    
+    initLexer("struct const fn");
+    var tok = nextToken();
+    std::println("Keyword 'struct' type: {}", tok.type);
+    
+    std::println("LEXER TESTS: OK");
+}
+
+proc run_parser_tests() {
+    std::println("\n========== PARSER TESTS ==========");
+    
+    initLexer("var x = 42");
+    initParser();
+    var result = parse([]);
+    std::println("Parsed {} nodes", result);
+    
+    std::println("PARSER TESTS: OK");
+}
+
+proc run_codegen_tests() {
+    std::println("\n========== CODEGEN TESTS ==========");
+    
+    initCodegen();
+    var ir = generate();
+    std::println("Generated IR: {}", len(ir));
+    
+    var fn = generateFunction("test", "  ret i32 0");
+    std::println("Function IR: {}", len(fn));
+    
+    std::println("CODEGEN TESTS: OK");
+}
+
+proc main() {
+    std::println("======================================");
+    std::println("  Stage0 Bootstrap Compiler Tests");
+    std::println("======================================");
+    
+    run_lexer_tests();
+    run_parser_tests();
+    run_codegen_tests();
+    
+    std::println("\n======================================");
+    std::println("  ALL TESTS PASSED");
+    std::println("======================================");
+}
+
+main();

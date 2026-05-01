@@ -121,6 +121,7 @@ struct NodeFnDecl {
 
 struct NodeFnCall {
     ASTNodeType type{ASTNodeType::FnCall};
+    Xvr_Literal identifier;
     std::unique_ptr<class ASTNode> arguments;
     int argumentCount{0};
 };

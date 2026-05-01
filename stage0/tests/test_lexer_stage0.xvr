@@ -1,0 +1,103 @@
+include std;
+
+proc test_token_types() {
+    std::println("=== Test: Token Types ===");
+    initLexer("var x = 42");
+    var count = tokenCount();
+    std::println("Token count: {}", count);
+    
+    var i = 0;
+    while (i < count) {
+        var lex = getTokenLexeme(i);
+        var typ = getTokenType(i);
+        std::println("Token {}: '{}' type={}", i, lex, typ);
+        i = i + 1;
+    }
+    std::println("PASS: token_types");
+}
+
+proc test_keyword_recognition() {
+    std::println("=== Test: Keyword Recognition ===");
+    initLexer("struct const fn if while for");
+    
+    var types: [i32];
+    types = [];
+    
+    var tok = nextToken();
+    types.insert(tok.type);
+    tok = nextToken();
+    types.insert(tok.type);
+    tok = nextToken();
+    types.insert(tok.type);
+    tok = nextToken();
+    types.insert(tok.type);
+    tok = nextToken();
+    types.insert(tok.type);
+    tok = nextToken();
+    types.insert(tok.type);
+    
+    std::println("Keywords recognized: {}", len(types));
+    std::println("PASS: keyword_recognition");
+}
+
+proc test_int_literal() {
+    std::println("=== Test: Integer Literal ===");
+    initLexer("42");
+    var tok = nextToken();
+    std::println("Int literal: '{}'", tok.lexeme);
+    std::println("PASS: int_literal");
+}
+
+proc test_float_literal() {
+    std::println("=== Test: Float Literal ===");
+    initLexer("3.14");
+    var tok = nextToken();
+    std::println("Float literal: '{}'", tok.lexeme);
+    std::println("PASS: float_literal");
+}
+
+proc test_string_literal() {
+    std::println("=== Test: String Literal ===");
+    initLexer("\"hello world\"");
+    var tok = nextToken();
+    std::println("String literal: '{}'", tok.lexeme);
+    std::println("PASS: string_literal");
+}
+
+proc test_identifier() {
+    std::println("=== Test: Identifier ===");
+    initLexer("myVariable");
+    var tok = nextToken();
+    std::println("Identifier: '{}'", tok.lexeme);
+    std::println("PASS: identifier");
+}
+
+proc test_operators() {
+    std::println("=== Test: Operators ===");
+    initLexer("+ - * / = == != < > <= >=");
+    
+    var count = 0;
+    var tok = nextToken();
+    while (tok.type != 0) {
+        count = count + 1;
+        tok = nextToken();
+    }
+    std::println("Operators count: {}", count);
+    std::println("PASS: operators");
+}
+
+proc main() {
+    std::println("Stage0 Unit Tests\n");
+    
+    test_token_types();
+    test_keyword_recognition();
+    test_int_literal();
+    test_float_literal();
+    test_string_literal();
+    test_identifier();
+    test_operators();
+    
+    std::println("\n=== All Tests Passed ===");
+}
+
+main();

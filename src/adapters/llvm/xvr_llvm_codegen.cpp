@@ -406,7 +406,15 @@ static void finalize_main_function(Xvr_LLVMCodegen* codegen) {
 
     LLVMBuilderRef builder = Xvr_LLVMIRBuilderGetLLVMBuilder(codegen->builder);
     LLVMContextRef llvm_ctx = Xvr_LLVMContextGetLLVMContext(codegen->context);
+    LLVMModuleRef module = Xvr_LLVMModuleManagerGetModule(codegen->module);
     LLVMTypeRef int32_type = LLVMInt32TypeInContext(llvm_ctx);
+
+    // Check if user defined a main function (renamed to _xvr_main)
+    LLVMValueRef user_main = LLVMGetNamedFunction(module, "_xvr_main");
+    if (user_main) {
+        LLVMTypeRef user_main_type = LLVMGlobalGetValueType(user_main);
+        LLVMBuildCall2(builder, user_main_type, user_main, NULL, 0, "");
+    }
 
     LLVMBuildRet(builder, LLVMConstInt(int32_type, 0, false));
 }
@@ -475,7 +483,7 @@ bool Xvr_LLVMCodegenEmitAST(Xvr_LLVMCodegen* codegen, Xvr_ASTNode* ast) {
         return result;
     }
 
-    if (ast->type == XVR_AST_NODE_FN_DECL) {
+if (ast->type == XVR_AST_NODE_FN_DECL) {
         bool result = Xvr_LLVMFunctionEmitterEmit(codegen->fn_emitter, ast);
         if (result) {
             ensure_main_function(codegen);

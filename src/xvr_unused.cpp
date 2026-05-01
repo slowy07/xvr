@@ -27,6 +27,13 @@ static void popScope(Xvr_UnusedChecker* checker) {
 
     for (int i = 0; i < scope->count; i++) {
         if (!scope->declarations[i].used) {
+            // Allow 'main' proc to be unused (auto-entry point)
+            const char* decl_name = Xvr_toCString(
+                scope->declarations[i].identifier.as.identifier.ptr);
+            if (scope->declarations[i].isFunction && strcmp(decl_name, "main") == 0) {
+                continue;
+            }
+            
             checker->hasError = true;
             const char* name = Xvr_toCString(
                 scope->declarations[i].identifier.as.identifier.ptr);
@@ -201,6 +208,11 @@ static void checkNode(Xvr_UnusedChecker* checker, Xvr_ASTNode* node) {
         break;
 
     case XVR_AST_NODE_FN_CALL:
+        // Mark the function being called as used
+        if (XVR_IS_IDENTIFIER(node->fnCall.identifier)) {
+            markUsed(checker, node->fnCall.identifier);
+        }
+        // Also check the arguments
         if (node->fnCall.arguments &&
             node->fnCall.arguments->type == XVR_AST_NODE_FN_COLLECTION) {
             for (int i = 0; i < node->fnCall.arguments->fnCollection.count;

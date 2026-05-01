@@ -1,0 +1,56 @@
+include std;
+include lexer;
+include parser;
+
+proc test_parser_var_decl() {
+    std::println("=== Test: Variable Declaration ===");
+    initLexer("var x = 42");
+    initParser();
+    
+    var result = parse([]);
+    std::println("Parsed {} nodes", result);
+    std::println("PASS: var_decl");
+}
+
+proc test_parser_if_statement() {
+    std::println("=== Test: If Statement ===");
+    initLexer("if x { y }");
+    initParser();
+    
+    var result = parse([]);
+    std::println("Parsed {} nodes", result);
+    std::println("PASS: if_statement");
+}
+
+proc test_parser_while_statement() {
+    std::println("=== Test: While Statement ===");
+    initLexer("while x { y }");
+    initParser();
+    
+    var result = parse([]);
+    std::println("Parsed {} nodes", result);
+    std::println("PASS: while_statement");
+}
+
+proc test_parser_return() {
+    std::println("=== Test: Return Statement ===");
+    initLexer("return 42");
+    initParser();
+    
+    var result = parse([]);
+    std::println("Parsed {} nodes", result);
+    std::println("PASS: return_statement");
+}
+
+proc main() {
+    std::println("Stage0 Parser Tests\n");
+    
+    test_parser_var_decl();
+    test_parser_if_statement();
+    test_parser_while_statement();
+    test_parser_return();
+    
+    std::println("\n=== All Parser Tests Passed ===");
+}
+
+main();

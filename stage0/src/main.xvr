@@ -1,0 +1,40 @@
+include lexer;
+include parser;
+include codegen;
+
+var g_ir: string;
+
+proc run(): void {
+    std::print("Stage0 Bootstrap Compiler v0.1.0\n");
+    std::print("Testing lexer with string: 'var x = 42'\n");
+    
+    var source = "var x = 42";
+    initLexer(source);
+    
+    std::print("Calling nextToken...\n");
+    var tok = nextToken();
+    std::print("Got token\n");
+    
+    tok = nextToken();
+    std::print("Got token\n");
+    
+    tok = nextToken();
+    std::print("Got token\n");
+    
+    tok = nextToken();
+    std::print("Got token\n");
+    
+    tok = nextToken();
+    std::print("Got token\n");
+    
+    initParser();
+    initCodegen();
+    generate();
+    g_ir = getIR();
+    
+    std::print("\n=== Generated LLVM IR ===\n");
+    std::print(g_ir);
+    std::print("\nStage0 ready - lexer works, parser/codegen need implementation\n");
+}
+
+run();

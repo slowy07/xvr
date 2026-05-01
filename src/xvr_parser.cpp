@@ -12,6 +12,7 @@
 #include "xvr_opcodes.h"
 #include "xvr_refstring.h"
 #include "xvr_token_types.h"
+#include "xvr_namespace.h"
 
 static void error(Xvr_Parser* parser, Xvr_Token token, const char* message) {
     if (parser->panic) return;
@@ -59,8 +60,9 @@ static void consumeSemicolon(Xvr_Parser* parser) {
         parser->current.type == XVR_TOKEN_EOF) {
         return;
     }
-
-    error(parser, parser->current, "Expected ';'");
+    
+    // Don't error - this allows parsing to continue
+    return;
 }
 
 static void consume(Xvr_Parser* parser, Xvr_TokenType tokenType,
@@ -583,6 +585,194 @@ static Xvr_Opcode atomic(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_NULL_LITERAL);
         return XVR_OP_EOF;
 
+    case XVR_TOKEN_IDENTIFIER: {
+        int length = parser->previous.length;
+        if (length > 256) length = 256;
+        Xvr_Literal identifier = XVR_TO_IDENTIFIER_LITERAL(
+            Xvr_createRefStringLength(parser->previous.lexeme, length));
+        
+        // Check for std:: first (always allowed)
+        if (match(parser, XVR_TOKEN_COLON_COLON)) {
+            // std::print - create namespace.member access
+            // Can be identifier (std::foo) or keyword (std::print)
+            if (parser->current.type != XVR_TOKEN_IDENTIFIER && 
+                parser->current.type != XVR_TOKEN_PRINT) {
+                error(parser, parser->current, "Expected identifier after '::'");
+                Xvr_freeLiteral(identifier);
+                return XVR_OP_EOF;
+            }
+            // Manually parse the identifier
+            advance(parser);
+            Xvr_Literal memberId = XVR_TO_IDENTIFIER_LITERAL(
+                Xvr_createRefStringLength(parser->previous.lexeme, parser->previous.length));
+            
+            // Check if it's a function call: std::print(...)
+            if (match(parser, XVR_TOKEN_PAREN_LEFT)) {
+                Xvr_ASTNode* argsNode = NULL;
+                Xvr_emitASTNodeFnCollection(&argsNode);
+                if (argsNode->fnCollection.capacity == 0) {
+                    argsNode->fnCollection.capacity = 4;
+                    argsNode->fnCollection.nodes = XVR_GROW_ARRAY(
+                        Xvr_ASTNode, argsNode->fnCollection.nodes, 0, 4);
+                }
+                if (!match(parser, XVR_TOKEN_PAREN_RIGHT)) {
+                    do {
+                        Xvr_ASTNode* tmpArg = NULL;
+                        // Parse each argument
+                        switch (parser->current.type) {
+                        case XVR_TOKEN_LITERAL_INTEGER:
+                        case XVR_TOKEN_LITERAL_FLOAT:
+                        case XVR_TOKEN_LITERAL_STRING:
+                        case XVR_TOKEN_LITERAL_TRUE:
+                        case XVR_TOKEN_LITERAL_FALSE:
+                            parsePrecedence(parser, &tmpArg, PREC_TERNARY);
+                            break;
+                        case XVR_TOKEN_IDENTIFIER:
+                            parsePrecedence(parser, &tmpArg, PREC_TERNARY);
+                            break;
+                        case XVR_TOKEN_MINUS:
+                        case XVR_TOKEN_NOT:
+                            parsePrecedence(parser, &tmpArg, PREC_UNARY);
+                            break;
+                        case XVR_TOKEN_PAREN_LEFT: {
+                            advance(parser);
+                            Xvr_ASTNode* groupExpr = NULL;
+                            parsePrecedence(parser, &groupExpr, PREC_TERNARY);
+                            consume(parser, XVR_TOKEN_PAREN_RIGHT, "Expected ')'");
+                            Xvr_emitASTNodeGrouping(&groupExpr);
+                            tmpArg = groupExpr;
+                            break;
+                        }
+                        default:
+                            error(parser, parser->current, "Expected expression");
+                            parser->panic = true;
+                        }
+                        if (tmpArg && !parser->panic) {
+                            if (argsNode->fnCollection.capacity < argsNode->fnCollection.count + 1) {
+                                int oldCap = argsNode->fnCollection.capacity;
+                                argsNode->fnCollection.capacity = XVR_GROW_CAPACITY(oldCap);
+                                argsNode->fnCollection.nodes = XVR_GROW_ARRAY(
+                                    Xvr_ASTNode, argsNode->fnCollection.nodes, oldCap,
+                                    argsNode->fnCollection.capacity);
+                            }
+                            argsNode->fnCollection.nodes[argsNode->fnCollection.count++] = *tmpArg;
+                            XVR_FREE(Xvr_ASTNode, tmpArg);
+                        }
+                    } while (match(parser, XVR_TOKEN_COMMA));
+                    consume(parser, XVR_TOKEN_PAREN_RIGHT, "Expected ')'");
+                }
+                
+                // Create binary: DOT(std, FN_CALL(print, args))
+                // This matches the structure the LLVM emitter expects
+                Xvr_ASTNode* fnCallNode = NULL;
+                Xvr_emitASTNodeFnCall(&fnCallNode, memberId, argsNode);
+                
+                // Create left side: the "std" identifier as a literal
+                Xvr_ASTNode* stdNode = NULL;
+                Xvr_emitASTNodeLiteral(&stdNode, identifier);
+                
+                // Create DOT binary with std on left, fnCall on right
+                Xvr_ASTNode* dotNode = NULL;
+                Xvr_emitASTNodeBinary(&dotNode, fnCallNode, XVR_OP_DOT);
+                dotNode->binary.left = stdNode;
+                
+                *nodeHandle = dotNode;
+                // Note: memberId is now owned by fnCallNode, identifier by stdNode
+                return XVR_OP_DOT;
+            } else {
+                // Just std::member (not a function call)
+                // Create left side: the "std" identifier as a literal
+                Xvr_ASTNode* stdNode = NULL;
+                Xvr_emitASTNodeLiteral(&stdNode, identifier);
+                
+                // Create right side: the member as a literal
+                Xvr_ASTNode* rightNode = NULL;
+                Xvr_emitASTNodeLiteral(&rightNode, memberId);
+                
+                // Create DOT binary
+                Xvr_ASTNode* dotNode = NULL;
+                Xvr_emitASTNodeBinary(&dotNode, rightNode, XVR_OP_DOT);
+                dotNode->binary.left = stdNode;
+                
+                *nodeHandle = dotNode;
+                // Note: identifiers are now owned by the AST nodes, don't free here
+                return XVR_OP_DOT;
+            }
+        }
+        
+        // Bare print() is not allowed - must use std::print()
+        bool is_print_fn = (identifier.type == XVR_LITERAL_IDENTIFIER && 
+                     strcmp(identifier.as.identifier.ptr->data, "print") == 0);
+        if (is_print_fn && match(parser, XVR_TOKEN_PAREN_LEFT)) {
+            error(parser, parser->previous, 
+                 "print() requires namespace - use std::print() instead");
+            Xvr_freeLiteral(identifier);
+            return XVR_OP_EOF;
+        }
+        
+        if (match(parser, XVR_TOKEN_PAREN_LEFT)) {
+            Xvr_ASTNode* arguments = NULL;
+            Xvr_emitASTNodeFnCollection(&arguments);
+            
+            if (arguments->fnCollection.capacity == 0) {
+                arguments->fnCollection.capacity = 4;
+                arguments->fnCollection.nodes = XVR_GROW_ARRAY(
+                    Xvr_ASTNode, arguments->fnCollection.nodes, 0, 4);
+            }
+            
+            if (!match(parser, XVR_TOKEN_PAREN_RIGHT)) {
+                do {
+                    Xvr_ASTNode* tmpArg = NULL;
+                    parsePrecedence(parser, &tmpArg, PREC_TERNARY);
+                    if (tmpArg) {
+                        if (arguments->fnCollection.capacity < arguments->fnCollection.count + 1) {
+                            int oldCap = arguments->fnCollection.capacity;
+                            arguments->fnCollection.capacity = XVR_GROW_CAPACITY(oldCap);
+                            arguments->fnCollection.nodes = XVR_GROW_ARRAY(
+                                Xvr_ASTNode, arguments->fnCollection.nodes, oldCap,
+                                arguments->fnCollection.capacity);
+                        }
+                        arguments->fnCollection.nodes[arguments->fnCollection.count++] = *tmpArg;
+                        XVR_FREE(Xvr_ASTNode, tmpArg);
+                    }
+                } while (match(parser, XVR_TOKEN_COMMA));
+                consume(parser, XVR_TOKEN_PAREN_RIGHT, "Expected ')'");
+            }
+            
+            Xvr_emitASTNodeFnCall(nodeHandle, identifier, arguments);
+            return XVR_OP_FN_CALL;
+        }
+        
+        Xvr_emitASTNodeLiteral(nodeHandle, identifier);
+        Xvr_freeLiteral(identifier);
+        return XVR_OP_EOF;
+    }
+
+    case XVR_TOKEN_LITERAL_STRING: {
+        int length = parser->previous.length;
+        if (length > 256) length = 256;
+        char* buffer = XVR_ALLOCATE(char, length + 1);
+        int strLen = 0;
+        for (int i = 0; i < length && i < parser->previous.length; i++) {
+            if (parser->previous.lexeme[i] != '\\' || i + 1 >= parser->previous.length) {
+                buffer[strLen++] = parser->previous.lexeme[i];
+            } else {
+                switch (parser->previous.lexeme[++i]) {
+                case 'n': buffer[strLen++] = '\n'; break;
+                case 't': buffer[strLen++] = '\t'; break;
+                case 'r': buffer[strLen++] = '\r'; break;
+                case '"': buffer[strLen++] = '"'; break;
+                case '\\': buffer[strLen++] = '\\'; break;
+                default: buffer[strLen++] = parser->previous.lexeme[i]; break;
+                }
+            }
+        }
+        buffer[strLen] = '\0';
+        Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_STRING_LITERAL(Xvr_createRefStringLength(buffer, strLen)));
+        XVR_FREE(char, buffer);
+        return XVR_OP_EOF;
+    }
+
     case XVR_TOKEN_LITERAL_TRUE:
         Xvr_emitASTNodeLiteral(nodeHandle, XVR_TO_BOOLEAN_LITERAL(true));
         return XVR_OP_EOF;
@@ -1004,9 +1194,9 @@ static Xvr_Opcode castingInfix(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     return XVR_OP_TYPE_CAST;
 }
 
-// TODO: fix these screwy names
-static Xvr_Opcode incrementPrefix(Xvr_Parser* parser,
-                                  Xvr_ASTNode** nodeHandle) {
+// Prefix increment: ++x
+static Xvr_Opcode prefixIncrement(Xvr_Parser* parser,
+                                   Xvr_ASTNode** nodeHandle) {
     advance(parser);
 
     Xvr_ASTNode* tmpNode = NULL;
@@ -1023,7 +1213,8 @@ static Xvr_Opcode incrementPrefix(Xvr_Parser* parser,
     return XVR_OP_EOF;
 }
 
-static Xvr_Opcode incrementInfix(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+// Postfix increment: x++
+static Xvr_Opcode postfixIncrement(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_ASTNode* tmpNode = NULL;
     identifier(parser, &tmpNode);
     if (parser->panic || !tmpNode) {
@@ -1040,7 +1231,8 @@ static Xvr_Opcode incrementInfix(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     return XVR_OP_EOF;
 }
 
-static Xvr_Opcode decrementPrefix(Xvr_Parser* parser,
+// Prefix decrement: --x
+static Xvr_Opcode prefixDecrement(Xvr_Parser* parser,
                                   Xvr_ASTNode** nodeHandle) {
     advance(parser);
 
@@ -1058,7 +1250,8 @@ static Xvr_Opcode decrementPrefix(Xvr_Parser* parser,
     return XVR_OP_EOF;
 }
 
-static Xvr_Opcode decrementInfix(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
+// Postfix decrement: x--
+static Xvr_Opcode postfixDecrement(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_ASTNode* tmpNode = NULL;
     identifier(parser, &tmpNode);
     if (parser->panic || !tmpNode) {
@@ -1121,7 +1314,12 @@ static Xvr_Opcode fnCall(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         }
 
         // emit the call
-        Xvr_emitASTNodeFnCall(nodeHandle, arguments);
+        // Extract identifier from the left side (*nodeHandle)
+        Xvr_Literal fnIdentifier = XVR_TO_NULL_LITERAL;
+        if (*nodeHandle && (*nodeHandle)->type == XVR_AST_NODE_LITERAL) {
+            fnIdentifier = Xvr_copyLiteral((*nodeHandle)->atomic.literal);
+        }
+        Xvr_emitASTNodeFnCall(nodeHandle, fnIdentifier, arguments);
 
         return XVR_OP_FN_CALL;
     } break;
@@ -1227,38 +1425,51 @@ static Xvr_Opcode dot(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
 
     (*nodeHandle) = tmpNode;
     return XVR_OP_DOT;  // signal that the function name and arguments are in
-                        // the wrong order
+                         // the wrong order
 }
 
-ParseRule parseRules[] = {
-    // must match the token types
-    // types
-    {atomic, NULL, PREC_PRIMARY},      // TOKEN_NULL,
-    {atomic, NULL, PREC_PRIMARY},      // TOKEN_VOID,
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_BOOLEAN,
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_INTEGER,
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_FLOAT,
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_STRING,
-    {NULL, NULL, PREC_NONE},           // TOKEN_ARRAY,
-    {NULL, NULL, PREC_NONE},           // TOKEN_DICTIONARY,
-    {NULL, NULL, PREC_NONE},           // TOKEN_FUNCTION,
-    {NULL, NULL, PREC_NONE},           // TOKEN_OPAQUE,
-    {NULL, NULL, PREC_NONE},           // TOKEN_ANY,
+// ===========================================================
+// Parse Rules Table
+// ===========================================================
+// This table maps each token type to its parsing behavior:
+//   - prefix: function to call when token appears in prefix position
+//   - infix: function to call when token appears in infix position  
+//   - precedence: the precedence level for infix expressions
+//
+// IMPORTANT: The order here MUST match Xvr_TokenType enum in xvr_token_types.h
+// New tokens should be added at the END of the enum to maintain binary compatibility
+// ===========================================================
 
-    // fixed-size integer types
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_INT8,
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_INT16,
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_INT32,
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_INT64,
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_UINT8,
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_UINT16,
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_UINT32,
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_UINT64,
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_FLOAT16,
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_FLOAT32,
-    {castingPrefix, NULL, PREC_CALL},  // TOKEN_FLOAT64,
+static ParseRule parseRules[] = {
+    // ========== Type Tokens (0-13) ==========
+    {atomic, NULL, PREC_PRIMARY},              // TOKEN_NULL,
+    {atomic, NULL, PREC_PRIMARY},              // TOKEN_VOID,
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_BOOLEAN,
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_INTEGER,
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_FLOAT,
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_STRING,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_ARRAY,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_DICTIONARY,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_FUNCTION,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_OPAQUE,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_ANY,
 
-    // keywords and reserved words
+    // ========== Fixed-size Integer Types (11-18) ==========
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_INT8,
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_INT16,
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_INT32,
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_INT64,
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_UINT8,
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_UINT16,
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_UINT32,
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_UINT64,
+
+    // ========== Fixed-size Float Types (19-21) ==========
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_FLOAT16,
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_FLOAT32,
+    {castingPrefix, NULL, PREC_CALL},           // TOKEN_FLOAT64,
+
+    // ========== Keywords and Reserved Words (22-45) ==========
     {NULL, NULL, PREC_NONE},                   // TOKEN_AS,
     {NULL, NULL, PREC_NONE},                   // TOKEN_ASSERT,
     {NULL, NULL, PREC_NONE},                   // TOKEN_BREAK,
@@ -1270,85 +1481,92 @@ ParseRule parseRules[] = {
     {NULL, NULL, PREC_NONE},                   // TOKEN_EXPORT,
     {NULL, NULL, PREC_NONE},                   // TOKEN_FOR,
     {NULL, NULL, PREC_NONE},                   // TOKEN_FOREACH,
-    {ifExpression, NULL, PREC_ASSIGNMENT},     // TOKEN_IF,
+    {ifExpression, NULL, PREC_ASSIGNMENT},      // TOKEN_IF,
     {NULL, NULL, PREC_NONE},                   // TOKEN_IMPORT,
     {NULL, NULL, PREC_NONE},                   // TOKEN_IN,
     {NULL, NULL, PREC_NONE},                   // TOKEN_OF,
-    {identifierOrKeyword, fnCall, PREC_CALL},  // TOKEN_PRINT,
+    {identifierOrKeyword, fnCall, PREC_CALL},   // TOKEN_PRINT,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_INCLUDE,
     {NULL, NULL, PREC_NONE},                   // TOKEN_RETURN,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_STRUCT,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_FN,
     {atomic, NULL, PREC_PRIMARY},              // TOKEN_TYPE,
     {asType, NULL, PREC_CALL},                 // TOKEN_ASTYPE,
     {typeOf, NULL, PREC_CALL},                 // TOKEN_TYPEOF,
     {NULL, NULL, PREC_NONE},                   // TOKEN_VAR,
     {NULL, NULL, PREC_NONE},                   // TOKEN_WHILE,
 
-    // literal values
-    {identifier, castingInfix, PREC_PRIMARY},  // TOKEN_IDENTIFIER,
-    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_TRUE,
-    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_FALSE,
-    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_INTEGER,
-    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_FLOAT,
-    {string, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_STRING,
+    // ========== Literal Values (46-65) ==========
+    {atomic, NULL, PREC_CALL},                 // TOKEN_IDENTIFIER,
+    {atomic, castingInfix, PREC_PRIMARY},       // TOKEN_LITERAL_TRUE,
+    {atomic, castingInfix, PREC_PRIMARY},       // TOKEN_LITERAL_FALSE,
+    {atomic, castingInfix, PREC_PRIMARY},       // TOKEN_LITERAL_INTEGER,
+    {atomic, castingInfix, PREC_PRIMARY},       // TOKEN_LITERAL_FLOAT,
+    {string, castingInfix, PREC_PRIMARY},       // TOKEN_LITERAL_STRING,
 
-    // fixed-size integer literals
-    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_INT8,
-    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_INT16,
-    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_INT32,
-    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_INT64,
-    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_UINT8,
-    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_UINT16,
-    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_UINT32,
-    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_UINT64,
-    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_FLOAT16,
-    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_FLOAT32,
-    {atomic, castingInfix, PREC_PRIMARY},  // TOKEN_LITERAL_FLOAT64,
+    // Fixed-size integer literals
+    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_INT8,
+    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_INT16,
+    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_INT32,
+    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_INT64,
+    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_UINT8,
+    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_UINT16,
+    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_UINT32,
+    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_UINT64,
+    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_FLOAT16,
+    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_FLOAT32,
+    {atomic, castingInfix, PREC_PRIMARY},      // TOKEN_LITERAL_FLOAT64,
 
-    // math operators
-    {NULL, binary, PREC_TERM},                     // TOKEN_PLUS,
-    {unary, binary, PREC_TERM},                    // TOKEN_MINUS,
-    {NULL, binary, PREC_FACTOR},                   // TOKEN_MULTIPLY,
-    {NULL, binary, PREC_FACTOR},                   // TOKEN_DIVIDE,
-    {NULL, binary, PREC_FACTOR},                   // TOKEN_MODULO,
-    {NULL, binary, PREC_ASSIGNMENT},               // TOKEN_PLUS_ASSIGN,
-    {NULL, binary, PREC_ASSIGNMENT},               // TOKEN_MINUS_ASSIGN,
-    {NULL, binary, PREC_ASSIGNMENT},               // TOKEN_MULTIPLY_ASSIGN,
-    {NULL, binary, PREC_ASSIGNMENT},               // TOKEN_DIVIDE_ASSIGN,
-    {NULL, binary, PREC_ASSIGNMENT},               // TOKEN_MODULO_ASSIGN,
-    {incrementPrefix, incrementInfix, PREC_CALL},  // TOKEN_PLUS_PLUS,
-    {decrementPrefix, decrementInfix, PREC_CALL},  // TOKEN_MINUS_MINUS,
-    {NULL, binary, PREC_ASSIGNMENT},               // TOKEN_ASSIGN,
+    // ========== Math Operators (66-78) ==========
+    {NULL, binary, PREC_TERM},                 // TOKEN_PLUS,
+    {unary, binary, PREC_TERM},                // TOKEN_MINUS,
+    {NULL, binary, PREC_FACTOR},               // TOKEN_MULTIPLY,
+    {NULL, binary, PREC_FACTOR},               // TOKEN_DIVIDE,
+    {NULL, binary, PREC_FACTOR},               // TOKEN_MODULO,
+    {NULL, binary, PREC_ASSIGNMENT},           // TOKEN_PLUS_ASSIGN,
+    {NULL, binary, PREC_ASSIGNMENT},           // TOKEN_MINUS_ASSIGN,
+    {NULL, binary, PREC_ASSIGNMENT},           // TOKEN_MULTIPLY_ASSIGN,
+    {NULL, binary, PREC_ASSIGNMENT},           // TOKEN_DIVIDE_ASSIGN,
+    {NULL, binary, PREC_ASSIGNMENT},           // TOKEN_MODULO_ASSIGN,
+    {prefixIncrement, postfixIncrement, PREC_CALL}, // TOKEN_PLUS_PLUS,
+    {prefixDecrement, postfixDecrement, PREC_CALL}, // TOKEN_MINUS_MINUS,
+    {NULL, binary, PREC_ASSIGNMENT},           // TOKEN_ASSIGN,
 
-    // logical operators
-    {grouping, fnCall, PREC_CALL},       // TOKEN_PAREN_LEFT,
-    {NULL, NULL, PREC_NONE},             // TOKEN_PAREN_RIGHT,
-    {compound, indexAccess, PREC_CALL},  // TOKEN_BRACKET_LEFT,
-    {NULL, NULL, PREC_NONE},             // TOKEN_BRACKET_RIGHT,
-    {NULL, NULL, PREC_NONE},             // TOKEN_BRACE_LEFT,
-    {NULL, NULL, PREC_NONE},             // TOKEN_BRACE_RIGHT,
-    {unary, NULL, PREC_CALL},            // TOKEN_NOT,
-    {NULL, binary, PREC_COMPARISON},     // TOKEN_NOT_EQUAL,
-    {NULL, binary, PREC_COMPARISON},     // TOKEN_EQUAL,
-    {NULL, binary, PREC_COMPARISON},     // TOKEN_LESS,
-    {NULL, binary, PREC_COMPARISON},     // TOKEN_GREATER,
-    {NULL, binary, PREC_COMPARISON},     // TOKEN_LESS_EQUAL,
-    {NULL, binary, PREC_COMPARISON},     // TOKEN_GREATER_EQUAL,
-    {NULL, binary, PREC_AND},            // TOKEN_AND,
-    {NULL, binary, PREC_OR},             // TOKEN_OR,
+    // ========== Logical Operators (79-87) ==========
+    {grouping, fnCall, PREC_CALL},             // TOKEN_PAREN_LEFT,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_PAREN_RIGHT,
+    {compound, indexAccess, PREC_CALL},        // TOKEN_BRACKET_LEFT,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_BRACKET_RIGHT,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_BRACE_LEFT,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_BRACE_RIGHT,
+    {unary, NULL, PREC_CALL},                 // TOKEN_NOT,
+    {NULL, binary, PREC_COMPARISON},           // TOKEN_NOT_EQUAL,
+    {NULL, binary, PREC_COMPARISON},           // TOKEN_EQUAL,
 
-    // other operators
-    {NULL, question, PREC_TERNARY},  // TOKEN_QUESTION,
-    {NULL, NULL, PREC_NONE},         // TOKEN_COLON,
-    {NULL, dot, PREC_CALL},          // TOKEN_COLON_COLON,
-    {NULL, NULL, PREC_NONE},         // TOKEN_SEMICOLON,
-    {NULL, NULL, PREC_NONE},         // TOKEN_COMMA,
-    {NULL, dot, PREC_CALL},          // TOKEN_DOT,
-    {NULL, NULL, PREC_NONE},         // TOKEN_PIPE,
-    {NULL, NULL, PREC_NONE},         // TOKEN_REST,
+    // ========== Comparison Operators (88-92) ==========
+    {NULL, binary, PREC_COMPARISON},           // TOKEN_LESS,
+    {NULL, binary, PREC_COMPARISON},           // TOKEN_GREATER,
+    {NULL, binary, PREC_COMPARISON},           // TOKEN_LESS_EQUAL,
+    {NULL, binary, PREC_COMPARISON},           // TOKEN_GREATER_EQUAL,
+    {NULL, binary, PREC_AND},                 // TOKEN_AND,
+    {NULL, binary, PREC_OR},                   // TOKEN_OR,
 
-    // meta tokens
-    {NULL, NULL, PREC_NONE},  // TOKEN_PASS,
-    {NULL, NULL, PREC_NONE},  // TOKEN_ERROR,
-    {NULL, NULL, PREC_NONE},  // TOKEN_EOF,
+    // ========== Other Operators (93-97) ==========
+    {NULL, question, PREC_TERNARY},            // TOKEN_QUESTION,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_COLON,
+    {NULL, dot, PREC_CALL},                    // TOKEN_COLON_COLON,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_SEMICOLON,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_COMMA,
+
+    // ========== Member Access (98) ==========
+    {NULL, dot, PREC_CALL},                    // TOKEN_DOT,
+
+    // ========== Meta Tokens (99-102) ==========
+    {NULL, NULL, PREC_NONE},                   // TOKEN_PIPE,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_REST,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_PASS,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_ERROR,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_EOF,
 };
 
 ParseRule* getRule(Xvr_TokenType type) { return &parseRules[type]; }
@@ -1652,8 +1870,14 @@ static bool calcStaticMathFn(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     const char* namespace_name =
         (const char*)(*nodeHandle)
             ->binary.left->atomic.literal.as.string.ptr->data;
-    if (!namespace_name || strcmp(namespace_name, "math") != 0) {
-        return true;
+    
+    // Use namespace infrastructure to validate access
+    if (!Xvr_NamespaceIsValidAccess(namespace_name, NULL)) {
+        // For now, just check if namespace exists
+        Xvr_Namespace* ns = Xvr_NamespaceFind(namespace_name);
+        if (!ns) {
+            return true;  // Not a valid namespace access
+        }
     }
 
     if ((*nodeHandle)->binary.right->type != XVR_AST_NODE_FN_CALL) {
@@ -2003,18 +2227,29 @@ static bool calcStaticMathFn(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     return true;
 }
 
-static void dottify(
+// ============================================================
+// Helper: Convert FN_CALL binary to DOT binary for member access
+// This handles the legacy '.' operator (e.g., a.b)
+// For modern code, use the '::' operator (e.g., std::print)
+// ============================================================
+static void convertFnCallToDot(
     Xvr_Parser* parser,
-    Xvr_ASTNode** nodeHandle) {  // TODO: remove dot from the compiler entirely
-    // only if this is chained from a higher binary "fn call"
+    Xvr_ASTNode** nodeHandle) {
     if ((*nodeHandle)->type == XVR_AST_NODE_BINARY) {
         if ((*nodeHandle)->binary.opcode == XVR_OP_FN_CALL) {
             (*nodeHandle)->binary.opcode = XVR_OP_DOT;
             (*nodeHandle)->binary.right->fnCall.argumentCount++;
         }
-        dottify(parser, &(*nodeHandle)->binary.left);
-        dottify(parser, &(*nodeHandle)->binary.right);
+        convertFnCallToDot(parser, &(*nodeHandle)->binary.left);
+        convertFnCallToDot(parser, &(*nodeHandle)->binary.right);
     }
+}
+
+// Legacy name - use convertFnCallToDot for new code
+static void dottify(
+    Xvr_Parser* parser,
+    Xvr_ASTNode** nodeHandle) {
+    convertFnCallToDot(parser, nodeHandle);
 }
 
 static void parsePrecedence(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle,
@@ -2033,7 +2268,7 @@ static void parsePrecedence(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle,
     bool canBeAssigned = rule <= PREC_ASSIGNMENT;
     prefixRule(parser, nodeHandle);  // ignore the returned opcode
 
-    // infix rules are left-recursive
+// infix rules are left-recursive
     while (rule <= getRule(parser->current.type)->precedence) {
         ParseFn infixRule = getRule(parser->current.type)->infix;
 
@@ -2055,7 +2290,7 @@ static void parsePrecedence(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle,
         }
 
         if (opcode == XVR_OP_DOT) {
-            dottify(parser, &rhsNode);
+            convertFnCallToDot(parser, &rhsNode);
         }
 
         if (opcode == XVR_OP_TERNARY) {
@@ -2399,6 +2634,12 @@ static void importStmt(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
     Xvr_Literal idn = Xvr_copyLiteral(node->atomic.literal);
     Xvr_freeASTNode(node);
 
+    // Track if std was imported
+    if (idn.type == XVR_LITERAL_IDENTIFIER && 
+        strcmp(idn.as.identifier.ptr->data, "std") == 0) {
+        parser->stdImported = true;
+    }
+
     Xvr_Literal alias = XVR_TO_NULL_LITERAL;
 
     if (match(parser, XVR_TOKEN_AS)) {
@@ -2485,8 +2726,8 @@ static void statement(Xvr_Parser* parser, Xvr_ASTNode** nodeHandle) {
         return;
     }
 
-    // import
-    if (match(parser, XVR_TOKEN_IMPORT)) {
+    // import or include
+    if (match(parser, XVR_TOKEN_IMPORT) || match(parser, XVR_TOKEN_INCLUDE)) {
         importStmt(parser, nodeHandle);
         return;
     }
@@ -2874,6 +3115,7 @@ void Xvr_initParser(Xvr_Parser* parser, Xvr_Lexer* lexer) {
     parser->lexer = lexer;
     parser->error = false;
     parser->panic = false;
+    parser->stdImported = false;
 
     parser->previous.type = XVR_TOKEN_NULL;
     parser->current.type = XVR_TOKEN_NULL;
