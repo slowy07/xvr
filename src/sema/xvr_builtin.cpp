@@ -20,9 +20,20 @@ struct Xvr_BuiltinRegistry {
     LLVMContextRef llvm_context;
 };
 
+#define XVR_MAX_SEARCH_PATHS 16
+
 struct Xvr_ModuleResolver {
-    char* stdlib_path;
+    char* search_paths[XVR_MAX_SEARCH_PATHS];
+    int path_count;
 };
+
+static bool add_search_path(Xvr_ModuleResolver* resolver, const char* path) {
+    if (!resolver || !path || resolver->path_count >= XVR_MAX_SEARCH_PATHS) {
+        return false;
+    }
+    resolver->search_paths[resolver->path_count++] = strdup(path);
+    return true;
+}
 
 static LLVMValueRef handle_sizeof(void* context, LLVMBuilderRef builder,
                                   Xvr_ASTNode* call_node,
@@ -213,10 +224,18 @@ Xvr_ModuleResolver* Xvr_ModuleResolverCreate(const char* stdlib_path) {
     }
 
     if (stdlib_path) {
-        resolver->stdlib_path = strdup(stdlib_path);
-    } else {
-        resolver->stdlib_path = strdup("./lib/std");
+        add_search_path(resolver, stdlib_path);
     }
+
+    const char* env_lib = getenv("XVR_LIB_DIR");
+    if (env_lib) {
+        add_search_path(resolver, env_lib);
+    }
+
+    add_search_path(resolver, "./lib/std");
+    add_search_path(resolver, "../lib/std");
+    add_search_path(resolver, "./lib");
+    add_search_path(resolver, "../lib");
 
     return resolver;
 }
@@ -226,7 +245,9 @@ void Xvr_ModuleResolverDestroy(Xvr_ModuleResolver* resolver) {
         return;
     }
 
-    free(resolver->stdlib_path);
+    for (int i = 0; i < resolver->path_count; i++) {
+        free(resolver->search_paths[i]);
+    }
     free(resolver);
 }
 
@@ -255,33 +276,35 @@ bool Xvr_ModuleResolverResolve(Xvr_ModuleResolver* resolver,
         }
     }
 
-    if (!resolver->stdlib_path || resolver->stdlib_path[0] == '\0') {
-        return false;
-    }
+    for (int p = 0; p < resolver->path_count; p++) {
+        const char* search_path = resolver->search_paths[p];
+        if (!search_path || search_path[0] == '\0') {
+            continue;
+        }
 
-    size_t stdlib_len = 0;
-    while (resolver->stdlib_path[stdlib_len] != '\0' && stdlib_len < 4096) {
-        stdlib_len++;
-    }
-    if (stdlib_len == 0 || stdlib_len >= 4096) {
-        return false;
-    }
+        size_t path_len = strlen(search_path) + name_len + 16;
+        char* path = (char*)malloc(path_len);
+        if (!path) {
+            continue;
+        }
 
-    size_t path_len = stdlib_len + name_len + 16;
-    char* path = (char*)malloc(path_len);
-    if (!path) {
-        return false;
-    }
+        int written = snprintf(path, path_len, "%s/%s.xvr", search_path,
+                               module_name);
+        if (written < 0 || (size_t)written >= path_len) {
+            free(path);
+            continue;
+        }
 
-    int written = snprintf(path, path_len, "%s/%s.xvr", resolver->stdlib_path,
-                           module_name);
-    if (written < 0 || (size_t)written >= path_len) {
+        FILE* f = fopen(path, "r");
+        if (f) {
+            fclose(f);
+            *out_path = path;
+            return true;
+        }
         free(path);
-        return false;
     }
 
-    *out_path = path;
-    return true;
+    return false;
 }
 
 static const unsigned char* read_file(const char* path, size_t* size) {
@@ -395,7 +418,7 @@ bool Xvr_ModuleResolverLoadModule(Xvr_ModuleResolver* resolver,
 }
 
 const char* Xvr_ModuleResolverGetStdlibPath(Xvr_ModuleResolver* resolver) {
-    return resolver ? resolver->stdlib_path : NULL;
+    return (resolver && resolver->path_count > 0) ? resolver->search_paths[0] : NULL;
 }
 
 void Xvr_ModuleResolverSetStdlibPath(Xvr_ModuleResolver* resolver,
@@ -404,6 +427,10 @@ void Xvr_ModuleResolverSetStdlibPath(Xvr_ModuleResolver* resolver,
         return;
     }
 
-    free(resolver->stdlib_path);
-    resolver->stdlib_path = path ? strdup(path) : strdup("./lib/std");
+    if (resolver->path_count > 0) {
+        free(resolver->search_paths[0]);
+        resolver->search_paths[0] = path ? strdup(path) : strdup("./lib/std");
+    } else {
+        add_search_path(resolver, path ? path : "./lib/std");
+    }
 }

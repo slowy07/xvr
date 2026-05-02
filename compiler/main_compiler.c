@@ -262,7 +262,7 @@ int main(int argc, const char* argv[]) {
     if (!nodes) {
         print_compiler_error(srcForError, 0, "error",
                              "parsing failed - check syntax", NULL);
-        free((void*)source);
+        if (Xvr_commandLine.sourceFile) free((void*)source);
         return 1;
     }
 
@@ -490,13 +490,13 @@ int main(int argc, const char* argv[]) {
 
         const char* env_build =
             getenv("XVR_BUILD_DIR"); /* Flawfinder: ignore */
-        if (env_build && is_safe_path_component(env_build)) {
+        if (env_build && is_safe_path_component(env_build) && path_count < 24) {
             snprintf(search_paths[path_count++], sizeof(search_paths[0]), "%s",
                      env_build);
         }
 
         const char* home = getenv("HOME"); /* Flawfinder: ignore */
-        if (home && is_safe_path_component(home)) {
+        if (home && is_safe_path_component(home) && path_count < 24) {
             char path[4096];
             snprintf(path, sizeof(path),
                      "%s/Documents/project/xvrlang/xvr/build", home);
@@ -507,24 +507,38 @@ int main(int argc, const char* argv[]) {
                      path);
         }
 
-        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
-                 "/home/arfyslowy/Documents/project/xvrlang/xvr/build");
-        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
-                 "/home/arfyslowy/project/xvrlang/xvr/build");
-        snprintf(search_paths[path_count++], sizeof(search_paths[0]), "build");
-        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
-                 "../build");
-        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
-                 "./build");
-        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
-                 "../../build");
-        snprintf(search_paths[path_count++], sizeof(search_paths[0]), ".");
-        snprintf(search_paths[path_count++], sizeof(search_paths[0]), "..");
-        snprintf(search_paths[path_count++], sizeof(search_paths[0]), "../..");
-        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
-                 "/usr/local/xvr/build");
-        snprintf(search_paths[path_count++], sizeof(search_paths[0]),
-                 "/opt/xvr/build");
+        if (path_count < 24) {
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]), "build");
+        }
+        if (path_count < 24) {
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                     "../build");
+        }
+        if (path_count < 24) {
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                     "./build");
+        }
+        if (path_count < 24) {
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                     "../../build");
+        }
+        if (path_count < 24) {
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]), ".");
+        }
+        if (path_count < 24) {
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]), "..");
+        }
+        if (path_count < 24) {
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]), "../..");
+        }
+        if (path_count < 24) {
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                     "/usr/local/xvr/build");
+        }
+        if (path_count < 24) {
+            snprintf(search_paths[path_count++], sizeof(search_paths[0]),
+                     "/opt/xvr/build");
+        }
 
         for (int i = 0; i < path_count; i++) {
             char test_path[8192];

@@ -192,6 +192,7 @@ proc generate(): string {
     g_ir = g_ir + "\n  %result = add i32 0, 0";
     g_ir = g_ir + "\n  ret i32 %result";
     g_ir = g_ir + "\n}";
+    return g_ir;
 }
 
 proc getIR(): string {

@@ -154,7 +154,7 @@ proc nextToken(): Token {
                     var tok: Token;
                     tok.lexeme = c;
                     tok.line = g_line;
-                    tok.type = INVALID;
+                    tok.type = tokType;
                     g_tokenTypeValues.insert(tokType);
                     g_tokenLexemes.insert(c);
                     g_tokenLines.insert(g_line);
@@ -185,6 +185,16 @@ proc lex(source: string): [Token] {
     }
     var result: [Token];
     result = [];
+    var i: i32;
+    i = 0;
+    while (i < g_tokenCount) {
+        var t: Token;
+        t.type = g_tokenTypeValues[i];
+        t.lexeme = g_tokenLexemes[i];
+        t.line = g_tokenLines[i];
+        result.insert(t);
+        i = i + 1;
+    }
     return result;
 }
 
