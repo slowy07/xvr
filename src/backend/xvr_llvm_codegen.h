@@ -45,6 +45,9 @@ typedef struct Xvr_LLVMCodegen Xvr_LLVMCodegen;
 Xvr_LLVMCodegen* Xvr_LLVMCodegenCreate(const char* module_name);
 void Xvr_LLVMCodegenDestroy(Xvr_LLVMCodegen* codegen);
 
+bool Xvr_LLVMCodegenSetIncludeDir(Xvr_LLVMCodegen* codegen,
+                                  const char* include_dir);
+
 bool Xvr_LLVMCodegenSetOptimizationLevel(Xvr_LLVMCodegen* codegen,
                                          Xvr_LLVMOptimizationLevel level);
 

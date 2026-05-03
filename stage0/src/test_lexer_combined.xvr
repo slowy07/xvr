@@ -1,3 +1,6 @@
+include lexer;
+include parser;
+include codegen;
 include std;
 
 proc test_token_types(): void {

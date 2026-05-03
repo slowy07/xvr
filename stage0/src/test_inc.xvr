@@ -1,0 +1,9 @@
+include lexer;
+
+proc main(): void {
+    initLexer("42");
+    var c = tokenCount();
+    std::print(c);
+}
+
+main();

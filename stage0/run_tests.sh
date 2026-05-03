@@ -2,7 +2,7 @@
 set -e
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
-XVR="${XVR:-$SCRIPT_DIR/../../build/xvr}"
+XVR="${XVR:-$SCRIPT_DIR/../build/xvr}"
 STAGE0_DIR="$SCRIPT_DIR/.."
 
 echo "=========================================="

@@ -93,6 +93,8 @@ bool Xvr_ModuleResolverLoadModule(Xvr_ModuleResolver* resolver,
 const char* Xvr_ModuleResolverGetStdlibPath(Xvr_ModuleResolver* resolver);
 void Xvr_ModuleResolverSetStdlibPath(Xvr_ModuleResolver* resolver,
                                      const char* path);
+bool Xvr_ModuleResolverAddSearchPath(Xvr_ModuleResolver* resolver,
+                                     const char* path);
 
 #ifdef __cplusplus
 }

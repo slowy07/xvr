@@ -434,3 +434,11 @@ void Xvr_ModuleResolverSetStdlibPath(Xvr_ModuleResolver* resolver,
         add_search_path(resolver, path ? path : "./lib/std");
     }
 }
+
+bool Xvr_ModuleResolverAddSearchPath(Xvr_ModuleResolver* resolver,
+                                     const char* path) {
+    if (!resolver || !path) {
+        return false;
+    }
+    return add_search_path(resolver, path);
+}

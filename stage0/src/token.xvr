@@ -1,58 +1,50 @@
-enum TokenType {
-    EOF,
-    INVALID,
-    IDENT,
-    INT_LITERAL,
-    FLOAT_LITERAL,
-    STRING_LITERAL,
-    BOOL_LITERAL,
+var EOF: i32 = 0;
+var INVALID: i32 = 1;
+var IDENT: i32 = 2;
+var INT_LITERAL: i32 = 3;
+var FLOAT_LITERAL: i32 = 4;
+var STRING_LITERAL: i32 = 5;
+var BOOL_LITERAL: i32 = 6;
 
-    KW_VAR,
-    KW_IF,
-    KW_ELSE,
-    KW_WHILE,
-    KW_FOR,
-    KW_RETURN,
-    KW_PROC,
-    KW_TRUE,
-    KW_FALSE,
-    KW_INCLUDE,
-    KW_VOID,
-    KW_STRUCT,
-    KW_CONST,
-    KW_FN,
+var KW_VAR: i32 = 9;
+var KW_IF: i32 = 10;
+var KW_ELSE: i32 = 11;
+var KW_WHILE: i32 = 12;
+var KW_FOR: i32 = 13;
+var KW_RETURN: i32 = 14;
+var KW_PROC: i32 = 15;
+var KW_TRUE: i32 = 16;
+var KW_FALSE: i32 = 17;
+var KW_INCLUDE: i32 = 18;
+var KW_VOID: i32 = 19;
+var KW_STRUCT: i32 = 20;
+var KW_CONST: i32 = 21;
+var KW_FN: i32 = 22;
 
-    OP_ASSIGN,
-    OP_PLUS,
-    OP_MINUS,
-    OP_STAR,
-    OP_SLASH,
-    OP_PERCENT,
-    OP_EQ,
-    OP_NEQ,
-    OP_LT,
-    OP_LTE,
-    OP_GT,
-    OP_GTE,
-    OP_AND,
-    OP_OR,
-    OP_NOT,
+var OP_ASSIGN: i32 = 31;
+var OP_PLUS: i32 = 32;
+var OP_MINUS: i32 = 33;
+var OP_STAR: i32 = 34;
+var OP_SLASH: i32 = 35;
+var OP_PERCENT: i32 = 36;
+var OP_EQ: i32 = 37;
+var OP_NEQ: i32 = 38;
+var OP_LT: i32 = 39;
+var OP_LTE: i32 = 40;
+var OP_GT: i32 = 41;
+var OP_GTE: i32 = 42;
+var OP_AND: i32 = 43;
+var OP_OR: i32 = 44;
+var OP_NOT: i32 = 45;
 
-    LPAREN,
-    RPAREN,
-    LBRACE,
-    RBRACE,
-    LBRACKET,
-    RBRACKET,
-    COMMA,
-    SEMICOLON,
-    COLON,
-    DOT,
-    EQ,
-}
-
-struct Token {
-    type: TokenType,
-    lexeme: string,
-    line: int,
-}
+var LPAREN: i32 = 46;
+var RPAREN: i32 = 47;
+var LBRACE: i32 = 48;
+var RBRACE: i32 = 49;
+var LBRACKET: i32 = 50;
+var RBRACKET: i32 = 51;
+var COMMA: i32 = 52;
+var SEMICOLON: i32 = 53;
+var COLON: i32 = 54;
+var DOT: i32 = 55;
+var EQ: i32 = 56;

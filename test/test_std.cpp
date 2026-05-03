@@ -3,13 +3,17 @@
 #include <cstdlib>
 #include <cstring>
 #include <unistd.h>
+#include <sys/stat.h>
 
 static const char* get_xvr_path(void) {
     const char* env_path = getenv("XVR_TEST_PATH");
     if (env_path) return env_path;
 
-    if (access("./xvr", X_OK) == 0) return "./xvr";
-    if (access("../xvr", X_OK) == 0) return "../xvr";
+    // Check if it's a regular file, not a directory
+    struct stat st;
+    if (stat("./xvr", &st) == 0 && S_ISREG(st.st_mode)) return "./xvr";
+    if (stat("../xvr", &st) == 0 && S_ISREG(st.st_mode)) return "../xvr";
+    if (stat("build/xvr", &st) == 0 && S_ISREG(st.st_mode)) return "build/xvr";
 
     return "./xvr";
 }

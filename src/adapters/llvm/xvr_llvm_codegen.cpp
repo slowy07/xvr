@@ -310,6 +310,16 @@ void Xvr_LLVMCodegenDestroy(Xvr_LLVMCodegen* codegen) {
     free(codegen);
 }
 
+bool Xvr_LLVMCodegenSetIncludeDir(Xvr_LLVMCodegen* codegen,
+                                  const char* include_dir) {
+    if (!codegen || !codegen->module_resolver || !include_dir) {
+        return false;
+    }
+
+    Xvr_ModuleResolverAddSearchPath(codegen->module_resolver, include_dir);
+    return true;
+}
+
 bool Xvr_LLVMCodegenSetOptimizationLevel(Xvr_LLVMCodegen* codegen,
                                          Xvr_LLVMOptimizationLevel level) {
     if (!codegen || !codegen->optimizer) {
