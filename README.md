@@ -169,9 +169,33 @@ Example:
 
 ## Say hello with Xvr
 ```xvr
-std::println("Hello, World!");
+proc main() {
+    std::println("Hello, World!");
+}
 ```
 
+## Function Declaration
+
+XVR uses `proc` as the single function declaration keyword:
+
+```xvr
+// Procedure with no return type (implicit void)
+proc greet() {
+    std::println("Hello!");
+}
+
+// Procedure with return type
+proc add(a: int, b: int): int {
+    return a + b;
+}
+
+// Procedure with void return type
+proc log(msg: string): void {
+    std::println("{}", msg);
+}
+```
+
+## Print with Format Specifiers
 ## Print with Format Specifiers
 ```xvr
 std::print("Hello, {}", "World");           // Hello, World

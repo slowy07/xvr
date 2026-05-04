@@ -64,30 +64,36 @@ set expandtab
 xvr/
 ├── src/                    # Core source files
 │   ├── CMakeLists.txt      # Library build config
-│   ├── backend/            # LLVM AOT backend
-│   │   ├── xvr_llvm_codegen.c       # Main code generator
-│   │   ├── xvr_llvm_control_flow.c # If/while/for handling
-│   │   ├── xvr_llvm_expression_emitter.c # Expression codegen
-│   │   ├── xvr_llvm_optimizer.c     # LLVM optimization pipeline
-│   │   └── *.c/*.h                  # LLVM infrastructure
+│   ├── adapters/llvm/     # LLVM AOT backend
+│   │   ├── xvr_llvm_codegen.cpp    # Main code generator
+│   │   ├── xvr_llvm_codegen.h      # Codegen API
+│   │   ├── xvr_llvm_expression_emitter.cpp # Expression codegen
+│   │   ├── xvr_llvm_function_emitter.cpp # Function codegen
+│   │   ├── xvr_llvm_optimizer.cpp   # LLVM optimization pipeline
+│   │   └── *.cpp/*.h                # LLVM infrastructure
+│   ├── sema/               # Semantic analysis
+│   │   ├── xvr_builtin.cpp   # Module resolver, builtins
+│   │   └── xvr_builtin.h    # Builtin API
 │   ├── optimizer/           # AST optimization passes
 │   │   ├── xvr_ast_optimizer.h     # PassManager interface
-│   │   └── xvr_ast_optimizer.c     # Pass implementations
-│   ├── xvr_*.c              # Parser, lexer, AST, etc.
+│   │   └── xvr_ast_optimizer.cpp     # Pass implementations
+│   ├── core/               # Core types and utilities
+│   │   └── ast/            # AST node definitions
+│   ├── xvr_*.cpp           # Parser, lexer, AST, etc.
 │   └── xvr_common.h        # Version info, common definitions
 ├── compiler/               # Compiler executable source
-│   └── CMakeLists.txt      # Compiler build config
+│   └── main_compiler.c   # Compiler entry point
 ├── test/                   # Unit tests
-│   └── CMakeLists.txt      # Test build config
+│   ├── CMakeLists.txt      # Test build config
+│   └── test_*.cpp         # Individual test modules
+├── stage0/                 # Bootstrap compiler (written in XVR)
+│   ├── src/               # Stage0 source files
+│   └── stage0            # Bootstrap binary
 ├── fuzzer/                 # Fuzz testing scripts
-│   ├── fuzz_test_suite.sh  # Edge case tests
-│   ├── stress_test.sh      # Random input tests
+│   ├── run_tests.sh       # Edge case tests
 │   └── corpus/            # Valid test inputs
-├── code/                   # Example XVR programs
 ├── docs/                   # Documentation
 ├── CMakeLists.txt          # Root build config
-├── .clang-format           # Code formatting rules
-├── .git/hooks/pre-commit   # Auto-format on commit
 └── build/                  # Build output (generated)
 ```
 
@@ -220,9 +226,10 @@ fprintf(stderr, XVR_CC_NOTICE "Notice: %s\n" XVR_CC_RESET, message);
    ```sh
    rm -rf build && mkdir build && cd build
    cmake .. && cmake --build .    # Build
-   ctest --output-on-failure     # Run tests
-   bash ../fuzzer/fuzz_test_suite.sh # Run fuzzer
-   bash ../fuzzer/stress_test.sh     # Run stress tests
+   ./xvr_test_all                    # Run tests (should be 94/94)
+   # OR
+   ctest --output-on-failure        # Run tests via CTest
+   bash ../stage0/build.sh            # Verify stage0 bootstrap
    ```
 5. **Commit** - The pre-commit hook will auto-format your staged files
 6. **Push** to your fork

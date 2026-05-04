@@ -39,6 +39,12 @@ static ParseRule parseRules[] = {
 
 **CRITICAL**: The order in `parseRules[]` MUST match `Xvr_TokenType` enum exactly.
 
+> **Common Pitfall**: Misaligned parseRules order causes subtle bugs where tokens are dispatched to wrong handlers.
+> 
+> **Example**: In a recent fix, `TOKEN_IMPORT`, `TOKEN_INCLUDE`, `TOKEN_IN`, `TOKEN_OF`, `TOKEN_PRINT` were in wrong order in `parseRules[]`, causing `print()` and other keywords to be misidentified. This led to "unexpected token" errors and crashes.
+>
+> **Rule**: Always verify that `parseRules[index]` corresponds to `Xvr_TokenType` enum value `index`. Add tokens to BOTH places in the same order.
+
 ### 3. Namespace Support (xvr_namespace.h/cpp)
 
 The namespace system allows registering namespaces and their members:
