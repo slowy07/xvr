@@ -8,6 +8,7 @@
 #include <sys/wait.h>
 #include <time.h>
 #include <unistd.h>
+#include <signal.h>
 
 #include "backend/xvr_llvm_codegen.h"
 #include "compiler_tools.h"
@@ -18,6 +19,8 @@
 #include "xvr_parser.h"
 #include "xvr_unused.h"
 #include "xvr_namespace.h"
+
+#define CI_TIMEOUT_SECONDS 30
 
 static int is_safe_path_component(const char* path) {
     if (!path) return 0;
@@ -572,6 +575,8 @@ int main(int argc, const char* argv[]) {
 
         pid_t pid = fork();
         if (pid == 0) {
+            /* Child: set timeout then exec */
+            alarm(CI_TIMEOUT_SECONDS);
             execve("/usr/bin/gcc", gcc_args, environ);
             _exit(127);
         } else if (pid > 0) {
@@ -579,8 +584,18 @@ int main(int argc, const char* argv[]) {
             waitpid(pid, &status, 0);
             if (libxvr_path) free(libxvr_path);
 
+            if (WIFSIGNALED(status)) {
+                fprintf(stderr, "[CI] gcc killed by signal %d (timeout?)\n",
+                        WTERMSIG(status));
+                if (WTERMSIG(status) == SIGALRM) {
+                    fprintf(stderr, "error: gcc timed out after %d seconds\n",
+                            CI_TIMEOUT_SECONDS);
+                }
+            }
+
             if (WIFEXITED(status) && WEXITSTATUS(status) != 0) {
-                fprintf(stderr, "error: failed to link executable\n");
+                fprintf(stderr, "error: failed to link executable (exit %d)\n",
+                        WEXITSTATUS(status));
             } else if (WIFEXITED(status) && WEXITSTATUS(status) == 0) {
                 long bin_size = get_file_size(final_exe);
 
@@ -603,11 +618,22 @@ int main(int argc, const char* argv[]) {
                     run_args[1] = NULL;
                     pid_t run_pid = fork();
                     if (run_pid == 0) {
+                        /* Child: set timeout then exec */
+                        alarm(CI_TIMEOUT_SECONDS);
                         execve(final_exe, run_args, NULL);
                         _exit(127);
                     } else if (run_pid > 0) {
                         int run_status;
                         waitpid(run_pid, &run_status, 0);
+
+                        if (WIFSIGNALED(run_status)) {
+                            fprintf(stderr, "[CI] Binary killed by signal %d (timeout?)\n",
+                                    WTERMSIG(run_status));
+                            if (WTERMSIG(run_status) == SIGALRM) {
+                                fprintf(stderr, "error: Binary timed out after %d seconds\n",
+                                        CI_TIMEOUT_SECONDS);
+                            }
+                        }
                     }
                 }
 

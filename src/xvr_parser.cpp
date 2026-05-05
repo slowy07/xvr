@@ -1567,7 +1567,12 @@ static ParseRule parseRules[] = {
     {NULL, NULL, PREC_NONE},                   // TOKEN_PASS,
     {NULL, NULL, PREC_NONE},                   // TOKEN_ERROR,
     {NULL, NULL, PREC_NONE},                   // TOKEN_EOF,
+    {NULL, NULL, PREC_NONE},                   // TOKEN_COUNT,
 };
+
+/* Static assert: verify parseRules[] size matches Xvr_TokenType enum */
+static_assert(sizeof(parseRules) / sizeof(parseRules[0]) == XVR_TOKEN_COUNT + 1,
+              "parseRules[] size must match XVR_TOKEN_COUNT + 1");
 
 ParseRule* getRule(Xvr_TokenType type) { return &parseRules[type]; }
 

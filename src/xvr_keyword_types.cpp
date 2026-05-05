@@ -69,9 +69,6 @@ Xvr_KeywordType Xvr_keywordTypes[] = {
     {XVR_TOKEN_LITERAL_FALSE, "false"},
 
     // meta tokens
-    {XVR_TOKEN_PASS, NULL},
-    {XVR_TOKEN_ERROR, NULL},
-
     {XVR_TOKEN_EOF, NULL},
 };
 

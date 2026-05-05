@@ -9,11 +9,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Parser**: Fixed parseRules array ordering bug where `IMPORT`, `INCLUDE`, `IN`, `OF`, `PRINT` tokens were misaligned with `Xvr_TokenType` enum, causing function calls to fail with "unexpected token" errors
+- **Parser**: Added `XVR_TOKEN_QUESTION`, `XVR_TOKEN_COLON`, `XVR_TOKEN_COLON_COLON` tokens for ternary operator support
+- **Parser**: Added compile-time static_assert verifying `parseRules[]` size matches `XVR_TOKEN_COUNT` — prevents future token ordering regressions
 - **LLVM Codegen**: Fixed void function default - functions without explicit return type now default to `void` (instead of `int`), preventing invalid IR generation
 - **LLVM Codegen**: Added terminator instructions (`ret void`/`ret 0`) when LLVM IR has errors, preventing crashes in optimization passes (BranchProbabilityInfo)
 - **Module Resolver**: Added `Xvr_ModuleResolverAddSearchPath()` function for dynamic search path registration
 - **Tests**: Fixed `get_xvr_path()` in test infrastructure to check for regular files (not directories), resolving test failures (94/94 now passing)
+- **Tests**: Added `safe_capture_run()` wrapper with 30-second timeout via `alarm()`, explicit `WIFSIGNALED()` checks, and CI diagnostics
 - **Compiler**: Fixed `Xvr_LLVMCodegenSetIncludeDir()` to use correct API signature
+- **Compiler**: Added `alarm(CI_TIMEOUT_SECONDS)` timeout for gcc linking and binary execution to prevent CI hangs
+- **Memory**: Added overflow protection to `XVR_GROW_CAPACITY` and `XVR_GROW_CAPACITY_FAST` macros to prevent integer overflow on large allocations
+- **Token Types**: Restored missing tokens (`XVR_TOKEN_QUESTION`, `XVR_TOKEN_COLON`, `XVR_TOKEN_COLON_COLON`, `XVR_TOKEN_PIPE`, `XVR_TOKEN_REST`, `XVR_TOKEN_PASS`, `XVR_TOKEN_ERROR`) to enum
 
 ### Added
 - **API**: `Xvr_ModuleResolverAddSearchPath()` - allows adding search paths to module resolver at runtime

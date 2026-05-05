@@ -62,8 +62,10 @@ extern "C" {
 #define XVR_ALLOCATE(type, count) \
     ((type*)Xvr_reallocate(NULL, 0, sizeof(type) * (count)))
 #define XVR_FREE(type, pointer) Xvr_reallocate(pointer, sizeof(type), 0)
-#define XVR_GROW_CAPACITY(capacity) ((capacity) < 8 ? 8 : (capacity) * 2)
-#define XVR_GROW_CAPACITY_FAST(capacity) ((capacity) < 32 ? 32 : (capacity) * 2)
+#define XVR_GROW_CAPACITY(capacity) \
+    ((capacity) < 8 ? 8 : ((capacity) > SIZE_MAX / 2 ? SIZE_MAX : (capacity) * 2))
+#define XVR_GROW_CAPACITY_FAST(capacity) \
+    ((capacity) < 32 ? 32 : ((capacity) > SIZE_MAX / 2 ? SIZE_MAX : (capacity) * 2))
 #define XVR_GROW_ARRAY(type, pointer, oldCount, count)               \
     (type*)Xvr_reallocate((type*)pointer, sizeof(type) * (oldCount), \
                           sizeof(type) * (count))
