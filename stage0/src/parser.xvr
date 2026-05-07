@@ -1,14 +1,6 @@
 include lexer;
 
-var g_astKinds: [i32];
-var g_astValues: [string];
-var g_astLefts: [i32];
-var g_astRights: [i32];
-var g_astExtras: [i32];
-var g_currentToken: i32;
-var g_tokenCount: i32;
-var g_nodeCount: i32;
-
+// AST node type constants (must match parser.xvr order)
 var NODE_PROGRAM: i32;
 var NODE_LITERAL: i32;
 var NODE_IDENTIFIER: i32;
@@ -23,21 +15,32 @@ var NODE_STRUCT_FIELD: i32;
 var NODE_STRUCT_INIT: i32;
 var NODE_STRUCT_ACCESS: i32;
 
-var g_structs: [string];
-var g_structFieldNames: [string];
-var g_structFieldTypes: [string];
-
+// Token type constants (must match lexer.xvr order)
 var TOK_IDENT: i32;
 var TOK_INT_LITERAL: i32;
 var TOK_VAR: i32;
 var TOK_IF: i32;
 var TOK_ELSE: i32;
 var TOK_WHILE: i32;
+var TOK_FOR: i32;
 var TOK_RETURN: i32;
 var TOK_PROC: i32;
 var TOK_INT: i32;
+var TOK_STRUCT: i32;
+var TOK_CONST: i32;
+var TOK_FN: i32;
+
+var g_astKinds: [i32];
+var g_astValues: [string];
+var g_astLefts: [i32];
+var g_astRights: [i32];
+var g_astExtras: [i32];
+var g_currentToken: i32;
+var g_tokenCount: i32;
+var g_nodeCount: i32;
 
 proc initParser() {
+    // Initialize AST node type constants
     NODE_PROGRAM = 0;
     NODE_LITERAL = 1;
     NODE_IDENTIFIER = 2;
@@ -47,16 +50,25 @@ proc initParser() {
     NODE_IF_STMT = 6;
     NODE_WHILE_STMT = 7;
     NODE_RETURN_STMT = 8;
+    NODE_STRUCT_DEF = 9;
+    NODE_STRUCT_FIELD = 10;
+    NODE_STRUCT_INIT = 11;
+    NODE_STRUCT_ACCESS = 12;
 
+    // Initialize token type constants
     TOK_IDENT = 4;
     TOK_INT_LITERAL = 5;
     TOK_VAR = 9;
     TOK_IF = 10;
     TOK_ELSE = 11;
     TOK_WHILE = 12;
+    TOK_FOR = 13;
     TOK_RETURN = 14;
     TOK_PROC = 15;
     TOK_INT = 18;
+    TOK_STRUCT = 20;
+    TOK_CONST = 21;
+    TOK_FN = 22;
 
     g_astKinds = [];
     g_astExtras = [];
@@ -70,7 +82,7 @@ proc currentTokenType(): i32 {
     if (g_currentToken < lexer::tokenCount()) {
         return lexer::getTokenType(g_currentToken);
     }
-    return 0;
+    return 0;  // EOF
 }
 
 proc currentLexeme(): string {
@@ -81,6 +93,11 @@ proc currentLexeme(): string {
 }
 
 proc addNode(kind: i32, value: string, left: i32, right: i32, extra: i32): i32 {
+    // Bounds check
+    if (g_nodeCount >= 10000) {
+        return -1;
+    }
+    
     g_astKinds.insert(kind);
     g_astValues.insert(value);
     g_astLefts.insert(left);
@@ -110,7 +127,7 @@ proc parseExpression(): i32 {
         return addNode(NODE_LITERAL, value, -1, -1, -1);
     }
 
-    return -1;
+    return -1;  // Error: unexpected token
 }
 
 proc parseStatement(): i32 {
@@ -163,25 +180,22 @@ proc parseStatement(): i32 {
         var name: string;
         name = currentLexeme();
         advance();
-        advance();
-        advance();
+        advance();  // skip (
+        advance();  // skip )
         var body: i32;
         body = parseBlock();
         return addNode(NODE_FUNCTION_DECL, name, body, -1, -1);
     }
 
-    if (tokType == 21) {
+    if (tokType == TOK_STRUCT) {
         advance();
         var name: string;
         name = currentLexeme();
         advance();
-        advance();
-        var structName: string;
-        structName = currentLexeme();
-        advance();
-        advance();
+        advance();  // skip {
         
-        g_structs.insert(structName);
+        // Add struct definition
+        addNode(NODE_STRUCT_DEF, name, 0, -1, -1);
         
         var fieldCount = 0;
         while (g_currentToken < lexer::tokenCount() - 1) {
@@ -194,14 +208,14 @@ proc parseStatement(): i32 {
             fieldCount = fieldCount + 1;
         }
         
-        return addNode(NODE_STRUCT_DEF, structName, fieldCount, -1, -1);
+        return addNode(NODE_STRUCT_DEF, name, fieldCount, -1, -1);
     }
 
     return parseExpression();
 }
 
 proc parseBlock(): i32 {
-    advance();
+    advance();  // skip {
     var count: i32;
     count = 0;
     while (g_currentToken < lexer::tokenCount() - 1) {
@@ -211,7 +225,7 @@ proc parseBlock(): i32 {
             count = count + 1;
         }
     }
-    advance();
+    advance();  // skip }
     return count;
 }
 

@@ -64,10 +64,14 @@ proc nextToken(): Token {
                 tok.type = if (isFloat) { FLOAT_LITERAL } else { INT_LITERAL };
                 tok.lexeme = lexeme;
                 tok.line = g_line;
-                g_tokenTypeValues.insert(5);
-                g_tokenLexemes.insert(lexeme);
-                g_tokenLines.insert(g_line);
-                g_tokenCount = g_tokenCount + 1;
+                
+                // Bounds check
+                if (g_tokenCount < 10000) {
+                    g_tokenTypeValues.insert(tok.type);
+                    g_tokenLexemes.insert(lexeme);
+                    g_tokenLines.insert(g_line);
+                    g_tokenCount = g_tokenCount + 1;
+                }
                 return tok;
             } else {
                 var isAlpha: bool;
@@ -82,6 +86,7 @@ proc nextToken(): Token {
                     while (isAlpha) {
                         lexeme = lexeme + c;
                         g_pos = g_pos + 1;
+                        if (g_pos >= len(g_source)) { break; }
                         c = g_source.subString(g_pos, 1);
                         isAlpha = false;
                         if (c >= "a") { if (c <= "z") { isAlpha = true; } }
@@ -89,28 +94,36 @@ proc nextToken(): Token {
                         if (c == "_") { isAlpha = true; }
                         if (c >= "0") { if (c <= "9") { isAlpha = true; } }
                     }
+                    
                     var tokType: i32;
-                    tokType = 3;
-                    if (lexeme == "var") { tokType = 9; }
-                    if (lexeme == "if") { tokType = 10; }
-                    if (lexeme == "else") { tokType = 11; }
-                    if (lexeme == "while") { tokType = 12; }
-                    if (lexeme == "for") { tokType = 13; }
-                    if (lexeme == "return") { tokType = 14; }
-                    if (lexeme == "proc") { tokType = 15; }
-                    if (lexeme == "true") { tokType = 16; }
-                    if (lexeme == "false") { tokType = 17; }
-                    if (lexeme == "struct") { tokType = 20; }
-                    if (lexeme == "const") { tokType = 21; }
-                    if (lexeme == "fn") { tokType = 22; }
+                    tokType = IDENT;
+                    if (lexeme == "var") { tokType = KW_VAR; }
+                    if (lexeme == "if") { tokType = KW_IF; }
+                    if (lexeme == "else") { tokType = KW_ELSE; }
+                    if (lexeme == "while") { tokType = KW_WHILE; }
+                    if (lexeme == "for") { tokType = KW_FOR; }
+                    if (lexeme == "return") { tokType = KW_RETURN; }
+                    if (lexeme == "proc") { tokType = KW_PROC; }
+                    if (lexeme == "true") { tokType = KW_TRUE; }
+                    if (lexeme == "false") { tokType = KW_FALSE; }
+                    if (lexeme == "struct") { tokType = KW_STRUCT; }
+                    if (lexeme == "const") { tokType = KW_CONST; }
+                    if (lexeme == "fn") { tokType = KW_FN; }
+                    if (lexeme == "include") { tokType = KW_INCLUDE; }
+                    if (lexeme == "void") { tokType = KW_VOID; }
+                    
                     var tok: Token;
                     tok.type = tokType;
                     tok.lexeme = lexeme;
                     tok.line = g_line;
-                    g_tokenTypeValues.insert(tokType);
-                    g_tokenLexemes.insert(lexeme);
-                    g_tokenLines.insert(g_line);
-                    g_tokenCount = g_tokenCount + 1;
+                    
+                    // Bounds check
+                    if (g_tokenCount < 10000) {
+                        g_tokenTypeValues.insert(tokType);
+                        g_tokenLexemes.insert(lexeme);
+                        g_tokenLines.insert(g_line);
+                        g_tokenCount = g_tokenCount + 1;
+                    }
                     return tok;
                 } else if (c == "\"") {
                     var lexeme: string;
@@ -126,54 +139,71 @@ proc nextToken(): Token {
                         lexeme = lexeme + currC;
                         g_pos = g_pos + 1;
                     }
+                    
                     var tok: Token;
                     tok.type = STRING_LITERAL;
                     tok.lexeme = lexeme;
                     tok.line = g_line;
-                    g_tokenTypeValues.insert(6);
-                    g_tokenLexemes.insert(lexeme);
-                    g_tokenLines.insert(g_line);
-                    g_tokenCount = g_tokenCount + 1;
+                    
+                    // Bounds check
+                    if (g_tokenCount < 10000) {
+                        g_tokenTypeValues.insert(STRING_LITERAL);
+                        g_tokenLexemes.insert(lexeme);
+                        g_tokenLines.insert(g_line);
+                        g_tokenCount = g_tokenCount + 1;
+                    }
                     return tok;
                 } else {
                     var tokType: i32;
-                    tokType = 2;
-                    if (c == "(") { tokType = 38; }
-                    if (c == ")") { tokType = 39; }
-                    if (c == "{") { tokType = 40; }
-                    if (c == "}") { tokType = 41; }
-                    if (c == "[") { tokType = 42; }
-                    if (c == "]") { tokType = 43; }
-                    if (c == ",") { tokType = 44; }
-                    if (c == ";") { tokType = 45; }
-                    if (c == "+") { tokType = 22; }
-                    if (c == "-") { tokType = 23; }
-                    if (c == "*") { tokType = 24; }
-                    if (c == "/") { tokType = 25; }
-                    if (c == "=") { tokType = 21; }
+                    tokType = INVALID;
+                    if (c == "(") { tokType = LPAREN; }
+                    if (c == ")") { tokType = RPAREN; }
+                    if (c == "{") { tokType = LBRACE; }
+                    if (c == "}") { tokType = RBRACE; }
+                    if (c == "[") { tokType = LBRACKET; }
+                    if (c == "]") { tokType = RBRACKET; }
+                    if (c == ",") { tokType = COMMA; }
+                    if (c == ";") { tokType = SEMICOLON; }
+                    if (c == ":") { tokType = COLON; }
+                    if (c == ".") { tokType = DOT; }
+                    if (c == "=") { tokType = EQ; }
+                    if (c == "+") { tokType = OP_PLUS; }
+                    if (c == "-") { tokType = OP_MINUS; }
+                    if (c == "*") { tokType = OP_STAR; }
+                    if (c == "/") { tokType = OP_SLASH; }
+                    if (c == "%") { tokType = OP_PERCENT; }
+                    
                     var tok: Token;
+                    tok.type = tokType;
                     tok.lexeme = c;
                     tok.line = g_line;
-                    tok.type = tokType;
-                    g_tokenTypeValues.insert(tokType);
-                    g_tokenLexemes.insert(c);
-                    g_tokenLines.insert(g_line);
-                    g_tokenCount = g_tokenCount + 1;
+                    
+                    // Bounds check
+                    if (g_tokenCount < 10000) {
+                        g_tokenTypeValues.insert(tokType);
+                        g_tokenLexemes.insert(c);
+                        g_tokenLines.insert(g_line);
+                        g_tokenCount = g_tokenCount + 1;
+                    }
                     g_pos = g_pos + 1;
                     return tok;
                 }
             }
         }
     }
-
+    
     var eof: Token;
     eof.type = EOF;
     eof.lexeme = "";
     eof.line = g_line;
-    g_tokenTypeValues.insert(0);
-    g_tokenLexemes.insert("");
-    g_tokenLines.insert(g_line);
-    g_tokenCount = g_tokenCount + 1;
+    
+    // Bounds check
+    if (g_tokenCount < 10000) {
+        g_tokenTypeValues.insert(EOF);
+        g_tokenLexemes.insert("");
+        g_tokenLines.insert(g_line);
+        g_tokenCount = g_tokenCount + 1;
+    }
     return eof;
 }
 
@@ -203,14 +233,14 @@ proc tokenCount(): i32 {
 }
 
 proc getTokenType(n: i32): i32 {
-    if (n < g_tokenCount) {
+    if (n >= 0 && n < g_tokenCount) {
         return g_tokenTypeValues[n];
     }
-    return 0;
+    return EOF;
 }
 
 proc getTokenLexeme(n: i32): string {
-    if (n < g_tokenCount) {
+    if (n >= 0 && n < g_tokenCount) {
         return g_tokenLexemes[n];
     }
     return "";
