@@ -1,21 +1,19 @@
-// AST node type constants (must match parser.xvr)
-var NODE_PROGRAM: i32;
-var NODE_LITERAL: i32;
-var NODE_IDENTIFIER: i32;
-var NODE_BINARY_OP: i32;
-var NODE_VARIABLE_DECL: i32;
-var NODE_FUNCTION_DECL: i32;
-var NODE_IF_STMT: i32;
-var NODE_WHILE_STMT: i32;
-var NODE_RETURN_STMT: i32;
-var NODE_STRUCT_DEF: i32;
-var NODE_STRUCT_FIELD: i32;
-var NODE_STRUCT_INIT: i32;
-var NODE_STRUCT_ACCESS: i32;
+var NODE_PROGRAM: i32 = 0;
+var NODE_LITERAL: i32 = 1;
+var NODE_IDENTIFIER: i32 = 2;
+var NODE_BINARY_OP: i32 = 3;
+var NODE_VARIABLE_DECL: i32 = 4;
+var NODE_FUNCTION_DECL: i32 = 5;
+var NODE_IF_STMT: i32 = 6;
+var NODE_WHILE_STMT: i32 = 7;
+var NODE_RETURN_STMT: i32 = 8;
+var NODE_STRUCT_DEF: i32 = 9;
+var NODE_STRUCT_FIELD: i32 = 10;
+var NODE_STRUCT_INIT: i32 = 11;
+var NODE_STRUCT_ACCESS: i32 = 12;
 
-// Max array sizes (defensive programming)
-var MAX_VARS: i32;
-var MAX_IR_LEN: i32;
+var MAX_VARS: i32 = 1000;
+var MAX_IR_LEN: i32 = 100000;
 
 var g_ir: string;
 var g_vars: [string];
@@ -23,43 +21,25 @@ var g_varCount: i32;
 var g_structs: [string];
 var g_structFieldCount: [i32];
 
+var g_labelCounter: i32 = 0;
+
 proc initCodegen() {
-    NODE_PROGRAM = 0;
-    NODE_LITERAL = 1;
-    NODE_IDENTIFIER = 2;
-    NODE_BINARY_OP = 3;
-    NODE_VARIABLE_DECL = 4;
-    NODE_FUNCTION_DECL = 5;
-    NODE_IF_STMT = 6;
-    NODE_WHILE_STMT = 7;
-    NODE_RETURN_STMT = 8;
-    NODE_STRUCT_DEF = 9;
-    NODE_STRUCT_FIELD = 10;
-    NODE_STRUCT_INIT = 11;
-    NODE_STRUCT_ACCESS = 12;
-
-    MAX_VARS = 1000;
-    MAX_IR_LEN = 100000;
-
     g_ir = "";
     g_vars = [];
     g_varCount = 0;
     g_structs = [];
     g_structFieldCount = [];
+    g_labelCounter = 0;
 }
 
 proc addVariable(name: string) {
-    // Bounds check
-    if (g_varCount >= MAX_VARS) {
-        return;
-    }
+    if (g_varCount >= MAX_VARS) { return; }
     g_vars.insert(name);
     g_varCount = g_varCount + 1;
 }
 
 proc findVariable(name: string): i32 {
-    var i: i32;
-    i = 0;
+    var i: i32 = 0;
     while (i < g_varCount) {
         if (g_vars[i] == name) {
             return i;
@@ -67,6 +47,12 @@ proc findVariable(name: string): i32 {
         i = i + 1;
     }
     return -1;
+}
+
+proc nextLabel(): string {
+    var label = "l" + g_labelCounter;
+    g_labelCounter = g_labelCounter + 1;
+    return label;
 }
 
 proc generateFunction(name: string, body: string): string {
@@ -81,10 +67,10 @@ proc generateFunction(name: string, body: string): string {
 
 proc generateIf(cond: string, thenBlock: string, elseBlock: string) -> string {
     var ir: string;
-    var thenLabel = "if_then";
-    var elseLabel = "if_else";
-    var endLabel = "if_end";
-    
+    var thenLabel = "if_then_" + nextLabel();
+    var elseLabel = "if_else_" + nextLabel();
+    var endLabel = "if_end_" + nextLabel();
+
     ir = "  br i1 " + cond + ", label %" + thenLabel + ", label %" + elseLabel + "\n";
     ir = ir + thenLabel + ":\n";
     ir = ir + thenBlock;
@@ -100,10 +86,10 @@ proc generateIf(cond: string, thenBlock: string, elseBlock: string) -> string {
 
 proc generateWhile(cond: string, body: string) -> string {
     var ir: string;
-    var condLabel = "while_cond";
-    var bodyLabel = "while_body";
-    var endLabel = "while_end";
-    
+    var condLabel = "while_cond_" + nextLabel();
+    var bodyLabel = "while_body_" + nextLabel();
+    var endLabel = "while_end_" + nextLabel();
+
     ir = "  br label %" + condLabel + "\n";
     ir = ir + condLabel + ":\n";
     ir = ir + "  br i1 " + cond + ", label %" + bodyLabel + ", label %" + endLabel + "\n";
@@ -124,8 +110,8 @@ proc generateStruct(structName: string, fieldCount: i32): string {
     var ir: string;
     ir = "; Struct definition: " + structName + " with " + fieldCount + " fields\n";
     ir = ir + "%" + structName + " = type { ";
-    
-    var i = 0;
+
+    var i: i32 = 0;
     while (i < fieldCount) {
         ir = ir + "i32";
         if (i < fieldCount - 1) {
@@ -134,18 +120,18 @@ proc generateStruct(structName: string, fieldCount: i32): string {
         i = i + 1;
     }
     ir = ir + " }\n";
-    
+
     g_structs.insert(structName);
     g_structFieldCount.insert(fieldCount);
-    
+
     return ir;
 }
 
 proc generateStructInit(structName: string, values: [string]): string {
     var ir: string;
-    var structIdx = -1;
-    
-    var i = 0;
+    var structIdx: i32 = -1;
+
+    var i: i32 = 0;
     while (i < len(g_structs)) {
         if (g_structs[i] == structName) {
             structIdx = i;
@@ -153,11 +139,11 @@ proc generateStructInit(structName: string, values: [string]): string {
         }
         i = i + 1;
     }
-    
+
     if (structIdx >= 0) {
         var fieldCount = g_structFieldCount[structIdx];
         ir = "  %" + structName + "_inst = alloca %" + structName + ", align 4\n";
-        
+
         i = 0;
         while (i < fieldCount && i < len(values)) {
             ir = ir + "  %field" + i + " = getelementptr %" + structName + ", %" + structName + "* %" + structName + "_inst, i32 0, i32 " + i + "\n";
@@ -165,87 +151,53 @@ proc generateStructInit(structName: string, values: [string]): string {
             i = i + 1;
         }
     }
-    
+
     return ir;
 }
 
 proc generateNode(kind: i32, left: i32, right: i32, extra: i32, values: [string]) {
-    // Bounds check for values array
     if (left >= 0 && left >= len(values)) { return; }
     if (right >= 0 && right >= len(values)) { return; }
     if (extra >= 0 && extra >= len(values)) { return; }
 
     if (kind == NODE_VARIABLE_DECL) {
-        var name: string;
-        var value: string;
-        name = values[left];
-        value = values[right];
+        var name: string = values[left];
+        var value: string = values[right];
         addVariable(name);
-        
-        // Bounds check for IR length
         if (len(g_ir) < MAX_IR_LEN) {
             g_ir = g_ir + "  %" + name + " = alloca i32, align 4\n";
             g_ir = g_ir + "  store i32 " + value + ", i32* %" + name + ", align 4\n";
         }
-    }
-
-    if (kind == NODE_FUNCTION_DECL) {
-        var fnName: string;
-        var fnBody: string;
-        fnName = values[left];
-        fnBody = values[right];
-        
-        // Bounds check for IR length
+    } else if (kind == NODE_FUNCTION_DECL) {
+        var fnName: string = values[left];
+        var fnBody: string = values[right];
         if (len(g_ir) < MAX_IR_LEN) {
             g_ir = g_ir + generateFunction(fnName, fnBody);
         }
-    }
-
-    if (kind == NODE_IF_STMT) {
-        var cond: string;
-        var thenBlock: string;
-        var elseBlock: string;
-        cond = values[left];
-        thenBlock = values[right];
+    } else if (kind == NODE_IF_STMT) {
+        var cond: string = values[left];
+        var thenBlock: string = values[right];
+        var elseBlock: string = "";
         if (extra >= 0) {
             elseBlock = values[extra];
         }
-        
-        // Bounds check for IR length
         if (len(g_ir) < MAX_IR_LEN) {
             g_ir = g_ir + generateIf(cond, thenBlock, elseBlock);
         }
-    }
-
-    if (kind == NODE_WHILE_STMT) {
-        var cond: string;
-        var body: string;
-        cond = values[left];
-        body = values[right];
-        
-        // Bounds check for IR length
+    } else if (kind == NODE_WHILE_STMT) {
+        var cond: string = values[left];
+        var body: string = values[right];
         if (len(g_ir) < MAX_IR_LEN) {
             g_ir = g_ir + generateWhile(cond, body);
         }
-    }
-
-    if (kind == NODE_STRUCT_DEF) {
-        var structName: string;
-        var fieldCount: i32;
-        structName = values[left];
-        fieldCount = right;
-        
-        // Bounds check for IR length
+    } else if (kind == NODE_STRUCT_DEF) {
+        var structName: string = values[left];
+        var fieldCount: i32 = right;
         if (len(g_ir) < MAX_IR_LEN) {
             g_ir = g_ir + generateStruct(structName, fieldCount);
         }
-    }
-
-    if (kind == NODE_STRUCT_INIT) {
-        var structName: string;
-        structName = values[left];
-        
-        // Bounds check for IR length
+    } else if (kind == NODE_STRUCT_INIT) {
+        var structName: string = values[left];
         if (len(g_ir) < MAX_IR_LEN) {
             g_ir = g_ir + generateStructInit(structName, values);
         }

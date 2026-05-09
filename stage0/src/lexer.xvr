@@ -18,6 +18,14 @@ proc initLexer(source: string) {
     g_tokenLines = [];
 }
 
+proc addToken(type: i32, lexeme: string, line: i32) {
+    if (g_tokenCount >= 10000) { return; }
+    g_tokenTypeValues.insert(type);
+    g_tokenLexemes.insert(lexeme);
+    g_tokenLines.insert(line);
+    g_tokenCount = g_tokenCount + 1;
+}
+
 proc nextToken(): Token {
     while (g_pos < len(g_source)) {
         var c: string;
@@ -65,13 +73,7 @@ proc nextToken(): Token {
                 tok.lexeme = lexeme;
                 tok.line = g_line;
                 
-                // Bounds check
-                if (g_tokenCount < 10000) {
-                    g_tokenTypeValues.insert(tok.type);
-                    g_tokenLexemes.insert(lexeme);
-                    g_tokenLines.insert(g_line);
-                    g_tokenCount = g_tokenCount + 1;
-                }
+                addToken(tok.type, lexeme, g_line);
                 return tok;
             } else {
                 var isAlpha: bool;
@@ -117,41 +119,35 @@ proc nextToken(): Token {
                     tok.lexeme = lexeme;
                     tok.line = g_line;
                     
-                    // Bounds check
-                    if (g_tokenCount < 10000) {
-                        g_tokenTypeValues.insert(tokType);
-                        g_tokenLexemes.insert(lexeme);
-                        g_tokenLines.insert(g_line);
-                        g_tokenCount = g_tokenCount + 1;
-                    }
+                    addToken(tokType, lexeme, g_line);
                     return tok;
                 } else if (c == "\"") {
                     var lexeme: string;
                     lexeme = "";
+                    var unterminated: bool;
+                    unterminated = true;
                     g_pos = g_pos + 1;
                     while (g_pos < len(g_source)) {
                         var currC: string;
                         currC = g_source.subString(g_pos, 1);
                         if (currC == "\"") {
                             g_pos = g_pos + 1;
+                            unterminated = false;
                             break;
                         }
                         lexeme = lexeme + currC;
                         g_pos = g_pos + 1;
                     }
                     
+                    var tokType: i32;
+                    tokType = if (unterminated) { INVALID } else { STRING_LITERAL };
+                    
                     var tok: Token;
-                    tok.type = STRING_LITERAL;
+                    tok.type = tokType;
                     tok.lexeme = lexeme;
                     tok.line = g_line;
                     
-                    // Bounds check
-                    if (g_tokenCount < 10000) {
-                        g_tokenTypeValues.insert(STRING_LITERAL);
-                        g_tokenLexemes.insert(lexeme);
-                        g_tokenLines.insert(g_line);
-                        g_tokenCount = g_tokenCount + 1;
-                    }
+                    addToken(tokType, lexeme, g_line);
                     return tok;
                 } else {
                     var tokType: i32;
@@ -178,13 +174,7 @@ proc nextToken(): Token {
                     tok.lexeme = c;
                     tok.line = g_line;
                     
-                    // Bounds check
-                    if (g_tokenCount < 10000) {
-                        g_tokenTypeValues.insert(tokType);
-                        g_tokenLexemes.insert(c);
-                        g_tokenLines.insert(g_line);
-                        g_tokenCount = g_tokenCount + 1;
-                    }
+                    addToken(tokType, c, g_line);
                     g_pos = g_pos + 1;
                     return tok;
                 }
@@ -197,13 +187,7 @@ proc nextToken(): Token {
     eof.lexeme = "";
     eof.line = g_line;
     
-    // Bounds check
-    if (g_tokenCount < 10000) {
-        g_tokenTypeValues.insert(EOF);
-        g_tokenLexemes.insert("");
-        g_tokenLines.insert(g_line);
-        g_tokenCount = g_tokenCount + 1;
-    }
+    addToken(EOF, "", g_line);
     return eof;
 }
 
@@ -219,8 +203,8 @@ proc lex(source: string): [Token] {
     i = 0;
     while (i < g_tokenCount) {
         var t: Token;
-        t.type = g_tokenTypeValues[i];
-        t.lexeme = g_tokenLexemes[i];
+        t.type = getTokenType(i);
+        t.lexeme = getTokenLexeme(i);
         t.line = g_tokenLines[i];
         result.insert(t);
         i = i + 1;
