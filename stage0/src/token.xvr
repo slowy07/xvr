@@ -48,3 +48,6 @@ var SEMICOLON: i32 = 53;
 var COLON: i32 = 54;
 var DOT: i32 = 55;
 var EQ: i32 = 56;
+
+var ARROW: i32 = 57;   // ->
+var RANGE: i32 = 58;   // ..
