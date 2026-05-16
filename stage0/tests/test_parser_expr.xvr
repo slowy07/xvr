@@ -1,0 +1,44 @@
+include std;
+include lexer;
+include parser;
+
+proc main(): void {
+    std::println("Test: a + b * 3");
+    initLexer("a + b * 3");
+    initParser();
+    var result = parseExpression(0);
+    if (result < 0) { std::println("FAIL: binary_expr"); return; }
+    std::println("PASS: binary_expr ({} nodes)", g_nodeCount);
+
+    std::println("Test: fn(a, b)");
+    initLexer("fn(a, b)");
+    initParser();
+    result = parseExpression(0);
+    if (result < 0) { std::println("FAIL: call expression"); return; }
+    std::println("PASS: call_expr ({} nodes)", g_nodeCount);
+
+    std::println("Test: (a + b)");
+    initLexer("(a + b)");
+    initParser();
+    result = parseExpression(0);
+    if (result < 0) { std::println("FAIL: paren expression"); return; }
+    std::println("PASS: paren_expr ({} nodes)", g_nodeCount);
+
+    std::println("Test: -x");
+    initLexer("-x");
+    initParser();
+    result = parseExpression(0);
+    if (result < 0) { std::println("FAIL: unary expression"); return; }
+    std::println("PASS: unary_expr ({} nodes)", g_nodeCount);
+
+    std::println("Test: a[i]");
+    initLexer("a[i]");
+    initParser();
+    result = parseExpression(0);
+    if (result < 0) { std::println("FAIL: index expression"); return; }
+    std::println("PASS: index_expr ({} nodes)", g_nodeCount);
+
+    std::println("");
+    std::println("All expression parser tests passed");
+}
+main();
