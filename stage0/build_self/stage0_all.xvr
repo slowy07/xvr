@@ -1,0 +1,1132 @@
+//#source main.xvr
+include lexer;
+include parser;
+include codegen;
+
+var g_ir: string;
+
+proc run(): void {
+    std::print("Stage0 Bootstrap Compiler v0.1.0\n");
+    std::print("Testing lexer with string: 'var x = 42'\n");
+    
+    var source = "var x = 42";
+    initLexer(source);
+    
+    std::print("Calling nextToken...\n");
+    var tok = nextToken();
+    std::print("Got token\n");
+    
+    tok = nextToken();
+    std::print("Got token\n");
+    
+    tok = nextToken();
+    std::print("Got token\n");
+    
+    tok = nextToken();
+    std::print("Got token\n");
+    
+    tok = nextToken();
+    std::print("Got token\n");
+    
+    initParser();
+    initCodegen();
+    generate();
+    g_ir = getIR();
+    
+    std::print("\n=== Generated LLVM IR ===\n");
+    std::print(g_ir);
+    std::print("\nStage0 ready - lexer works, parser/codegen need implementation\n");
+}
+
+run();
+//#source token.xvr
+var EOF: i32 = 0;
+var INVALID: i32 = 1;
+var IDENT: i32 = 2;
+var INT_LITERAL: i32 = 3;
+var FLOAT_LITERAL: i32 = 4;
+var STRING_LITERAL: i32 = 5;
+var BOOL_LITERAL: i32 = 6;
+
+var KW_VAR: i32 = 9;
+var KW_IF: i32 = 10;
+var KW_ELSE: i32 = 11;
+var KW_WHILE: i32 = 12;
+var KW_FOR: i32 = 13;
+var KW_RETURN: i32 = 14;
+var KW_PROC: i32 = 15;
+var KW_TRUE: i32 = 16;
+var KW_FALSE: i32 = 17;
+var KW_INCLUDE: i32 = 18;
+var KW_VOID: i32 = 19;
+var KW_STRUCT: i32 = 20;
+var KW_CONST: i32 = 21;
+var KW_FN: i32 = 22;
+
+var OP_ASSIGN: i32 = 31;
+var OP_PLUS: i32 = 32;
+var OP_MINUS: i32 = 33;
+var OP_STAR: i32 = 34;
+var OP_SLASH: i32 = 35;
+var OP_PERCENT: i32 = 36;
+var OP_EQ: i32 = 37;
+var OP_NEQ: i32 = 38;
+var OP_LT: i32 = 39;
+var OP_LTE: i32 = 40;
+var OP_GT: i32 = 41;
+var OP_GTE: i32 = 42;
+var OP_AND: i32 = 43;
+var OP_OR: i32 = 44;
+var OP_NOT: i32 = 45;
+
+var LPAREN: i32 = 46;
+var RPAREN: i32 = 47;
+var LBRACE: i32 = 48;
+var RBRACE: i32 = 49;
+var LBRACKET: i32 = 50;
+var RBRACKET: i32 = 51;
+var COMMA: i32 = 52;
+var SEMICOLON: i32 = 53;
+var COLON: i32 = 54;
+var DOT: i32 = 55;
+var EQ: i32 = 56;
+
+var ARROW: i32 = 57;   // ->
+var RANGE: i32 = 58;   // ..
+
+//#source ast.xvr
+enum NodeKind {
+    PROGRAM,
+    LITERAL,
+    IDENTIFIER,
+    BINARY_OP,
+    VARIABLE_DECL,
+    FUNCTION_DECL,
+    IF_STMT,
+    WHILE_STMT,
+    RETURN_STMT,
+    STRUCT_DEF,
+    STRUCT_FIELD,
+    STRUCT_INIT,
+    STRUCT_FIELD_ACCESS,
+}
+
+struct StructField {
+    name: string,
+    type: string,
+    defaultValue: string,
+}
+
+struct StructDef {
+    name: string,
+    fields: [StructField],
+}
+
+struct Node {
+    kind: NodeKind,
+    value: string,
+    left: i32,
+    right: i32,
+    structName: string,
+    fieldName: string,
+}
+//#source lexer.xvr
+include token;
+
+var g_source: string;
+var g_pos: i32;
+var g_line: i32;
+var g_tokenCount: i32;
+var g_tokenTypeValues: [i32];
+var g_tokenLexemes: [string];
+var g_tokenLines: [i32];
+
+proc initLexer(source: string) {
+    g_source = source;
+    g_pos = 0;
+    g_line = 1;
+    g_tokenCount = 0;
+    g_tokenTypeValues = [];
+    g_tokenLexemes = [];
+    g_tokenLines = [];
+}
+
+proc addToken(type: i32, lexeme: string, line: i32) {
+    if (g_tokenCount >= 10000) { return; }
+    g_tokenTypeValues.insert(type);
+    g_tokenLexemes.insert(lexeme);
+    g_tokenLines.insert(line);
+    g_tokenCount = g_tokenCount + 1;
+}
+
+proc peek(): string {
+    if (g_pos + 1 < len(g_source)) {
+        return g_source.subString(g_pos + 1, 1);
+    }
+    return "";
+}
+
+proc nextToken(): Token {
+    while (g_pos < len(g_source)) {
+        var c: string;
+        c = g_source.subString(g_pos, 1);
+
+        var isSpace: bool;
+        isSpace = false;
+        if (c == " ") { isSpace = true; }
+        if (c == "\t") { isSpace = true; }
+        if (c == "\n") { isSpace = true; }
+
+        if (isSpace) {
+            if (c == "\n") {
+                g_line = g_line + 1;
+            }
+            g_pos = g_pos + 1;
+        } else {
+            var isDigit: bool;
+            isDigit = false;
+            if (c >= "0") { if (c <= "9") { isDigit = true; } }
+
+            if (isDigit) {
+                var lexeme: string;
+                lexeme = "";
+                var isFloat = false;
+                
+                while (g_pos < len(g_source)) {
+                    var currC: string;
+                    currC = g_source.subString(g_pos, 1);
+                    
+                    if (currC == "." && !isFloat) {
+                        isFloat = true;
+                        lexeme = lexeme + currC;
+                        g_pos = g_pos + 1;
+                    } else if (currC >= "0" && currC <= "9") {
+                        lexeme = lexeme + currC;
+                        g_pos = g_pos + 1;
+                    } else {
+                        break;
+                    }
+                }
+                
+                var tok: Token;
+                tok.type = if (isFloat) { FLOAT_LITERAL } else { INT_LITERAL };
+                tok.lexeme = lexeme;
+                tok.line = g_line;
+                
+                addToken(tok.type, lexeme, g_line);
+                return tok;
+            } else {
+                var isAlpha: bool;
+                isAlpha = false;
+                if (c >= "a") { if (c <= "z") { isAlpha = true; } }
+                if (c >= "A") { if (c <= "Z") { isAlpha = true; } }
+                if (c == "_") { isAlpha = true; }
+
+                if (isAlpha) {
+                    var lexeme: string;
+                    lexeme = "";
+                    while (isAlpha) {
+                        lexeme = lexeme + c;
+                        g_pos = g_pos + 1;
+                        if (g_pos >= len(g_source)) { break; }
+                        c = g_source.subString(g_pos, 1);
+                        isAlpha = false;
+                        if (c >= "a") { if (c <= "z") { isAlpha = true; } }
+                        if (c >= "A") { if (c <= "Z") { isAlpha = true; } }
+                        if (c == "_") { isAlpha = true; }
+                        if (c >= "0") { if (c <= "9") { isAlpha = true; } }
+                    }
+                    
+                    var tokType: i32;
+                    tokType = IDENT;
+                    if (lexeme == "var") { tokType = KW_VAR; }
+                    if (lexeme == "if") { tokType = KW_IF; }
+                    if (lexeme == "else") { tokType = KW_ELSE; }
+                    if (lexeme == "while") { tokType = KW_WHILE; }
+                    if (lexeme == "for") { tokType = KW_FOR; }
+                    if (lexeme == "return") { tokType = KW_RETURN; }
+                    if (lexeme == "proc") { tokType = KW_PROC; }
+                    if (lexeme == "true") { tokType = KW_TRUE; }
+                    if (lexeme == "false") { tokType = KW_FALSE; }
+                    if (lexeme == "struct") { tokType = KW_STRUCT; }
+                    if (lexeme == "const") { tokType = KW_CONST; }
+                    if (lexeme == "fn") { tokType = KW_FN; }
+                    if (lexeme == "include") { tokType = KW_INCLUDE; }
+                    if (lexeme == "void") { tokType = KW_VOID; }
+                    
+                    var tok: Token;
+                    tok.type = tokType;
+                    tok.lexeme = lexeme;
+                    tok.line = g_line;
+                    
+                    addToken(tokType, lexeme, g_line);
+                    return tok;
+                } else if (c == "\"") {
+                    var lexeme: string;
+                    lexeme = "";
+                    var unterminated: bool;
+                    unterminated = true;
+                    g_pos = g_pos + 1;
+                    while (g_pos < len(g_source)) {
+                        var currC: string;
+                        currC = g_source.subString(g_pos, 1);
+                        if (currC == "\"") {
+                            g_pos = g_pos + 1;
+                            unterminated = false;
+                            break;
+                        }
+                        lexeme = lexeme + currC;
+                        g_pos = g_pos + 1;
+                    }
+                    
+                    var tokType: i32;
+                    tokType = if (unterminated) { INVALID } else { STRING_LITERAL };
+                    
+                    var tok: Token;
+                    tok.type = tokType;
+                    tok.lexeme = lexeme;
+                    tok.line = g_line;
+                    
+                    addToken(tokType, lexeme, g_line);
+                    return tok;
+                } else {
+                    var tokType: i32;
+                    tokType = INVALID;
+                    var nextC: string;
+                    nextC = peek();
+                    var isTwoChar: bool;
+                    isTwoChar = false;
+
+                    if (c == "=" && nextC == "=") { tokType = OP_EQ; isTwoChar = true; }
+                    else if (c == "!" && nextC == "=") { tokType = OP_NEQ; isTwoChar = true; }
+                    else if (c == "<" && nextC == "=") { tokType = OP_LTE; isTwoChar = true; }
+                    else if (c == ">" && nextC == "=") { tokType = OP_GTE; isTwoChar = true; }
+                    else if (c == "&" && nextC == "&") { tokType = OP_AND; isTwoChar = true; }
+                    else if (c == "|" && nextC == "|") { tokType = OP_OR; isTwoChar = true; }
+                    else if (c == "-" && nextC == ">") { tokType = ARROW; isTwoChar = true; }
+                    else if (c == "." && nextC == ".") { tokType = RANGE; isTwoChar = true; }
+                    else if (c == "(") { tokType = LPAREN; }
+                    else if (c == ")") { tokType = RPAREN; }
+                    else if (c == "{") { tokType = LBRACE; }
+                    else if (c == "}") { tokType = RBRACE; }
+                    else if (c == "[") { tokType = LBRACKET; }
+                    else if (c == "]") { tokType = RBRACKET; }
+                    else if (c == ",") { tokType = COMMA; }
+                    else if (c == ";") { tokType = SEMICOLON; }
+                    else if (c == ":") { tokType = COLON; }
+                    else if (c == ".") { tokType = DOT; }
+                    else if (c == "=") { tokType = EQ; }
+                    else if (c == "+") { tokType = OP_PLUS; }
+                    else if (c == "-") { tokType = OP_MINUS; }
+                    else if (c == "*") { tokType = OP_STAR; }
+                    else if (c == "/") { tokType = OP_SLASH; }
+                    else if (c == "%") { tokType = OP_PERCENT; }
+                    else if (c == "!") { tokType = OP_NOT; }
+
+                    var tok: Token;
+                    tok.type = tokType;
+                    tok.lexeme = c;
+                    tok.line = g_line;
+
+                    addToken(tokType, c, g_line);
+                    g_pos = g_pos + 1;
+                    if (isTwoChar) {
+                        g_pos = g_pos + 1;
+                    }
+                    return tok;
+                }
+            }
+        }
+    }
+    
+    var eof: Token;
+    eof.type = EOF;
+    eof.lexeme = "";
+    eof.line = g_line;
+    
+    addToken(EOF, "", g_line);
+    return eof;
+}
+
+proc lex(source: string): [Token] {
+    initLexer(source);
+    nextToken();
+    while (g_pos < len(g_source)) {
+        nextToken();
+    }
+    var result: [Token];
+    result = [];
+    var i: i32;
+    i = 0;
+    while (i < g_tokenCount) {
+        var t: Token;
+        t.type = getTokenType(i);
+        t.lexeme = getTokenLexeme(i);
+        t.line = g_tokenLines[i];
+        result.insert(t);
+        i = i + 1;
+    }
+    return result;
+}
+
+proc tokenCount(): i32 {
+    return g_tokenCount;
+}
+
+proc getTokenType(n: i32): i32 {
+    if (n >= 0 && n < g_tokenCount) {
+        return g_tokenTypeValues[n];
+    }
+    return EOF;
+}
+
+proc getTokenLexeme(n: i32): string {
+    if (n >= 0 && n < g_tokenCount) {
+        return g_tokenLexemes[n];
+    }
+    return "";
+}
+
+//#source parser.xvr
+include lexer;
+
+var NODE_PROGRAM: i32 = 0;
+var NODE_LITERAL: i32 = 1;
+var NODE_IDENTIFIER: i32 = 2;
+var NODE_BINARY_OP: i32 = 3;
+var NODE_VARIABLE_DECL: i32 = 4;
+var NODE_FUNCTION_DECL: i32 = 5;
+var NODE_IF_STMT: i32 = 6;
+var NODE_WHILE_STMT: i32 = 7;
+var NODE_RETURN_STMT: i32 = 8;
+var NODE_STRUCT_DEF: i32 = 9;
+var NODE_STRUCT_FIELD: i32 = 10;
+var NODE_STRUCT_INIT: i32 = 11;
+var NODE_STRUCT_ACCESS: i32 = 12;
+var NODE_UNARY_OP: i32 = 13;
+var NODE_CALL: i32 = 14;
+var NODE_INDEX: i32 = 15;
+var NODE_FIELD: i32 = 16;
+var NODE_CONDITIONAL: i32 = 17;
+var NODE_GROUPING: i32 = 18;
+
+var g_astKinds: [i32];
+var g_astValues: [string];
+var g_astLefts: [i32];
+var g_astRights: [i32];
+var g_astExtras: [i32];
+var g_currentToken: i32;
+var g_tokenCount: i32;
+var g_nodeCount: i32;
+
+proc initParser() {
+    g_astKinds = [];
+    g_astValues = [];
+    g_astLefts = [];
+    g_astRights = [];
+    g_astExtras = [];
+    g_currentToken = 0;
+    g_nodeCount = 0;
+}
+
+proc advance() {
+    if (g_currentToken < lexer::tokenCount()) {
+        g_currentToken = g_currentToken + 1;
+    }
+}
+
+proc currentTokenType(): i32 {
+    if (g_currentToken < lexer::tokenCount()) {
+        return lexer::getTokenType(g_currentToken);
+    }
+    return EOF;
+}
+
+proc currentLexeme(): string {
+    if (g_currentToken < lexer::tokenCount()) {
+        return lexer::getTokenLexeme(g_currentToken);
+    }
+    return "";
+}
+
+proc addNode(kind: i32, value: string, left: i32, right: i32, extra: i32): i32 {
+    if (g_nodeCount >= 10000) {
+        return -1;
+    }
+    g_astKinds.insert(kind);
+    g_astValues.insert(value);
+    g_astLefts.insert(left);
+    g_astRights.insert(right);
+    g_astExtras.insert(extra);
+    var index: i32;
+    index = g_nodeCount;
+    g_nodeCount = g_nodeCount + 1;
+    return index;
+}
+
+proc getPrecedence(tokType: i32): i32 {
+    if (tokType == OP_OR) { return 2; }
+    if (tokType == OP_AND) { return 3; }
+    if (tokType == OP_EQ) { return 4; }
+    if (tokType == OP_NEQ) { return 4; }
+    if (tokType == OP_LT) { return 5; }
+    if (tokType == OP_GT) { return 5; }
+    if (tokType == OP_LTE) { return 5; }
+    if (tokType == OP_GTE) { return 5; }
+    if (tokType == OP_PLUS) { return 6; }
+    if (tokType == OP_MINUS) { return 6; }
+    if (tokType == OP_STAR) { return 7; }
+    if (tokType == OP_SLASH) { return 7; }
+    if (tokType == OP_PERCENT) { return 7; }
+    return 0;
+}
+
+proc parsePrefix(): i32 {
+    var tokType: i32;
+    tokType = currentTokenType();
+
+    if (tokType == INT_LITERAL) {
+        var value: string;
+        value = currentLexeme();
+        advance();
+        return addNode(NODE_LITERAL, value, -1, -1, -1);
+    }
+    if (tokType == STRING_LITERAL) {
+        var value: string;
+        value = currentLexeme();
+        advance();
+        return addNode(NODE_LITERAL, value, -1, -1, -1);
+    }
+
+    if (tokType == IDENT) {
+        var value: string;
+        value = currentLexeme();
+        advance();
+        if (currentTokenType() == LPAREN) {
+            advance();
+            var argCount: i32;
+            argCount = 0;
+            if (currentTokenType() != RPAREN) {
+                var arg: i32;
+                arg = parseExpression(0);
+                argCount = 1;
+                while (currentTokenType() == COMMA) {
+                    advance();
+                    arg = parseExpression(0);
+                    argCount = argCount + 1;
+                }
+            }
+            advance();
+            return addNode(NODE_CALL, value, argCount, -1, -1);
+        }
+        return addNode(NODE_IDENTIFIER, value, -1, -1, -1);
+    }
+
+    if (tokType == LPAREN) {
+        advance();
+        var expr: i32;
+        expr = parseExpression(0);
+        advance();
+        return addNode(NODE_GROUPING, "", expr, -1, -1);
+    }
+
+    if (tokType == OP_MINUS) {
+        advance();
+        var operand: i32;
+        operand = parseExpression(8);
+        return addNode(NODE_UNARY_OP, "-", operand, -1, -1);
+    }
+    if (tokType == OP_NOT) {
+        advance();
+        var operand: i32;
+        operand = parseExpression(8);
+        return addNode(NODE_UNARY_OP, "!", operand, -1, -1);
+    }
+
+    return -1;
+}
+
+proc parseInfix(left: i32, leftPrec: i32): i32 {
+    var tokType: i32;
+    tokType = currentTokenType();
+
+    if (tokType == OP_PLUS) {
+        var opLexeme: string;
+        opLexeme = currentLexeme();
+        advance();
+        var right: i32;
+        right = parseExpression(leftPrec);
+        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
+    }
+    if (tokType == OP_MINUS) {
+        var opLexeme: string;
+        opLexeme = currentLexeme();
+        advance();
+        var right: i32;
+        right = parseExpression(leftPrec);
+        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
+    }
+    if (tokType == OP_STAR) {
+        var opLexeme: string;
+        opLexeme = currentLexeme();
+        advance();
+        var right: i32;
+        right = parseExpression(leftPrec);
+        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
+    }
+    if (tokType == OP_SLASH) {
+        var opLexeme: string;
+        opLexeme = currentLexeme();
+        advance();
+        var right: i32;
+        right = parseExpression(leftPrec);
+        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
+    }
+    if (tokType == OP_PERCENT) {
+        var opLexeme: string;
+        opLexeme = currentLexeme();
+        advance();
+        var right: i32;
+        right = parseExpression(leftPrec);
+        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
+    }
+    if (tokType == OP_EQ) {
+        var opLexeme: string;
+        opLexeme = currentLexeme();
+        advance();
+        var right: i32;
+        right = parseExpression(leftPrec);
+        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
+    }
+    if (tokType == OP_NEQ) {
+        var opLexeme: string;
+        opLexeme = currentLexeme();
+        advance();
+        var right: i32;
+        right = parseExpression(leftPrec);
+        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
+    }
+    if (tokType == OP_LT) {
+        var opLexeme: string;
+        opLexeme = currentLexeme();
+        advance();
+        var right: i32;
+        right = parseExpression(leftPrec);
+        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
+    }
+    if (tokType == OP_GT) {
+        var opLexeme: string;
+        opLexeme = currentLexeme();
+        advance();
+        var right: i32;
+        right = parseExpression(leftPrec);
+        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
+    }
+    if (tokType == OP_LTE) {
+        var opLexeme: string;
+        opLexeme = currentLexeme();
+        advance();
+        var right: i32;
+        right = parseExpression(leftPrec);
+        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
+    }
+    if (tokType == OP_GTE) {
+        var opLexeme: string;
+        opLexeme = currentLexeme();
+        advance();
+        var right: i32;
+        right = parseExpression(leftPrec);
+        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
+    }
+    if (tokType == OP_AND) {
+        var opLexeme: string;
+        opLexeme = currentLexeme();
+        advance();
+        var right: i32;
+        right = parseExpression(leftPrec);
+        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
+    }
+    if (tokType == OP_OR) {
+        var opLexeme: string;
+        opLexeme = currentLexeme();
+        advance();
+        var right: i32;
+        right = parseExpression(leftPrec);
+        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
+    }
+
+    if (tokType == LBRACKET) {
+        advance();
+        var index: i32;
+        index = parseExpression(0);
+        advance();
+        return addNode(NODE_INDEX, "", left, index, -1);
+    }
+
+    if (tokType == DOT) {
+        advance();
+        var fieldName: string;
+        fieldName = currentLexeme();
+        advance();
+        return addNode(NODE_FIELD, fieldName, left, -1, -1);
+    }
+
+    return -1;
+}
+
+proc parseExpression(prec: i32): i32 {
+    var left: i32;
+    left = parsePrefix();
+    if (left == -1) { return -1; }
+
+    while (true) {
+        var tokType: i32;
+        tokType = currentTokenType();
+        var nextPrec: i32;
+        nextPrec = 0;
+
+        if (tokType == LBRACKET) {
+            nextPrec = 9;
+        } else {
+            if (tokType == DOT) {
+                nextPrec = 9;
+            } else {
+                nextPrec = getPrecedence(tokType);
+            }
+        }
+
+        if (nextPrec == 0) { break; }
+        if (prec >= nextPrec) { break; }
+
+        left = parseInfix(left, nextPrec);
+        if (left == -1) { return -1; }
+    }
+
+    return left;
+}
+
+proc parseStatement(): i32 {
+    var tokType: i32;
+    tokType = currentTokenType();
+
+    if (tokType == KW_VAR) {
+        advance();
+        var name: string;
+        name = currentLexeme();
+        advance();
+        var value: i32;
+        value = parseExpression(0);
+        return addNode(NODE_VARIABLE_DECL, name, value, -1, -1);
+    }
+
+    if (tokType == KW_IF) {
+        advance();
+        var cond: i32;
+        cond = parseExpression(0);
+        var thenBranch: i32;
+        thenBranch = parseExpression(0);
+        var elseBranch: i32;
+        elseBranch = -1;
+        if (currentTokenType() == KW_ELSE) {
+            advance();
+            elseBranch = parseExpression(0);
+        }
+        return addNode(NODE_IF_STMT, "", cond, thenBranch, elseBranch);
+    }
+
+    if (tokType == KW_WHILE) {
+        advance();
+        var cond: i32;
+        cond = parseExpression(0);
+        var body: i32;
+        body = parseExpression(0);
+        return addNode(NODE_WHILE_STMT, "", cond, body, -1);
+    }
+
+    if (tokType == KW_RETURN) {
+        advance();
+        var value: i32;
+        value = parseExpression(0);
+        return addNode(NODE_RETURN_STMT, "", value, -1, -1);
+    }
+
+    if (tokType == KW_PROC) {
+        advance();
+        var name: string;
+        name = currentLexeme();
+        advance();
+        advance();
+        advance();
+        var body: i32;
+        body = parseBlock();
+        return addNode(NODE_FUNCTION_DECL, name, body, -1, -1);
+    }
+
+    if (tokType == KW_STRUCT) {
+        advance();
+        var name: string;
+        name = currentLexeme();
+        advance();
+        advance();  // skip {
+
+        var fieldCount = 0;
+        while (g_currentToken < lexer::tokenCount() - 1) {
+            var fieldName = currentLexeme();
+            if (fieldName == "}") {
+                break;
+            }
+            advance();
+            advance();
+            fieldCount = fieldCount + 1;
+        }
+
+        return addNode(NODE_STRUCT_DEF, name, fieldCount, -1, -1);
+    }
+
+    return parseExpression(0);
+}
+
+proc parseBlock(): i32 {
+    advance();  // skip {
+    var count: i32;
+    count = 0;
+    while (g_currentToken < lexer::tokenCount() - 1) {
+        var stmt: i32;
+        stmt = parseStatement();
+        if (stmt >= 0) {
+            count = count + 1;
+        } else {
+            advance();
+        }
+    }
+    advance();  // skip }
+    return count;
+}
+
+var g_result: i32;
+
+proc finalizeParse() {
+    g_result = g_nodeCount;
+}
+
+proc parse(tokens: [i32]): i32 {
+    g_astKinds = [];
+    g_astValues = [];
+    g_astLefts = [];
+    g_astRights = [];
+    g_astExtras = [];
+    g_currentToken = 0;
+    g_nodeCount = 1;
+    g_astKinds.insert(NODE_PROGRAM);
+    g_astValues.insert("");
+    g_astLefts.insert(-1);
+    g_astRights.insert(-1);
+    g_astExtras.insert(-1);
+    g_tokenCount = lexer::tokenCount();
+    while (g_currentToken < g_tokenCount - 1) {
+        var stmt: i32;
+        stmt = parseStatement();
+        if (stmt == -1) {
+            g_currentToken = g_currentToken + 1;
+        }
+    }
+    finalizeParse();
+    return g_result;
+}
+
+//#source codegen.xvr
+var NODE_PROGRAM: i32 = 0;
+var NODE_LITERAL: i32 = 1;
+var NODE_IDENTIFIER: i32 = 2;
+var NODE_BINARY_OP: i32 = 3;
+var NODE_VARIABLE_DECL: i32 = 4;
+var NODE_FUNCTION_DECL: i32 = 5;
+var NODE_IF_STMT: i32 = 6;
+var NODE_WHILE_STMT: i32 = 7;
+var NODE_RETURN_STMT: i32 = 8;
+var NODE_STRUCT_DEF: i32 = 9;
+var NODE_STRUCT_FIELD: i32 = 10;
+var NODE_STRUCT_INIT: i32 = 11;
+var NODE_STRUCT_ACCESS: i32 = 12;
+var NODE_UNARY_OP: i32 = 13;
+var NODE_CALL: i32 = 14;
+var NODE_INDEX: i32 = 15;
+var NODE_FIELD: i32 = 16;
+var NODE_CONDITIONAL: i32 = 17;
+var NODE_GROUPING: i32 = 18;
+
+var MAX_VARS: i32 = 1000;
+var MAX_IR_LEN: i32 = 100000;
+
+var g_ir: string;
+var g_vars: [string];
+var g_varCount: i32;
+var g_structs: [string];
+var g_structFieldCount: [i32];
+
+var g_labelCounter: i32 = 0;
+var g_regCounter: i32 = 0;
+
+proc initCodegen() {
+    g_ir = "";
+    g_vars = [];
+    g_varCount = 0;
+    g_structs = [];
+    g_structFieldCount = [];
+    g_labelCounter = 0;
+    g_regCounter = 0;
+}
+
+proc addVariable(name: string) {
+    if (g_varCount >= MAX_VARS) { return; }
+    g_vars.insert(name);
+    g_varCount = g_varCount + 1;
+}
+
+proc findVariable(name: string): i32 {
+    var i: i32 = 0;
+    while (i < g_varCount) {
+        if (g_vars[i] == name) {
+            return i;
+        }
+        i = i + 1;
+    }
+    return -1;
+}
+
+proc nextLabel(): string {
+    var label = "l" + g_labelCounter;
+    g_labelCounter = g_labelCounter + 1;
+    return label;
+}
+
+proc nextReg(): string {
+    var r: string = "%t" + g_regCounter;
+    g_regCounter = g_regCounter + 1;
+    return r;
+}
+
+proc emitExpr(kind: i32, left: i32, right: i32, extra: i32, values: [string]): string {
+    var ir: string = "";
+    var reg: string;
+
+    if (kind == NODE_LITERAL) {
+        if (left >= 0 && left < len(values)) {
+            return values[left];
+        }
+        return "0";
+    }
+
+    if (kind == NODE_IDENTIFIER) {
+        if (left >= 0 && left < len(values)) {
+            var name: string = values[left];
+            reg = nextReg();
+            return "  " + reg + " = load i32, i32* %" + name + ", align 4\n";
+        }
+        return "0";
+    }
+
+    if (kind == NODE_BINARY_OP) {
+        reg = nextReg();
+        if (extra == OP_PLUS) { ir = "  " + reg + " = add i32 0, 0\n"; }
+        else if (extra == OP_MINUS) { ir = "  " + reg + " = sub i32 0, 0\n"; }
+        else if (extra == OP_STAR) { ir = "  " + reg + " = mul i32 0, 0\n"; }
+        else if (extra == OP_SLASH) { ir = "  " + reg + " = sdiv i32 0, 0\n"; }
+        else if (extra == OP_EQ) { ir = "  " + reg + " = icmp eq i32 0, 0\n"; }
+        else if (extra == OP_NEQ) { ir = "  " + reg + " = icmp ne i32 0, 0\n"; }
+        else if (extra == OP_LT) { ir = "  " + reg + " = icmp slt i32 0, 0\n"; }
+        else if (extra == OP_GT) { ir = "  " + reg + " = icmp sgt i32 0, 0\n"; }
+        else if (extra == OP_LTE) { ir = "  " + reg + " = icmp sle i32 0, 0\n"; }
+        else if (extra == OP_GTE) { ir = "  " + reg + " = icmp sge i32 0, 0\n"; }
+        return ir;
+    }
+
+    if (kind == NODE_UNARY_OP) {
+        reg = nextReg();
+        if (left >= 0 && left < len(values) && values[left] == "-") {
+            ir = "  " + reg + " = sub i32 0, 0\n";
+        } else {
+            ir = "  " + reg + " = icmp eq i32 0, 0\n";
+        }
+        return ir;
+    }
+
+    if (kind == NODE_CALL) {
+        var fnName: string = "";
+        if (left >= 0 && left < len(values)) { fnName = values[left]; }
+        reg = nextReg();
+        return "  " + reg + " = call i32 @" + fnName + "()\n";
+    }
+
+    return "";
+}
+
+proc generateFunction(name: string, body: string): string {
+    var ir: string;
+    ir = "define i32 @" + name + "() {\n";
+    ir = ir + "entry:\n";
+    ir = ir + body;
+    ir = ir + "  ret i32 0\n";
+    ir = ir + "}\n";
+    return ir;
+}
+
+proc generateIf(cond: string, thenBlock: string, elseBlock: string) -> string {
+    var ir: string;
+    var thenLabel = "if_then_" + nextLabel();
+    var elseLabel = "if_else_" + nextLabel();
+    var endLabel = "if_end_" + nextLabel();
+
+    ir = "  br i1 " + cond + ", label %" + thenLabel + ", label %" + elseLabel + "\n";
+    ir = ir + thenLabel + ":\n";
+    ir = ir + thenBlock;
+    ir = ir + "  br label %" + endLabel + "\n";
+    ir = ir + elseLabel + ":\n";
+    if (len(elseBlock) > 0) {
+        ir = ir + elseBlock;
+    }
+    ir = ir + "  br label %" + endLabel + "\n";
+    ir = ir + endLabel + ":\n";
+    return ir;
+}
+
+proc generateWhile(cond: string, body: string) -> string {
+    var ir: string;
+    var condLabel = "while_cond_" + nextLabel();
+    var bodyLabel = "while_body_" + nextLabel();
+    var endLabel = "while_end_" + nextLabel();
+
+    ir = "  br label %" + condLabel + "\n";
+    ir = ir + condLabel + ":\n";
+    ir = ir + "  br i1 " + cond + ", label %" + bodyLabel + ", label %" + endLabel + "\n";
+    ir = ir + bodyLabel + ":\n";
+    ir = ir + body;
+    ir = ir + "  br label %" + condLabel + "\n";
+    ir = ir + endLabel + ":\n";
+    return ir;
+}
+
+proc generateCall(fnName: string): string {
+    var ir: string;
+    ir = "  %result = call i32 @" + fnName + "()\n";
+    return ir;
+}
+
+proc generateStruct(structName: string, fieldCount: i32): string {
+    var ir: string;
+    ir = "; Struct definition: " + structName + " with " + fieldCount + " fields\n";
+    ir = ir + "%" + structName + " = type { ";
+
+    var i: i32 = 0;
+    while (i < fieldCount) {
+        ir = ir + "i32";
+        if (i < fieldCount - 1) {
+            ir = ir + ", ";
+        }
+        i = i + 1;
+    }
+    ir = ir + " }\n";
+
+    g_structs.insert(structName);
+    g_structFieldCount.insert(fieldCount);
+
+    return ir;
+}
+
+proc generateStructInit(structName: string, values: [string]): string {
+    var ir: string;
+    var structIdx: i32 = -1;
+
+    var i: i32 = 0;
+    while (i < len(g_structs)) {
+        if (g_structs[i] == structName) {
+            structIdx = i;
+            break;
+        }
+        i = i + 1;
+    }
+
+    if (structIdx >= 0) {
+        var fieldCount = g_structFieldCount[structIdx];
+        ir = "  %" + structName + "_inst = alloca %" + structName + ", align 4\n";
+
+        i = 0;
+        while (i < fieldCount && i < len(values)) {
+            ir = ir + "  %field" + i + " = getelementptr %" + structName + ", %" + structName + "* %" + structName + "_inst, i32 0, i32 " + i + "\n";
+            ir = ir + "  store i32 " + values[i] + ", i32* %field" + i + ", align 4\n";
+            i = i + 1;
+        }
+    }
+
+    return ir;
+}
+
+proc generateNode(kind: i32, left: i32, right: i32, extra: i32, values: [string]) {
+    if (left >= 0 && left >= len(values)) { return; }
+    if (right >= 0 && right >= len(values)) { return; }
+    if (extra >= 0 && extra >= len(values)) { return; }
+
+    if (kind == NODE_VARIABLE_DECL) {
+        var name: string = values[left];
+        var value: string = values[right];
+        addVariable(name);
+        if (len(g_ir) < MAX_IR_LEN) {
+            g_ir = g_ir + "  %" + name + " = alloca i32, align 4\n";
+            g_ir = g_ir + "  store i32 " + value + ", i32* %" + name + ", align 4\n";
+        }
+    } else if (kind == NODE_FUNCTION_DECL) {
+        var fnName: string = values[left];
+        var fnBody: string = values[right];
+        if (len(g_ir) < MAX_IR_LEN) {
+            g_ir = g_ir + generateFunction(fnName, fnBody);
+        }
+    } else if (kind == NODE_IF_STMT) {
+        var cond: string = values[left];
+        var thenBlock: string = values[right];
+        var elseBlock: string = "";
+        if (extra >= 0) {
+            elseBlock = values[extra];
+        }
+        if (len(g_ir) < MAX_IR_LEN) {
+            g_ir = g_ir + generateIf(cond, thenBlock, elseBlock);
+        }
+    } else if (kind == NODE_WHILE_STMT) {
+        var cond: string = values[left];
+        var body: string = values[right];
+        if (len(g_ir) < MAX_IR_LEN) {
+            g_ir = g_ir + generateWhile(cond, body);
+        }
+    } else if (kind == NODE_STRUCT_DEF) {
+        var structName: string = values[left];
+        var fieldCount: i32 = right;
+        if (len(g_ir) < MAX_IR_LEN) {
+            g_ir = g_ir + generateStruct(structName, fieldCount);
+        }
+    } else if (kind == NODE_STRUCT_INIT) {
+        var structName: string = values[left];
+        if (len(g_ir) < MAX_IR_LEN) {
+            g_ir = g_ir + generateStructInit(structName, values);
+        }
+    } else if (kind == NODE_CALL) {
+        if (len(g_ir) < MAX_IR_LEN) {
+            g_ir = g_ir + emitExpr(kind, left, right, extra, values);
+        }
+    }
+}
+
+proc generate(): string {
+    g_ir = "; Module ID 'stage0'";
+    g_ir = g_ir + "\nsource_filename = \"stage0.llvm\"";
+    g_ir = g_ir + "\n";
+    g_ir = g_ir + "\ndefine i32 @main() {";
+    g_ir = g_ir + "\nentry:";
+    g_ir = g_ir + "\n  %result = add i32 0, 0";
+    g_ir = g_ir + "\n  ret i32 %result";
+    g_ir = g_ir + "\n}";
+    return g_ir;
+}
+
+proc getIR(): string {
+    return g_ir;
+}
+
