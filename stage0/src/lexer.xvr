@@ -26,6 +26,13 @@ proc addToken(type: i32, lexeme: string, line: i32) {
     g_tokenCount = g_tokenCount + 1;
 }
 
+proc peek(): string {
+    if (g_pos + 1 < len(g_source)) {
+        return g_source.subString(g_pos + 1, 1);
+    }
+    return "";
+}
+
 proc nextToken(): Token {
     while (g_pos < len(g_source)) {
         var c: string;
@@ -152,30 +159,47 @@ proc nextToken(): Token {
                 } else {
                     var tokType: i32;
                     tokType = INVALID;
-                    if (c == "(") { tokType = LPAREN; }
-                    if (c == ")") { tokType = RPAREN; }
-                    if (c == "{") { tokType = LBRACE; }
-                    if (c == "}") { tokType = RBRACE; }
-                    if (c == "[") { tokType = LBRACKET; }
-                    if (c == "]") { tokType = RBRACKET; }
-                    if (c == ",") { tokType = COMMA; }
-                    if (c == ";") { tokType = SEMICOLON; }
-                    if (c == ":") { tokType = COLON; }
-                    if (c == ".") { tokType = DOT; }
-                    if (c == "=") { tokType = EQ; }
-                    if (c == "+") { tokType = OP_PLUS; }
-                    if (c == "-") { tokType = OP_MINUS; }
-                    if (c == "*") { tokType = OP_STAR; }
-                    if (c == "/") { tokType = OP_SLASH; }
-                    if (c == "%") { tokType = OP_PERCENT; }
-                    
+                    var nextC: string;
+                    nextC = peek();
+                    var isTwoChar: bool;
+                    isTwoChar = false;
+
+                    if (c == "=" && nextC == "=") { tokType = OP_EQ; isTwoChar = true; }
+                    else if (c == "!" && nextC == "=") { tokType = OP_NEQ; isTwoChar = true; }
+                    else if (c == "<" && nextC == "=") { tokType = OP_LTE; isTwoChar = true; }
+                    else if (c == ">" && nextC == "=") { tokType = OP_GTE; isTwoChar = true; }
+                    else if (c == "&" && nextC == "&") { tokType = OP_AND; isTwoChar = true; }
+                    else if (c == "|" && nextC == "|") { tokType = OP_OR; isTwoChar = true; }
+                    else if (c == "-" && nextC == ">") { tokType = ARROW; isTwoChar = true; }
+                    else if (c == "." && nextC == ".") { tokType = RANGE; isTwoChar = true; }
+                    else if (c == "(") { tokType = LPAREN; }
+                    else if (c == ")") { tokType = RPAREN; }
+                    else if (c == "{") { tokType = LBRACE; }
+                    else if (c == "}") { tokType = RBRACE; }
+                    else if (c == "[") { tokType = LBRACKET; }
+                    else if (c == "]") { tokType = RBRACKET; }
+                    else if (c == ",") { tokType = COMMA; }
+                    else if (c == ";") { tokType = SEMICOLON; }
+                    else if (c == ":") { tokType = COLON; }
+                    else if (c == ".") { tokType = DOT; }
+                    else if (c == "=") { tokType = EQ; }
+                    else if (c == "+") { tokType = OP_PLUS; }
+                    else if (c == "-") { tokType = OP_MINUS; }
+                    else if (c == "*") { tokType = OP_STAR; }
+                    else if (c == "/") { tokType = OP_SLASH; }
+                    else if (c == "%") { tokType = OP_PERCENT; }
+                    else if (c == "!") { tokType = OP_NOT; }
+
                     var tok: Token;
                     tok.type = tokType;
                     tok.lexeme = c;
                     tok.line = g_line;
-                    
+
                     addToken(tokType, c, g_line);
                     g_pos = g_pos + 1;
+                    if (isTwoChar) {
+                        g_pos = g_pos + 1;
+                    }
                     return tok;
                 }
             }

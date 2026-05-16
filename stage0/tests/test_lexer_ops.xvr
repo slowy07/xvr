@@ -1,0 +1,24 @@
+include std;
+include token;
+
+proc main(): void {
+    initLexer("== != <= >= && || -> ..");
+    var tok = nextToken();
+    if (tok.type != OP_EQ) { std::println("FAIL: expected OP_EQ, got {}", tok.type); return; }
+    tok = nextToken();
+    if (tok.type != OP_NEQ) { std::println("FAIL: expected OP_NEQ, got {}", tok.type); return; }
+    tok = nextToken();
+    if (tok.type != OP_LTE) { std::println("FAIL: expected OP_LTE, got {}", tok.type); return; }
+    tok = nextToken();
+    if (tok.type != OP_GTE) { std::println("FAIL: expected OP_GTE, got {}", tok.type); return; }
+    tok = nextToken();
+    if (tok.type != OP_AND) { std::println("FAIL: expected OP_AND, got {}", tok.type); return; }
+    tok = nextToken();
+    if (tok.type != OP_OR) { std::println("FAIL: expected OP_OR, got {}", tok.type); return; }
+    tok = nextToken();
+    if (tok.type != ARROW) { std::println("FAIL: expected ARROW, got {}", tok.type); return; }
+    tok = nextToken();
+    if (tok.type != RANGE) { std::println("FAIL: expected RANGE, got {}", tok.type); return; }
+    std::println("PASS: all multi-char operators recognized");
+}
+main();
