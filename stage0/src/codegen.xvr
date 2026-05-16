@@ -11,6 +11,12 @@ var NODE_STRUCT_DEF: i32 = 9;
 var NODE_STRUCT_FIELD: i32 = 10;
 var NODE_STRUCT_INIT: i32 = 11;
 var NODE_STRUCT_ACCESS: i32 = 12;
+var NODE_UNARY_OP: i32 = 13;
+var NODE_CALL: i32 = 14;
+var NODE_INDEX: i32 = 15;
+var NODE_FIELD: i32 = 16;
+var NODE_CONDITIONAL: i32 = 17;
+var NODE_GROUPING: i32 = 18;
 
 var MAX_VARS: i32 = 1000;
 var MAX_IR_LEN: i32 = 100000;
@@ -22,6 +28,7 @@ var g_structs: [string];
 var g_structFieldCount: [i32];
 
 var g_labelCounter: i32 = 0;
+var g_regCounter: i32 = 0;
 
 proc initCodegen() {
     g_ir = "";
@@ -30,6 +37,7 @@ proc initCodegen() {
     g_structs = [];
     g_structFieldCount = [];
     g_labelCounter = 0;
+    g_regCounter = 0;
 }
 
 proc addVariable(name: string) {
@@ -53,6 +61,67 @@ proc nextLabel(): string {
     var label = "l" + g_labelCounter;
     g_labelCounter = g_labelCounter + 1;
     return label;
+}
+
+proc nextReg(): string {
+    var r: string = "%t" + g_regCounter;
+    g_regCounter = g_regCounter + 1;
+    return r;
+}
+
+proc emitExpr(kind: i32, left: i32, right: i32, extra: i32, values: [string]): string {
+    var ir: string = "";
+    var reg: string;
+
+    if (kind == NODE_LITERAL) {
+        if (left >= 0 && left < len(values)) {
+            return values[left];
+        }
+        return "0";
+    }
+
+    if (kind == NODE_IDENTIFIER) {
+        if (left >= 0 && left < len(values)) {
+            var name: string = values[left];
+            reg = nextReg();
+            return "  " + reg + " = load i32, i32* %" + name + ", align 4\n";
+        }
+        return "0";
+    }
+
+    if (kind == NODE_BINARY_OP) {
+        reg = nextReg();
+        if (extra == OP_PLUS) { ir = "  " + reg + " = add i32 0, 0\n"; }
+        else if (extra == OP_MINUS) { ir = "  " + reg + " = sub i32 0, 0\n"; }
+        else if (extra == OP_STAR) { ir = "  " + reg + " = mul i32 0, 0\n"; }
+        else if (extra == OP_SLASH) { ir = "  " + reg + " = sdiv i32 0, 0\n"; }
+        else if (extra == OP_EQ) { ir = "  " + reg + " = icmp eq i32 0, 0\n"; }
+        else if (extra == OP_NEQ) { ir = "  " + reg + " = icmp ne i32 0, 0\n"; }
+        else if (extra == OP_LT) { ir = "  " + reg + " = icmp slt i32 0, 0\n"; }
+        else if (extra == OP_GT) { ir = "  " + reg + " = icmp sgt i32 0, 0\n"; }
+        else if (extra == OP_LTE) { ir = "  " + reg + " = icmp sle i32 0, 0\n"; }
+        else if (extra == OP_GTE) { ir = "  " + reg + " = icmp sge i32 0, 0\n"; }
+        return ir;
+    }
+
+    if (kind == NODE_UNARY_OP) {
+        reg = nextReg();
+        if (left >= 0 && left < len(values) && values[left] == "-") {
+            ir = "  " + reg + " = sub i32 0, 0\n";
+        } else {
+            ir = "  " + reg + " = icmp eq i32 0, 0\n";
+        }
+        return ir;
+    }
+
+    if (kind == NODE_CALL) {
+        var fnName: string = "";
+        if (left >= 0 && left < len(values)) { fnName = values[left]; }
+        reg = nextReg();
+        return "  " + reg + " = call i32 @" + fnName + "()\n";
+    }
+
+    return "";
 }
 
 proc generateFunction(name: string, body: string): string {
@@ -200,6 +269,10 @@ proc generateNode(kind: i32, left: i32, right: i32, extra: i32, values: [string]
         var structName: string = values[left];
         if (len(g_ir) < MAX_IR_LEN) {
             g_ir = g_ir + generateStructInit(structName, values);
+        }
+    } else if (kind == NODE_CALL) {
+        if (len(g_ir) < MAX_IR_LEN) {
+            g_ir = g_ir + emitExpr(kind, left, right, extra, values);
         }
     }
 }
