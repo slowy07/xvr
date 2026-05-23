@@ -18,6 +18,22 @@ proc initLexer(source: string) {
     g_tokenLines = [];
 }
 
+proc isAlpha(c: string): bool {
+    if (c >= "a") { if (c <= "z") { return true; } }
+    if (c >= "A") { if (c <= "Z") { return true; } }
+    if (c == "_") { return true; }
+    return false;
+}
+
+proc isDigit(c: string): bool {
+    if (c >= "0") { if (c <= "9") { return true; } }
+    return false;
+}
+
+proc isAlphaNum(c: string): bool {
+    return isAlpha(c) || isDigit(c);
+}
+
 proc addToken(type: i32, lexeme: string, line: i32) {
     if (g_tokenCount >= 10000) { return; }
     g_tokenTypeValues.insert(type);
@@ -31,6 +47,34 @@ proc peek(): string {
         return g_source.subString(g_pos + 1, 1);
     }
     return "";
+}
+
+proc lexNumber(): Token {
+    var lexeme: string;
+    lexeme = "";
+    var isFloat = false;
+
+    while (g_pos < len(g_source)) {
+        var currC: string;
+        currC = g_source.subString(g_pos, 1);
+        if (currC == "." && !isFloat) {
+            isFloat = true;
+            lexeme = lexeme + currC;
+            g_pos = g_pos + 1;
+        } else if (isDigit(currC)) {
+            lexeme = lexeme + currC;
+            g_pos = g_pos + 1;
+        } else {
+            break;
+        }
+    }
+
+    var tok: Token;
+    tok.type = if (isFloat) { FLOAT_LITERAL } else { INT_LITERAL };
+    tok.lexeme = lexeme;
+    tok.line = g_line;
+    addToken(tok.type, lexeme, g_line);
+    return tok;
 }
 
 proc nextToken(): Token {
@@ -51,43 +95,13 @@ proc nextToken(): Token {
             g_pos = g_pos + 1;
         } else {
             var isDigit: bool;
-            isDigit = false;
-            if (c >= "0") { if (c <= "9") { isDigit = true; } }
+            isDigit = isDigit(c);
 
             if (isDigit) {
-                var lexeme: string;
-                lexeme = "";
-                var isFloat = false;
-                
-                while (g_pos < len(g_source)) {
-                    var currC: string;
-                    currC = g_source.subString(g_pos, 1);
-                    
-                    if (currC == "." && !isFloat) {
-                        isFloat = true;
-                        lexeme = lexeme + currC;
-                        g_pos = g_pos + 1;
-                    } else if (currC >= "0" && currC <= "9") {
-                        lexeme = lexeme + currC;
-                        g_pos = g_pos + 1;
-                    } else {
-                        break;
-                    }
-                }
-                
-                var tok: Token;
-                tok.type = if (isFloat) { FLOAT_LITERAL } else { INT_LITERAL };
-                tok.lexeme = lexeme;
-                tok.line = g_line;
-                
-                addToken(tok.type, lexeme, g_line);
-                return tok;
+                return lexNumber();
             } else {
                 var isAlpha: bool;
-                isAlpha = false;
-                if (c >= "a") { if (c <= "z") { isAlpha = true; } }
-                if (c >= "A") { if (c <= "Z") { isAlpha = true; } }
-                if (c == "_") { isAlpha = true; }
+                isAlpha = isAlpha(c);
 
                 if (isAlpha) {
                     var lexeme: string;
@@ -98,10 +112,7 @@ proc nextToken(): Token {
                         if (g_pos >= len(g_source)) { break; }
                         c = g_source.subString(g_pos, 1);
                         isAlpha = false;
-                        if (c >= "a") { if (c <= "z") { isAlpha = true; } }
-                        if (c >= "A") { if (c <= "Z") { isAlpha = true; } }
-                        if (c == "_") { isAlpha = true; }
-                        if (c >= "0") { if (c <= "9") { isAlpha = true; } }
+                        if (isAlphaNum(c)) { isAlpha = true; }
                     }
                     
                     var tokType: i32;
