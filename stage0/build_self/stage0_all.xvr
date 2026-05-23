@@ -195,151 +195,141 @@ proc lexNumber(): Token {
     return tok;
 }
 
+proc lexIdentifierOrKeyword(): Token {
+    var lexeme: string;
+    lexeme = "";
+    var c: string;
+    c = g_source.subString(g_pos, 1);
+    while (isAlphaNum(c)) {
+        lexeme = lexeme + c;
+        g_pos = g_pos + 1;
+        if (g_pos >= len(g_source)) { break; }
+        c = g_source.subString(g_pos, 1);
+    }
+
+    var tokType: i32;
+    tokType = IDENT;
+    if (lexeme == "var") { tokType = KW_VAR; }
+    if (lexeme == "if") { tokType = KW_IF; }
+    if (lexeme == "else") { tokType = KW_ELSE; }
+    if (lexeme == "while") { tokType = KW_WHILE; }
+    if (lexeme == "for") { tokType = KW_FOR; }
+    if (lexeme == "return") { tokType = KW_RETURN; }
+    if (lexeme == "proc") { tokType = KW_PROC; }
+    if (lexeme == "true") { tokType = KW_TRUE; }
+    if (lexeme == "false") { tokType = KW_FALSE; }
+    if (lexeme == "struct") { tokType = KW_STRUCT; }
+    if (lexeme == "const") { tokType = KW_CONST; }
+    if (lexeme == "fn") { tokType = KW_FN; }
+    if (lexeme == "include") { tokType = KW_INCLUDE; }
+    if (lexeme == "void") { tokType = KW_VOID; }
+
+    var tok: Token;
+    tok.type = tokType;
+    tok.lexeme = lexeme;
+    tok.line = g_line;
+    addToken(tokType, lexeme, g_line);
+    return tok;
+}
+
+proc lexString(): Token {
+    var lexeme: string;
+    lexeme = "";
+    var unterminated: bool;
+    unterminated = true;
+    g_pos = g_pos + 1;
+    while (g_pos < len(g_source)) {
+        var currC: string;
+        currC = g_source.subString(g_pos, 1);
+        if (currC == "\"") {
+            g_pos = g_pos + 1;
+            unterminated = false;
+            break;
+        }
+        lexeme = lexeme + currC;
+        g_pos = g_pos + 1;
+    }
+    var tokType: i32;
+    tokType = if (unterminated) { INVALID } else { STRING_LITERAL };
+    var tok: Token;
+    tok.type = tokType;
+    tok.lexeme = lexeme;
+    tok.line = g_line;
+    addToken(tokType, lexeme, g_line);
+    return tok;
+}
+
+proc lexOperatorOrPunctuation(firstChar: string): Token {
+    var tokType: i32;
+    tokType = INVALID;
+    var nextC: string;
+    nextC = peek();
+    var isTwoChar: bool;
+    isTwoChar = false;
+
+    if (firstChar == "=" && nextC == "=") { tokType = OP_EQ; isTwoChar = true; }
+    else if (firstChar == "!" && nextC == "=") { tokType = OP_NEQ; isTwoChar = true; }
+    else if (firstChar == "<" && nextC == "=") { tokType = OP_LTE; isTwoChar = true; }
+    else if (firstChar == ">" && nextC == "=") { tokType = OP_GTE; isTwoChar = true; }
+    else if (firstChar == "&" && nextC == "&") { tokType = OP_AND; isTwoChar = true; }
+    else if (firstChar == "|" && nextC == "|") { tokType = OP_OR; isTwoChar = true; }
+    else if (firstChar == "-" && nextC == ">") { tokType = ARROW; isTwoChar = true; }
+    else if (firstChar == "." && nextC == ".") { tokType = RANGE; isTwoChar = true; }
+    else if (firstChar == "(") { tokType = LPAREN; }
+    else if (firstChar == ")") { tokType = RPAREN; }
+    else if (firstChar == "{") { tokType = LBRACE; }
+    else if (firstChar == "}") { tokType = RBRACE; }
+    else if (firstChar == "[") { tokType = LBRACKET; }
+    else if (firstChar == "]") { tokType = RBRACKET; }
+    else if (firstChar == ",") { tokType = COMMA; }
+    else if (firstChar == ";") { tokType = SEMICOLON; }
+    else if (firstChar == ":") { tokType = COLON; }
+    else if (firstChar == ".") { tokType = DOT; }
+    else if (firstChar == "=") { tokType = EQ; }
+    else if (firstChar == "+") { tokType = OP_PLUS; }
+    else if (firstChar == "-") { tokType = OP_MINUS; }
+    else if (firstChar == "*") { tokType = OP_STAR; }
+    else if (firstChar == "/") { tokType = OP_SLASH; }
+    else if (firstChar == "%") { tokType = OP_PERCENT; }
+    else if (firstChar == "!") { tokType = OP_NOT; }
+
+    var lexeme: string;
+    lexeme = firstChar;
+    var tok: Token;
+    tok.type = tokType;
+    tok.lexeme = lexeme;
+    tok.line = g_line;
+    addToken(tokType, lexeme, g_line);
+    g_pos = g_pos + 1;
+    if (isTwoChar) {
+        g_pos = g_pos + 1;
+    }
+    return tok;
+}
+
 proc nextToken(): Token {
     while (g_pos < len(g_source)) {
         var c: string;
         c = g_source.subString(g_pos, 1);
 
-        var isSpace: bool;
-        isSpace = false;
-        if (c == " ") { isSpace = true; }
-        if (c == "\t") { isSpace = true; }
-        if (c == "\n") { isSpace = true; }
-
-        if (isSpace) {
-            if (c == "\n") {
-                g_line = g_line + 1;
-            }
+        if (c == " " || c == "\t" || c == "\n") {
+            if (c == "\n") { g_line = g_line + 1; }
             g_pos = g_pos + 1;
+        } else if (isDigit(c)) {
+            return lexNumber();
+        } else if (isAlpha(c)) {
+            return lexIdentifierOrKeyword();
+        } else if (c == "\"") {
+            return lexString();
         } else {
-            var isDigit: bool;
-            isDigit = isDigit(c);
-
-            if (isDigit) {
-                return lexNumber();
-            } else {
-                var isAlpha: bool;
-                isAlpha = isAlpha(c);
-
-                if (isAlpha) {
-                    var lexeme: string;
-                    lexeme = "";
-                    while (isAlpha) {
-                        lexeme = lexeme + c;
-                        g_pos = g_pos + 1;
-                        if (g_pos >= len(g_source)) { break; }
-                        c = g_source.subString(g_pos, 1);
-                        isAlpha = false;
-                        if (isAlphaNum(c)) { isAlpha = true; }
-                    }
-                    
-                    var tokType: i32;
-                    tokType = IDENT;
-                    if (lexeme == "var") { tokType = KW_VAR; }
-                    if (lexeme == "if") { tokType = KW_IF; }
-                    if (lexeme == "else") { tokType = KW_ELSE; }
-                    if (lexeme == "while") { tokType = KW_WHILE; }
-                    if (lexeme == "for") { tokType = KW_FOR; }
-                    if (lexeme == "return") { tokType = KW_RETURN; }
-                    if (lexeme == "proc") { tokType = KW_PROC; }
-                    if (lexeme == "true") { tokType = KW_TRUE; }
-                    if (lexeme == "false") { tokType = KW_FALSE; }
-                    if (lexeme == "struct") { tokType = KW_STRUCT; }
-                    if (lexeme == "const") { tokType = KW_CONST; }
-                    if (lexeme == "fn") { tokType = KW_FN; }
-                    if (lexeme == "include") { tokType = KW_INCLUDE; }
-                    if (lexeme == "void") { tokType = KW_VOID; }
-                    
-                    var tok: Token;
-                    tok.type = tokType;
-                    tok.lexeme = lexeme;
-                    tok.line = g_line;
-                    
-                    addToken(tokType, lexeme, g_line);
-                    return tok;
-                } else if (c == "\"") {
-                    var lexeme: string;
-                    lexeme = "";
-                    var unterminated: bool;
-                    unterminated = true;
-                    g_pos = g_pos + 1;
-                    while (g_pos < len(g_source)) {
-                        var currC: string;
-                        currC = g_source.subString(g_pos, 1);
-                        if (currC == "\"") {
-                            g_pos = g_pos + 1;
-                            unterminated = false;
-                            break;
-                        }
-                        lexeme = lexeme + currC;
-                        g_pos = g_pos + 1;
-                    }
-                    
-                    var tokType: i32;
-                    tokType = if (unterminated) { INVALID } else { STRING_LITERAL };
-                    
-                    var tok: Token;
-                    tok.type = tokType;
-                    tok.lexeme = lexeme;
-                    tok.line = g_line;
-                    
-                    addToken(tokType, lexeme, g_line);
-                    return tok;
-                } else {
-                    var tokType: i32;
-                    tokType = INVALID;
-                    var nextC: string;
-                    nextC = peek();
-                    var isTwoChar: bool;
-                    isTwoChar = false;
-
-                    if (c == "=" && nextC == "=") { tokType = OP_EQ; isTwoChar = true; }
-                    else if (c == "!" && nextC == "=") { tokType = OP_NEQ; isTwoChar = true; }
-                    else if (c == "<" && nextC == "=") { tokType = OP_LTE; isTwoChar = true; }
-                    else if (c == ">" && nextC == "=") { tokType = OP_GTE; isTwoChar = true; }
-                    else if (c == "&" && nextC == "&") { tokType = OP_AND; isTwoChar = true; }
-                    else if (c == "|" && nextC == "|") { tokType = OP_OR; isTwoChar = true; }
-                    else if (c == "-" && nextC == ">") { tokType = ARROW; isTwoChar = true; }
-                    else if (c == "." && nextC == ".") { tokType = RANGE; isTwoChar = true; }
-                    else if (c == "(") { tokType = LPAREN; }
-                    else if (c == ")") { tokType = RPAREN; }
-                    else if (c == "{") { tokType = LBRACE; }
-                    else if (c == "}") { tokType = RBRACE; }
-                    else if (c == "[") { tokType = LBRACKET; }
-                    else if (c == "]") { tokType = RBRACKET; }
-                    else if (c == ",") { tokType = COMMA; }
-                    else if (c == ";") { tokType = SEMICOLON; }
-                    else if (c == ":") { tokType = COLON; }
-                    else if (c == ".") { tokType = DOT; }
-                    else if (c == "=") { tokType = EQ; }
-                    else if (c == "+") { tokType = OP_PLUS; }
-                    else if (c == "-") { tokType = OP_MINUS; }
-                    else if (c == "*") { tokType = OP_STAR; }
-                    else if (c == "/") { tokType = OP_SLASH; }
-                    else if (c == "%") { tokType = OP_PERCENT; }
-                    else if (c == "!") { tokType = OP_NOT; }
-
-                    var tok: Token;
-                    tok.type = tokType;
-                    tok.lexeme = c;
-                    tok.line = g_line;
-
-                    addToken(tokType, c, g_line);
-                    g_pos = g_pos + 1;
-                    if (isTwoChar) {
-                        g_pos = g_pos + 1;
-                    }
-                    return tok;
-                }
-            }
+            return lexOperatorOrPunctuation(c);
         }
     }
-    
+
     var eof: Token;
     eof.type = EOF;
     eof.lexeme = "";
     eof.line = g_line;
-    
     addToken(EOF, "", g_line);
     return eof;
 }
