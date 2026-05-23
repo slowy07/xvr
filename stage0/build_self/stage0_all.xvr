@@ -356,6 +356,15 @@ proc getTokenLexeme(n: i32): string {
 include lexer;
 include node_types;
 
+var PREC_OR: i32 = 2;
+var PREC_AND: i32 = 3;
+var PREC_EQ: i32 = 4;
+var PREC_COMPARE: i32 = 5;
+var PREC_TERM: i32 = 6;
+var PREC_FACTOR: i32 = 7;
+var PREC_UNARY: i32 = 8;
+var PREC_CALL: i32 = 9;
+
 var g_astKinds: [i32];
 var g_astValues: [string];
 var g_astLefts: [i32];
@@ -411,19 +420,12 @@ proc addNode(kind: i32, value: string, left: i32, right: i32, extra: i32): i32 {
 }
 
 proc getPrecedence(tokType: i32): i32 {
-    if (tokType == OP_OR) { return 2; }
-    if (tokType == OP_AND) { return 3; }
-    if (tokType == OP_EQ) { return 4; }
-    if (tokType == OP_NEQ) { return 4; }
-    if (tokType == OP_LT) { return 5; }
-    if (tokType == OP_GT) { return 5; }
-    if (tokType == OP_LTE) { return 5; }
-    if (tokType == OP_GTE) { return 5; }
-    if (tokType == OP_PLUS) { return 6; }
-    if (tokType == OP_MINUS) { return 6; }
-    if (tokType == OP_STAR) { return 7; }
-    if (tokType == OP_SLASH) { return 7; }
-    if (tokType == OP_PERCENT) { return 7; }
+    if (tokType == OP_OR) { return PREC_OR; }
+    if (tokType == OP_AND) { return PREC_AND; }
+    if (tokType == OP_EQ || tokType == OP_NEQ) { return PREC_EQ; }
+    if (tokType == OP_LT || tokType == OP_GT || tokType == OP_LTE || tokType == OP_GTE) { return PREC_COMPARE; }
+    if (tokType == OP_PLUS || tokType == OP_MINUS) { return PREC_TERM; }
+    if (tokType == OP_STAR || tokType == OP_SLASH || tokType == OP_PERCENT) { return PREC_FACTOR; }
     return 0;
 }
 
@@ -479,13 +481,13 @@ proc parsePrefix(): i32 {
     if (tokType == OP_MINUS) {
         advance();
         var operand: i32;
-        operand = parseExpression(8);
+        operand = parseExpression(PREC_UNARY);
         return addNode(NODE_UNARY_OP, "-", operand, -1, -1);
     }
     if (tokType == OP_NOT) {
         advance();
         var operand: i32;
-        operand = parseExpression(8);
+        operand = parseExpression(PREC_UNARY);
         return addNode(NODE_UNARY_OP, "!", operand, -1, -1);
     }
 
@@ -495,111 +497,6 @@ proc parsePrefix(): i32 {
 proc parseInfix(left: i32, leftPrec: i32): i32 {
     var tokType: i32;
     tokType = currentTokenType();
-
-    if (tokType == OP_PLUS) {
-        var opLexeme: string;
-        opLexeme = currentLexeme();
-        advance();
-        var right: i32;
-        right = parseExpression(leftPrec);
-        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
-    }
-    if (tokType == OP_MINUS) {
-        var opLexeme: string;
-        opLexeme = currentLexeme();
-        advance();
-        var right: i32;
-        right = parseExpression(leftPrec);
-        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
-    }
-    if (tokType == OP_STAR) {
-        var opLexeme: string;
-        opLexeme = currentLexeme();
-        advance();
-        var right: i32;
-        right = parseExpression(leftPrec);
-        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
-    }
-    if (tokType == OP_SLASH) {
-        var opLexeme: string;
-        opLexeme = currentLexeme();
-        advance();
-        var right: i32;
-        right = parseExpression(leftPrec);
-        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
-    }
-    if (tokType == OP_PERCENT) {
-        var opLexeme: string;
-        opLexeme = currentLexeme();
-        advance();
-        var right: i32;
-        right = parseExpression(leftPrec);
-        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
-    }
-    if (tokType == OP_EQ) {
-        var opLexeme: string;
-        opLexeme = currentLexeme();
-        advance();
-        var right: i32;
-        right = parseExpression(leftPrec);
-        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
-    }
-    if (tokType == OP_NEQ) {
-        var opLexeme: string;
-        opLexeme = currentLexeme();
-        advance();
-        var right: i32;
-        right = parseExpression(leftPrec);
-        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
-    }
-    if (tokType == OP_LT) {
-        var opLexeme: string;
-        opLexeme = currentLexeme();
-        advance();
-        var right: i32;
-        right = parseExpression(leftPrec);
-        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
-    }
-    if (tokType == OP_GT) {
-        var opLexeme: string;
-        opLexeme = currentLexeme();
-        advance();
-        var right: i32;
-        right = parseExpression(leftPrec);
-        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
-    }
-    if (tokType == OP_LTE) {
-        var opLexeme: string;
-        opLexeme = currentLexeme();
-        advance();
-        var right: i32;
-        right = parseExpression(leftPrec);
-        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
-    }
-    if (tokType == OP_GTE) {
-        var opLexeme: string;
-        opLexeme = currentLexeme();
-        advance();
-        var right: i32;
-        right = parseExpression(leftPrec);
-        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
-    }
-    if (tokType == OP_AND) {
-        var opLexeme: string;
-        opLexeme = currentLexeme();
-        advance();
-        var right: i32;
-        right = parseExpression(leftPrec);
-        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
-    }
-    if (tokType == OP_OR) {
-        var opLexeme: string;
-        opLexeme = currentLexeme();
-        advance();
-        var right: i32;
-        right = parseExpression(leftPrec);
-        return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
-    }
 
     if (tokType == LBRACKET) {
         advance();
@@ -617,7 +514,12 @@ proc parseInfix(left: i32, leftPrec: i32): i32 {
         return addNode(NODE_FIELD, fieldName, left, -1, -1);
     }
 
-    return -1;
+    var opLexeme: string;
+    opLexeme = currentLexeme();
+    advance();
+    var right: i32;
+    right = parseExpression(leftPrec);
+    return addNode(NODE_BINARY_OP, opLexeme, left, right, tokType);
 }
 
 proc parseExpression(prec: i32): i32 {
@@ -632,10 +534,10 @@ proc parseExpression(prec: i32): i32 {
         nextPrec = 0;
 
         if (tokType == LBRACKET) {
-            nextPrec = 9;
+            nextPrec = PREC_CALL;
         } else {
             if (tokType == DOT) {
-                nextPrec = 9;
+                nextPrec = PREC_CALL;
             } else {
                 nextPrec = getPrecedence(tokType);
             }
