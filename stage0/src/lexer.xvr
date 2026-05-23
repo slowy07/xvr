@@ -215,27 +215,6 @@ proc nextToken(): Token {
     return eof;
 }
 
-proc lex(source: string): [Token] {
-    initLexer(source);
-    nextToken();
-    while (g_pos < len(g_source)) {
-        nextToken();
-    }
-    var result: [Token];
-    result = [];
-    var i: i32;
-    i = 0;
-    while (i < g_tokenCount) {
-        var t: Token;
-        t.type = getTokenType(i);
-        t.lexeme = getTokenLexeme(i);
-        t.line = g_tokenLines[i];
-        result.insert(t);
-        i = i + 1;
-    }
-    return result;
-}
-
 proc tokenCount(): i32 {
     return g_tokenCount;
 }

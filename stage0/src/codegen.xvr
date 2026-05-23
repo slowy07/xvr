@@ -1,22 +1,4 @@
-var NODE_PROGRAM: i32 = 0;
-var NODE_LITERAL: i32 = 1;
-var NODE_IDENTIFIER: i32 = 2;
-var NODE_BINARY_OP: i32 = 3;
-var NODE_VARIABLE_DECL: i32 = 4;
-var NODE_FUNCTION_DECL: i32 = 5;
-var NODE_IF_STMT: i32 = 6;
-var NODE_WHILE_STMT: i32 = 7;
-var NODE_RETURN_STMT: i32 = 8;
-var NODE_STRUCT_DEF: i32 = 9;
-var NODE_STRUCT_FIELD: i32 = 10;
-var NODE_STRUCT_INIT: i32 = 11;
-var NODE_STRUCT_ACCESS: i32 = 12;
-var NODE_UNARY_OP: i32 = 13;
-var NODE_CALL: i32 = 14;
-var NODE_INDEX: i32 = 15;
-var NODE_FIELD: i32 = 16;
-var NODE_CONDITIONAL: i32 = 17;
-var NODE_GROUPING: i32 = 18;
+include node_types;
 
 var MAX_VARS: i32 = 1000;
 var MAX_IR_LEN: i32 = 100000;
@@ -166,12 +148,6 @@ proc generateWhile(cond: string, body: string) -> string {
     ir = ir + body;
     ir = ir + "  br label %" + condLabel + "\n";
     ir = ir + endLabel + ":\n";
-    return ir;
-}
-
-proc generateCall(fnName: string): string {
-    var ir: string;
-    ir = "  %result = call i32 @" + fnName + "()\n";
     return ir;
 }
 

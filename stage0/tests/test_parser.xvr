@@ -1,5 +1,0 @@
-include std;
-include lexer;
-include parser;
-
-std::println("Parser test");

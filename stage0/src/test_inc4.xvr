@@ -1,5 +1,0 @@
-proc main(): void {
-    std::print("hello");
-}
-
-main();

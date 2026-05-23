@@ -11,7 +11,7 @@ echo "=== Concatenating source files ==="
 BUILD_SELF="$STAGE0_DIR/build_self/stage0_all.xvr"
 : > "$BUILD_SELF"
 
-for f in "$STAGE0_DIR/src/main.xvr" "$STAGE0_DIR/src/token.xvr" "$STAGE0_DIR/src/ast.xvr" "$STAGE0_DIR/src/lexer.xvr" "$STAGE0_DIR/src/parser.xvr" "$STAGE0_DIR/src/codegen.xvr"; do
+for f in "$STAGE0_DIR/src/main.xvr" "$STAGE0_DIR/src/token.xvr" "$STAGE0_DIR/src/node_types.xvr" "$STAGE0_DIR/src/lexer.xvr" "$STAGE0_DIR/src/parser.xvr" "$STAGE0_DIR/src/codegen.xvr"; do
     filename=$(basename "$f")
     echo "//#source $filename" >> "$BUILD_SELF"
     cat "$f" >> "$BUILD_SELF"
