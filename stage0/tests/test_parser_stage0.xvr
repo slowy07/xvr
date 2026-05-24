@@ -7,7 +7,7 @@ proc test_var_decl() {
     std::print("=== Test: Var Declaration ===\n");
     initLexer("var x = 42");
     initParser();
-    var count = parse([]);
+    var count = parse();
     assertTrue(count > 0, "parsed at least 1 node for var decl");
 }
 
@@ -15,7 +15,7 @@ proc test_if_stmt() {
     std::print("=== Test: If Statement ===\n");
     initLexer("if x { y }");
     initParser();
-    var count = parse([]);
+    var count = parse();
     assertTrue(count > 0, "parsed if statement");
 }
 
@@ -23,7 +23,7 @@ proc test_while_stmt() {
     std::print("=== Test: While Statement ===\n");
     initLexer("while x { y }");
     initParser();
-    var count = parse([]);
+    var count = parse();
     assertTrue(count > 0, "parsed while statement");
 }
 
@@ -31,7 +31,7 @@ proc test_return() {
     std::print("=== Test: Return ===\n");
     initLexer("return 42");
     initParser();
-    var count = parse([]);
+    var count = parse();
     assertTrue(count > 0, "parsed return statement");
 }
 

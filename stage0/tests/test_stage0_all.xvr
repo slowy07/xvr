@@ -11,7 +11,7 @@ proc main() {
     assertEq(tokenCount(), 5, "lexer produces 5 tokens for 'var x = 42'");
 
     initParser();
-    var nodeCount = parse([]);
+    var nodeCount = parse();
     assertTrue(nodeCount > 0, "parser produces nodes");
 
     initCodegen();

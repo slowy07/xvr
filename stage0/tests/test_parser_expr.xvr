@@ -7,19 +7,19 @@ proc main(): void {
     std::print("Test: a + b * 3\n");
     initLexer("a + b * 3");
     initParser();
-    var result = parse([]);
+    var result = parse();
     assertTrue(result > 0, "binary expression parsed successfully");
 
     std::print("Test: -x\n");
     initLexer("-x");
     initParser();
-    result = parse([]);
+    result = parse();
     assertTrue(result > 0, "unary expression parsed successfully");
 
     std::print("Test: a[i]\n");
     initLexer("a[i]");
     initParser();
-    result = parse([]);
+    result = parse();
     assertTrue(result > 0, "index expression parsed successfully");
 
     std::print("");
