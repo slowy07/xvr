@@ -100,6 +100,16 @@ fuzzer/coverage.filtered.info
 *.fuzz.tmp
 *.fuzz_out
 
+# Stage0 build artifacts
+stage0/stage0
+stage0/tests/test_lexer
+stage0/tests/test_lexer_ops
+stage0/tests/test_parser
+stage0/tests/test_parser_expr
+stage0/tests/test_codegen
+stage0/tests/test_struct
+stage0/tests/test_all
+
 # IDE files
 .vscode/
 .idea/
