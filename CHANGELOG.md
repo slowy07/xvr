@@ -26,7 +26,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **API**: `Xvr_LLVMCodegenSetIncludeDir()` - sets include directory for source-relative module resolution
 
 ### Changed
-- **Stage0**: Verified stage0 bootstrap compiler builds successfully with current lexer implementation
+- **Stage0**: Unify node constants — deleted `ast.xvr` (dead code), created `node_types.xvr` as single source of truth, removed triple-duplicated NODE_* definitions from parser.xvr and codegen.xvr
+- **Stage0**: Deleted 11 dead/experimental files (`test_inc*.xvr`, `test_minimal.xvr`, `test_lexer_combined.xvr`, abandoned test stubs)
+- **Stage0**: Refactored `nextToken()` from 181-line monolith to 25-line dispatcher (extracted `lexNumber`, `lexIdentifierOrKeyword`, `lexString`, `lexOperatorOrPunctuation`)
+- **Stage0**: Extracted character helpers (`isAlpha`, `isDigit`, `isAlphaNum`) replacing 6+ inline range checks
+- **Stage0**: Replaced 13 copy-paste operator blocks in `parseInfix()` with single generic handler
+- **Stage0**: Added `PREC_OR`..`PREC_CALL` named constants replacing magic numbers 2-9
+- **Stage0**: Wired `main.xvr` pipeline (lex → parse → codegen) — replaces stub that ignored parser output
+- **Stage0**: Added `test_helpers.xvr` with `assertEq`/`assertStr`/`assertTrue` — all tests converted from print-and-check to assertion-based
+- **Stage0**: Added `embed_and_build.sh` for compile-time source embedding, `test_self_host.sh` for self-compilation verification
+- **Stage0**: Added accessor functions (`getAstKind`, `getAstLeft`, etc.) for safe AST traversal
 
 ## [0.6.16] - 2026-05-02
 
