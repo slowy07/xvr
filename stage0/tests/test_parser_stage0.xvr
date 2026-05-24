@@ -1,56 +1,47 @@
 include std;
 include lexer;
 include parser;
+include test_helpers;
 
-proc test_parser_var_decl() {
-    std::println("=== Test: Variable Declaration ===");
+proc test_var_decl() {
+    std::print("=== Test: Var Declaration ===\n");
     initLexer("var x = 42");
     initParser();
-    
-    var result = parse([]);
-    std::println("Parsed {} nodes", result);
-    std::println("PASS: var_decl");
+    var count = parse([]);
+    assertTrue(count > 0, "parsed at least 1 node for var decl");
 }
 
-proc test_parser_if_statement() {
-    std::println("=== Test: If Statement ===");
+proc test_if_stmt() {
+    std::print("=== Test: If Statement ===\n");
     initLexer("if x { y }");
     initParser();
-    
-    var result = parse([]);
-    std::println("Parsed {} nodes", result);
-    std::println("PASS: if_statement");
+    var count = parse([]);
+    assertTrue(count > 0, "parsed if statement");
 }
 
-proc test_parser_while_statement() {
-    std::println("=== Test: While Statement ===");
+proc test_while_stmt() {
+    std::print("=== Test: While Statement ===\n");
     initLexer("while x { y }");
     initParser();
-    
-    var result = parse([]);
-    std::println("Parsed {} nodes", result);
-    std::println("PASS: while_statement");
+    var count = parse([]);
+    assertTrue(count > 0, "parsed while statement");
 }
 
-proc test_parser_return() {
-    std::println("=== Test: Return Statement ===");
+proc test_return() {
+    std::print("=== Test: Return ===\n");
     initLexer("return 42");
     initParser();
-    
-    var result = parse([]);
-    std::println("Parsed {} nodes", result);
-    std::println("PASS: return_statement");
+    var count = parse([]);
+    assertTrue(count > 0, "parsed return statement");
 }
 
 proc main() {
-    std::println("Stage0 Parser Tests\n");
-    
-    test_parser_var_decl();
-    test_parser_if_statement();
-    test_parser_while_statement();
-    test_parser_return();
-    
-    std::println("\n=== All Parser Tests Passed ===");
+    std::print("Stage0 Parser Tests\n\n");
+    test_var_decl();
+    test_if_stmt();
+    test_while_stmt();
+    test_return();
+    std::print("\n=== All Parser Tests Passed ===\n");
 }
 
 main();

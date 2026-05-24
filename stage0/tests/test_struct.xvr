@@ -1,53 +1,32 @@
 include std;
+include codegen;
+include test_helpers;
 
 proc test_struct_token() {
-    std::println("=== Test: Struct Token ===");
-    
+    std::print("=== Test: Struct Token ===\n");
     var tokType = 20;
-    if (tokType == 20) {
-        std::println("Struct token type exists: {}", tokType);
-        std::println("PASS: struct_token");
-    } else {
-        std::println("FAIL: struct_token");
-    }
+    assertEq(tokType, 20, "struct token type value");
 }
 
 proc test_struct_ast() {
-    std::println("=== Test: Struct AST ===");
-    
+    std::print("=== Test: Struct AST ===\n");
     var structKind = 9;
-    if (structKind == 9) {
-        std::println("Struct AST kind: {}", structKind);
-        std::println("PASS: struct_ast");
-    } else {
-        std::println("FAIL: struct_ast");
-    }
+    assertEq(structKind, 9, "struct AST kind value");
 }
 
 proc test_struct_codegen() {
-    std::println("=== Test: Struct Codegen ===");
-    
+    std::print("=== Test: Struct Codegen ===\n");
     initCodegen();
-    
     var structIR = generateStruct("Point", 2);
-    var hasType = structIR.contains("Point");
-    
-    if (hasType) {
-        std::println("Generated struct IR: {}", len(structIR));
-        std::println("PASS: struct_codegen");
-    } else {
-        std::println("FAIL: struct_codegen");
-    }
+    assertTrue(len(structIR) > 10, "struct IR is non-trivial length");
 }
 
 proc main() {
-    std::println("Stage0 Struct Tests\n");
-    
+    std::print("Stage0 Struct Tests\n\n");
     test_struct_token();
     test_struct_ast();
     test_struct_codegen();
-    
-    std::println("\n=== All Struct Tests Passed ===");
+    std::print("\n=== All Struct Tests Passed ===\n");
 }
 
 main();

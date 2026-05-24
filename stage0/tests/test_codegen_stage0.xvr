@@ -2,56 +2,46 @@ include std;
 include lexer;
 include parser;
 include codegen;
+include test_helpers;
 
 proc test_codegen_basic() {
-    std::println("=== Test: Basic Codegen ===");
+    std::print("=== Test: Basic Codegen ===\n");
     initLexer("var x = 42");
     initParser();
     initCodegen();
-    
     generate();
     var ir = getIR();
-    
-    std::println("Generated IR length: {}", len(ir));
-    std::println("PASS: codegen_basic");
+    assertTrue(len(ir) > 0, "generated IR is non-empty");
 }
 
-proc test_codegen_function() {
-    std::println("=== Test: Function Codegen ===");
+proc test_generate_function() {
+    std::print("=== Test: Generate Function ===\n");
     initCodegen();
-    
     var fn = generateFunction("main", "  ret i32 0");
-    std::println("Generated function: {}", len(fn));
-    std::println("PASS: codegen_function");
+    assertTrue(len(fn) > 10, "function IR is non-trivial length");
 }
 
-proc test_codegen_if() {
-    std::println("=== Test: If Codegen ===");
+proc test_generate_if() {
+    std::print("=== Test: Generate If ===\n");
     initCodegen();
-    
-    var if_ir = generateIf("%cond", "  br label %end", "");
-    std::println("Generated if: {}", len(if_ir));
-    std::println("PASS: codegen_if");
+    var ir = generateIf("%cond", "  br label %end", "");
+    assertTrue(len(ir) > 20, "if IR is non-trivial length");
 }
 
-proc test_codegen_while() {
-    std::println("=== Test: While Codegen ===");
+proc test_generate_while() {
+    std::print("=== Test: Generate While ===\n");
     initCodegen();
-    
-    var while_ir = generateWhile("%cond", "  br label %cond");
-    std::println("Generated while: {}", len(while_ir));
-    std::println("PASS: codegen_while");
+    var ir = generateWhile("%cond", "  br label %cond");
+    assertTrue(len(ir) > 20, "while IR is non-trivial length");
 }
 
 proc main() {
-    std::println("Stage0 Codegen Tests\n");
-    
+    std::print("Stage0 Codegen Tests\n\n");
     test_codegen_basic();
-    test_codegen_function();
-    test_codegen_if();
-    test_codegen_while();
-    
-    std::println("\n=== All Codegen Tests Passed ===");
+    test_generate_function();
+    test_generate_if();
+    test_generate_while();
+    std::print("\n=== All Codegen Tests Passed ===\n");
 }
 
 main();

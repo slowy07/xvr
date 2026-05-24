@@ -1,0 +1,15 @@
+proc assertEq(got: i32, expected: i32, msg: string) {
+    if (got != expected) {
+        std::print("FAIL: {} (got: {}, expected: {})\n", msg, got, expected);
+    } else {
+        std::print("PASS: {}\n", msg);
+    }
+}
+
+proc assertTrue(cond: bool, msg: string) {
+    if (cond) {
+        std::print("PASS: {}\n", msg);
+    } else {
+        std::print("FAIL: {}\n", msg);
+    }
+}

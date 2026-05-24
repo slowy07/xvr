@@ -1,24 +1,23 @@
 include std;
-include token;
+include test_helpers;
 
 proc main(): void {
     initLexer("== != <= >= && || -> ..");
     var tok = nextToken();
-    if (tok.type != OP_EQ) { std::println("FAIL: expected OP_EQ, got {}", tok.type); return; }
+    assertEq(tok.type, 37, "token type for ==");
     tok = nextToken();
-    if (tok.type != OP_NEQ) { std::println("FAIL: expected OP_NEQ, got {}", tok.type); return; }
+    assertEq(tok.type, 38, "token type for !=");
     tok = nextToken();
-    if (tok.type != OP_LTE) { std::println("FAIL: expected OP_LTE, got {}", tok.type); return; }
+    assertEq(tok.type, 40, "token type for <=");
     tok = nextToken();
-    if (tok.type != OP_GTE) { std::println("FAIL: expected OP_GTE, got {}", tok.type); return; }
+    assertEq(tok.type, 42, "token type for >=");
     tok = nextToken();
-    if (tok.type != OP_AND) { std::println("FAIL: expected OP_AND, got {}", tok.type); return; }
+    assertEq(tok.type, 43, "token type for &&");
     tok = nextToken();
-    if (tok.type != OP_OR) { std::println("FAIL: expected OP_OR, got {}", tok.type); return; }
+    assertEq(tok.type, 44, "token type for ||");
     tok = nextToken();
-    if (tok.type != ARROW) { std::println("FAIL: expected ARROW, got {}", tok.type); return; }
+    assertEq(tok.type, 57, "token type for ->");
     tok = nextToken();
-    if (tok.type != RANGE) { std::println("FAIL: expected RANGE, got {}", tok.type); return; }
-    std::println("PASS: all multi-char operators recognized");
+    assertEq(tok.type, 58, "token type for ..");
 }
 main();
