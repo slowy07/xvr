@@ -2,39 +2,44 @@ include lexer;
 include parser;
 include codegen;
 
-var g_ir: string;
-
 proc run(): void {
     std::print("Stage0 Bootstrap Compiler v0.1.0\n");
-    std::print("Testing lexer with string: 'var x = 42'\n");
-    
+
     var source = "var x = 42";
     initLexer(source);
-    
-    std::print("Calling nextToken...\n");
-    var tok = nextToken();
-    std::print("Got token\n");
-    
+
+    var tok: Token;
     tok = nextToken();
-    std::print("Got token\n");
-    
-    tok = nextToken();
-    std::print("Got token\n");
-    
-    tok = nextToken();
-    std::print("Got token\n");
-    
-    tok = nextToken();
-    std::print("Got token\n");
-    
+    while (tok.type != EOF) {
+        tok = nextToken();
+    }
+
     initParser();
+    var nodeCount = parse();
+
     initCodegen();
-    generate();
-    g_ir = getIR();
-    
-    std::print("\n=== Generated LLVM IR ===\n");
-    std::print(g_ir);
-    std::print("\nStage0 ready - lexer works, parser/codegen need implementation\n");
+    var i: i32;
+    i = 0;
+    while (i < nodeCount) {
+        generateNode(parser::getAstKind(i), parser::getAstLeft(i), parser::getAstRight(i),
+                     parser::getAstExtra(i), parser::getAstValue(i));
+        i = i + 1;
+    }
+    var ir: string;
+    ir = getIR();
+    std::print("=== Generated LLVM IR ===\n");
+    std::print("; Module ID 'stage0'\n");
+    std::print("source_filename = \"stage0.llvm\"\n");
+    std::print("\n");
+    std::print("define i32 @main() {\n");
+    std::print("entry:\n");
+    if (len(ir) > 0) {
+        std::print(ir);
+    } else {
+        std::print("  ; (no IR generated — parser/var-decl handling WIP)\n");
+    }
+    std::print("  ret i32 0\n");
+    std::print("}\n");
 }
 
 run();

@@ -302,6 +302,27 @@ proc finalizeParse() {
     g_result = g_nodeCount;
 }
 
+proc getAstKind(i: i32): i32 {
+    if (i >= 0 && i < g_nodeCount) { return g_astKinds[i]; }
+    return -1;
+}
+proc getAstLeft(i: i32): i32 {
+    if (i >= 0 && i < g_nodeCount) { return g_astLefts[i]; }
+    return -1;
+}
+proc getAstRight(i: i32): i32 {
+    if (i >= 0 && i < g_nodeCount) { return g_astRights[i]; }
+    return -1;
+}
+proc getAstExtra(i: i32): i32 {
+    if (i >= 0 && i < g_nodeCount) { return g_astExtras[i]; }
+    return -1;
+}
+proc getAstValue(i: i32): string {
+    if (i >= 0 && i < g_nodeCount) { return g_astValues[i]; }
+    return "";
+}
+
 proc parse(): i32 {
     g_astKinds = [];
     g_astValues = [];
