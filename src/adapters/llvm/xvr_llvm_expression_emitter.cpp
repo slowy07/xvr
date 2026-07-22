@@ -3667,6 +3667,12 @@ LLVMValueRef Xvr_LLVMExpressionEmitterEmitFnCall(
     }
 
     LLVMValueRef callee = LLVMGetNamedFunction(module, fn_name);
+    // ponytail: if user defined "main", it was renamed to _xvr_main; bare
+    // main() calls must resolve there to avoid self-recursion in the wrapper
+    if (callee && strcmp(fn_name, "main") == 0) {
+        LLVMValueRef renamed = LLVMGetNamedFunction(module, "_xvr_main");
+        if (renamed) callee = renamed;
+    }
     if (!callee) {
         return NULL;
     }

@@ -6,7 +6,6 @@ STAGE0_DIR="$SCRIPT_DIR/.."
 
 PASSED=0
 FAILED=0
-SKIPPED=0
 
 echo "=========================================="
 echo "Stage0 Test Runner"
@@ -43,11 +42,8 @@ run_test() {
                 echo "PASS: $test_name"
                 PASSED=$((PASSED + 1))
             else
-                # Known pre-existing LLVM codegen bug: test binaries compile
-                # correctly but segfault at runtime. This is tracked in
-                # test_self_host.sh and will be fixed by full self-hosting.
-                echo "PASS: $test_name (compiled, known runtime segfault)"
-                SKIPPED=$((SKIPPED + 1))
+                echo "FAIL: $test_name (runtime error, exit $?)"
+                FAILED=$((FAILED + 1))
             fi
         else
             echo "PASS: $test_name (compiled, no binary)"
@@ -97,7 +93,7 @@ echo "=========================================="
 run_test "All Tests" "stage0/tests/test_stage0_all.xvr" "stage0/tests/test_all"
 
 echo "=========================================="
-echo "Results: $PASSED passed, $FAILED failed, $SKIPPED skipped (known runtime issue)"
+echo "Results: $PASSED passed, $FAILED failed"
 echo "=========================================="
 
 exit $FAILED

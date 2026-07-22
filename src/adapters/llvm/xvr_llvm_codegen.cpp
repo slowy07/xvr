@@ -422,8 +422,26 @@ static void finalize_main_function(Xvr_LLVMCodegen* codegen) {
     // Check if user defined a main function (renamed to _xvr_main)
     LLVMValueRef user_main = LLVMGetNamedFunction(module, "_xvr_main");
     if (user_main) {
-        LLVMTypeRef user_main_type = LLVMGlobalGetValueType(user_main);
-        LLVMBuildCall2(builder, user_main_type, user_main, NULL, 0, "");
+        // ponytail: if the wrapper already contains a call to _xvr_main
+        // (from a bare main() call in source), skip the duplicate
+        bool has_call = false;
+        LLVMValueRef main_fn = LLVMGetNamedFunction(module, "main");
+        if (main_fn) {
+            LLVMBasicBlockRef entry = LLVMGetEntryBasicBlock(main_fn);
+            if (entry) {
+                for (LLVMValueRef inst = LLVMGetFirstInstruction(entry);
+                     inst; inst = LLVMGetNextInstruction(inst)) {
+                    if (LLVMGetInstructionOpcode(inst) == LLVMCall) {
+                        has_call = true;
+                        break;
+                    }
+                }
+            }
+        }
+        if (!has_call) {
+            LLVMTypeRef user_main_type = LLVMGlobalGetValueType(user_main);
+            LLVMBuildCall2(builder, user_main_type, user_main, NULL, 0, "");
+        }
     }
 
     LLVMBuildRet(builder, LLVMConstInt(int32_type, 0, false));
